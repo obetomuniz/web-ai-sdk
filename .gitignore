@@ -16,3 +16,4 @@ apps/*/.npmrc
 .vscode/
 .idea/
 .claude/
+CLAUDE.md
