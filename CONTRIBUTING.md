@@ -34,8 +34,6 @@ See the [README "Repo layout" section](./README.md#repo-layout) for the full tre
 
 ## Adding a new package
 
-The `.claude/skills/add-package/SKILL.md` file is the canonical recipe; follow it whether you're a human or an agent. The short version:
-
 1. Copy an existing package whose shape matches what you need (`prompt` if you want streaming + session cache + opt-in result cache, `webmcp` if you want an AbortSignal registry, `translator` if you want DOM-walking).
 2. Mirror the file layout: `src/api.ts` (adapter over the global, feature-detected), `src/index.ts` (public API + typed unavailability error), `src/react/index.ts` (thin hook adapter), `src/*.test.ts` (vanilla tests), `src/react/index.test.tsx` (React hook tests). Optional: `src/cache.ts` if the package has a result cache.
 3. Add the package to the Pages docs (`apps/docs/src/content/docs/guides/<name>.mdx`, `apps/docs/src/content/docs/react/use-<name>.mdx`, plus a demo component) and to the landing's package row.

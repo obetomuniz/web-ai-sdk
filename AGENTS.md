@@ -68,7 +68,6 @@ Lifecycle layer on purpose. Each package only manages session lifetime, cleanup,
 │   └── landing/                  # Vite + React marketing landing
 ├── .changeset/
 ├── .github/workflows/            # CI gate + release + Pages deploy
-├── .claude/skills/add-package/   # SKILL.md recipe for new packages
 ├── .nvmrc                        # pins Node 24 for local dev
 ├── biome.json                    # lint + format
 ├── package.json                  # workspace root + every pnpm script (incl. "packageManager" → pnpm 9.15.0)
@@ -153,8 +152,6 @@ These rules apply to the API-wrapper packages (`@web-ai-sdk/prompt`, `webmcp`, `
 ## 6. Common tasks (cookbook)
 
 ### Add a new tool / wrapper package
-
-The canonical recipe lives at [`.claude/skills/add-package/SKILL.md`](./.claude/skills/add-package/SKILL.md); follow it whether you're a human or an agent. Quick summary:
 
 1. `cp -r packages/<closest-template> packages/<new>` and rename in `package.json`, `tsup.config.ts`, `tsconfig.json`.
 2. Replace `src/index.ts` / `src/api.ts` / `src/react/index.ts` with the real wrapper. Keep the core package contract (§ 5).

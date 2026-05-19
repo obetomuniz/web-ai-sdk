@@ -15,8 +15,4 @@ packages/*/.npmrc
 apps/*/.npmrc
 .vscode/
 .idea/
-# Claude Code session artifacts (screenshots, launch config) but keep skills.
-.claude/*.jpg
-.claude/*.jpeg
-.claude/*.png
-.claude/launch.json
+.claude/
