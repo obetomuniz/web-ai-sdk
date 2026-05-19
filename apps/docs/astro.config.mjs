@@ -4,17 +4,15 @@ import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
 
 // Base path mirrors the landing site's VITE_BASE convention so the same
-// SITE_BASE value drives both deploys. Defaults to the GH Pages
-// `/web-ai-sdk/` prefix; override at build time for org Pages (`/`) or a
-// custom domain. The Pages workflow sets DOCS_BASE; locally `pnpm
-// pages:build` sets it explicitly so the assembled `_site/docs/` works
-// when served from `/`.
-const base = process.env.DOCS_BASE ?? "/web-ai-sdk/docs/";
+// SITE_BASE value drives both deploys. Defaults to `/docs/` for the custom
+// domain (web-ai-sdk.dev/docs/); override at build time with DOCS_BASE for
+// project Pages (`/web-ai-sdk/docs/`) or any other host prefix.
+const base = process.env.DOCS_BASE ?? "/docs/";
 
 export default defineConfig({
   base,
   // No trailing slash in `site` — Starlight composes it with `base`.
-  site: "https://obetomuniz.github.io",
+  site: "https://web-ai-sdk.dev",
   integrations: [
     starlight({
       title: "web-ai-sdk",
