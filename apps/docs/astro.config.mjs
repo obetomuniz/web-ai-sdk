@@ -45,6 +45,7 @@ export default defineConfig({
         {
           label: "Guides",
           items: [
+            { label: "Meta-package", slug: "guides/meta-package" },
             { label: "Prompt", slug: "guides/prompt" },
             { label: "WebMCP", slug: "guides/webmcp" },
             { label: "Summarizer", slug: "guides/summarizer" },
