@@ -4,17 +4,18 @@
   "description": "Building block for the Web's Built-in Summarizer API",
   "license": "MIT",
   "author": "Beto Muniz",
-  "homepage": "https://github.com/obetomuniz/web-ai-sdk-kit/tree/main/packages/summarizer#readme",
+  "homepage": "https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/summarizer#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/obetomuniz/web-ai-sdk.git",
     "directory": "packages/summarizer"
   },
   "bugs": {
-    "url": "https://github.com/obetomuniz/web-ai-sdk-kit/issues"
+    "url": "https://github.com/obetomuniz/web-ai-sdk/issues"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   },
   "type": "module",
   "files": [
