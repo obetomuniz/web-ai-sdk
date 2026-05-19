@@ -46,9 +46,14 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 
 ## Install
 
+Pick a building block, or grab the whole suite under a single install:
+
 ```sh
-pnpm add @web-ai-sdk/prompt        # or any of the others
+pnpm add @web-ai-sdk/prompt        # one block
+pnpm add web-ai-sdk                # all five blocks
 ```
+
+See the [meta-package guide](./guides/meta-package/) for the two import shapes (`web-ai-sdk/prompt` subpath vs `{ prompt } from "web-ai-sdk"` namespaced root).
 
 Each package ships:
 

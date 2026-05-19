@@ -1,0 +1,78 @@
+---
+title: Meta-package
+description: One install, all five building blocks. The web-ai-sdk meta-package re-exports prompt, summarizer, translator, detector, and webmcp behind a single dependency.
+---
+
+`web-ai-sdk` is a thin meta-package that re-exports the five scoped `@web-ai-sdk/*` building blocks under a single install. It has no behaviour of its own. All logic, tests, and version history live in the scoped packages.
+
+Reach for it when you want one entry in `package.json` instead of five, or when you're prototyping and don't care yet which blocks you'll keep.
+
+## Install
+
+```sh
+pnpm add web-ai-sdk
+# or: npm i web-ai-sdk / bun add web-ai-sdk
+```
+
+The five scoped packages come along as transitive dependencies. `react` is a peer dependency only when you import any `/react` subpath.
+
+## Two import shapes
+
+Both are valid. Pick whichever reads better at the call site.
+
+### Per-package subpaths (recommended for production)
+
+Bundlers tree-shake this cleanly; you only pay for the blocks you actually use.
+
+```ts
+import { prompt } from "web-ai-sdk/prompt";
+import { summarize } from "web-ai-sdk/summarizer";
+import { translate } from "web-ai-sdk/translator";
+import { detect } from "web-ai-sdk/detector";
+import { registerTool } from "web-ai-sdk/webmcp";
+```
+
+```tsx
+import { usePrompt } from "web-ai-sdk/prompt/react";
+import { useSummarizer } from "web-ai-sdk/summarizer/react";
+```
+
+### Namespaced root (handy for prototyping)
+
+```ts
+import { prompt, summarizer, translator, detector, webmcp } from "web-ai-sdk";
+
+await prompt.prompt({ prompt: "Hello" });
+await summarizer.summarize({ language: "en", article: document.body });
+```
+
+Why namespaced and not flat? Several names (`checkAvailability`, `defaultCacheKey`, `createSessionStorageCache`) appear in more than one package, so a flat re-export at the root would collide. Namespacing keeps each block's surface intact.
+
+## When *not* to use the meta-package
+
+Use the scoped packages directly when:
+
+- You're shipping a library and want minimal transitive deps for downstream consumers.
+- You need to pin one block to a different version than the rest.
+
+For applications, the meta-package is usually the right default.
+
+## Versioning
+
+`web-ai-sdk` and the five scoped packages release together. Every release ships all six at the same version via a Changesets `fixed` group, so pinning a single version in your `package.json` gets you the whole suite at a known state.
+
+## Available subpaths
+
+| Subpath                     | Re-exports                          |
+| --------------------------- | ----------------------------------- |
+| `web-ai-sdk`                | namespaces for all five packages    |
+| `web-ai-sdk/prompt`         | [`@web-ai-sdk/prompt`](./prompt/)         |
+| `web-ai-sdk/prompt/react`   | `@web-ai-sdk/prompt/react`                |
+| `web-ai-sdk/webmcp`         | [`@web-ai-sdk/webmcp`](./webmcp/)         |
+| `web-ai-sdk/webmcp/react`   | `@web-ai-sdk/webmcp/react`                |
+| `web-ai-sdk/summarizer`     | [`@web-ai-sdk/summarizer`](./summarizer/) |
+| `web-ai-sdk/summarizer/react` | `@web-ai-sdk/summarizer/react`          |
+| `web-ai-sdk/translator`     | [`@web-ai-sdk/translator`](./translator/) |
+| `web-ai-sdk/translator/react` | `@web-ai-sdk/translator/react`          |
+| `web-ai-sdk/detector`       | [`@web-ai-sdk/detector`](./detector/)     |
+| `web-ai-sdk/detector/react` | `@web-ai-sdk/detector/react`              |

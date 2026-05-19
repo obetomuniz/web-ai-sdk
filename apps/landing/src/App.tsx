@@ -91,7 +91,7 @@ export const App = () => (
             </svg>
             View on GitHub
           </a>
-          <InstallPill pkg="@web-ai-sdk/prompt" />
+          <InstallPill pkg="web-ai-sdk" />
         </div>
 
         <div className="badge-row">
@@ -746,10 +746,11 @@ export const App = () => (
           </div>
           <h2>Try it in your project.</h2>
           <p>
-            One command per package. Zero config. Ships ESM, CJS, and types.
-            Tree-shakable per package.
+            One install, all five blocks. Or pick the individual{" "}
+            <code>@web-ai-sdk/*</code> packages. Ships ESM, CJS, and types.
+            Tree-shakable.
           </p>
-          <InstallPill pkg="@web-ai-sdk/prompt" />
+          <InstallPill pkg="web-ai-sdk" />
           <div className="links">
             <a className="link" href={DOCS_URL}>
               Read the docs <span>↗</span>
