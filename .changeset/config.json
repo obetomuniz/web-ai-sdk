@@ -4,7 +4,7 @@
   "commit": false,
   "fixed": [
     [
-      "web-ai-sdk",
+      "@web-ai-sdk/all",
       "@web-ai-sdk/prompt",
       "@web-ai-sdk/webmcp",
       "@web-ai-sdk/summarizer",

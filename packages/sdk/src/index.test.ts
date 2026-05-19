@@ -9,8 +9,8 @@ import * as translatorSubpath from "./translator.js";
 import * as webmcpSubpath from "./webmcp.js";
 
 // Smoke tests for the aggregator's two import shapes:
-//   1. Namespaced root  (`import { prompt, summarizer } from "web-ai-sdk"`).
-//   2. Per-package subpath (`import { prompt } from "web-ai-sdk/prompt"`).
+//   1. Namespaced root  (`import { prompt, summarizer } from "@web-ai-sdk/all"`).
+//   2. Per-package subpath (`import { prompt } from "@web-ai-sdk/all/prompt"`).
 //
 // We check a single representative export from each package as a tripwire;
 // the full APIs are covered by each scoped package's own tests.

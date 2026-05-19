@@ -1,7 +1,7 @@
 {
-  "name": "web-ai-sdk",
+  "name": "@web-ai-sdk/all",
   "version": "0.1.1",
-  "description": "Meta-package for the @web-ai-sdk/* building blocks: install once, use the prompt, summarizer, translator, detector, and webmcp wrappers under one roof.",
+  "description": "Meta-package for the @web-ai-sdk/* building blocks: install @web-ai-sdk/all once, use the prompt, summarizer, translator, detector, and webmcp wrappers under one roof.",
   "license": "MIT",
   "author": "Beto Muniz",
   "homepage": "https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/sdk#readme",

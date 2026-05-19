@@ -29,12 +29,12 @@ Pick the building blocks you need, or grab the whole suite in one install:
 
 ```sh
 pnpm add @web-ai-sdk/webmcp        # one block
-pnpm add web-ai-sdk                # all five blocks under one install
+pnpm add @web-ai-sdk/all           # all five blocks under one install
 ```
 
 Each package has its own README with install + usage:
 
-- [`web-ai-sdk`](./packages/sdk/README.md) (meta-package; re-exports all five)
+- [`@web-ai-sdk/all`](./packages/sdk/README.md) (meta-package; re-exports all five)
 - [`@web-ai-sdk/webmcp`](./packages/webmcp/README.md)
 - [`@web-ai-sdk/translator`](./packages/translator/README.md)
 - [`@web-ai-sdk/summarizer`](./packages/summarizer/README.md)
@@ -69,7 +69,7 @@ For the AI APIs to actually run, open a supporting browser (Chrome 138+ or Edge 
 │   ├── summarizer/     # @web-ai-sdk/summarizer
 │   ├── prompt/         # @web-ai-sdk/prompt
 │   ├── detector/       # @web-ai-sdk/detector
-│   └── sdk/            # web-ai-sdk (meta-package; re-exports the five above)
+│   └── sdk/            # @web-ai-sdk/all (meta-package; re-exports the five above)
 ├── apps/
 │   ├── docs/           # @web-ai-sdk-apps/docs (private; Astro Starlight)
 │   └── landing/        # @web-ai-sdk-apps/landing (private; marketing site)
