@@ -1,6 +1,6 @@
 {
   "name": "@web-ai-sdk/summarizer",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Building block for the Web's Built-in Summarizer API",
   "license": "MIT",
   "author": "Beto Muniz",
