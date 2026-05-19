@@ -1,6 +1,6 @@
 {
   "name": "@web-ai-sdk/webmcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Building block for the Web's native WebMCP API (navigator.modelContext)",
   "license": "MIT",
   "author": "Beto Muniz",
