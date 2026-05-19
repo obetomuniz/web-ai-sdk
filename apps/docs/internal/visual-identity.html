@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>web-ai-sdk — Visual Identity</title>
+
+<!-- Favicon (inline SVG so this file is self-contained) -->
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 64"><rect width="96" height="64" rx="14" fill="%230C0A09"/><path d="M22 27 L14 38 L22 49" fill="none" stroke="%23EDE6DA" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="45" cy="38" r="11" fill="none" stroke="%23EDE6DA" stroke-width="5"/><line x1="56" y1="27" x2="56" y2="49" stroke="%23EDE6DA" stroke-width="5" stroke-linecap="round"/><circle cx="56" cy="18" r="3.8" fill="%23F26B3B"/><path d="M68 27 L76 38 L68 49" fill="none" stroke="%23EDE6DA" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>' />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    /* ── Core surfaces ─────────────────────────── */
+    --ink:        #0C0A09;       /* warm near-black (page bg) */
+    --ink-2:      #14110F;       /* card */
+    --ink-3:      #1F1A17;       /* elevated / input */
+    --rule:       #2A231E;       /* hairlines on dark */
+    --rule-2:     #3A302A;       /* stronger rule */
+
+    /* ── Foregrounds ───────────────────────────── */
+    --paper:      #EDE6DA;       /* warm cream — primary text */
+    --paper-2:    #C9C0B1;       /* secondary */
+    --muted:      #8A8175;       /* tertiary / meta */
+    --muted-2:    #5E574E;       /* disabled / grid */
+
+    /* ── Accent ────────────────────────────────── */
+    --flame:      #F26B3B;       /* signature orange */
+    --flame-hi:   #FF8456;       /* hover / highlight */
+    --flame-lo:   #B94A22;       /* pressed / inactive */
+    --flame-bg:   rgba(242,107,59,0.10);
+    --flame-ring: rgba(242,107,59,0.35);
+
+    /* ── Type ──────────────────────────────────── */
+    --sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --mono: "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    --maxw: 1180px;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    /* Subtle warm radial glow, top-right, like the site */
+    background-image:
+      radial-gradient(900px 600px at 100% 0%, rgba(242,107,59,0.10), transparent 60%),
+      radial-gradient(700px 500px at 0% 8%, rgba(242,107,59,0.03), transparent 60%);
+    background-attachment:fixed;
+  }
+
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:48px 40px 96px; }
+
+  /* ───── Top meta bar ───── */
+  .meta{
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:var(--mono); font-size:12px; color:var(--muted);
+    letter-spacing:0; padding-bottom:24px; border-bottom:1px solid var(--rule);
+  }
+  .meta .dot{
+    display:inline-block; width:7px; height:7px; border-radius:50%;
+    background:var(--flame); margin-right:8px; vertical-align:middle;
+    box-shadow:0 0 0 3px var(--flame-bg);
+  }
+
+  /* ───── Section scaffold ───── */
+  section{
+    padding:64px 0;
+    border-bottom:1px solid var(--rule);
+  }
+  section:last-of-type{ border-bottom:none; }
+  .sec-head{
+    display:grid; grid-template-columns:160px 1fr; gap:32px;
+    margin-bottom:32px;
+  }
+  .sec-num{
+    font-family:var(--mono); font-size:12px; color:var(--muted);
+  }
+  .sec-title{
+    font-size:30px; font-weight:500; letter-spacing:-0.02em; margin:0;
+    color:var(--paper);
+  }
+  .sec-title small{
+    display:block; font-family:var(--sans); font-size:14px; color:var(--paper-2);
+    font-weight:400; letter-spacing:0; margin-top:8px;
+    max-width:60ch;
+  }
+
+  /* ───── HERO ───── */
+  .hero{ padding:32px 0 72px; border-bottom:1px solid var(--rule); }
+  .pill{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--mono); font-size:12px; color:var(--paper-2);
+    border:1px solid var(--rule-2); border-radius:999px;
+    padding:6px 12px; background:var(--ink-2);
+  }
+  .pill .ledot{
+    width:6px; height:6px; border-radius:50%; background:var(--flame);
+    box-shadow:0 0 0 3px var(--flame-bg);
+  }
+
+  .wordmark{
+    font-family:var(--mono);
+    font-weight:500;
+    font-size:clamp(56px, 10vw, 128px);
+    letter-spacing:-0.02em;
+    line-height:1;
+    margin:28px 0 0;
+    color:var(--paper);
+    white-space:nowrap;
+  }
+  .wordmark .ai{ color:var(--flame); }
+  .wordmark .cursor{
+    display:inline-block;
+    width:0.55ch; height:0.92em;
+    background:var(--flame);
+    vertical-align:-0.08em;
+    margin-left:0.04em;
+    animation: blink 1s steps(2,end) infinite;
+  }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .lede{
+    font-family:var(--sans); font-size:18px; line-height:1.45; margin:24px 0 8px;
+    color:var(--paper); max-width:54ch;
+  }
+  .lede b{ font-weight:600; }
+  .sub{
+    font-family:var(--sans); font-size:15px; color:var(--paper-2);
+    max-width:54ch; line-height:1.55;
+  }
+
+  /* ───── Buttons ───── */
+  .btn-row{ display:flex; gap:10px; margin-top:28px; flex-wrap:wrap; align-items:center; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:10px 16px; border-radius:8px;
+    font-family:var(--sans); font-size:14px; font-weight:500;
+    text-decoration:none; border:1px solid transparent;
+    transition: filter .15s ease, background .15s ease;
+    cursor:pointer;
+  }
+  .btn-primary{ background:var(--flame); color:#160A05; }
+  .btn-primary:hover{ filter:brightness(1.06); }
+  .btn-ghost{ background:transparent; color:var(--paper); border-color:var(--rule-2); }
+  .btn-ghost:hover{ background:var(--ink-2); }
+  .btn .arrow{ font-family:var(--mono); }
+
+  .install{
+    font-family:var(--mono); font-size:13px;
+    background:var(--ink-2); border:1px solid var(--rule);
+    padding:10px 14px; border-radius:8px; color:var(--paper);
+  }
+  .install .prompt{ color:var(--flame); }
+  .install .pkg{ color:var(--paper); }
+
+  /* ───── Logo gallery ───── */
+  .logo-grid{
+    display:grid; grid-template-columns:repeat(2, 1fr); gap:14px;
+  }
+  .logo-cell{
+    border:1px solid var(--rule); border-radius:14px;
+    aspect-ratio:3/2; display:flex; align-items:center; justify-content:center;
+    position:relative; overflow:hidden; padding:10% 12%;
+    background:var(--ink-2);
+  }
+  .logo-cell.inverse{ background:var(--paper); border-color:transparent; }
+  .logo-cell.flame{ background:var(--flame); border-color:transparent; }
+  .logo-cell.outline{ background:var(--ink); }
+  .logo-cell .lbl{
+    position:absolute; top:12px; left:14px;
+    font-family:var(--mono); font-size:10px;
+    color:var(--muted);
+  }
+  .logo-cell.inverse .lbl{ color:#6B6A63; }
+  .logo-cell.flame .lbl{ color:rgba(12,10,9,0.6); }
+  .logo-cell svg{ width:100%; height:100%; display:block; }
+
+  .lockup-row{
+    margin-top:16px; border:1px solid var(--rule); border-radius:14px;
+    padding:48px 40px; background:var(--ink-2);
+    display:flex; align-items:center; justify-content:center; gap:24px;
+  }
+  .lockup-wordmark{
+    font-family:var(--mono); font-weight:500;
+    font-size:48px; letter-spacing:-0.02em; color:var(--paper);
+    line-height:1;
+  }
+  .lockup-wordmark .ai{ color:var(--flame); }
+  .lockup-wordmark .cursor{
+    display:inline-block; width:0.55ch; height:0.92em;
+    background:var(--flame); vertical-align:-0.08em; margin-left:0.04em;
+  }
+
+  /* ───── Colors ───── */
+  .color-grid{
+    display:grid; grid-template-columns:repeat(4, 1fr); gap:12px;
+  }
+  .swatch{
+    border-radius:14px; padding:18px;
+    aspect-ratio:4/5;
+    display:flex; flex-direction:column; justify-content:space-between;
+    font-family:var(--mono); font-size:11px;
+    border:1px solid transparent;
+  }
+  .swatch .top{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .swatch .name{ font-family:var(--sans); font-size:14px; font-weight:500; letter-spacing:-0.01em; }
+  .swatch .role{ font-family:var(--mono); font-size:10px; opacity:0.7; }
+  .swatch .vals{ display:flex; flex-direction:column; gap:2px; opacity:0.8; }
+  .sw-ink   { background:var(--ink);   color:var(--paper); border-color:var(--rule); }
+  .sw-ink2  { background:var(--ink-2); color:var(--paper); border-color:var(--rule); }
+  .sw-ink3  { background:var(--ink-3); color:var(--paper); border-color:var(--rule); }
+  .sw-paper { background:var(--paper); color:#1A1614; }
+  .sw-paper2{ background:var(--paper-2); color:#1A1614; }
+  .sw-muted { background:var(--muted); color:var(--ink); }
+  .sw-flame { background:var(--flame); color:#160A05; }
+  .sw-flame-lo{ background:var(--flame-lo); color:var(--paper); }
+
+  /* ───── Typography ───── */
+  .type-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .type-card{
+    border:1px solid var(--rule); border-radius:14px; padding:28px;
+    background:var(--ink-2);
+  }
+  .type-card .label{
+    font-family:var(--mono); font-size:11px; color:var(--muted);
+    margin-bottom:6px;
+  }
+  .type-card .name{
+    font-size:22px; font-weight:500; letter-spacing:-0.02em; margin-bottom:20px;
+    color:var(--paper);
+  }
+  .specimen-sans{
+    font-family:var(--sans); font-weight:500;
+    font-size:72px; letter-spacing:-0.04em; line-height:0.95; margin:0 0 16px;
+    color:var(--paper);
+  }
+  .specimen-mono{
+    font-family:var(--mono); font-weight:500;
+    font-size:56px; letter-spacing:-0.03em; line-height:1; margin:0 0 16px;
+    color:var(--paper);
+  }
+  .specimen-mono .flame{ color:var(--flame); }
+  .weights{ display:flex; flex-direction:column; gap:6px; font-size:14px; }
+  .weights .row{ display:flex; gap:16px; align-items:baseline; }
+  .weights .row span:first-child{
+    font-family:var(--mono); font-size:11px; color:var(--muted);
+    width:90px;
+  }
+  .type-card.sans .row span:last-child{ font-family:var(--sans); color:var(--paper); }
+  .type-card.mono .row span:last-child{ font-family:var(--mono); color:var(--paper); }
+
+  /* ───── Favicon previews ───── */
+  .fav-grid{
+    display:grid; grid-template-columns:repeat(5, auto) 1fr; gap:24px; align-items:end;
+  }
+  .fav{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .fav .ico{ background:var(--ink-2); border:1px solid var(--rule); border-radius:6px; padding:6px; }
+  .fav .px{ font-family:var(--mono); font-size:11px; color:var(--muted); }
+  .fav .ico svg{ display:block; }
+
+  .tabmock{
+    background:var(--ink-3); border-radius:8px 8px 0 0;
+    padding:8px 12px; display:inline-flex; gap:10px; align-items:center;
+    font-family:var(--sans); font-size:13px; color:var(--paper);
+    border:1px solid var(--rule); border-bottom:none;
+  }
+  .tabmock svg{ display:block; }
+
+  /* ───── Code blocks ───── */
+  .code{
+    background:#0A0807; color:var(--paper);
+    border:1px solid var(--rule);
+    border-radius:14px; padding:22px 24px;
+    font-family:var(--mono); font-size:13px; line-height:1.7;
+    overflow:auto; white-space:pre;
+  }
+  .code .c-mute{ color:var(--muted); }
+  .code .c-key { color:var(--flame); }
+  .code .c-str { color:#C9C0B1; }
+  .code .c-com { color:#5E574E; font-style:italic; }
+  .code .c-tok { color:#FF8456; }
+
+  /* ───── Section grids ───── */
+  .col2{ display:grid; grid-template-columns:1fr; gap:16px; }
+
+  /* ───── Footer ───── */
+  footer{
+    margin-top:64px; padding-top:24px; border-top:1px solid var(--rule);
+    display:flex; justify-content:space-between;
+    font-family:var(--mono); font-size:11px; color:var(--muted);
+  }
+
+  @media (max-width: 880px){
+    .sec-head{ grid-template-columns:1fr; gap:8px; }
+    .logo-grid{ grid-template-columns:1fr; }
+    .color-grid{ grid-template-columns:repeat(2,1fr); }
+    .type-grid{ grid-template-columns:1fr; }
+    .fav-grid{ grid-template-columns:repeat(3, auto); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ─────────────────────────────────────────────
+     Reusable logo definitions
+     Use anywhere with: <svg><use href="#logo-mark"/></svg>
+     ───────────────────────────────────────────── -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- Primary mark: < ai > — the 'ai' ligature wrapped in angle brackets.
+         Geometry: x-height runs y=27–49 (height 22). Brackets, 'a' bowl,
+         and shared stem all share this band — baseline-aligned at y=49.
+         The i-tittle is a flame dot floating at typographic tittle height. -->
+    <symbol id="logo-mark" viewBox="0 0 96 64">
+      <rect x="0" y="0" width="96" height="64" rx="14" fill="var(--mark-bg, #0C0A09)"/>
+      <!-- Left bracket -->
+      <path d="M22 27 L14 38 L22 49"
+            fill="none" stroke="var(--mark-fg, #EDE6DA)"
+            stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- 'a' bowl -->
+      <circle cx="45" cy="38" r="11" fill="none"
+              stroke="var(--mark-fg, #EDE6DA)" stroke-width="5"/>
+      <!-- Shared stem -->
+      <line x1="56" y1="27" x2="56" y2="49"
+            stroke="var(--mark-fg, #EDE6DA)" stroke-width="5"
+            stroke-linecap="round"/>
+      <!-- i-tittle (flame) -->
+      <circle cx="56" cy="18" r="3.8" fill="var(--mark-accent, #F26B3B)"/>
+      <!-- Right bracket -->
+      <path d="M68 27 L76 38 L68 49"
+            fill="none" stroke="var(--mark-fg, #EDE6DA)"
+            stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+
+    <!-- Outline variant: stroke frame, no fill -->
+    <symbol id="logo-mark-outline" viewBox="0 0 96 64">
+      <rect x="1.5" y="1.5" width="93" height="61" rx="13"
+            fill="none" stroke="var(--mark-fg, #EDE6DA)" stroke-width="3"/>
+      <path d="M22 27 L14 38 L22 49"
+            fill="none" stroke="var(--mark-fg, #EDE6DA)"
+            stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="45" cy="38" r="11" fill="none"
+              stroke="var(--mark-fg, #EDE6DA)" stroke-width="5"/>
+      <line x1="56" y1="27" x2="56" y2="49"
+            stroke="var(--mark-fg, #EDE6DA)" stroke-width="5"
+            stroke-linecap="round"/>
+      <circle cx="56" cy="18" r="3.8" fill="var(--mark-accent, #F26B3B)"/>
+      <path d="M68 27 L76 38 L68 49"
+            fill="none" stroke="var(--mark-fg, #EDE6DA)"
+            stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+
+    <!-- Glyph only: no frame, mark sits on transparent background -->
+    <symbol id="logo-glyph" viewBox="0 0 96 64">
+      <path d="M22 27 L14 38 L22 49"
+            fill="none" stroke="var(--mark-fg, #EDE6DA)"
+            stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="45" cy="38" r="11" fill="none"
+              stroke="var(--mark-fg, #EDE6DA)" stroke-width="5"/>
+      <line x1="56" y1="27" x2="56" y2="49"
+            stroke="var(--mark-fg, #EDE6DA)" stroke-width="5"
+            stroke-linecap="round"/>
+      <circle cx="56" cy="18" r="3.8" fill="var(--mark-accent, #F26B3B)"/>
+      <path d="M68 27 L76 38 L68 49"
+            fill="none" stroke="var(--mark-fg, #EDE6DA)"
+            stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+
+    <!-- Construction-grid variant: x-height + baseline rules + mark -->
+    <symbol id="logo-mark-construction" viewBox="0 0 96 64">
+      <rect x="0" y="0" width="96" height="64" rx="14" fill="var(--mark-bg, #0C0A09)"/>
+      <g stroke="var(--mark-accent, #F26B3B)" stroke-width="0.5" stroke-dasharray="2 2" fill="none" opacity="0.55">
+        <line x1="4" y1="27" x2="92" y2="27"/>
+        <line x1="4" y1="49" x2="92" y2="49"/>
+        <line x1="45" y1="4" x2="45" y2="60"/>
+        <line x1="56" y1="4" x2="56" y2="60"/>
+        <circle cx="45" cy="38" r="11"/>
+      </g>
+      <path d="M22 27 L14 38 L22 49"
+            fill="none" stroke="var(--mark-fg, #EDE6DA)"
+            stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="45" cy="38" r="11" fill="none"
+              stroke="var(--mark-fg, #EDE6DA)" stroke-width="5"/>
+      <line x1="56" y1="27" x2="56" y2="49"
+            stroke="var(--mark-fg, #EDE6DA)" stroke-width="5"
+            stroke-linecap="round"/>
+      <circle cx="56" cy="18" r="3.8" fill="var(--mark-accent, #F26B3B)"/>
+      <path d="M68 27 L76 38 L68 49"
+            fill="none" stroke="var(--mark-fg, #EDE6DA)"
+            stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+
+<div class="wrap">
+
+  <div class="meta">
+    <div><span class="dot"></span>web-ai-sdk / brand kit v0.5</div>
+    <div>warm-black · flame · mono</div>
+  </div>
+
+  <!-- ───── HERO ───── -->
+  <section class="hero">
+    <span class="pill"><span class="ledot"></span>built on-AI, the right way</span>
+    <h1 class="wordmark">web-<span class="ai">ai</span>-sdk<span class="cursor"></span></h1>
+    <p class="lede"><b>Building blocks</b> for the Web's built-in AI APIs.</p>
+    <p class="sub">Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals. Vanilla TypeScript by default, with optional React hooks.</p>
+
+    <div class="btn-row">
+      <a class="btn btn-primary" href="#">Get started <span class="arrow">→</span></a>
+      <a class="btn btn-ghost" href="#">◇ View on GitHub</a>
+      <span class="install">
+        <span class="prompt">$ npm install</span>
+        <span class="pkg">web-ai-sdk/all</span>
+      </span>
+    </div>
+  </section>
+
+  <!-- ───── 01 LOGO ───── -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">01 / logo</div>
+      <h2 class="sec-title">An <span style="color:var(--flame); font-family:var(--mono);">ai</span> in brackets
+        <small>Angle brackets read as HTML / JSX — the natural home of an SDK that lives in the browser. Between them, a geometric ligature: the bowl of <span style="font-family:var(--mono); color:var(--paper);">a</span> shares its stem with <span style="font-family:var(--mono); color:var(--paper);">i</span>, and the i-tittle becomes a single flame dot, the spark of intelligence.</small>
+      </h2>
+    </div>
+
+    <!-- Primary lockup: the mark beside the wordmark -->
+    <div class="lockup-row">
+      <svg viewBox="0 0 96 64" width="120" height="80" style="--mark-bg:var(--ink); --mark-fg:var(--paper); --mark-accent:var(--flame); flex-shrink:0;"><use href="#logo-mark"/></svg>
+      <div class="lockup-wordmark">web-<span class="ai">ai</span>-sdk<span class="cursor"></span></div>
+    </div>
+
+    <div style="height:14px;"></div>
+
+    <!-- Icon variants -->
+    <div class="logo-grid">
+      <div class="logo-cell" style="--mark-bg:var(--ink); --mark-fg:var(--paper); --mark-accent:var(--flame);">
+        <span class="lbl">01 · primary</span>
+        <svg viewBox="0 0 96 64"><use href="#logo-mark"/></svg>
+      </div>
+      <div class="logo-cell inverse" style="--mark-bg:var(--paper); --mark-fg:var(--ink); --mark-accent:var(--flame);">
+        <span class="lbl">02 · inverse</span>
+        <svg viewBox="0 0 96 64"><use href="#logo-mark"/></svg>
+      </div>
+      <div class="logo-cell outline" style="--mark-fg:var(--paper); --mark-accent:var(--flame);">
+        <span class="lbl">03 · outline</span>
+        <svg viewBox="0 0 96 64"><use href="#logo-mark-outline"/></svg>
+      </div>
+      <div class="logo-cell" style="--mark-bg:var(--ink); --mark-fg:var(--paper); --mark-accent:var(--flame);">
+        <span class="lbl">04 · construction</span>
+        <svg viewBox="0 0 96 64"><use href="#logo-mark-construction"/></svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── 02 COLORS ───── -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">02 / color</div>
+      <h2 class="sec-title">Warm-black on cream, one flame
+        <small>The palette is monochromatic warm-black tones for surfaces, off-white cream for text, and a single signature orange — used sparingly, where attention should go.</small>
+      </h2>
+    </div>
+
+    <div class="color-grid">
+      <div class="swatch sw-ink">
+        <div class="top"><div class="name">Ink</div><div class="role">bg</div></div>
+        <div class="vals"><span>#0C0A09</span><span>--ink</span></div>
+      </div>
+      <div class="swatch sw-ink2">
+        <div class="top"><div class="name">Ink · 2</div><div class="role">card</div></div>
+        <div class="vals"><span>#14110F</span><span>--ink-2</span></div>
+      </div>
+      <div class="swatch sw-ink3">
+        <div class="top"><div class="name">Ink · 3</div><div class="role">input</div></div>
+        <div class="vals"><span>#1F1A17</span><span>--ink-3</span></div>
+      </div>
+      <div class="swatch sw-muted">
+        <div class="top"><div class="name">Muted</div><div class="role">meta</div></div>
+        <div class="vals"><span>#8A8175</span><span>--muted</span></div>
+      </div>
+
+      <div class="swatch sw-paper2">
+        <div class="top"><div class="name">Paper · 2</div><div class="role">2nd text</div></div>
+        <div class="vals"><span>#C9C0B1</span><span>--paper-2</span></div>
+      </div>
+      <div class="swatch sw-paper">
+        <div class="top"><div class="name">Paper</div><div class="role">text</div></div>
+        <div class="vals"><span>#EDE6DA</span><span>--paper</span></div>
+      </div>
+      <div class="swatch sw-flame">
+        <div class="top"><div class="name">Flame</div><div class="role">accent</div></div>
+        <div class="vals"><span>#F26B3B</span><span>--flame</span></div>
+      </div>
+      <div class="swatch sw-flame-lo">
+        <div class="top"><div class="name">Flame · lo</div><div class="role">pressed</div></div>
+        <div class="vals"><span>#B94A22</span><span>--flame-lo</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── 03 TYPOGRAPHY ───── -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">03 / type</div>
+      <h2 class="sec-title">Mono carries the brand. Sans carries the prose.
+        <small>Geist Mono in the wordmark, headlines, and code. Geist Sans for body, UI, and anything that needs to read fast.</small>
+      </h2>
+    </div>
+
+    <div class="type-grid">
+      <div class="type-card mono">
+        <div class="label">wordmark / code / headlines</div>
+        <div class="name">Geist Mono</div>
+        <p class="specimen-mono">web-ai-sdk<span class="flame">|</span></p>
+        <div class="weights">
+          <div class="row"><span>Regular 400</span><span>const ai = await prompt();</span></div>
+          <div class="row"><span>Medium 500</span><span>const ai = await prompt();</span></div>
+          <div class="row"><span>Semibold 600</span><span>const ai = await prompt();</span></div>
+        </div>
+      </div>
+
+      <div class="type-card sans">
+        <div class="label">body / UI / prose</div>
+        <div class="name">Geist Sans</div>
+        <p class="specimen-sans">Composable.</p>
+        <div class="weights">
+          <div class="row"><span>Regular 400</span><span>Building blocks for the Web's built-in AI APIs.</span></div>
+          <div class="row"><span>Medium 500</span><span>Building blocks for the Web's built-in AI APIs.</span></div>
+          <div class="row"><span>Semibold 600</span><span>Building blocks for the Web's built-in AI APIs.</span></div>
+          <div class="row"><span>Bold 700</span><span>Building blocks for the Web's built-in AI APIs.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── 04 FAVICON ───── -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">04 / favicon</div>
+      <h2 class="sec-title">The mark, scaled down
+        <small>Five shapes — two brackets, a ring, a stem, a spark — hold up at every size. The flame dot stays the focal point all the way down.</small>
+      </h2>
+    </div>
+
+    <div class="fav-grid">
+      <div class="fav">
+        <div class="ico"><svg width="96" height="64" viewBox="0 0 96 64" style="--mark-bg:var(--ink); --mark-fg:var(--paper); --mark-accent:var(--flame);"><use href="#logo-mark"/></svg></div>
+        <div class="px">96 × 64</div>
+      </div>
+      <div class="fav">
+        <div class="ico"><svg width="72" height="48" viewBox="0 0 96 64" style="--mark-bg:var(--ink); --mark-fg:var(--paper); --mark-accent:var(--flame);"><use href="#logo-mark"/></svg></div>
+        <div class="px">72 × 48</div>
+      </div>
+      <div class="fav">
+        <div class="ico"><svg width="48" height="32" viewBox="0 0 96 64" style="--mark-bg:var(--ink); --mark-fg:var(--paper); --mark-accent:var(--flame);"><use href="#logo-mark"/></svg></div>
+        <div class="px">48 × 32</div>
+      </div>
+      <div class="fav">
+        <div class="ico"><svg width="36" height="24" viewBox="0 0 96 64" style="--mark-bg:var(--ink); --mark-fg:var(--paper); --mark-accent:var(--flame);"><use href="#logo-mark"/></svg></div>
+        <div class="px">36 × 24</div>
+      </div>
+      <div class="fav">
+        <div class="ico"><svg width="24" height="16" viewBox="0 0 96 64" style="--mark-bg:var(--ink); --mark-fg:var(--paper); --mark-accent:var(--flame);"><use href="#logo-mark"/></svg></div>
+        <div class="px">24 × 16</div>
+      </div>
+      <div style="display:flex; align-items:flex-end; justify-content:flex-end;">
+        <div class="tabmock">
+          <svg width="21" height="14" viewBox="0 0 96 64" style="--mark-bg:var(--ink); --mark-fg:var(--paper); --mark-accent:var(--flame);"><use href="#logo-mark"/></svg>
+          web-ai-sdk · docs
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── 05 ASSETS ───── -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-num">05 / kit</div>
+      <h2 class="sec-title">Copy-paste kit
+        <small>Drop these into any project. Self-contained, no dependencies beyond the Google Fonts link.</small>
+      </h2>
+    </div>
+
+    <div class="col2">
+
+      <pre class="code"><span class="c-com">/* Tokens — drop into :root */</span>
+<span class="c-key">--ink</span>:      #0C0A09;   <span class="c-com">/* page bg */</span>
+<span class="c-key">--ink-2</span>:    #14110F;   <span class="c-com">/* card */</span>
+<span class="c-key">--ink-3</span>:    #1F1A17;   <span class="c-com">/* input / elevated */</span>
+<span class="c-key">--rule</span>:     #2A231E;
+<span class="c-key">--paper</span>:    #EDE6DA;   <span class="c-com">/* primary text */</span>
+<span class="c-key">--paper-2</span>:  #C9C0B1;   <span class="c-com">/* secondary text */</span>
+<span class="c-key">--muted</span>:    #8A8175;   <span class="c-com">/* meta / tertiary */</span>
+<span class="c-key">--flame</span>:    #F26B3B;   <span class="c-com">/* signature accent */</span>
+<span class="c-key">--flame-hi</span>: #FF8456;
+<span class="c-key">--flame-lo</span>: #B94A22;
+
+<span class="c-key">--sans</span>: <span class="c-str">"Geist"</span>, ui-sans-serif, system-ui, -apple-system, sans-serif;
+<span class="c-key">--mono</span>: <span class="c-str">"Geist Mono"</span>, <span class="c-str">"JetBrains Mono"</span>, ui-monospace, Menlo, monospace;</pre>
+
+      <pre class="code"><span class="c-com">&lt;!-- Google Fonts --&gt;</span>
+&lt;<span class="c-key">link</span> href=<span class="c-str">"https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap"</span> rel=<span class="c-str">"stylesheet"</span>&gt;</pre>
+
+      <pre class="code"><span class="c-com">&lt;!-- Favicon (inline SVG, self-contained) --&gt;</span>
+&lt;<span class="c-key">link</span> rel=<span class="c-str">"icon"</span> type=<span class="c-str">"image/svg+xml"</span> href=<span class="c-str">'data:image/svg+xml;utf8,&lt;svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 64"&gt;&lt;rect width="96" height="64" rx="14" fill="%230C0A09"/&gt;&lt;path d="M22 27 L14 38 L22 49" fill="none" stroke="%23EDE6DA" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/&gt;&lt;circle cx="45" cy="38" r="11" fill="none" stroke="%23EDE6DA" stroke-width="5"/&gt;&lt;line x1="56" y1="27" x2="56" y2="49" stroke="%23EDE6DA" stroke-width="5" stroke-linecap="round"/&gt;&lt;circle cx="56" cy="18" r="3.8" fill="%23F26B3B"/&gt;&lt;path d="M68 27 L76 38 L68 49" fill="none" stroke="%23EDE6DA" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/&gt;&lt;/svg&gt;'</span>/&gt;</pre>
+
+      <pre class="code"><span class="c-com">&lt;!-- Logo SVG, standalone --&gt;</span>
+&lt;<span class="c-key">svg</span> xmlns=<span class="c-str">"http://www.w3.org/2000/svg"</span> viewBox=<span class="c-str">"0 0 96 64"</span> width=<span class="c-str">"96"</span> height=<span class="c-str">"64"</span>&gt;
+  &lt;<span class="c-key">rect</span> width=<span class="c-str">"96"</span> height=<span class="c-str">"64"</span> rx=<span class="c-str">"14"</span> fill=<span class="c-str">"#0C0A09"</span>/&gt;
+  &lt;<span class="c-key">path</span> d=<span class="c-str">"M22 27 L14 38 L22 49"</span> fill=<span class="c-str">"none"</span> stroke=<span class="c-str">"#EDE6DA"</span> stroke-width=<span class="c-str">"5"</span> stroke-linecap=<span class="c-str">"round"</span> stroke-linejoin=<span class="c-str">"round"</span>/&gt;
+  &lt;<span class="c-key">circle</span> cx=<span class="c-str">"45"</span> cy=<span class="c-str">"38"</span> r=<span class="c-str">"11"</span> fill=<span class="c-str">"none"</span> stroke=<span class="c-str">"#EDE6DA"</span> stroke-width=<span class="c-str">"5"</span>/&gt;
+  &lt;<span class="c-key">line</span> x1=<span class="c-str">"56"</span> y1=<span class="c-str">"27"</span> x2=<span class="c-str">"56"</span> y2=<span class="c-str">"49"</span> stroke=<span class="c-str">"#EDE6DA"</span> stroke-width=<span class="c-str">"5"</span> stroke-linecap=<span class="c-str">"round"</span>/&gt;
+  &lt;<span class="c-key">circle</span> cx=<span class="c-str">"56"</span> cy=<span class="c-str">"18"</span> r=<span class="c-str">"3.8"</span> fill=<span class="c-str">"#F26B3B"</span>/&gt;
+  &lt;<span class="c-key">path</span> d=<span class="c-str">"M68 27 L76 38 L68 49"</span> fill=<span class="c-str">"none"</span> stroke=<span class="c-str">"#EDE6DA"</span> stroke-width=<span class="c-str">"5"</span> stroke-linecap=<span class="c-str">"round"</span> stroke-linejoin=<span class="c-str">"round"</span>/&gt;
+&lt;/<span class="c-key">svg</span>&gt;</pre>
+
+      <pre class="code"><span class="c-com">&lt;!-- Wordmark in HTML (the primary lockup) --&gt;</span>
+&lt;<span class="c-key">h1</span> style=<span class="c-str">"font-family:'Geist Mono',monospace; font-weight:500; letter-spacing:-0.02em; color:#EDE6DA;"</span>&gt;
+  web-ai-sdk&lt;<span class="c-key">span</span> style=<span class="c-str">"display:inline-block;width:.55ch;height:.92em;background:#F26B3B;vertical-align:-.08em;margin-left:.04em;"</span>&gt;&lt;/<span class="c-key">span</span>&gt;
+&lt;/<span class="c-key">h1</span>&gt;</pre>
+
+    </div>
+  </section>
+
+  <footer>
+    <div>web-ai-sdk · visual identity v0.3</div>
+    <div>built for export</div>
+  </footer>
+
+</div>
+
+</body>
+</html>

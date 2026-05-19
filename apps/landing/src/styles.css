@@ -1,35 +1,36 @@
 /* web-ai-sdk landing; tokens + base styles */
 
 :root {
-  /* Surface tones; layered near-blacks, not pure #000 */
-  --bg: #0a0a0c;
-  --surface: #131316;
-  --surface-2: #1a1a1f;
-  --surface-3: #22222a;
-  --hairline: #26262c;
-  --hairline-2: #2e2e36;
+  /* Surfaces; warm near-blacks per the brand identity (see
+     apps/docs/internal/visual-identity.html). */
+  --bg: #0c0a09;
+  --surface: #14110f;
+  --surface-2: #1f1a17;
+  --surface-3: #2a231e;
+  --hairline: #2a231e;
+  --hairline-2: #3a302a;
 
-  /* Text */
-  --fg: #ededf0;
-  --fg-2: #b8b8c1;
-  --fg-3: #8a8a94;
-  --fg-4: #5a5a64;
+  /* Text; warm cream */
+  --fg: #ede6da;
+  --fg-2: #c9c0b1;
+  --fg-3: #8a8175;
+  --fg-4: #5e574e;
 
-  /* Accent; cinnabar tomato in oklch */
-  --accent: oklch(0.68 0.18 35);
-  --accent-bright: oklch(0.74 0.20 35);
-  --accent-dim: oklch(0.55 0.15 35);
-  --accent-soft: oklch(0.68 0.18 35 / 0.12);
-  --accent-line: oklch(0.68 0.18 35 / 0.45);
+  /* Accent; signature flame */
+  --accent: #f26b3b;
+  --accent-bright: #ff8456;
+  --accent-dim: #b94a22;
+  --accent-soft: rgba(242, 107, 59, 0.12);
+  --accent-line: rgba(242, 107, 59, 0.45);
 
-  /* Semantic */
+  /* Semantic; kept in oklch since they aren't part of the brand palette */
   --ok: oklch(0.74 0.13 150);
   --warn: oklch(0.78 0.13 80);
   --err: oklch(0.65 0.20 25);
 
-  /* Type */
+  /* Type; Geist Mono is the brand canon — it carries the wordmark, code, and headlines */
   --sans: "Geist", "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --mono: "JetBrains Mono", "Fira Code", ui-monospace, "SF Mono", Menlo, monospace;
+  --mono: "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   /* Geometry */
   --r-sm: 6px;
@@ -86,6 +87,38 @@ body::before {
   background-image:
     radial-gradient(1200px 600px at 50% -10%, oklch(0.68 0.18 35 / 0.08), transparent 60%),
     radial-gradient(800px 400px at 90% 10%, oklch(0.68 0.18 35 / 0.04), transparent 60%);
+}
+
+/* Page-background watermark. The brand mark, rendered in a tone-on-tone
+   barely darker than --bg — close enough that the mark reads as a slight
+   inset/shadow rather than a logo. Anchored bottom-right of the viewport
+   (fixed so it stays put across scroll), with a small bleed off both
+   edges so the mark feels attached to the corner from outside the frame.
+   Pure aesthetics; pointer-events off so it never intercepts clicks. */
+.brand-watermark {
+  position: fixed;
+  right: -3vw;
+  bottom: -3vh;
+  width: clamp(360px, 48vw, 720px);
+  height: auto;
+  /* Two-knob subtlety control: tone-on-tone color a hair darker than
+     --bg, plus an opacity multiplier so it fades against any ambient
+     gradient on body::before. Tune `opacity` to taste — 0.5 sits in
+     "barely noticeable" territory; drop to ~0.3 if it still reads as
+     a logo, raise to ~0.7 if it vanishes entirely on bright displays. */
+  color: #080706;
+  /* Override the canonical flame dot — at watermark scale + low contrast,
+     the saturated orange is the one pixel that still reads as "logo".
+     Forcing it to currentColor folds the dot into the same near-black
+     wash as the strokes, so the entire mark recedes uniformly. */
+  --brand-mark-accent: currentColor;
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+@media (max-width: 760px) {
+  .brand-watermark { display: none; }
 }
 
 /* ---------- Layout primitives ---------- */
