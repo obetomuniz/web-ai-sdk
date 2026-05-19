@@ -91,7 +91,7 @@ export const App = () => (
             </svg>
             View on GitHub
           </a>
-          <InstallPill pkg="web-ai-sdk" />
+          <InstallPill pkg="@web-ai-sdk/all" />
         </div>
 
         <div className="badge-row">
@@ -750,7 +750,7 @@ export const App = () => (
             <code>@web-ai-sdk/*</code> packages. Ships ESM, CJS, and types.
             Tree-shakable.
           </p>
-          <InstallPill pkg="web-ai-sdk" />
+          <InstallPill pkg="@web-ai-sdk/all" />
           <div className="links">
             <a className="link" href={DOCS_URL}>
               Read the docs <span>↗</span>

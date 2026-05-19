@@ -1,4 +1,4 @@
-# web-ai-sdk
+# @web-ai-sdk/all
 
 One-install meta-package for every `@web-ai-sdk/*` building block: `prompt`, `summarizer`, `translator`, `detector`, and `webmcp`. Pulls each scoped package in as a regular dependency so consumers don't have to track them individually.
 
@@ -15,8 +15,8 @@ Each underlying scoped package is independently supported in Chrome / Edge with 
 ## Install
 
 ```sh
-pnpm add web-ai-sdk
-# or: npm i web-ai-sdk / bun add web-ai-sdk
+pnpm add @web-ai-sdk/all
+# or: npm i @web-ai-sdk/all / bun add @web-ai-sdk/all
 ```
 
 `react` is a peer dependency only when you import any `/react` subpath.
@@ -28,22 +28,22 @@ pnpm add web-ai-sdk
 Tree-shakes cleanly; the bundler only pulls in the building blocks you actually use.
 
 ```ts
-import { prompt } from "web-ai-sdk/prompt";
-import { summarize } from "web-ai-sdk/summarizer";
-import { translate } from "web-ai-sdk/translator";
-import { detect } from "web-ai-sdk/detector";
-import { registerTool } from "web-ai-sdk/webmcp";
+import { prompt } from "@web-ai-sdk/all/prompt";
+import { summarize } from "@web-ai-sdk/all/summarizer";
+import { translate } from "@web-ai-sdk/all/translator";
+import { detect } from "@web-ai-sdk/all/detector";
+import { registerTool } from "@web-ai-sdk/all/webmcp";
 ```
 
 ```tsx
-import { usePrompt } from "web-ai-sdk/prompt/react";
-import { useSummarizer } from "web-ai-sdk/summarizer/react";
+import { usePrompt } from "@web-ai-sdk/all/prompt/react";
+import { useSummarizer } from "@web-ai-sdk/all/summarizer/react";
 ```
 
 ### Namespaced root (handy for prototyping)
 
 ```ts
-import { prompt, summarizer, translator, detector, webmcp } from "web-ai-sdk";
+import { prompt, summarizer, translator, detector, webmcp } from "@web-ai-sdk/all";
 
 await prompt.prompt({ prompt: "Hello" });
 await summarizer.summarize({ language: "en", article: document.body });
