@@ -17,6 +17,7 @@ For human-facing context see the root [`README.md`](./README.md) and [`CONTRIBUT
 | `@web-ai-sdk/summarizer`| `Summarizer` (Web Built-in AI Summarizer API)       | Ported     |
 | `@web-ai-sdk/prompt`    | `LanguageModel` (Web Built-in AI Prompt API)        | New        |
 | `@web-ai-sdk/detector`  | `LanguageDetector` (Web Built-in AI Language Detection API) | New |
+| `web-ai-sdk`            | meta-package; re-exports the five above under one install | New     |
 
 Two private workspace apps live under `apps/`: `apps/docs` (Astro Starlight docs site with live React demos) and `apps/landing` (the marketing/demo site). Run `pnpm docs` or `pnpm landing` after `pnpm build`.
 
@@ -62,7 +63,8 @@ Lifecycle layer on purpose. Each package only manages session lifetime, cleanup,
 │   ├── translator/               # same shape; adds serialize.ts for DOM block walking
 │   ├── summarizer/               # same shape; adds skeleton.ts + cache.ts
 │   ├── prompt/                   # same shape; adds api.ts + cache.ts
-│   └── detector/                 # same shape; adds api.ts + cache.ts
+│   ├── detector/                 # same shape; adds api.ts + cache.ts
+│   └── sdk/                      # web-ai-sdk meta-package; re-exports the five above
 ├── apps/
 │   ├── docs/                     # Astro Starlight docs site
 │   └── landing/                  # Vite + React marketing landing

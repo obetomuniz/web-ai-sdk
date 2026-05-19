@@ -1,0 +1,131 @@
+{
+  "name": "web-ai-sdk",
+  "version": "0.1.1",
+  "description": "Meta-package for the @web-ai-sdk/* building blocks: install once, use the prompt, summarizer, translator, detector, and webmcp wrappers under one roof.",
+  "license": "MIT",
+  "author": "Beto Muniz",
+  "homepage": "https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/sdk#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/obetomuniz/web-ai-sdk.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/obetomuniz/web-ai-sdk/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "type": "module",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./prompt": {
+      "types": "./dist/prompt.d.ts",
+      "import": "./dist/prompt.js",
+      "require": "./dist/prompt.cjs"
+    },
+    "./prompt/react": {
+      "types": "./dist/react/prompt.d.ts",
+      "import": "./dist/react/prompt.js",
+      "require": "./dist/react/prompt.cjs"
+    },
+    "./webmcp": {
+      "types": "./dist/webmcp.d.ts",
+      "import": "./dist/webmcp.js",
+      "require": "./dist/webmcp.cjs"
+    },
+    "./webmcp/react": {
+      "types": "./dist/react/webmcp.d.ts",
+      "import": "./dist/react/webmcp.js",
+      "require": "./dist/react/webmcp.cjs"
+    },
+    "./summarizer": {
+      "types": "./dist/summarizer.d.ts",
+      "import": "./dist/summarizer.js",
+      "require": "./dist/summarizer.cjs"
+    },
+    "./summarizer/react": {
+      "types": "./dist/react/summarizer.d.ts",
+      "import": "./dist/react/summarizer.js",
+      "require": "./dist/react/summarizer.cjs"
+    },
+    "./translator": {
+      "types": "./dist/translator.d.ts",
+      "import": "./dist/translator.js",
+      "require": "./dist/translator.cjs"
+    },
+    "./translator/react": {
+      "types": "./dist/react/translator.d.ts",
+      "import": "./dist/react/translator.js",
+      "require": "./dist/react/translator.cjs"
+    },
+    "./detector": {
+      "types": "./dist/detector.d.ts",
+      "import": "./dist/detector.js",
+      "require": "./dist/detector.cjs"
+    },
+    "./detector/react": {
+      "types": "./dist/react/detector.d.ts",
+      "import": "./dist/react/detector.js",
+      "require": "./dist/react/detector.cjs"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@web-ai-sdk/prompt": "workspace:*",
+    "@web-ai-sdk/webmcp": "workspace:*",
+    "@web-ai-sdk/summarizer": "workspace:*",
+    "@web-ai-sdk/translator": "workspace:*",
+    "@web-ai-sdk/detector": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16",
+    "@types/react": "^19.0.1",
+    "happy-dom": "^15.11.7",
+    "react": "^19.0.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "keywords": [
+    "chrome",
+    "built-in-ai",
+    "web-ai",
+    "prompt",
+    "summarizer",
+    "translator",
+    "language-detector",
+    "webmcp",
+    "gemini-nano",
+    "meta-package",
+    "react"
+  ]
+}
