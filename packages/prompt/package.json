@@ -14,7 +14,8 @@
     "url": "https://github.com/obetomuniz/web-ai-sdk/issues"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   },
   "type": "module",
   "files": [

@@ -24,7 +24,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # .nvmrc pins Node 24, which ships npm 11+ (required for npm
+          # Trusted Publishing / OIDC).
+          node-version-file: .nvmrc
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
@@ -34,6 +36,13 @@ jobs:
 
       # Opens a "Version Packages" PR while changesets are pending.
       # When that PR is merged, runs `pnpm release` to publish to npm.
+      #
+      # Auth: npm Trusted Publishing (OIDC). No NPM_TOKEN secret.
+      # Each package must have a Trusted Publisher configured at
+      #   https://www.npmjs.com/package/@web-ai-sdk/<name>/access
+      # pointing at this repo + workflow filename (release.yml).
+      # The `id-token: write` permission above lets the npm CLI mint
+      # a short-lived registry token from the GitHub OIDC token.
       - uses: changesets/action@v1
         with:
           publish: pnpm release
@@ -42,4 +51,3 @@ jobs:
           title: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -9,6 +9,10 @@ _site/
 .DS_Store
 .env
 .env.local
+
+# Sub-package / sub-app npmrc files (the root .npmrc is intentionally tracked for pnpm config; never commit auth tokens).
+packages/*/.npmrc
+apps/*/.npmrc
 .vscode/
 .idea/
 # Claude Code session artifacts (screenshots, launch config) but keep skills.
