@@ -2,7 +2,16 @@
   "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [],
+  "fixed": [
+    [
+      "web-ai-sdk",
+      "@web-ai-sdk/prompt",
+      "@web-ai-sdk/webmcp",
+      "@web-ai-sdk/summarizer",
+      "@web-ai-sdk/translator",
+      "@web-ai-sdk/detector"
+    ]
+  ],
   "linked": [],
   "access": "public",
   "baseBranch": "main",
