@@ -1,0 +1,65 @@
+---
+title: WebMCP
+description: Register agent-callable tools on the W3C WebMCP surface (navigator.modelContext) with AbortSignal-based cleanup.
+---
+
+Building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `navigator.modelContext`. Register agent-callable tools from any framework; the package is vanilla TypeScript / DOM with an optional React adapter shipped as a subpath export. See [useWebMCP](../react/use-web-mcp/) for React.
+
+## Usage
+
+```ts
+import { registerTool, registerTools } from "@web-ai-sdk/webmcp";
+
+const cleanup = registerTool({
+  name: "add_to_cart",
+  description: "Add a SKU to the user's cart",
+  execute: async (input) => ({ ok: true, ...input }),
+});
+
+// Later, when the tool should no longer be exposed:
+cleanup();
+```
+
+Pass an array to `registerTools` to register many at once with a single cleanup.
+
+## How it works
+
+Chrome's `navigator.modelContext.registerTool({...}, { signal })` is the spec entry point. The wrapper sits on top with three quality-of-life additions:
+
+- **Feature detection.** On browsers without `navigator.modelContext`, every entry point is a no-op so consumer code ships unchanged. `isWebMCPAvailable()` returns `false`.
+- **Last-writer-wins on duplicate names.** React effect cleanup is asynchronous; a fast re-render can attempt to register `"foo"` before Chrome processed the prior `abort()`. The wrapper detects the resulting duplicate-name error, queues a microtask retry, and tracks ownership so a stale registration can't squat the name.
+- **One AbortController per call.** `registerTool` and `registerTools` both return a single cleanup function that aborts the underlying controller, unregistering every tool registered in that call atomically.
+
+## Annotations
+
+Annotations communicate intent to the agent. WebMCP exposes shorthand flags (`readOnly`, `destructive`) plus a raw `annotations` passthrough that merges on top:
+
+```ts
+registerTool({
+  name: "delete_account",
+  description: "Permanently delete the user account",
+  destructive: true, // → annotations.destructiveHint
+  annotations: {
+    idempotentHint: false,
+    openWorldHint: true,
+  },
+  execute: () => { /* ... */ },
+});
+```
+
+Shorthand flags map to the spec hints (`readOnlyHint`, `destructiveHint`); pass `annotations` directly when you need `idempotentHint` or `openWorldHint`.
+
+## Errors and unavailability
+
+The wrapper never throws on missing API; it's a no-op. The vanilla functions return a no-op cleanup, so consumer code stays declarative:
+
+```ts
+import { registerTool, isWebMCPAvailable } from "@web-ai-sdk/webmcp";
+
+if (!isWebMCPAvailable()) {
+  console.log("WebMCP not available; tools will not be exposed to agents.");
+  return;
+}
+
+registerTool({ ... });
+```

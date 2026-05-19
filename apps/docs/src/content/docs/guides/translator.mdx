@@ -1,0 +1,65 @@
+---
+title: Translator
+description: Building block for the Web's Built-in Translator with block-level DOM round-trip, casing restoration, and snapshot-based restore.
+---
+
+Building block for the Web's Built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api) (on-demand language packs). Block-level translation with inline placeholder serialization, casing restoration, and a snapshot-based restore. See [useTranslator](../react/use-translator/) for React.
+
+## Usage
+
+```ts
+import { translate } from "@web-ai-sdk/translator";
+
+const controller = translate({
+  sourceLanguage: "en",
+  targetLanguage: "pt",
+  roots: "[data-translate-root]",
+  onProgress: (event) => console.log(event),
+});
+
+const { blocksTranslated } = await controller.done;
+console.log(`Translated ${blocksTranslated} blocks.`);
+
+// To roll back:
+controller.restore();
+```
+
+`translate()` returns a controller synchronously. Await `controller.done` for completion; call `controller.cancel()` to abort or `controller.restore()` to snap every translated block back to its original children.
+
+## How it works
+
+The translator walks each root (default `[data-translate-root]`), finds block-level elements (default selector covers `p, h1-h6, li, blockquote, figcaption, dt, dd, summary`), and serializes their children into a single token string. Inline elements like `<a>`, `<strong>`, `<code>` become opaque placeholders that round-trip through the model without being translated.
+
+After the model returns translated text, the wrapper rebuilds the block: re-inserts the placeholders, restores their original markup, and applies casing rules so the translated text matches the source's capitalization pattern.
+
+A snapshot of each block's original children is kept in memory; `controller.restore()` swaps them back in. Calling `restore()` twice on the same block is a no-op.
+
+## Block-level vs string-level
+
+The wrapper is block-level by design. For a one-shot string translation, use `getOrCreateTranslator(api, opts)` directly:
+
+```ts
+import { getOrCreateTranslator, getTranslatorApi } from "@web-ai-sdk/translator";
+
+const api = getTranslatorApi();
+if (!api) return; // unavailable
+
+const translator = await getOrCreateTranslator(api, {
+  sourceLanguage: "en",
+  targetLanguage: "pt",
+});
+
+const output = await translator.translate("Hello, world.");
+```
+
+Sessions are cached per `(sourceLanguage, targetLanguage)` pair, so switching back and forth is instant.
+
+## Untranslatable tokens
+
+Some content shouldn't be translated: emoji, URLs, numbers, single-letter words. The wrapper detects standalone tokens of this kind and skips the block (`onProgress: { phase: "block-skipped", reason: "untranslatable-token" }`). Override via `opaqueInlineTags` to add tags that should be kept verbatim.
+
+## Errors and unavailability
+
+The translator is feature-detected. On browsers without `Translator`, `translate()` returns a controller whose `done` resolves immediately with `{ blocksTranslated: 0 }`; no error is thrown. Branch on `isTranslatorAvailable()` if you want to render a fallback explicitly.
+
+`controller.cancel()` is supported at any time. Cancelling mid-translation throws `AbortError` from `controller.done`.

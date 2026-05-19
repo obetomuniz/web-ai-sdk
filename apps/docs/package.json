@@ -1,0 +1,32 @@
+{
+  "name": "@web-ai-sdk-apps/docs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Documentation site for web-ai-sdk (Astro + Starlight)",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --port 6006",
+    "build": "astro build",
+    "preview": "astro preview --port 4174",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/react": "^4.2.0",
+    "@astrojs/starlight": "^0.30.0",
+    "@web-ai-sdk/detector": "workspace:*",
+    "@web-ai-sdk/prompt": "workspace:*",
+    "@web-ai-sdk/summarizer": "workspace:*",
+    "@web-ai-sdk/translator": "workspace:*",
+    "@web-ai-sdk/webmcp": "workspace:*",
+    "astro": "^5.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@types/react": "^19.0.1",
+    "@types/react-dom": "^19.0.2",
+    "typescript": "^5.7.2"
+  }
+}

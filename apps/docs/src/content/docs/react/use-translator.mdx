@@ -1,0 +1,61 @@
+---
+title: useTranslator
+description: React adapter for @web-ai-sdk/translator. Translates on mount, restores on unmount, with a controller exposing cancel + restore.
+---
+
+import { TranslatorDemo } from "../../../components/TranslatorDemo.tsx";
+
+React adapter for `@web-ai-sdk/translator`. Translates the provided roots on mount, restores them on unmount, and exposes a controller for imperative cancel / restore. For the conceptual overview see [Translator](../guides/translator/).
+
+## Live demo
+
+<TranslatorDemo client:only="react" />
+
+Pick a source and target language; the demo translates the marked-up content in place and lets you restore the original.
+
+## Usage
+
+```tsx
+import { useTranslator } from "@web-ai-sdk/translator/react";
+
+export function TranslatedPage({ sourceLanguage }: { sourceLanguage: string }) {
+  const { status, error, restore } = useTranslator({
+    sourceLanguage,
+    targetLanguage: "en",
+    roots: "[data-translate-root]",
+  });
+
+  if (status === "unavailable") return <p>Translator not available.</p>;
+
+  return (
+    <>
+      {status === "done" && <button onClick={restore}>Restore original</button>}
+      {error && <small>{error.message}</small>}
+    </>
+  );
+}
+```
+
+The hook is opinionated: it kicks off translation as soon as it has the inputs it needs (`sourceLanguage` set, `targetLanguage` set, roots resolvable). For more imperative use cases, call the vanilla `translate()` directly.
+
+## State machine
+
+```
+pending ───► loading ───► translating ───► done
+                                            │
+unavailable ◄── (no API / same source+target)
+```
+
+- **`pending`**: hook mounted, missing inputs.
+- **`loading`**: warming the `Translator.create()` session.
+- **`translating`**: walking blocks and substituting children.
+- **`done`**: all blocks processed. `restore()` rolls everything back.
+- **`unavailable`**: API missing, or source equals target (no-op).
+
+## Restoring
+
+`restore()` swaps every translated block back to its original children (snapshots are kept in memory). Calling it twice is a no-op. The hook also auto-restores on unmount so unmounting the component returns the page to its untranslated state.
+
+## Errors and unavailability
+
+On browsers without `Translator`, the hook returns `status: "unavailable"` and never invokes the model. Render whatever fallback UI you want.

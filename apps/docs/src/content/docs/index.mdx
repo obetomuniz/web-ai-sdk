@@ -1,0 +1,62 @@
+---
+title: web-ai-sdk
+description: Building blocks for the Web's built-in AI APIs. Lifecycle, streaming, AbortSignals. Vanilla TypeScript by default, with optional React hooks.
+template: splash
+hero:
+  tagline: Building blocks for the Web's built-in AI APIs. Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals.
+  actions:
+    - text: Browser support
+      link: ./browser-support/
+      icon: right-arrow
+    - text: Guides → Prompt
+      link: ./guides/prompt/
+      variant: minimal
+    - text: GitHub
+      link: https://github.com/obetomuniz/web-ai-sdk
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+## Composable wrappers. One philosophy.
+
+<CardGrid>
+  <Card title="@web-ai-sdk/prompt" icon="seti:typescript">
+    Talk to the on-device language model. Sessions, streaming, AbortSignals.
+    [Read the guide →](./guides/prompt/)
+  </Card>
+  <Card title="@web-ai-sdk/webmcp" icon="puzzle">
+    Register tools the browser's model context can call. Real agents, real
+    cleanup, no boilerplate. [Read the guide →](./guides/webmcp/)
+  </Card>
+  <Card title="@web-ai-sdk/summarizer" icon="document">
+    Key-points, TL;DR, headlines. Configurable type and length, streaming.
+    [Read the guide →](./guides/summarizer/)
+  </Card>
+  <Card title="@web-ai-sdk/translator" icon="translate">
+    Pair-based translation with block-level round-trip. Walks the DOM, swaps
+    text, keeps markup intact. [Read the guide →](./guides/translator/)
+  </Card>
+  <Card title="@web-ai-sdk/detector" icon="magnifier">
+    Detect the language of any text on-device. Confidence scores plus a sorted
+    list of alternates. [Read the guide →](./guides/detector/)
+  </Card>
+</CardGrid>
+
+## Install
+
+```sh
+pnpm add @web-ai-sdk/prompt        # or any of the others
+```
+
+Each package ships:
+
+- **Vanilla** (`@web-ai-sdk/<pkg>`); TypeScript / DOM only, zero framework deps.
+- **React** (`@web-ai-sdk/<pkg>/react`); small hook adapter that wraps the vanilla core. `react` is an optional peer dependency.
+
+## Why composable
+
+Browsers are shipping built-in AI APIs behind flags. The shape changes; the lifecycle is similar across them: feature-detect, lazily create a session, stream chunks, cache results, clean up. Those concerns are framework-agnostic and worth sharing.
+
+We ship that lifecycle layer. Framework adapters, polyfills, UI primitives stay optional subpaths so they don't constrain your design system, framework, or styling stack. Pick the layers you need; skip the rest.

@@ -1,0 +1,75 @@
+{
+  "name": "@web-ai-sdk/summarizer",
+  "version": "0.0.0",
+  "description": "Building block for the Web's Built-in Summarizer API",
+  "license": "MIT",
+  "author": "Beto Muniz",
+  "homepage": "https://github.com/obetomuniz/web-ai-sdk-kit/tree/main/packages/summarizer#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/obetomuniz/web-ai-sdk.git",
+    "directory": "packages/summarizer"
+  },
+  "bugs": {
+    "url": "https://github.com/obetomuniz/web-ai-sdk-kit/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js",
+      "require": "./dist/react/index.cjs"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16",
+    "@types/react": "^19.0.1",
+    "happy-dom": "^15.11.7",
+    "react": "^19.0.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "keywords": [
+    "chrome",
+    "built-in-ai",
+    "summarizer",
+    "tldr",
+    "gemini-nano",
+    "web-ai",
+    "building-block",
+    "react"
+  ]
+}

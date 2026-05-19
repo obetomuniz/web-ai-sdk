@@ -1,0 +1,78 @@
+---
+title: usePrompt
+description: React adapter for @web-ai-sdk/prompt with an idle / loading / streaming / done state machine, abort + reset controls.
+---
+
+import { PromptDemo } from "../../../components/PromptDemo.tsx";
+
+React adapter for `@web-ai-sdk/prompt`. Runs single-shot prompts on demand via `ask(input)` and exposes status, streaming response text, and abort / reset controls. For the conceptual overview of the underlying API see [Prompt](../guides/prompt/).
+
+## Live demo
+
+<PromptDemo client:only="react" />
+
+Type a question and click "Ask". Tokens stream in as the model produces them. Click "Cancel" to abort mid-stream.
+
+## Usage
+
+```tsx
+import { usePrompt } from "@web-ai-sdk/prompt/react";
+
+export function AskBox() {
+  const { status, response, error, ask, abort } = usePrompt({
+    systemPrompt: "You are a helpful assistant. Be concise.",
+    temperature: 0.7,
+  });
+
+  if (status === "unavailable") return null;
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const input = new FormData(e.currentTarget).get("q") as string;
+        if (input) ask(input);
+      }}
+    >
+      <input name="q" placeholder="Ask anything" />
+      <button type="submit" disabled={status === "loading" || status === "streaming"}>
+        {status === "streaming" ? "Streaming…" : "Ask"}
+      </button>
+      {response && <p>{response}</p>}
+      {error && <small>{error.message}</small>}
+    </form>
+  );
+}
+```
+
+The hook doesn't auto-run on mount; you call `ask(input)` from a form submit, button click, or any event. Each call cancels any in-flight request and starts a fresh one.
+
+## State machine
+
+```
+idle ───► loading ───► streaming ───► done
+                                       │
+unavailable ◄─── (no flag / no model)  │
+                                       ▼
+                                    reset() / abort()
+```
+
+- **`idle`**: ready. Call `ask(input)` to start.
+- **`loading`**: warming the `LanguageModel.create()` session (~1-3s cold start).
+- **`streaming`**: chunks arriving. `response` grows on each chunk; render it directly for a typewriter effect.
+- **`done`**: final response in `response`. `fromCache` is `true` if the result came from the opt-in result cache (i.e. you passed `cache` and a prior call wrote to it).
+- **`unavailable`**: API missing. Render nothing or a fallback.
+
+`abort()` cancels the current request and flips status back to `idle`. `reset()` clears the response and returns to `idle` without touching any in-flight request.
+
+## Stable options
+
+Pass `cache`, `createOptions`, `expectedInputs`, etc. as stable references. The hook keeps the latest options in a ref so the `ask` callback stays stable across renders without restarting on every render.
+
+## Streaming UX
+
+`response` updates on every chunk during `streaming`. A naive `<p>{response}</p>` already produces a typewriter effect because React re-renders on each state change. If chunks arrive faster than you want to repaint, debounce on the consumer side.
+
+## Multi-turn
+
+`usePrompt` is single-shot per `ask()`. For multi-turn conversation (carrying prior turns into the next), use the vanilla `getOrCreateLanguageModel()` directly and call `session.prompt()` with an array of messages.

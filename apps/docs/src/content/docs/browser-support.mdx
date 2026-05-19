@@ -1,0 +1,36 @@
+---
+title: Browser support
+description: Where each web-ai-sdk package runs today, including Chrome and Edge specifics.
+---
+
+Built-in AI lands engine by engine. Where it isn't there yet, every package is a feature-detected no-op so your code doesn't crash; render whatever fallback UI you want.
+
+| Package | Chrome | Edge | Safari | Firefox |
+| --- | --- | --- | --- | --- |
+| `@web-ai-sdk/prompt` | 138+ · flag | 138+ · partial | no-op fallback | no-op fallback |
+| `@web-ai-sdk/summarizer` | 138+ · stable | 138+ · partial | no-op fallback | no-op fallback |
+| `@web-ai-sdk/translator` | 138+ · stable | 138+ · stable | no-op fallback | no-op fallback |
+| `@web-ai-sdk/detector` | 138+ · stable | 138+ · stable | no-op fallback | no-op fallback |
+| `@web-ai-sdk/webmcp` | 146+ · stable | 146+ · stable | no-op fallback | no-op fallback |
+
+Versions reflect when the underlying platform API became available. Wrapper exports stay stable across all browsers.
+
+## Edge specifics
+
+Edge ships the same JS API surface as Chrome but routes through Phi-4-mini (or Phi-Silica on Copilot+ PCs) with a stricter safety pipeline.
+
+- **Partial** means the JS API is present but the on-device model frequently refuses output. Summarizer often returns "low quality output blocked"; prompt may emit C0 control-character placeholders instead of text. The library handles both cases (strips C0/C1, normalizes streaming shape, wraps refusals in typed errors), but the model itself is the bottleneck.
+- Flag names differ: `edge://flags/` → search "Phi mini" instead of "Gemini Nano".
+- Hardware check: `edge://on-device-internals` requires "High" device performance class and all supplementary safety models ("GENERALIZED_SAFETY", "TEXT_SAFETY", "LANGUAGE_DETECTION") in "Ready" state.
+
+Tested on macOS; Windows behavior may differ.
+
+## Enabling on Chrome
+
+| Surface | Flag |
+| --- | --- |
+| Prompt API | `chrome://flags/#prompt-api-for-gemini-nano` |
+| WebMCP | `chrome://flags/#enable-webmcp-testing` |
+| Summarizer, Translator, Detector | Stable in Chrome 138+ |
+
+After enabling a flag, restart Chrome and wait for the on-device model to download (`chrome://on-device-internals`).

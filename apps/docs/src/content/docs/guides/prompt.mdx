@@ -1,0 +1,109 @@
+---
+title: Prompt
+description: Single-shot prompts on the Web's Built-in LanguageModel. System message, sampling controls, streaming, session reuse, pluggable result caching.
+---
+
+Building block for the Web's Built-in [Prompt API](https://developer.chrome.com/docs/extensions/ai/prompt-api) (`LanguageModel`). Single-shot prompts with system message, sampling controls, streaming, session reuse, and pluggable result caching.
+
+The package's [README](https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/prompt#readme) covers install and the API table. This page is the conceptual overview of the core (vanilla) surface. The React adapter lives at `@web-ai-sdk/prompt/react`; see [usePrompt](../react/use-prompt/).
+
+## Usage
+
+```ts
+import { prompt } from "@web-ai-sdk/prompt";
+
+const result = await prompt({
+  prompt: "Summarize this in one sentence: WebMCP lets pages expose tools to agents.",
+  systemPrompt: "You are concise. Reply with a single sentence.",
+  temperature: 0.2,
+  onChunk: (text) => render(text),
+});
+
+console.log(result.response, result.cached);
+```
+
+Pass `onChunk` to render partial text as it streams. `result.response` is the final cleaned text; `result.cached` tells you whether the response came back without invoking the model.
+
+## How it works
+
+Chrome's `LanguageModel` exposes `LanguageModel.create({...})` to spin up a session and `session.prompt(input)` / `session.promptStreaming(input)` to run it. The wrapper does three useful things on top:
+
+- **Feature detection.** `isPromptAvailable()` / `checkAvailability()` return `false` / `null` on browsers without the API. The vanilla `prompt()` throws `PromptUnavailableError`; the React hook surfaces `status: "unavailable"`.
+- **Session reuse.** Internally caches `LanguageModel.create()` by stringified create options. Cold start ≈ 1-3s; warm calls are sub-second. Cleared on full page reload.
+- **Optional result cache.** Off by default; every call hits the model. Pass `cache: createSessionStorageCache()` (or any `{ get, set }`-shaped object) to memoize responses by `(prompt, systemPrompt, temperature, topK)`. Swap the backend (e.g. `localStorage` for cross-tab persistence) via the `cache` option.
+
+## System prompt + sampling
+
+`systemPrompt` is folded into the session's `initialPrompts` as a `system` role. `temperature` and `topK` are passed through verbatim; when omitted, the model's defaults apply.
+
+```ts
+prompt({
+  prompt: "Tell me a joke about web standards.",
+  systemPrompt: "You are a stand-up comedian. Be punchy.",
+  temperature: 1.0,
+  topK: 8,
+});
+```
+
+## Language hints
+
+Chrome's Prompt API accepts `expectedInputs` / `expectedOutputs` with optional language arrays. The wrapper sets these automatically when you pass `language` and the language is in `supportedLanguages` (default: `["en"]`):
+
+```ts
+prompt({
+  prompt: "Explain CORS in two sentences.",
+  language: "en-US",
+});
+```
+
+For unsupported languages the hints are silently omitted; the model still runs, just without the hint.
+
+## Structured output
+
+Pass a JSON Schema via `responseConstraint` to constrain the model's output:
+
+```ts
+const result = await prompt({
+  prompt: "Extract the city and country from: 'I live in Belo Horizonte, Brazil.'",
+  responseConstraint: {
+    type: "object",
+    properties: {
+      city: { type: "string" },
+      country: { type: "string" },
+    },
+    required: ["city", "country"],
+  },
+});
+
+const parsed = JSON.parse(result.response ?? "{}");
+```
+
+The wrapper passes `responseConstraint` straight through to `session.prompt()` / `session.promptStreaming()`. Support depends on your Chrome version.
+
+## Aborting
+
+`AbortSignal` is supported. Aborting mid-stream resolves cleanly; an opt-in result cache is not written for aborted runs:
+
+```ts
+const controller = new AbortController();
+const promise = prompt({ prompt: "Long story…", signal: controller.signal });
+setTimeout(() => controller.abort(), 1000);
+```
+
+## Errors and unavailability
+
+The vanilla `prompt()` throws `PromptUnavailableError` when the API is missing or reports `availability: "unavailable"`. Callers branch explicitly:
+
+```ts
+import { prompt, PromptUnavailableError } from "@web-ai-sdk/prompt";
+
+try {
+  const result = await prompt({ prompt: "hi" });
+} catch (err) {
+  if (err instanceof PromptUnavailableError) {
+    // No Chrome flag, no model, or download blocked; fall back.
+    return;
+  }
+  throw err;
+}
+```

@@ -1,0 +1,63 @@
+---
+title: useSummarizer
+description: React adapter for @web-ai-sdk/summarizer. Auto-runs on mount and re-runs when inputs change.
+---
+
+import { SummarizerDemo } from "../../../components/SummarizerDemo.tsx";
+
+React adapter for `@web-ai-sdk/summarizer`. Auto-runs on mount, re-runs when `article` / `text` / `language` change, and streams chunks through state updates. For the conceptual overview see [Summarizer](../guides/summarizer/).
+
+## Live demo
+
+<SummarizerDemo client:only="react" />
+
+Pick a sample article or paste your own. The summary streams in as the model produces it.
+
+## Usage
+
+```tsx
+import { useSummarizer } from "@web-ai-sdk/summarizer/react";
+
+export function ArticleSummary({ article }: { article: HTMLElement | null }) {
+  const { status, summary } = useSummarizer({
+    language: "en",
+    article: article ?? undefined,
+    createOptions: { type: "key-points", length: "short" },
+  });
+
+  if (status === "unavailable") return null;
+  return <aside>{summary}</aside>;
+}
+```
+
+The hook auto-runs whenever its meaningful inputs change. Empty / undefined `article` keeps the hook in `"pending"` without invoking the model.
+
+## State machine
+
+```
+pending ───► loading ───► streaming ───► done
+                                          │
+unavailable ◄─── (no flag /  │
+                no model)    │
+                             ▼
+                          dismiss()
+```
+
+- **`pending`**: hook mounted, waiting for `article` to be defined.
+- **`loading`**: warming the `Summarizer.create()` session (~1-3s cold start).
+- **`streaming`**: chunks arriving. `result.summary` grows as they land; render it directly for a typewriter effect.
+- **`done`**: final summary in `result.summary`. `result.cached` is `true` if the response came from the opt-in result cache.
+- **`unavailable`**: API missing. Render nothing.
+
+## Caching tips
+
+The hook exposes the same two caches as the vanilla `summarize()`:
+
+- **Session cache** (in-memory, always on): warm sessions are reused across calls with the same `{ language, sharedContext, createOptions }`. Plan your inputs around these dimensions to keep cold-starts rare.
+- **Result cache** (opt-in): off by default; every call hits the model. Pass `cache: createSessionStorageCache()` for per-tab caching, `cache: createSessionStorageCache({ storage: localStorage })` to persist across tabs, or any `Map`-shaped object for in-memory-only.
+
+`result.cached` lets you render a "From cache" hint or skip a re-fetch loop entirely.
+
+## Streaming UX
+
+`result.summary` updates on every chunk during `streaming`. A naive `<p>{result.summary}</p>` already produces a typewriter effect because React re-renders on each state change. If chunks arrive faster than you want to repaint, debounce on the consumer side.

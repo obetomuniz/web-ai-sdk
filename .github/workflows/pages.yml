@@ -1,0 +1,86 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Only one Pages deploy at a time. Don't cancel in-flight runs so a rapid
+# main push doesn't kill an active deploy mid-upload.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Deploy target is parameterized so flipping between user/project Pages
+# (`/web-ai-sdk/`), org Pages (`/`), or a custom domain (`/`) is a one-line
+# change in GitHub UI rather than a code edit.
+#
+# Set a `SITE_BASE` repository variable at:
+#   Settings → Secrets and variables → Actions → Variables → New variable
+# Examples:
+#   - User/Project Pages (obetomuniz.github.io/web-ai-sdk/)  → `/web-ai-sdk/`
+#   - Org Pages (web-ai-sdk.github.io/)                       → `/`
+#   - Custom domain (web-ai-sdk.dev/)                         → `/`
+# The default below keeps the current obetomuniz/web-ai-sdk setup working
+# out of the box if the variable isn't set.
+#
+# Trailing slash is required.
+env:
+  SITE_BASE: ${{ vars.SITE_BASE || '/web-ai-sdk/' }}
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Build the packages first so the app workspaces can resolve
+      # @web-ai-sdk/* from dist (matches local `pnpm build && pnpm landing`).
+      - name: Build packages
+        run: pnpm build
+
+      - name: Build landing
+        run: pnpm --filter @web-ai-sdk-apps/landing build
+        env:
+          VITE_BASE: ${{ env.SITE_BASE }}
+
+      - name: Build docs
+        run: pnpm --filter @web-ai-sdk-apps/docs build
+        env:
+          DOCS_BASE: ${{ env.SITE_BASE }}docs/
+
+      # Combine the two builds into a single Pages artifact:
+      #   _site/         ← landing (root)
+      #   _site/docs/    ← Astro Starlight docs (under /docs/)
+      - name: Combine outputs
+        run: |
+          mkdir -p _site
+          cp -r apps/landing/dist/. _site/
+          mkdir -p _site/docs
+          cp -r apps/docs/dist/. _site/docs/
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

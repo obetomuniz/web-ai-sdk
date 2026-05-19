@@ -1,0 +1,97 @@
+---
+title: Summarizer
+description: Building block for the Web's Built-in Summarizer with skeleton extraction, session reuse, opt-in result caching, and streaming.
+---
+
+Building block for the Web's Built-in [Summarizer API](https://developer.chrome.com/docs/ai/summarizer-api). Skeleton extraction, sentence-boundary trim, streaming, and pluggable result caching. The React adapter lives at `@web-ai-sdk/summarizer/react`; see [useSummarizer](../react/use-summarizer/).
+
+## Usage
+
+```ts
+import { summarize } from "@web-ai-sdk/summarizer";
+
+const result = await summarize({
+  language: "en",
+  article: document.querySelector("article") ?? undefined,
+  createOptions: { type: "key-points", length: "short" },
+  onChunk: (text) => render(text),
+});
+
+console.log(result.summary, result.cached);
+```
+
+Pass `article` to let the wrapper extract a skeleton (title + description + every `h1-h4` and `<strong>` / `<b>` inside the article); or pass `text` directly to skip skeleton extraction. The input is trimmed to a sentence boundary (default cap: 3000 chars) so the model never sees half-cut sentences.
+
+## How it works
+
+1. **Build a skeleton.** For long posts the high-signal content drops the input from thousands of chars to a few hundred and produces a tighter summary. Falls back to the trimmed body when the skeleton is too thin (`minSkeletonChars`, default 200).
+2. **Trim to a sentence boundary.** So the model never sees a half-cut sentence (default cap: 3000 chars).
+3. **Cache `Summarizer.create()` sessions** by JSON-stringified options. First post pays the ~1-3s cold start; later same-config calls reuse the warm session.
+4. **Stream `summarizeStreaming()`** when the instance supports it, falling back to one-shot `summarize()`. Cleaned chunks are pushed to `onChunk` as they arrive.
+5. **Optionally cache the final summary** when you pass a `cache` (e.g. `createSessionStorageCache()`). Off by default; opt in for revisits in the same tab to render instantly.
+
+## Two caches, two purposes
+
+**Session cache** (internal, in-memory, always on): a `Map<stringifiedOptions, Summarizer>` so the second call with the same `{ language, sharedContext, createOptions }` reuses the warm `Summarizer.create()` session. Cold-start is ~1-3s; warm sessions are sub-second. Cleared on full page reload.
+
+**Result cache** (opt-in): off by default; every call hits the model. Pass a `cache` (anything matching `{ get, set }`) to memoize the final summary string by `cacheKey` (or a default key derived from the inputs).
+
+```ts
+import { summarize, createSessionStorageCache } from "@web-ai-sdk/summarizer";
+
+// Off by default; every call hits the model.
+summarize({ language: "en", article });
+
+// Per-tab caching via sessionStorage
+summarize({
+  language: "en",
+  article,
+  cache: createSessionStorageCache(),
+});
+
+// Persistent caching across tabs
+summarize({
+  language: "en",
+  article,
+  cache: createSessionStorageCache({ storage: localStorage, prefix: "post-summary:" }),
+});
+```
+
+`result.cached` tells you which path served the response, so you can render a "From cache" hint or skip a re-fetch.
+
+## Streaming
+
+When the underlying Summarizer instance exposes `summarizeStreaming()`, the library uses it and pushes cleaned chunks to `onChunk` as they arrive. Otherwise it falls back to one-shot `summarize()`. Either way, `result.summary` is the final cleaned text.
+
+## Language support beyond en/es/ja
+
+The Web's Built-in Summarizer (Chrome 138+, Edge 138+) only accepts `expectedInputLanguages` / `outputLanguage` for `["en", "es", "ja"]`. Pass any other language as `language: "pt"` and the library omits those hints. The model still runs, but you steer it via `sharedContext` instead:
+
+```ts
+summarize({
+  language: "pt",
+  article,
+  sharedContext: { pt: "Resuma o artigo em português em 2-3 frases curtas." },
+});
+```
+
+When Chrome adds more accepted languages, pass them explicitly via `supportedLanguages: ["en", "es", "ja", "pt"]` and the hints fire through.
+
+## Errors and unavailability
+
+The vanilla `summarize()` throws `SummarizerUnavailableError` when the API is missing. Callers branch explicitly:
+
+```ts
+import { summarize, SummarizerUnavailableError } from "@web-ai-sdk/summarizer";
+
+try {
+  const result = await summarize({ language: "en", article });
+} catch (err) {
+  if (err instanceof SummarizerUnavailableError) {
+    return;
+  }
+  throw err;
+}
+```
+
+`AbortSignal` is supported. Aborting mid-stream resolves cleanly; an opt-in result cache is not written for aborted runs.

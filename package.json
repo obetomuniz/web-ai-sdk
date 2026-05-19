@@ -1,0 +1,49 @@
+{
+  "name": "web-ai-sdk",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Building blocks for the Web's Built-in AI APIs",
+  "license": "MIT",
+  "author": "Beto Muniz",
+  "homepage": "https://github.com/obetomuniz/web-ai-sdk#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/obetomuniz/web-ai-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/obetomuniz/web-ai-sdk/issues"
+  },
+  "type": "module",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.19.1"
+  },
+  "scripts": {
+    "build": "pnpm --filter \"./packages/**\" -r run build",
+    "build:apps": "pnpm --filter \"./apps/**\" -r run build",
+    "dev": "pnpm --filter \"./packages/**\" -r --parallel run dev",
+    "docs": "pnpm --filter \"./apps/docs\" run dev",
+    "landing": "pnpm --filter \"./apps/landing\" run dev",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm --filter \"./packages/**\" -r run test",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm build && changeset publish",
+    "gate": "pnpm lint && pnpm build && pnpm typecheck && pnpm test",
+    "pages:clean": "rm -rf _site",
+    "pages:build:landing": "VITE_BASE=/ pnpm --filter @web-ai-sdk-apps/landing build",
+    "pages:build:docs": "DOCS_BASE=/docs/ pnpm --filter @web-ai-sdk-apps/docs build",
+    "pages:assemble": "mkdir -p _site && cp -R apps/landing/dist/. _site/ && mkdir -p _site/docs && cp -R apps/docs/dist/. _site/docs/",
+    "pages:build": "pnpm pages:clean && pnpm build && pnpm pages:build:landing && pnpm pages:build:docs && pnpm pages:assemble",
+    "pages:preview": "pnpm pages:build && pnpm dlx serve _site -p 4173"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@changesets/cli": "^2.27.10",
+    "typescript": "^5.7.2"
+  }
+}

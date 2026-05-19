@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>web-ai-sdk · building blocks for the Web's built-in AI</title>
+    <meta
+      name="description"
+      content="Building blocks for the Web's built-in AI APIs. Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals. Vanilla TypeScript by default, with optional React hooks."
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <script>
+      // Accent + density tokens. The host can override before the bundle loads.
+      window.__TWEAKS__ = { accent: "#ff5436", caretStyle: "bar", density: "tight" };
+      (function applyTweaks(t) {
+        const root = document.documentElement;
+        const accents = {
+          "#ff5436": { c: "oklch(0.68 0.18 35)", b: "oklch(0.74 0.20 35)", d: "oklch(0.55 0.15 35)" },
+          "#e8392b": { c: "oklch(0.65 0.20 28)", b: "oklch(0.72 0.22 28)", d: "oklch(0.52 0.16 28)" },
+          "#f37133": { c: "oklch(0.70 0.17 50)", b: "oklch(0.76 0.19 50)", d: "oklch(0.58 0.14 50)" },
+          "#e23e6d": { c: "oklch(0.68 0.20 0)", b: "oklch(0.74 0.22 0)", d: "oklch(0.55 0.16 0)" },
+        };
+        const a = accents[t.accent] || accents["#ff5436"];
+        root.style.setProperty("--accent", a.c);
+        root.style.setProperty("--accent-bright", a.b);
+        root.style.setProperty("--accent-dim", a.d);
+        root.style.setProperty("--accent-soft", a.c.replace(")", " / 0.12)"));
+        root.style.setProperty("--accent-line", a.c.replace(")", " / 0.45)"));
+        root.classList.toggle("density-tight", t.density === "tight");
+        root.classList.toggle("density-loose", t.density === "loose");
+        root.dataset.caret = t.caretStyle || "bar";
+      })(window.__TWEAKS__);
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

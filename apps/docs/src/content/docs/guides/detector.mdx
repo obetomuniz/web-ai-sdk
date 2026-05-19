@@ -1,0 +1,95 @@
+---
+title: Detector
+description: Building block for the Web's Built-in LanguageDetector with confidence thresholds, bias hints, and session reuse.
+---
+
+Building block for [the Web's Built-in Language Detector API](https://developer.chrome.com/docs/ai/language-detection). Detect the language of any text on-device, with confidence scores and a sorted list of alternates. Session reuse, opt-in result caching, AbortSignal-driven cleanup. See [useDetector](../react/use-detector/) for React.
+
+## Usage
+
+```ts
+import { detect } from "@web-ai-sdk/detector";
+
+const result = await detect({ text: "Olá, mundo" });
+console.log(result.language);   // → "pt"
+console.log(result.confidence); // → 0.98
+console.log(result.all);        // → [{ detectedLanguage, confidence }, ...]
+```
+
+`result.language` is the top candidate (BCP-47), or `null` for empty input or when the top confidence is below `minConfidence`. `result.all` is the full sorted list for callers that want to inspect alternates.
+
+## How it works
+
+Chrome's `LanguageDetector` exposes `LanguageDetector.create({...})` to spin up a session and `detector.detect(text)` to run it. The wrapper does the same three things on top that the other packages do:
+
+- **Feature detection.** `isDetectorAvailable()` / `checkAvailability()` return `false` / `null` on browsers without the API. The vanilla `detect()` throws `DetectorUnavailableError`; the React hook surfaces `status: "unavailable"`.
+- **Session reuse.** Internally caches `LanguageDetector.create()` by `expectedInputLanguages` shape. Cold-start is fast on this model (~100-300ms); warm calls are sub-50ms.
+- **Optional result cache.** Off by default. Pass `cache: createSessionStorageCache()` to memoize the full sorted list by trimmed input text.
+
+## Confidence threshold
+
+By default, `detect()` returns the highest-confidence candidate regardless of how confident the model actually is. For ambiguous input (single word, emoji-only, gibberish) the model may return `detectedLanguage: "und"` with low confidence. Set `minConfidence` to suppress these:
+
+```ts
+const result = await detect({ text: "??", minConfidence: 0.8 });
+// → { language: null, confidence: 0, all: [...] }
+```
+
+`result.all` still contains everything the model returned, so you can inspect it even when `result.language` is `null`.
+
+## Bias hints
+
+Pass `expectedInputLanguages` when you have a prior on what to expect. The model uses it to break ties between similar languages (e.g. `pt` vs `gl`, `no` vs `nb`):
+
+```ts
+detect({
+  text: "Lorem ipsum dolor sit amet",
+  expectedInputLanguages: ["la", "en", "it"],
+});
+```
+
+The hint is also forwarded to `availability()` so engines that warn on shape mismatch (Edge) stay quiet.
+
+## Composing with the other packages
+
+Pair the detector with summarizer / translator / prompt to skip the manual `language: "en"` argument when the input language isn't known ahead of time:
+
+```ts
+import { detect } from "@web-ai-sdk/detector";
+import { summarize } from "@web-ai-sdk/summarizer";
+
+const { language } = await detect({ text: articleText });
+await summarize({
+  language: language ?? "en",
+  text: articleText,
+});
+```
+
+A first-class `language: "auto"` shortcut may land in a future release that wires this internally for you.
+
+## Aborting
+
+`AbortSignal` is supported. The result cache is not written for aborted runs.
+
+```ts
+const controller = new AbortController();
+detect({ text: "long input…", signal: controller.signal });
+controller.abort();
+```
+
+## Errors and unavailability
+
+The vanilla `detect()` throws `DetectorUnavailableError` when the API is missing or reports `availability: "unavailable"`. Callers branch explicitly:
+
+```ts
+import { detect, DetectorUnavailableError } from "@web-ai-sdk/detector";
+
+try {
+  const result = await detect({ text });
+} catch (err) {
+  if (err instanceof DetectorUnavailableError) {
+    return null;
+  }
+  throw err;
+}
+```

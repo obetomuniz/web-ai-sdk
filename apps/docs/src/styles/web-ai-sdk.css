@@ -1,0 +1,64 @@
+/* Theme tokens reused from the landing app so the docs site reads as
+   part of the same product. Starlight exposes a CSS custom property
+   surface that we override per the design system; see:
+   https://starlight.astro.build/guides/css-and-tailwind/ */
+
+:root {
+  --sl-font: "Geist", "Inter", ui-sans-serif, system-ui, -apple-system,
+    sans-serif;
+  --sl-font-mono: "JetBrains Mono", "Fira Code", ui-monospace, "SF Mono", Menlo,
+    monospace;
+}
+
+/* Dark theme: cinnabar accent on near-black surfaces. */
+:root[data-theme="dark"] {
+  --sl-color-bg: #0a0a0c;
+  --sl-color-bg-nav: #0a0a0c;
+  --sl-color-bg-sidebar: #0a0a0c;
+  --sl-color-bg-inline-code: #1a1a1f;
+
+  --sl-color-text: #ededf0;
+  --sl-color-text-accent: oklch(0.74 0.2 35);
+  --sl-color-text-invert: #0a0a0c;
+
+  --sl-color-accent-low: oklch(0.68 0.18 35 / 0.16);
+  --sl-color-accent: oklch(0.68 0.18 35);
+  --sl-color-accent-high: oklch(0.74 0.2 35);
+
+  --sl-color-white: #ededf0;
+  --sl-color-gray-1: #ededf0;
+  --sl-color-gray-2: #b8b8c1;
+  --sl-color-gray-3: #8a8a94;
+  --sl-color-gray-4: #5a5a64;
+  --sl-color-gray-5: #2e2e36;
+  --sl-color-gray-6: #1a1a1f;
+  --sl-color-black: #0a0a0c;
+
+  --sl-color-hairline-light: #26262c;
+  --sl-color-hairline: #2e2e36;
+  --sl-color-hairline-shade: #2e2e36;
+}
+
+/* Light theme: tinted to keep the cinnabar tone without going neon. */
+:root[data-theme="light"] {
+  --sl-color-text-accent: oklch(0.5 0.18 35);
+  --sl-color-accent: oklch(0.55 0.18 35);
+  --sl-color-accent-high: oklch(0.5 0.18 35);
+  --sl-color-accent-low: oklch(0.55 0.18 35 / 0.12);
+}
+
+/* Minor tightening: monospaced inline code with hairline border so it
+   reads as a chip, not just colored text. Matches the landing demos. */
+.sl-markdown-content :not(pre) > code {
+  border: 1px solid var(--sl-color-hairline);
+  padding: 0.05rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+/* Subtle accent under the active sidebar entry, matching the landing
+   .nav-links a.active styling. */
+[data-current-parent="true"] > a,
+.sl-nav-link[aria-current="page"] {
+  font-weight: 500;
+}
