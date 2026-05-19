@@ -1,3 +1,4 @@
+import { BrandMark } from "./components/BrandMark.js";
 import { DetectorDemo } from "./components/DetectorDemo.js";
 import { HowItWorks } from "./components/HowItWorks.js";
 import { InstallPill } from "./components/InstallPill.js";
@@ -24,6 +25,13 @@ const guideLink = (slug: string): string => `${DOCS_URL}guides/${slug}/`;
 
 export const App = () => (
   <>
+    {/* Page-background watermark. Single oversized mark anchored to the
+        bottom-right corner, rendered in a tone-on-tone barely darker than
+        --bg so it reads as ambient texture rather than a logo. Pure
+        decoration; pointer-events off so it never blocks clicks. Hidden
+        on mobile to keep small viewports clean. */}
+    <BrandMark className="brand-watermark" title="" />
+
     {/* Top nav */}
     <nav className="nav">
       <div className="container nav-inner">

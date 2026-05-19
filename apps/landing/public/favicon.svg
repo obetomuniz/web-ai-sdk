@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="web-ai-sdk">
+  <!-- The mark's native geometry is 3:2 (96×64). To fill a square favicon
+       slot rather than letterboxing into ~65% of the icon area, the mark
+       is scaled by 1.3× inside the square viewBox and centred. Strokes
+       scale with the mark, so they read as proportionally thicker at
+       tab-favicon sizes (16/32 px) — fixes the "too small / too thin"
+       problem next to siblings whose icons fill their slots. -->
+  <!-- prefers-color-scheme swap: cream strokes on dark tab chrome,
+       warm-black strokes on light tab chrome. The flame dot stays orange
+       in both contexts; it's the signature element. -->
+  <style>
+    .mark { stroke: #EDE6DA; }
+    @media (prefers-color-scheme: light) {
+      .mark { stroke: #0C0A09; }
+    }
+  </style>
+  <g transform="translate(-10.5, 5.3) scale(1.3)">
+    <g class="mark" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 27 L14 38 L22 49" />
+      <circle cx="45" cy="38" r="11" />
+      <line x1="56" y1="27" x2="56" y2="49" />
+      <path d="M68 27 L76 38 L68 49" />
+    </g>
+    <circle cx="56" cy="18" r="3.8" fill="#F26B3B" />
+  </g>
+</svg>
