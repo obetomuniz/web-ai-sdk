@@ -1,5 +1,16 @@
 # @web-ai-sdk/all
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [59943e3]
+  - @web-ai-sdk/prompt@0.3.1
+  - @web-ai-sdk/webmcp@0.3.1
+  - @web-ai-sdk/summarizer@0.3.1
+  - @web-ai-sdk/translator@0.3.1
+  - @web-ai-sdk/detector@0.3.1
+
 ## 0.3.0
 
 ### Minor Changes
