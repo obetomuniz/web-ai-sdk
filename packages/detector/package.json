@@ -1,6 +1,6 @@
 {
   "name": "@web-ai-sdk/detector",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Building block for the Web's Built-in Language Detector API (Chrome)",
   "license": "MIT",
   "author": "Beto Muniz",
