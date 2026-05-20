@@ -856,7 +856,7 @@ export const App = () => (
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Beto Muniz
+                  @obetomuniz
                 </a>
               </li>
               <li>
