@@ -6,10 +6,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node scripts/build-llms.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "og:build": "node scripts/build-og-image.mjs"
+    "og:build": "node scripts/build-og-image.mjs",
+    "llms:build": "node scripts/build-llms.mjs"
   },
   "dependencies": {
     "@web-ai-sdk/detector": "workspace:*",
