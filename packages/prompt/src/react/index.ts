@@ -40,8 +40,9 @@ export interface UsePromptReturn {
  * (memoize if necessary); the hook keeps them in a ref to avoid stale-closure
  * issues without forcing the consumer to re-render on every change.
  *
- * For multi-turn chat where each conversation needs its own context and
- * streams should run concurrently, prefer `useSession`.
+ * For multi-turn chat where each conversation needs its own context,
+ * system prompt, and lifecycle (so `abort()` on one chat doesn't kill
+ * the others), prefer `useSession`.
  */
 export const usePrompt = (options: UsePromptOptions = {}): UsePromptReturn => {
   const [status, setStatus] = useState<PromptStatus>(() =>
@@ -145,10 +146,17 @@ export interface UseSessionReturn {
 
 /**
  * Lifecycle-only React adapter for `createSession`. Each call owns one
- * underlying `LanguageModel` session — so parallel components stream
- * concurrently — and the session is destroyed on unmount or when any
- * primitive option (`systemPrompt`, `temperature`, `topK`, `language`,
- * `enabled`) changes.
+ * underlying `LanguageModel` session with its own history, system prompt,
+ * sampling, and lifecycle — `abort()` / `destroy()` on one component's
+ * session never touch another's — and the session is destroyed on unmount
+ * or when any primitive option (`systemPrompt`, `temperature`, `topK`,
+ * `language`, `enabled`) changes.
+ *
+ * Token-level interleaving across sessions is browser-defined: the
+ * underlying on-device model is single-instance, so Chrome 138 / Edge 138
+ * currently serialize `sendStreaming` calls across sessions FIFO. The
+ * second component's send waits for the first to drain. The API is
+ * forward-compatible for runtimes that expose parallel inference.
  *
  * The hook intentionally does **not** track `response` / `history` /
  * streaming status. Iterate `session.sendStreaming()` yourself and keep UI
