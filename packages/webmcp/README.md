@@ -128,6 +128,56 @@ interface Tool<TInput = unknown, TOutput = unknown> {
 
 `description` is consumed by the agent host (Cursor / Claude / Chrome agent / etc.). Write it as an instruction to an LLM about when to call the tool.
 
+### `defineTool({...}): Tool` — typed schema adapter (Standard Schema)
+
+```ts
+import { defineTool } from "@web-ai-sdk/webmcp";
+import { z } from "zod"; // or valibot, arktype, effect, …
+
+const sendEmail = defineTool({
+  name: "send_contact_email",
+  description: "Send a contact email on behalf of the visitor.",
+  destructive: true,
+  // Standard Schema (https://standardschema.dev): used to narrow execute's
+  // input type. Validation at runtime is opt-in via `validate: true`.
+  input: z.object({
+    name: z.string().min(1),
+    email: z.string().email(),
+    subject: z.string().min(1),
+    message: z.string().min(1),
+  }),
+  // The host still wants raw JSON Schema for tool dispatch; pass it explicitly.
+  // Standard Schema does not emit JSON Schema, so we don't bridge between
+  // them — keeping both lets you choose your validator without coupling.
+  inputSchema: {
+    type: "object",
+    properties: {
+      name: { type: "string", minLength: 1 },
+      email: { type: "string", format: "email" },
+      subject: { type: "string", minLength: 1 },
+      message: { type: "string", minLength: 1 },
+    },
+    required: ["name", "email", "subject", "message"],
+  },
+  async execute({ name, email, subject, message }) {
+    // `name`, `email`, etc. are typed from the Zod schema.
+    const res = await fetch("/api/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, subject, message }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return { ok: true };
+  },
+});
+
+// `sendEmail` is a plain Tool and can be passed to registerTool / registerTools / useWebMCP.
+```
+
+`defineTool` accepts any [Standard Schema](https://standardschema.dev) V1 validator (Zod 3.24+, Valibot, ArkType, Effect, …) — no SDK dependency on any specific library. The returned object is a plain `Tool`, so it composes with the rest of the API unchanged.
+
+**Validation:** off by default (`validate: false`). Most WebMCP hosts validate against `inputSchema` themselves; running the Standard Schema validator on top is opt-in via `validate: true`, which throws `ToolValidationError` on bad input. With `validate: false` the schema is type-only.
+
 ## Safety
 
 Mark mutating tools `destructive: true`. The host (browser, agent) is responsible for gating destructive tools on explicit user approval; `@web-ai-sdk/webmcp` only forwards the annotation. For sensitive operations also defend server-side (origin allowlist, rate limit, validation).

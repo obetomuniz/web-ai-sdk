@@ -5,11 +5,10 @@
   "description": "Documentation site for web-ai-sdk (Astro + Starlight)",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/sync-package-readmes.mjs && astro dev --port 6006",
-    "build": "node scripts/sync-package-readmes.mjs && astro build",
+    "dev": "astro dev --port 6006",
+    "build": "astro build",
     "preview": "astro preview --port 4174",
-    "typecheck": "node scripts/sync-package-readmes.mjs && astro check",
-    "readmes:sync": "node scripts/sync-package-readmes.mjs"
+    "typecheck": "astro check"
   },
   "dependencies": {
     "@astrojs/react": "^4.2.0",

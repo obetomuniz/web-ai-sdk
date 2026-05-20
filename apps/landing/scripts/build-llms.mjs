@@ -26,25 +26,28 @@ const DOCS_CONTENT_DIR = resolve(REPO_ROOT, "apps/docs/src/content/docs");
 const DIST_DIR = resolve(HERE, "../dist");
 
 const SITE_URL = "https://web-ai-sdk.dev";
+const REPO_URL = "https://github.com/obetomuniz/web-ai-sdk";
 
-// Package directory → { npmName, route }. Mirrors SLUG_MAP in
-// apps/docs/scripts/sync-package-readmes.mjs (sdk/ is published as
-// @web-ai-sdk/all).
+// Package directory → npm name. `sdk/` is published as `@web-ai-sdk/all`.
+// READMEs on GitHub are the canonical per-package reference; the docs site
+// hosts hand-curated guides rather than mirroring README content.
 const PACKAGES = [
-  { dir: "sdk", npm: "@web-ai-sdk/all", route: "/docs/packages/all/" },
-  { dir: "prompt", npm: "@web-ai-sdk/prompt", route: "/docs/packages/prompt/" },
-  { dir: "webmcp", npm: "@web-ai-sdk/webmcp", route: "/docs/packages/webmcp/" },
-  { dir: "summarizer", npm: "@web-ai-sdk/summarizer", route: "/docs/packages/summarizer/" },
-  { dir: "translator", npm: "@web-ai-sdk/translator", route: "/docs/packages/translator/" },
-  { dir: "detector", npm: "@web-ai-sdk/detector", route: "/docs/packages/detector/" },
+  { dir: "sdk", npm: "@web-ai-sdk/all" },
+  { dir: "prompt", npm: "@web-ai-sdk/prompt" },
+  { dir: "webmcp", npm: "@web-ai-sdk/webmcp" },
+  { dir: "summarizer", npm: "@web-ai-sdk/summarizer" },
+  { dir: "translator", npm: "@web-ai-sdk/translator" },
+  { dir: "detector", npm: "@web-ai-sdk/detector" },
 ];
+
+const readmeUrl = (dir) => `${REPO_URL}/tree/main/packages/${dir}#readme`;
 
 function readReadme(dir) {
   return readFileSync(resolve(PACKAGES_DIR, dir, "README.md"), "utf8");
 }
 
 function summary(md) {
-  // First non-empty paragraph after the H1 — same logic as the docs sync.
+  // First non-empty paragraph after the H1.
   const lines = md.split(/\r?\n/);
   let pastH1 = false;
   const buf = [];
@@ -79,12 +82,9 @@ function walk(dir) {
 }
 
 function docsRoutes() {
-  // Convert each content file path to its Starlight route. Index pages and
-  // the synthetic packages/* pages (which only exist after the docs sync
-  // runs) are both included.
+  // Convert each content file path to its Starlight route.
   const files = walk(DOCS_CONTENT_DIR).filter((f) => /\.(md|mdx)$/.test(f));
   const routes = new Set();
-  // Docs root.
   routes.add("/docs/");
   for (const f of files) {
     const rel = relative(DOCS_CONTENT_DIR, f).replace(/\\/g, "/");
@@ -92,9 +92,6 @@ function docsRoutes() {
     if (slug === "index") continue;
     routes.add(`/docs/${slug}/`);
   }
-  // Also synthesize package routes even if the sync hasn't run yet — keeps
-  // the sitemap stable when this script runs before the docs build.
-  for (const p of PACKAGES) routes.add(p.route);
   return [...routes].sort();
 }
 
@@ -102,7 +99,7 @@ function buildLlmsIndex() {
   const packageLines = PACKAGES.map((p) => {
     const md = readReadme(p.dir);
     const desc = summary(md);
-    return `- [${p.npm}](${SITE_URL}${p.route}): ${desc}`;
+    return `- [${p.npm}](${readmeUrl(p.dir)}): ${desc}`;
   });
 
   return [
@@ -110,7 +107,7 @@ function buildLlmsIndex() {
     "",
     "> Building blocks for the Web's built-in AI APIs. Composable. No runtime deps. Just lifecycle, streaming, AbortSignals. Vanilla TypeScript by default, with optional React hooks.",
     "",
-    "Each package wraps one Built-in AI surface (Prompt, Summarizer, Translator, Detector, WebMCP) plus an optional `/react` adapter. The per-package READMEs are the source of truth; the pages linked below mirror them verbatim. Full content is also available at [llms-full.txt](" + SITE_URL + "/llms-full.txt).",
+    "Each package wraps one Built-in AI surface (Prompt, Summarizer, Translator, Detector, WebMCP) plus an optional `/react` adapter. The per-package READMEs (linked below) are the source of truth for the API surface; the docs site hosts hand-curated conceptual guides. Full README content is also available concatenated at [llms-full.txt](" + SITE_URL + "/llms-full.txt).",
     "",
     "## Packages",
     "",
@@ -129,6 +126,7 @@ function buildLlmsIndex() {
     "## React adapters",
     "",
     "- [usePrompt](" + SITE_URL + "/docs/react/use-prompt/)",
+    "- [useSession](" + SITE_URL + "/docs/react/use-session/)",
     "- [useWebMCP](" + SITE_URL + "/docs/react/use-web-mcp/)",
     "- [useSummarizer](" + SITE_URL + "/docs/react/use-summarizer/)",
     "- [useTranslator](" + SITE_URL + "/docs/react/use-translator/)",
@@ -136,7 +134,7 @@ function buildLlmsIndex() {
     "",
     "## Optional",
     "",
-    "- [Source repository](https://github.com/obetomuniz/web-ai-sdk)",
+    "- [Source repository](" + REPO_URL + ")",
     "- [Full text of every README](" + SITE_URL + "/llms-full.txt)",
     "",
   ].join("\n");
@@ -148,15 +146,14 @@ function buildLlmsFull() {
     "",
     "> Concatenated content of every packages/*/README.md, in the order published. Generated at build time; the READMEs in the GitHub repo are the source of truth.",
     "",
-    `> Source: https://github.com/obetomuniz/web-ai-sdk`,
+    `> Source: ${REPO_URL}`,
     "",
   ];
   for (const p of PACKAGES) {
     const md = readReadme(p.dir);
     parts.push("---");
     parts.push("");
-    parts.push(`<!-- Source: packages/${p.dir}/README.md -->`);
-    parts.push(`<!-- Rendered: ${SITE_URL}${p.route} -->`);
+    parts.push(`<!-- Source: ${readmeUrl(p.dir)} -->`);
     parts.push("");
     parts.push(md.trimEnd());
     parts.push("");

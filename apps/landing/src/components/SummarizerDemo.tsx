@@ -59,7 +59,7 @@ export const SummarizerDemo = () => {
         text,
         createOptions: { ...toCreateOptions(type, length), monitor },
         signal: ac.signal,
-        onChunk: (chunk) => {
+        onUpdate: (chunk) => {
           if (ac.signal.aborted) return;
           setOutput(chunk);
           update(chunk);

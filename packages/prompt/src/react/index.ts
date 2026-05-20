@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  type PromptOptions,
-  type PromptResult,
+  type AskOptions,
+  type AskResult,
+  type CreateSessionOptions,
   PromptUnavailableError,
+  type Session,
+  ask,
+  createSession,
   isPromptAvailable,
-  prompt as runPrompt,
 } from "../index.js";
 
 export type PromptStatus =
@@ -15,7 +18,7 @@ export type PromptStatus =
   | "unavailable";
 
 export interface UsePromptOptions
-  extends Omit<PromptOptions, "prompt" | "onChunk" | "signal"> {}
+  extends Omit<AskOptions, "input" | "onUpdate" | "signal"> {}
 
 export interface UsePromptReturn {
   status: PromptStatus;
@@ -36,6 +39,9 @@ export interface UsePromptReturn {
  * as chunks stream. Pass `cache`, `createOptions`, etc. as stable references
  * (memoize if necessary); the hook keeps them in a ref to avoid stale-closure
  * issues without forcing the consumer to re-render on every change.
+ *
+ * For multi-turn chat where each conversation needs its own context and
+ * streams should run concurrently, prefer `useSession`.
  */
 export const usePrompt = (options: UsePromptOptions = {}): UsePromptReturn => {
   const [status, setStatus] = useState<PromptStatus>(() =>
@@ -68,7 +74,7 @@ export const usePrompt = (options: UsePromptOptions = {}): UsePromptReturn => {
     setStatus(isPromptAvailable() ? "idle" : "unavailable");
   }, []);
 
-  const ask = useCallback(async (input: string): Promise<void> => {
+  const askMethod = useCallback(async (input: string): Promise<void> => {
     if (!isPromptAvailable()) {
       setStatus("unavailable");
       return;
@@ -83,11 +89,11 @@ export const usePrompt = (options: UsePromptOptions = {}): UsePromptReturn => {
     setStatus("loading");
 
     try {
-      const result: PromptResult = await runPrompt({
+      const result: AskResult = await ask({
         ...optionsRef.current,
-        prompt: input,
+        input,
         signal: controller.signal,
-        onChunk: (chunk) => {
+        onUpdate: (chunk) => {
           if (controller.signal.aborted) return;
           setResponse(chunk);
           setStatus("streaming");
@@ -118,11 +124,125 @@ export const usePrompt = (options: UsePromptOptions = {}): UsePromptReturn => {
   // Abort any in-flight request on unmount.
   useEffect(() => () => controllerRef.current?.abort(), []);
 
-  return { status, response, error, fromCache, ask, abort, reset };
+  return { status, response, error, fromCache, ask: askMethod, abort, reset };
+};
+
+export type SessionStatus = "loading" | "ready" | "unavailable";
+
+export interface UseSessionOptions extends CreateSessionOptions {
+  /** Skip session creation when `false`. Default: `true`. */
+  enabled?: boolean;
+}
+
+export interface UseSessionReturn {
+  /** `"loading"` while the underlying session is being created, `"ready"` once usable, `"unavailable"` when the API is missing or creation failed. */
+  status: SessionStatus;
+  /** Creation error, if any. */
+  error: Error | null;
+  /** The session itself. `null` until `status === "ready"`. */
+  session: Session | null;
+}
+
+/**
+ * Lifecycle-only React adapter for `createSession`. Each call owns one
+ * underlying `LanguageModel` session — so parallel components stream
+ * concurrently — and the session is destroyed on unmount or when any
+ * primitive option (`systemPrompt`, `temperature`, `topK`, `language`,
+ * `enabled`) changes.
+ *
+ * The hook intentionally does **not** track `response` / `history` /
+ * streaming status. Iterate `session.sendStreaming()` yourself and keep UI
+ * state in your own components. The hook only solves the React lifecycle:
+ * feature detection, create, destroy, recreate-on-change.
+ *
+ * Object options (`expectedInputs`, `createOptions`) participate in the
+ * effect dependency check by reference; memoize them or accept the recreate
+ * cost.
+ */
+export const useSession = (
+  options: UseSessionOptions = {},
+): UseSessionReturn => {
+  const {
+    enabled = true,
+    systemPrompt,
+    temperature,
+    topK,
+    language,
+    supportedLanguages,
+    expectedInputs,
+    expectedOutputs,
+    createOptions,
+  } = options;
+
+  const [state, setState] = useState<{
+    status: SessionStatus;
+    session: Session | null;
+    error: Error | null;
+  }>(() => ({
+    status: isPromptAvailable() && enabled ? "loading" : "unavailable",
+    session: null,
+    error: null,
+  }));
+
+  useEffect(() => {
+    if (!enabled || !isPromptAvailable()) {
+      setState({ status: "unavailable", session: null, error: null });
+      return;
+    }
+
+    let session: Session;
+    try {
+      session = createSession({
+        systemPrompt,
+        temperature,
+        topK,
+        language,
+        supportedLanguages,
+        expectedInputs,
+        expectedOutputs,
+        createOptions,
+      });
+    } catch (err) {
+      if (err instanceof PromptUnavailableError) {
+        setState({ status: "unavailable", session: null, error: null });
+        return;
+      }
+      setState({
+        status: "unavailable",
+        session: null,
+        error: err instanceof Error ? err : new Error(String(err)),
+      });
+      return;
+    }
+    // `status: "ready"` means the session object exists and is usable.
+    // Sends await the underlying `LanguageModel.create()` internally; if
+    // creation fails, the consumer sees `PromptUnavailableError` on the
+    // first send. The hook does not pre-detect creation errors — that
+    // would require an extra observation channel we deliberately don't expose.
+    setState({ status: "ready", session, error: null });
+
+    return () => {
+      session.destroy();
+    };
+  }, [
+    enabled,
+    systemPrompt,
+    temperature,
+    topK,
+    language,
+    supportedLanguages,
+    expectedInputs,
+    expectedOutputs,
+    createOptions,
+  ]);
+
+  return state;
 };
 
 export type {
-  PromptOptions,
-  PromptResult,
+  AskOptions,
+  AskResult,
   ResponseCache,
+  CreateSessionOptions,
+  Session,
 } from "../index.js";

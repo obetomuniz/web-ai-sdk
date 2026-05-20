@@ -101,7 +101,7 @@ describe("summarize", () => {
       language: "en",
       text: "Some article body.",
       cache: inMemoryCache(),
-      onChunk: (c) => chunks.push(c),
+      onUpdate: (c) => chunks.push(c),
     });
     expect(chunks.length).toBeGreaterThan(0);
     expect(result.summary).toBe("Hello world");
@@ -118,7 +118,7 @@ describe("summarize", () => {
       language: "en",
       text: "Some article body.",
       cache: inMemoryCache(),
-      onChunk: (c) => chunks.push(c),
+      onUpdate: (c) => chunks.push(c),
     });
     expect(result.summary).toBe("Hello world");
     expect(result.cached).toBe(false);
@@ -216,6 +216,16 @@ describe("summarize", () => {
       cache: inMemoryCache(),
     });
     expect(result).toEqual({ summary: null, cached: false });
+  });
+
+  it("preserves sentence punctuation in the cleaned output", async () => {
+    installFakeSummarizer({ summary: "Concise TL;DR." });
+    const result = await summarize({
+      language: "en",
+      text: "Body about a thing.",
+      cache: inMemoryCache(),
+    });
+    expect(result.summary).toBe("Concise TL;DR.");
   });
 
   it("respects an aborted signal", async () => {

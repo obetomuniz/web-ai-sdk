@@ -86,7 +86,86 @@ export const checkAvailability = async (
   }
 };
 
+const DEFAULT_MAX_CACHED_SESSIONS = 8;
+
+interface CacheConfig {
+  max: number;
+}
+
+const cacheConfig: CacheConfig = { max: DEFAULT_MAX_CACHED_SESSIONS };
+
+// Map iteration order is insertion order, which lets us use it as an LRU:
+// on hit we re-insert to bump recency, and on overflow we evict the
+// oldest (first) entry.
 const sessionCache = new Map<string, Promise<SummarizerInstance>>();
+
+export interface ConfigureSummarizerCacheOptions {
+  /** Soft cap on cached summarizer sessions. Default: `8`. */
+  max?: number;
+}
+
+/**
+ * Bound the internal summarizer session cache. Excess entries are evicted in
+ * LRU order (their `destroy?()` is invoked when present). Lowering `max`
+ * immediately evicts down to the new ceiling.
+ */
+export const configureSummarizerCache = (
+  options: ConfigureSummarizerCacheOptions = {},
+): void => {
+  if (options.max !== undefined) {
+    cacheConfig.max = Math.max(0, Math.floor(options.max));
+  }
+  trim();
+};
+
+const destroySession = (entry: Promise<SummarizerInstance>): void => {
+  entry
+    .then((session) => {
+      try {
+        session.destroy?.();
+      } catch {
+        // best-effort; the spec doesn't require destroy to be infallible.
+      }
+    })
+    .catch(() => {
+      // session never resolved (e.g. create() rejected); nothing to destroy.
+    });
+};
+
+const trim = (): void => {
+  while (sessionCache.size > cacheConfig.max) {
+    const oldestKey = sessionCache.keys().next().value;
+    if (oldestKey === undefined) return;
+    const evicted = sessionCache.get(oldestKey);
+    sessionCache.delete(oldestKey);
+    if (evicted) destroySession(evicted);
+  }
+};
+
+/**
+ * Drop every cached summarizer session. Sessions live for the tab lifetime by
+ * default; call this to free them eagerly when navigating away from a feature
+ * that won't be revisited.
+ */
+export const clearSummarizerSessions = (): void => {
+  for (const entry of sessionCache.values()) {
+    destroySession(entry);
+  }
+  sessionCache.clear();
+};
+
+/**
+ * Drop the cached summarizer whose create-options match `options`.
+ */
+export const clearSummarizerSession = (
+  options: SummarizerCreateOptions,
+): void => {
+  const key = JSON.stringify(options);
+  const entry = sessionCache.get(key);
+  if (!entry) return;
+  sessionCache.delete(key);
+  destroySession(entry);
+};
 
 /**
  * Get or create a `Summarizer` session for the given options. Sessions live
@@ -100,17 +179,24 @@ export const getOrCreateSummarizer = (
 ): Promise<SummarizerInstance> => {
   const key = JSON.stringify(options);
   let session = sessionCache.get(key);
-  if (!session) {
-    session = api.create(options).catch((err) => {
-      sessionCache.delete(key);
-      throw err;
-    });
+  if (session) {
+    // Bump recency: delete + reinsert so this entry moves to the end of the
+    // LRU order.
+    sessionCache.delete(key);
     sessionCache.set(key, session);
+    return session;
   }
+  session = api.create(options).catch((err) => {
+    sessionCache.delete(key);
+    throw err;
+  });
+  sessionCache.set(key, session);
+  trim();
   return session;
 };
 
 /** Test-only escape hatch; drop every cached session. */
 export const __clearSessionCacheForTests = (): void => {
   sessionCache.clear();
+  cacheConfig.max = DEFAULT_MAX_CACHED_SESSIONS;
 };
