@@ -112,13 +112,98 @@ export const checkAvailability = async (options?: {
   }
 };
 
+const DEFAULT_MAX_CACHED_SESSIONS = 8;
+
+interface CacheConfig {
+  max: number;
+}
+
+const cacheConfig: CacheConfig = { max: DEFAULT_MAX_CACHED_SESSIONS };
+
+// Map iteration order is insertion order, which lets us use it as an LRU:
+// on hit we re-insert to bump recency, and on overflow we evict the
+// oldest (first) entry.
 const sessionCache = new Map<string, Promise<LanguageModelInstance>>();
+
+export interface ConfigurePromptCacheOptions {
+  /** Soft cap on cached one-shot sessions. Default: `8`. */
+  max?: number;
+}
+
+/**
+ * Bound the internal one-shot session cache. The cache only memoizes sessions
+ * created by `ask()`; `createSession()` is never cached. Excess entries are
+ * evicted in LRU order (their `destroy?()` is invoked when present).
+ *
+ * Lowering `max` immediately evicts down to the new ceiling.
+ */
+export const configurePromptCache = (
+  options: ConfigurePromptCacheOptions = {},
+): void => {
+  if (options.max !== undefined) {
+    cacheConfig.max = Math.max(0, Math.floor(options.max));
+  }
+  trim();
+};
+
+const destroySession = (entry: Promise<LanguageModelInstance>): void => {
+  entry
+    .then((session) => {
+      try {
+        session.destroy?.();
+      } catch {
+        // best-effort; the spec doesn't require destroy to be infallible.
+      }
+    })
+    .catch(() => {
+      // session never resolved (e.g. create() rejected); nothing to destroy.
+    });
+};
+
+const trim = (): void => {
+  while (sessionCache.size > cacheConfig.max) {
+    const oldestKey = sessionCache.keys().next().value;
+    if (oldestKey === undefined) return;
+    const evicted = sessionCache.get(oldestKey);
+    sessionCache.delete(oldestKey);
+    if (evicted) destroySession(evicted);
+  }
+};
+
+/**
+ * Drop every cached one-shot session. Sessions live for the tab lifetime by
+ * default; call this to free them eagerly (e.g. when navigating away from a
+ * feature that won't be revisited). Does not affect sessions created via
+ * `createSession()`.
+ */
+export const clearSessions = (): void => {
+  for (const entry of sessionCache.values()) {
+    destroySession(entry);
+  }
+  sessionCache.clear();
+};
+
+/**
+ * Drop the cached session whose create-options match `options`. Useful when
+ * you know a specific persona / temperature combination is finished and the
+ * memory should be released without flushing the whole cache.
+ */
+export const clearSession = (options: LanguageModelCreateOptions): void => {
+  const key = JSON.stringify(options);
+  const entry = sessionCache.get(key);
+  if (!entry) return;
+  sessionCache.delete(key);
+  destroySession(entry);
+};
 
 /**
  * Get or create a `LanguageModel` session for the given options. Sessions live
  * for the tab lifetime so consecutive calls with the same shape skip the
  * ~1-3s cold start. On `create()` failure the cache slot is purged so the
  * next call retries instead of returning a poisoned promise.
+ *
+ * The cache is shared across `ask()` calls only. `createSession()` bypasses
+ * this cache so chat-shaped apps get independent sessions per call.
  */
 export const getOrCreateLanguageModel = (
   api: LanguageModelApi,
@@ -126,17 +211,24 @@ export const getOrCreateLanguageModel = (
 ): Promise<LanguageModelInstance> => {
   const key = JSON.stringify(options);
   let session = sessionCache.get(key);
-  if (!session) {
-    session = api.create(options).catch((err) => {
-      sessionCache.delete(key);
-      throw err;
-    });
+  if (session) {
+    // Bump recency: delete + reinsert so this entry moves to the end of the
+    // LRU order.
+    sessionCache.delete(key);
     sessionCache.set(key, session);
+    return session;
   }
+  session = api.create(options).catch((err) => {
+    sessionCache.delete(key);
+    throw err;
+  });
+  sessionCache.set(key, session);
+  trim();
   return session;
 };
 
 /** Test-only escape hatch; drop every cached session. */
 export const __clearSessionCacheForTests = (): void => {
   sessionCache.clear();
+  cacheConfig.max = DEFAULT_MAX_CACHED_SESSIONS;
 };

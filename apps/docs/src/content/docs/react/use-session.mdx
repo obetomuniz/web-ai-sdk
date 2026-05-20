@@ -1,0 +1,124 @@
+---
+title: useSession
+description: Lifecycle-only React adapter for createSession. Each call owns one never-shared LanguageModel session; UI state is the consumer's concern.
+---
+
+Lifecycle-only React adapter for the chat-shaped [`createSession()`](../guides/prompt/#chat-createsession) primitive in `@web-ai-sdk/prompt`. Each `useSession` call owns one underlying `LanguageModelInstance` — so N components produce N concurrent streams. The hook handles feature detection, create, destroy-on-unmount, and recreate-on-options-change. It does **not** track `response`, `history`, or streaming status; iterate `session.sendStreaming()` yourself and keep UI state in your own component.
+
+For ask-and-display flows (embeds, widgets, single-question UIs) prefer [`usePrompt`](./use-prompt/); it shares a warm session across same-shape callers.
+
+## Usage
+
+```tsx
+import { useSession } from "@web-ai-sdk/prompt/react";
+import { useState } from "react";
+
+export function Chat({ persona }: { persona: string }) {
+  const { status, session } = useSession({
+    systemPrompt: persona,
+    temperature: 0.7,
+  });
+
+  const [response, setResponse] = useState("");
+  const [streaming, setStreaming] = useState(false);
+
+  if (status === "unavailable" || !session) return null;
+
+  const send = async (text: string) => {
+    setStreaming(true);
+    setResponse("");
+    try {
+      let buffer = "";
+      for await (const delta of session.sendStreaming(text)) {
+        buffer += delta;
+        setResponse(buffer);
+      }
+    } finally {
+      setStreaming(false);
+    }
+  };
+
+  return (
+    <div>
+      <p>{response}</p>
+      <form onSubmit={(e) => { e.preventDefault(); send("Hello"); }}>
+        <button type="submit" disabled={streaming}>Send</button>
+        <button type="button" onClick={() => session.abort()}>Stop</button>
+      </form>
+    </div>
+  );
+}
+```
+
+`session.sendStreaming(text)` yields **deltas** (each chunk is the new text since the last yield). Accumulate into your own `response` state for a typewriter effect. The hook stays out of the streaming loop entirely.
+
+## Parallel chats
+
+Two `useSession` calls with identical options get two independent underlying instances. In a chat app with N agents in the same mode, every one streams concurrently.
+
+```tsx
+function ChatList({ agents }: { agents: Agent[] }) {
+  return agents.map((agent) => <ChatPane key={agent.id} agent={agent} />);
+}
+
+function ChatPane({ agent }: { agent: Agent }) {
+  // Each ChatPane owns its own session. Streams don't queue against
+  // each other even when systemPrompt / temperature are identical.
+  const { session } = useSession({
+    systemPrompt: agent.systemPrompt,
+    temperature: agent.temperature,
+  });
+  // …
+}
+```
+
+## Return shape
+
+```ts
+interface UseSessionReturn {
+  status: "loading" | "ready" | "unavailable";
+  error: Error | null;
+  session: Session | null; // null until status === "ready"
+}
+```
+
+- **`loading`**: brief; the underlying `LanguageModel.create()` is in flight. Sends issued during this state await creation internally.
+- **`ready`**: `session` is non-null. Iterate `session.sendStreaming(...)`, call `session.send(...)`, `session.abort()`, or `session.destroy()` (the hook also destroys on unmount).
+- **`unavailable`**: API missing or `enabled: false`. Render a fallback.
+
+The hook does not pre-detect creation errors that surface async. If `LanguageModel.create()` rejects after `status` flips to `ready`, the rejection bubbles up the next time you call `session.send` / `session.sendStreaming` as `PromptUnavailableError`. Wrap your send in `try { … } catch (err) { … }` to handle that path.
+
+## Recreating the session
+
+The hook recreates the underlying instance whenever a primitive option changes (`systemPrompt`, `temperature`, `topK`, `language`, `enabled`). Object options (`expectedInputs`, `expectedOutputs`, `createOptions`) participate in the dependency check by reference; memoize them or accept the recreate cost.
+
+```tsx
+const expected = useMemo<LanguageModelExpectedInput[]>(
+  () => [{ type: "text", languages: ["en"] }],
+  [],
+);
+const { session } = useSession({ systemPrompt, expectedInputs: expected });
+```
+
+## Disabled state
+
+Pass `enabled: false` to skip session creation entirely (status stays `"unavailable"`). Flipping it back to `true` creates the session on the next render. Useful when the session depends on user opt-in.
+
+## Seeding multi-turn context
+
+Pass `createOptions.initialPrompts` to restore a prior conversation:
+
+```tsx
+const session = useSession({
+  systemPrompt: "You are a helpful assistant.",
+  createOptions: {
+    initialPrompts: [
+      { role: "system", content: "You are a helpful assistant." },
+      { role: "user", content: "Earlier turn from storage." },
+      { role: "assistant", content: "Earlier reply." },
+    ],
+  },
+});
+```
+
+The seeded turns become real context for the model. UI history lives in your own component state.

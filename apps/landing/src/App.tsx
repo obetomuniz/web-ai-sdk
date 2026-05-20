@@ -530,8 +530,9 @@ export const App = () => (
                 <span className="scope">@web-ai-sdk/</span>X
               </div>
               <div className="stack-detail">
-                prompt() &nbsp; summarize() &nbsp; translate() &nbsp; detect()
-                &nbsp; registerTools() &nbsp; AbortSignal &nbsp; session cache
+                ask() &nbsp; createSession() &nbsp; summarize() &nbsp;
+                translate() &nbsp; detect() &nbsp; registerTools() &nbsp;
+                defineTool() &nbsp; AbortSignal &nbsp; session cache
               </div>
             </div>
             <span className="stack-owner">web-ai-sdk</span>
@@ -545,8 +546,8 @@ export const App = () => (
                 <span className="scope">/react</span>
               </div>
               <div className="stack-detail">
-                usePrompt() &nbsp; useSummarizer() &nbsp; useTranslator() &nbsp;
-                useDetector() &nbsp; useWebMCP()
+                usePrompt() &nbsp; useSession() &nbsp; useSummarizer() &nbsp;
+                useTranslator() &nbsp; useDetector() &nbsp; useWebMCP()
               </div>
             </div>
             <span className="stack-owner">web-ai-sdk</span>

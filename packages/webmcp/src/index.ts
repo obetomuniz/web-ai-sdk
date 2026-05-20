@@ -28,6 +28,154 @@ export interface Tool<TInput = unknown, TOutput = unknown> {
   execute: (input: TInput) => Promise<TOutput> | TOutput;
 }
 
+/**
+ * Minimal Standard Schema V1 surface — see https://standardschema.dev. Any
+ * validation library that implements the spec (Zod 3.24+, Valibot, ArkType,
+ * Effect, etc.) satisfies this interface without an adapter or dep. We declare
+ * the types locally so this package stays dependency-free.
+ */
+export interface StandardSchemaV1<Input = unknown, Output = Input> {
+  readonly "~standard": {
+    readonly version: 1;
+    readonly vendor: string;
+    readonly validate: (
+      value: unknown,
+    ) =>
+      | StandardSchemaV1.Result<Output>
+      | Promise<StandardSchemaV1.Result<Output>>;
+    readonly types?: {
+      readonly input: Input;
+      readonly output: Output;
+    };
+  };
+}
+
+export namespace StandardSchemaV1 {
+  export type Result<Output> =
+    | { readonly value: Output; readonly issues?: undefined }
+    | { readonly issues: ReadonlyArray<Issue> };
+
+  export interface Issue {
+    readonly message: string;
+    readonly path?: ReadonlyArray<PropertyKey | PathSegment>;
+  }
+
+  export interface PathSegment {
+    readonly key: PropertyKey;
+  }
+
+  export type InferInput<S> = S extends StandardSchemaV1<infer In, unknown>
+    ? In
+    : unknown;
+}
+
+export class ToolValidationError extends Error {
+  override readonly name = "ToolValidationError";
+  readonly issues: ReadonlyArray<StandardSchemaV1.Issue>;
+  constructor(toolName: string, issues: ReadonlyArray<StandardSchemaV1.Issue>) {
+    const summary = issues
+      .slice(0, 3)
+      .map((i) => i.message)
+      .join("; ");
+    super(`Tool "${toolName}" input validation failed: ${summary}`);
+    this.issues = issues;
+  }
+}
+
+export interface DefineToolOptions<
+  Schema extends StandardSchemaV1 | undefined = undefined,
+  TOutput = unknown,
+> {
+  name: string;
+  description: string;
+  /**
+   * Optional Standard Schema (Zod / Valibot / ArkType / etc.) used purely to
+   * narrow `execute`'s input type. Runtime validation is opt-in via
+   * `validate: true`. Standard Schema doesn't emit JSON Schema, so pass
+   * `inputSchema` explicitly when the host needs it for tool dispatch.
+   */
+  input?: Schema;
+  /** Raw JSON Schema for the host. Stays explicit; the SDK does not derive it from `input`. */
+  inputSchema?: object;
+  readOnly?: boolean;
+  destructive?: boolean;
+  annotations?: ToolAnnotations;
+  /**
+   * When `true`, run `input.~standard.validate` before `execute` and throw
+   * `ToolValidationError` on failure. Default `false` — most WebMCP hosts
+   * validate against `inputSchema` themselves, so the SDK doesn't double up.
+   */
+  validate?: boolean;
+  execute: (
+    input: Schema extends StandardSchemaV1
+      ? StandardSchemaV1.InferInput<Schema>
+      : unknown,
+  ) => Promise<TOutput> | TOutput;
+}
+
+const validateInput = async <Output>(
+  schema: StandardSchemaV1<unknown, Output>,
+  value: unknown,
+  toolName: string,
+): Promise<Output> => {
+  const result = await schema["~standard"].validate(value);
+  if ("issues" in result && result.issues) {
+    throw new ToolValidationError(toolName, result.issues);
+  }
+  return (result as { value: Output }).value;
+};
+
+/**
+ * Build a `Tool` whose `execute` is typed against an optional Standard Schema
+ * (Zod / Valibot / ArkType / etc.) without forcing the SDK to take a dep on
+ * any specific library. Pass `validate: true` to also run the schema at
+ * runtime; otherwise the schema is type-only and `execute` runs verbatim.
+ *
+ * The returned object is a plain `Tool` and can be passed to `registerTool`,
+ * `registerTools`, or the React `useWebMCP` hook unchanged.
+ */
+export const defineTool = <
+  Schema extends StandardSchemaV1 | undefined = undefined,
+  TOutput = unknown,
+>(
+  options: DefineToolOptions<Schema, TOutput>,
+): Tool<
+  Schema extends StandardSchemaV1
+    ? StandardSchemaV1.InferInput<Schema>
+    : unknown,
+  TOutput
+> => {
+  type Input = Schema extends StandardSchemaV1
+    ? StandardSchemaV1.InferInput<Schema>
+    : unknown;
+
+  const baseExecute = options.execute as (
+    input: Input,
+  ) => Promise<TOutput> | TOutput;
+  const execute: (input: Input) => Promise<TOutput> | TOutput =
+    options.validate && options.input
+      ? async (input: Input) => {
+          const validated = (await validateInput(
+            options.input as StandardSchemaV1<unknown, Input>,
+            input,
+            options.name,
+          )) as Input;
+          return baseExecute(validated);
+        }
+      : baseExecute;
+
+  const tool: Tool<Input, TOutput> = {
+    name: options.name,
+    description: options.description,
+    execute,
+  };
+  if (options.inputSchema !== undefined) tool.inputSchema = options.inputSchema;
+  if (options.readOnly) tool.readOnly = true;
+  if (options.destructive) tool.destructive = true;
+  if (options.annotations) tool.annotations = options.annotations;
+  return tool;
+};
+
 interface RegisteredTool {
   name: string;
   description: string;

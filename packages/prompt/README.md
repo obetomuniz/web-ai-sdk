@@ -1,10 +1,10 @@
 # @web-ai-sdk/prompt
 
-Building block for the Web's Built-in [Prompt API](https://developer.chrome.com/docs/extensions/ai/prompt-api) (`LanguageModel`). Single-shot prompts with system message, sampling controls, streaming, session reuse, and pluggable result caching.
+Building block for the Web's Built-in [Prompt API](https://developer.chrome.com/docs/extensions/ai/prompt-api) (`LanguageModel`). One-shot `ask()` for embeds and widgets, plus a thin `createSession()` primitive (and React `useSession`) for chat-shaped apps that need independent per-conversation sessions and delta-shaped streaming. The wrapper smooths cross-browser quirks (delta-vs-cumulative chunks, output sanitization, abort wiring); UI state and conversation history are the consumer's concern.
 
 ## Status
 
-Prompt API ships in Chrome 138+ (behind `chrome://flags/#prompt-api-for-gemini-nano`) and Edge 138+ (behind `edge://flags/#prompt-api-for-phi-mini`). On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `prompt()` throws `PromptUnavailableError` so callers can branch explicitly.
+Prompt API ships in Chrome 138+ (behind `chrome://flags/#prompt-api-for-gemini-nano`) and Edge 138+ (behind `edge://flags/#prompt-api-for-phi-mini`). On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `ask()` throws `PromptUnavailableError` so callers can branch explicitly.
 
 ## Install
 
@@ -17,20 +17,50 @@ The React adapter ships as a subpath export, with no extra install. `react` is a
 
 ## Vanilla TypeScript / DOM
 
-```ts
-import { prompt } from "@web-ai-sdk/prompt";
+### One-shot — `ask()`
 
-const result = await prompt({
-  prompt: "Summarize this in one sentence: WebMCP lets web pages expose tools to agents.",
+```ts
+import { ask } from "@web-ai-sdk/prompt";
+
+const result = await ask({
+  input: "Summarize this in one sentence: WebMCP lets web pages expose tools to agents.",
   systemPrompt: "You are concise. Reply with a single sentence.",
   temperature: 0.2,
-  onChunk: (text) => console.log("partial", text),
+  onUpdate: (text) => console.log("partial", text), // cumulative buffer
 });
 
 console.log(result.response, result.cached);
 ```
 
+`ask()` shares a warm `LanguageModel` instance across same-shape callers so the cold start is paid once per persona. That's right for embeds, widgets, ask-and-display flows. It's the wrong shape for chat (two callers with the same mode would queue, not stream concurrently).
+
+### Chat — `createSession()`
+
+```ts
+import { createSession } from "@web-ai-sdk/prompt";
+
+const session = createSession({
+  systemPrompt: "You are a helpful assistant.",
+  temperature: 0.7,
+});
+
+// Streaming, yields DELTA chunks (not cumulative buffers):
+for await (const delta of session.sendStreaming("Tell me about WebMCP.")) {
+  process.stdout.write(delta);
+}
+
+// Or one-shot per turn:
+const text = await session.send("And what about the Prompt API?");
+
+// Tear down explicitly when the conversation ends.
+session.destroy();
+```
+
+Every `createSession()` call returns an independent `LanguageModelInstance`, so N parallel chats stream concurrently. Concurrent `send` / `sendStreaming` calls on the **same** session are NOT queued — the underlying `LanguageModel` is sequential per instance and will reject the overlapping call with `InvalidStateError`. Either `await` the previous send or call `session.abort()` before issuing a new turn. Multi-turn conversation context is tracked by the native instance itself; UI message lists are your data model.
+
 ## React
+
+### One-shot — `usePrompt`
 
 ```tsx
 import { usePrompt } from "@web-ai-sdk/prompt/react";
@@ -62,15 +92,48 @@ export function AskBox() {
 }
 ```
 
-State machine: `idle | loading | streaming | done | unavailable`. `ask(input)` triggers a request, cancels any in-flight one, and updates `response` as chunks stream. `abort()` cancels the current request; `reset()` clears state.
+State machine: `idle | loading | streaming | done | unavailable`. `ask(input)` triggers a request, cancels any in-flight one, and updates `response` as chunks stream.
+
+### Chat — `useSession`
+
+```tsx
+import { useSession } from "@web-ai-sdk/prompt/react";
+import { useState } from "react";
+
+export function Chat({ persona }: { persona: string }) {
+  const { status, session } = useSession({ systemPrompt: persona });
+  const [response, setResponse] = useState("");
+
+  if (status === "unavailable" || !session) return null;
+
+  const send = async (text: string) => {
+    setResponse("");
+    let buffer = "";
+    for await (const delta of session.sendStreaming(text)) {
+      buffer += delta;
+      setResponse(buffer);
+    }
+  };
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); send("Hello"); }}>
+      <button type="submit">Send</button>
+      <button type="button" onClick={() => session.abort()}>Stop</button>
+      <p>{response}</p>
+    </form>
+  );
+}
+```
+
+`useSession` is lifecycle-only: it creates the session on mount, destroys it on unmount, and recreates it when any primitive option changes. It deliberately does **not** track `response` / `history` / streaming status — that's your UI state, you own it. Each `useSession()` call owns its own underlying `LanguageModelInstance`, so N components → N concurrent streams.
 
 ## API
 
-### `prompt(options): Promise<PromptResult>`
+### `ask(options): Promise<AskResult>`
 
 ```ts
-interface PromptOptions {
-  prompt: string;
+interface AskOptions {
+  input: string;
   systemPrompt?: string;
   temperature?: number;
   topK?: number;
@@ -82,15 +145,57 @@ interface PromptOptions {
   responseConstraint?: object;              // JSON Schema for structured output
   cache?: ResponseCache;
   cacheKey?: string;
-  onChunk?: (text: string) => void;
+  onUpdate?: (text: string) => void;        // CUMULATIVE buffer
   signal?: AbortSignal;
 }
 
-interface PromptResult {
+interface AskResult {
   response: string | null;
   cached: boolean;
 }
 ```
+
+`onUpdate` receives the cumulative text so far, not deltas. For delta-shaped streaming use `createSession().sendStreaming()`.
+
+If `systemPrompt` is passed alongside `createOptions.initialPrompts`, the SDK emits a one-shot `console.warn` because `initialPrompts` overrides the synthesized system prompt and the persona is silently lost.
+
+### `createSession(options?): Session`
+
+```ts
+interface CreateSessionOptions {
+  systemPrompt?: string;
+  temperature?: number;
+  topK?: number;
+  language?: string;
+  supportedLanguages?: readonly string[];
+  expectedInputs?: LanguageModelExpectedInput[];
+  expectedOutputs?: LanguageModelExpectedOutput[];
+  // Pass `initialPrompts` here to seed multi-turn context.
+  createOptions?: Partial<LanguageModelCreateOptions>;
+}
+
+interface Session {
+  readonly destroyed: boolean;
+  send(input: string, options?: SessionSendOptions): Promise<string | null>;
+  sendStreaming(input: string, options?: SessionSendOptions): AsyncIterable<string>;
+  abort(): void;
+  destroy(): void;
+}
+```
+
+`Session.sendStreaming()` yields **deltas** (each chunk is the new text since the last yield, never cumulative). The wrapper does no extra bookkeeping: no history tracking, no concurrent-send queue, no usage telemetry. Always destroy sessions you no longer need.
+
+### `useSession(options?): UseSessionReturn`
+
+```ts
+interface UseSessionReturn {
+  status: "loading" | "ready" | "unavailable";
+  error: Error | null;
+  session: Session | null; // null until status === "ready"
+}
+```
+
+Lifecycle-only: feature detection + create + destroy on unmount + recreate when any primitive option (`systemPrompt`, `temperature`, `topK`, `language`) changes. Object options (`expectedInputs`, `createOptions`) participate by reference; memoize them or accept the recreate cost. UI state is your concern — iterate `session.sendStreaming()` and accumulate text into your own component state.
 
 ### `isPromptAvailable(): boolean`
 
@@ -102,35 +207,49 @@ Forwards to `LanguageModel.availability()`. Returns `null` if the global is miss
 
 ### `createSessionStorageCache({ storage?, prefix? }): ResponseCache`
 
-Optional cache backend. Pass it to `prompt({ cache })` to enable response caching, with an optional custom `storage` (e.g. `localStorage`, an in-memory polyfill).
+Optional cache backend. Pass it to `ask({ cache })` to enable response caching, with an optional custom `storage` (e.g. `localStorage`, an in-memory polyfill).
+
+### Cache controls
+
+```ts
+import {
+  clearSessions,        // drop every cached one-shot session
+  clearSession,         // drop one cached session by create-options
+  configurePromptCache, // change the LRU cap (default 8)
+} from "@web-ai-sdk/prompt";
+```
+
+The internal session cache is LRU-bounded (default 8) and only memoizes sessions created by `ask()`; `createSession()` is never cached.
 
 ### Lower-level helpers (advanced)
 
-`getLanguageModelApi`, `getOrCreateLanguageModel`, `defaultCacheKey`; exported so you can compose your own pipeline (e.g. share one cached session across multiple call sites, or roll your own retry).
+`getLanguageModelApi`, `getOrCreateLanguageModel`, `defaultCacheKey`; exported so you can compose your own pipeline.
 
 ## Caching
 
 Two layers, same as `@web-ai-sdk/summarizer`:
 
-- **Session cache** (internal, in-memory, always on): a `Map<stringifiedCreateOptions, LanguageModel>` so consecutive calls with the same shape (system prompt, temperature, topK, language hints) reuse the warm session. Cold-start ≈ 1-3s; warm calls are sub-second.
-- **Result cache** (opt-in): pass a `cache` (anything matching `{ get, set }`) to memoize final responses by `(prompt, systemPrompt, temperature, topK)`. Omit it for a fresh model call every time.
+- **Session cache** (internal, in-memory, on by default for `ask()` only): a bounded LRU of `LanguageModel` instances keyed by stringified create-options. Cold-start ≈ 1-3s; warm calls are sub-second. `createSession()` bypasses this cache entirely.
+- **Result cache** (opt-in): pass a `cache` (anything matching `{ get, set }`) to memoize final responses by `(input, systemPrompt, temperature, topK)`. Omit it for a fresh model call every time.
 
 ```ts
 // Off by default; every call hits the model.
-prompt({ prompt: "hi" });
+ask({ input: "hi" });
 
 // Opt in for sessionStorage-backed caching.
-prompt({ prompt: "hi", cache: createSessionStorageCache() });
+ask({ input: "hi", cache: createSessionStorageCache() });
 
 // Or roll your own.
-prompt({ prompt: "hi", cache: myMap, cacheKey: "greeting" });
+ask({ input: "hi", cache: myMap, cacheKey: "greeting" });
 ```
 
 ## Errors and unavailability
 
-The vanilla `prompt()` throws `PromptUnavailableError` when the API is missing or reports `availability: "unavailable"`. The React hook absorbs this and returns `status: "unavailable"` instead.
+The vanilla `ask()` throws `PromptUnavailableError` when the API is missing or reports `availability: "unavailable"`. The React hook absorbs this and returns `status: "unavailable"` instead.
 
-`AbortSignal` is supported on both surfaces. Aborting mid-stream resolves cleanly; the result cache is not written for aborted runs.
+`createSession()` returns a `Session` synchronously even if the underlying `create()` rejects; the error surfaces on the first `send` / `sendStreaming`.
+
+`AbortSignal` is supported on every surface. Aborting mid-stream resolves cleanly; the result cache is not written for aborted runs.
 
 ## License
 

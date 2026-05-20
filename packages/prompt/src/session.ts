@@ -1,0 +1,398 @@
+/**
+ * Independent, never-shared `LanguageModel` sessions for chat-shaped apps.
+ *
+ * `ask()` shares warm sessions through `getOrCreateLanguageModel`, which is
+ * right for embeds and widgets — the cold start is paid once per persona.
+ * It's the wrong shape for chat: two callers with the same mode would share
+ * one instance and queue against each other instead of streaming concurrently.
+ * `createSession()` bypasses that cache so every caller gets its own instance.
+ *
+ * The wrapper is intentionally thin. It handles cross-browser smoothing that
+ * every consumer would otherwise reimplement (delta-vs-cumulative chunk
+ * detection, output sanitization, abort composition, typed unavailability)
+ * and forwards everything else to the native instance. It does NOT track
+ * conversation history, queue concurrent sends, or wrap `clone()` — those
+ * are the consumer's data model and UI concerns.
+ */
+
+import {
+  type LanguageModelApi,
+  type LanguageModelCreateOptions,
+  type LanguageModelExpectedInput,
+  type LanguageModelExpectedOutput,
+  type LanguageModelInstance,
+  getLanguageModelApi,
+} from "./api.js";
+
+const NORMALIZE_LANG = (lang: string): string =>
+  lang.split("-")[0]?.toLowerCase() ?? lang.toLowerCase();
+
+const DEFAULT_SUPPORTED_LANGUAGES = ["en"] as const;
+
+export class PromptUnavailableError extends Error {
+  override readonly name = "PromptUnavailableError";
+}
+
+export class SessionDestroyedError extends Error {
+  override readonly name = "SessionDestroyedError";
+  constructor() {
+    super("Session has been destroyed");
+  }
+}
+
+export class PromptAbortError extends Error {
+  override readonly name = "AbortError";
+  constructor() {
+    super("Prompt aborted");
+  }
+}
+
+export const buildLangHints = (
+  language: string | undefined,
+  supported: readonly string[] | undefined,
+): {
+  expectedInputs?: LanguageModelExpectedInput[];
+  expectedOutputs?: LanguageModelExpectedOutput[];
+} => {
+  if (!language) return {};
+  const lang = NORMALIZE_LANG(language);
+  const set = new Set(supported ?? DEFAULT_SUPPORTED_LANGUAGES);
+  if (!set.has(lang)) return {};
+  return {
+    expectedInputs: [{ type: "text", languages: [lang] }],
+    expectedOutputs: [{ type: "text", languages: [lang] }],
+  };
+};
+
+/**
+ * Strip non-printing characters from a model response:
+ *   - C0 control codes (U+0000..U+001F) except TAB/LF/CR
+ *   - DEL + C1 controls (U+007F..U+009F)
+ *   - Soft hyphen (U+00AD)
+ *   - Zero-width / joiner / direction marks (U+200B..U+200F, U+202A..U+202E,
+ *     U+2060..U+206F)
+ *   - BOM (U+FEFF)
+ *
+ * Edge's safety pipeline has been observed returning runs of `` (CANCEL)
+ * as a "soft block" placeholder instead of throwing or returning empty;
+ * these strip away here so callers can treat empty-after-clean as "model
+ * returned nothing meaningful."
+ */
+const NON_PRINTING = new RegExp(
+  "[" +
+    "\\u0000-\\u0008" + // C0 except TAB/LF/CR
+    "\\u000B\\u000C" + // VT, FF
+    "\\u000E-\\u001F" + // rest of C0
+    "\\u007F-\\u009F" + // DEL + C1
+    "\\u00AD" + // soft hyphen
+    "\\u200B-\\u200F" + // zero-width + LTR/RTL marks
+    "\\u202A-\\u202E" + // bidi
+    "\\u2060-\\u206F" + // word joiner + reserved
+    "\\uFEFF" + // BOM
+    "]",
+  "g",
+);
+
+/**
+ * Strip non-printing characters without trimming surrounding whitespace.
+ * Safe to apply per streamed delta — inter-token spaces are preserved.
+ */
+export const stripNonPrinting = (raw: string): string =>
+  raw.replace(NON_PRINTING, "");
+
+/**
+ * Full sanitization for a final response: strip non-printing characters and
+ * trim leading/trailing whitespace. Apply at the end of a turn, not per delta.
+ */
+export const sanitizeResponse = (raw: string): string =>
+  stripNonPrinting(raw).trim();
+
+/**
+ * The W3C Web AI streaming contract is ambiguous between "delta" (each chunk
+ * is new content) and "cumulative" (each chunk is the full text so far).
+ * Chrome ships delta; some Edge backends (notably Phi-Silica on Copilot+
+ * PCs) ship cumulative. Detect per-chunk: if the chunk starts with the prior
+ * buffer, treat as cumulative (replace); otherwise treat as delta (append).
+ *
+ * Returns `{ buffer, delta }` so streaming surfaces can decide whether to
+ * hand callers cumulative text (`buffer`) or the new piece (`delta`).
+ */
+export const mergeStreamChunk = (
+  buffer: string,
+  chunk: string,
+): { buffer: string; delta: string } => {
+  if (chunk.startsWith(buffer)) {
+    return { buffer: chunk, delta: chunk.slice(buffer.length) };
+  }
+  return { buffer: buffer + chunk, delta: chunk };
+};
+
+export interface CreateSessionOptions {
+  /** Optional system prompt (folded into `initialPrompts` as a `system` role). */
+  systemPrompt?: string;
+  /** Sampling temperature (0..1). Defaults to the model's default. */
+  temperature?: number;
+  /** Sampling top-k. Defaults to the model's default. */
+  topK?: number;
+  /** BCP-47 language hint. Folded into `expectedInputs` / `expectedOutputs` when supported. */
+  language?: string;
+  /** Languages the model supports for the language hint. Default: `["en"]`. */
+  supportedLanguages?: readonly string[];
+  /** Advanced: full `expectedInputs` passthrough. Overrides the `language` hint. */
+  expectedInputs?: LanguageModelExpectedInput[];
+  /** Advanced: full `expectedOutputs` passthrough. Overrides the `language` hint. */
+  expectedOutputs?: LanguageModelExpectedOutput[];
+  /**
+   * Override `LanguageModel.create()` options entirely. Merged on top of
+   * defaults. Pass `initialPrompts` here to seed multi-turn context (e.g.
+   * restoring a conversation from storage).
+   */
+  createOptions?: Partial<LanguageModelCreateOptions>;
+}
+
+export interface SessionSendOptions {
+  signal?: AbortSignal;
+  responseConstraint?: object;
+}
+
+export interface Session {
+  /** Whether `destroy()` has been called. After destroy, sends throw `SessionDestroyedError`. */
+  readonly destroyed: boolean;
+  /** Run a turn. Returns the cleaned final text, or `null` if nothing meaningful remains. */
+  send(input: string, options?: SessionSendOptions): Promise<string | null>;
+  /**
+   * Run a turn and yield **delta** chunks (each chunk is the *new* text since
+   * the last yield, never cumulative).
+   */
+  sendStreaming(
+    input: string,
+    options?: SessionSendOptions,
+  ): AsyncIterable<string>;
+  /** Abort the most recent in-flight `send` / `sendStreaming`. No-op when idle. */
+  abort(): void;
+  /** Tear down the underlying instance and refuse further sends. Idempotent. */
+  destroy(): void;
+}
+
+const buildCreateOptions = (
+  options: CreateSessionOptions,
+): LanguageModelCreateOptions => {
+  const initialPrompts = options.systemPrompt
+    ? [{ role: "system" as const, content: options.systemPrompt }]
+    : [];
+  const langHints = buildLangHints(
+    options.language,
+    options.supportedLanguages,
+  );
+  return {
+    ...(initialPrompts.length > 0 ? { initialPrompts } : {}),
+    ...(options.temperature !== undefined
+      ? { temperature: options.temperature }
+      : {}),
+    ...(options.topK !== undefined ? { topK: options.topK } : {}),
+    ...(options.expectedInputs
+      ? { expectedInputs: options.expectedInputs }
+      : langHints.expectedInputs
+        ? { expectedInputs: langHints.expectedInputs }
+        : {}),
+    ...(options.expectedOutputs
+      ? { expectedOutputs: options.expectedOutputs }
+      : langHints.expectedOutputs
+        ? { expectedOutputs: langHints.expectedOutputs }
+        : {}),
+    ...options.createOptions,
+  };
+};
+
+interface SessionInternal {
+  instance: LanguageModelInstance;
+  api: LanguageModelApi;
+}
+
+const wrapInstance = (internal: Promise<SessionInternal>): Session => {
+  let destroyed = false;
+  let currentController: AbortController | null = null;
+
+  // Wrap the create-failure promise once so awaiters get the typed error.
+  const ready: Promise<SessionInternal> = internal.catch((err) => {
+    if (err instanceof PromptAbortError) throw err;
+    const message = (err as Error)?.message ?? String(err);
+    throw new PromptUnavailableError(
+      `LanguageModel.create() failed: ${message}`,
+    );
+  });
+  // Swallow the rejection on the internal promise so unhandled-rejection
+  // warnings don't fire when callers never touch `ready`.
+  ready.catch(() => {});
+
+  const ensureLive = (): void => {
+    if (destroyed) throw new SessionDestroyedError();
+  };
+
+  const setupController = (
+    externalSignal: AbortSignal | undefined,
+  ): { controller: AbortController; cleanup: () => void } => {
+    const controller = new AbortController();
+    currentController = controller;
+    if (!externalSignal) {
+      return {
+        controller,
+        cleanup: () => {
+          if (currentController === controller) currentController = null;
+        },
+      };
+    }
+    if (externalSignal.aborted) controller.abort();
+    const onExternalAbort = () => controller.abort();
+    externalSignal.addEventListener("abort", onExternalAbort);
+    return {
+      controller,
+      cleanup: () => {
+        externalSignal.removeEventListener("abort", onExternalAbort);
+        if (currentController === controller) currentController = null;
+      },
+    };
+  };
+
+  const send = async (
+    input: string,
+    options?: SessionSendOptions,
+  ): Promise<string | null> => {
+    ensureLive();
+    if (!input.trim()) return null;
+    const { instance } = await ready;
+    ensureLive();
+
+    const { controller, cleanup } = setupController(options?.signal);
+    const promptOpts: { signal: AbortSignal; responseConstraint?: object } = {
+      signal: controller.signal,
+    };
+    if (options?.responseConstraint)
+      promptOpts.responseConstraint = options.responseConstraint;
+
+    try {
+      const raw = await instance.prompt(input, promptOpts);
+      if (controller.signal.aborted) throw new PromptAbortError();
+      const cleaned = sanitizeResponse(raw);
+      return cleaned || null;
+    } catch (err) {
+      if ((err as { name?: string })?.name === "AbortError") {
+        throw new PromptAbortError();
+      }
+      throw err;
+    } finally {
+      cleanup();
+    }
+  };
+
+  const sendStreaming = (
+    input: string,
+    options?: SessionSendOptions,
+  ): AsyncIterable<string> => ({
+    [Symbol.asyncIterator]: async function* () {
+      ensureLive();
+      if (!input.trim()) return;
+      const { instance } = await ready;
+      ensureLive();
+
+      const { controller, cleanup } = setupController(options?.signal);
+      const promptOpts: { signal: AbortSignal; responseConstraint?: object } = {
+        signal: controller.signal,
+      };
+      if (options?.responseConstraint)
+        promptOpts.responseConstraint = options.responseConstraint;
+
+      try {
+        if (typeof instance.promptStreaming === "function") {
+          let buffer = "";
+          for await (const chunk of instance.promptStreaming(
+            input,
+            promptOpts,
+          )) {
+            if (controller.signal.aborted) throw new PromptAbortError();
+            const merged = mergeStreamChunk(buffer, chunk);
+            // Strip non-printing chars (control codes, BOM, zero-width)
+            // but preserve inter-token whitespace — trimming would eat
+            // spaces that legitimately split deltas like "lo, " | "world".
+            const cleanedDelta = stripNonPrinting(merged.delta);
+            buffer = merged.buffer;
+            if (cleanedDelta) yield cleanedDelta;
+          }
+        } else {
+          const raw = await instance.prompt(input, promptOpts);
+          if (controller.signal.aborted) throw new PromptAbortError();
+          const cleaned = sanitizeResponse(raw);
+          if (cleaned) yield cleaned;
+        }
+      } catch (err) {
+        if ((err as { name?: string })?.name === "AbortError") {
+          throw new PromptAbortError();
+        }
+        throw err;
+      } finally {
+        cleanup();
+      }
+    },
+  });
+
+  const abort = (): void => {
+    currentController?.abort();
+  };
+
+  const destroy = (): void => {
+    if (destroyed) return;
+    destroyed = true;
+    currentController?.abort();
+    currentController = null;
+    ready
+      .then(({ instance }) => {
+        try {
+          instance.destroy?.();
+        } catch {
+          // best-effort.
+        }
+      })
+      .catch(() => {
+        // never created; nothing to destroy.
+      });
+  };
+
+  return {
+    get destroyed() {
+      return destroyed;
+    },
+    send,
+    sendStreaming,
+    abort,
+    destroy,
+  };
+};
+
+/**
+ * Create a fresh `LanguageModel` session. Unlike `ask()`, sessions returned
+ * here are **never shared**: every call returns an independent instance so
+ * streams can run concurrently and turn history doesn't bleed between
+ * conversations.
+ *
+ * Concurrent `send` / `sendStreaming` calls on the same session are NOT
+ * queued; the native `LanguageModel` is sequential per instance and will
+ * reject the second call with an `InvalidStateError`. Either `await` the
+ * previous call or `session.abort()` before issuing a new turn.
+ *
+ * The returned `Session` is usable synchronously; the first `send` /
+ * `sendStreaming` awaits the underlying `LanguageModel.create()` internally
+ * and surfaces creation errors as `PromptUnavailableError`.
+ */
+export const createSession = (options: CreateSessionOptions = {}): Session => {
+  const api = getLanguageModelApi();
+  if (!api?.create) {
+    throw new PromptUnavailableError(
+      "Prompt API (LanguageModel) is not available in this environment.",
+    );
+  }
+  const createOpts = buildCreateOptions(options);
+  const internal: Promise<SessionInternal> = api
+    .create(createOpts)
+    .then((instance) => ({ instance, api }));
+  return wrapInstance(internal);
+};

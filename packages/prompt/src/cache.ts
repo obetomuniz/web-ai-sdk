@@ -6,7 +6,7 @@
  *
  * Prompt cache keys hash the inputs that affect the model output
  * (prompt + systemPrompt + temperature + topK). Pass an explicit `cacheKey`
- * to `prompt()` if you want a more stable key (e.g. per-feature shorthand).
+ * to `ask()` if you want a more stable key (e.g. per-feature shorthand).
  */
 
 export interface ResponseCache {
@@ -61,7 +61,7 @@ export interface DefaultCacheKeyInput {
 /**
  * Build a default cache key from the inputs that affect the response. JSON
  * stringification keeps it collision-free without pulling in a hashing
- * dependency. Pass a custom `cacheKey` to `prompt()` for shorter / sticky keys.
+ * dependency. Pass a custom `cacheKey` to `ask()` for shorter / sticky keys.
  */
 export const defaultCacheKey = (input: DefaultCacheKeyInput): string =>
   JSON.stringify([

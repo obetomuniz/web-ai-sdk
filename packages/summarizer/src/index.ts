@@ -14,6 +14,9 @@ import {
   type SummarizerCreateOptions,
   type SummarizerInstance,
   checkAvailability,
+  clearSummarizerSession,
+  clearSummarizerSessions,
+  configureSummarizerCache,
   getOrCreateSummarizer,
   getSummarizerApi,
   isSummarizerAvailable,
@@ -40,6 +43,9 @@ export {
   trimToSentenceBoundary,
   createSessionStorageCache,
   defaultCacheKey,
+  clearSummarizerSessions,
+  clearSummarizerSession,
+  configureSummarizerCache,
 };
 
 export type {
@@ -83,8 +89,11 @@ export interface SummarizeOptions {
   cache?: SummaryCache;
   /** Cache key. Default: `defaultCacheKey(lang)` (pathname:lang). */
   cacheKey?: string;
-  /** Streaming chunk callback (cleaned text, monotonically growing). */
-  onChunk?: (text: string) => void;
+  /**
+   * Streaming update callback (cleaned text, monotonically growing).
+   * Receives the **cumulative** buffer, not deltas.
+   */
+  onUpdate?: (text: string) => void;
   /** Abort signal. */
   signal?: AbortSignal;
 }
@@ -110,6 +119,11 @@ export class SummarizerUnavailableError extends Error {
  * one-shot otherwise. Returns `null` when no input is available (empty
  * article, no text passed). Throws `SummarizerUnavailableError` when the API
  * isn't present in the environment.
+ *
+ * Output is normalized via `cleanSummary` (wrapping quotes/whitespace stripped,
+ * internal whitespace collapsed). Anything beyond that — e.g. trimming
+ * terminal punctuation for headline-style use cases — is the consumer's
+ * concern.
  */
 export const summarize = async (
   options: SummarizeOptions,
@@ -246,13 +260,12 @@ export const summarize = async (
     chunk.startsWith(buffer) ? chunk : buffer + chunk;
 
   let finalText: string;
-  if (typeof summarizer.summarizeStreaming === "function" && options.onChunk) {
+  if (typeof summarizer.summarizeStreaming === "function" && options.onUpdate) {
     let buffer = "";
     for await (const chunk of summarizer.summarizeStreaming(text)) {
       if (options.signal?.aborted) throw new AbortError();
       buffer = mergeChunk(buffer, chunk);
-      const cleaned = cleanSummary(buffer);
-      options.onChunk(cleaned);
+      options.onUpdate(cleanSummary(buffer));
     }
     finalText = cleanSummary(buffer);
   } else if (typeof summarizer.summarizeStreaming === "function") {

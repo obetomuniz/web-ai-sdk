@@ -20,7 +20,7 @@ The React adapter ships as a subpath export, with no extra install. `react` is a
 1. **Build a skeleton**: title + description + every `h1-h4` and `<strong>`/`<b>` inside the article. That's the highest-signal content; for long posts it drops the input from thousands of chars to a few hundred and produces a tighter summary. Falls back to the trimmed body when the skeleton is too thin.
 2. **Trim to a sentence boundary** so the model never sees a half-cut sentence (default cap: 3000 chars).
 3. **Cache `Summarizer.create()` sessions** by JSON-stringified options. First post pays the ~1-3s cold start; later same-config calls reuse the warm session.
-4. **Stream `summarizeStreaming()`** when the instance supports it, falling back to one-shot `summarize()`. Cleaned chunks are pushed to `onChunk` as they arrive.
+4. **Stream `summarizeStreaming()`** when the instance supports it, falling back to one-shot `summarize()`. Cleaned chunks are pushed to `onUpdate` as they arrive (cumulative buffer).
 5. **Optionally cache the final summary** when you pass a `cache` (e.g. `createSessionStorageCache()`). Off by default; opt in for revisits in the same tab to render instantly without invoking the model.
 
 ## Vanilla TypeScript / DOM
@@ -33,7 +33,7 @@ const result = await summarize({
   article: document.querySelector("article")!,
   title: "My Post",
   description: "About interesting things",
-  onChunk: (text) => console.log("partial", text),
+  onUpdate: (text) => console.log("partial", text),
 });
 
 console.log(result.summary, result.cached);
@@ -88,7 +88,7 @@ interface SummarizeOptions {
   minSkeletonChars?: number;  // default 200
   cache?: SummaryCache;
   cacheKey?: string;
-  onChunk?: (text: string) => void;
+  onUpdate?: (text: string) => void;
   signal?: AbortSignal;
 }
 
@@ -117,6 +117,22 @@ summarize({ language: "en", article });
 // Opt in for sessionStorage-backed caching.
 summarize({ language: "en", article, cache: createSessionStorageCache() });
 ```
+
+### Output normalization
+
+`cleanSummary` strips wrapping quotes / whitespace and collapses internal whitespace; applied to every summary regardless of `type`. Anything beyond that — e.g. trimming terminal punctuation for headline-style chat titles — is the consumer's concern; apply your own post-process after the call returns.
+
+### Cache controls
+
+```ts
+import {
+  clearSummarizerSessions,    // drop every cached summarizer session
+  clearSummarizerSession,     // drop one cached session by create-options
+  configureSummarizerCache,   // change the LRU cap (default 8)
+} from "@web-ai-sdk/summarizer";
+```
+
+The internal session cache is LRU-bounded (default 8). Evicted sessions have their `destroy()` invoked when present.
 
 ### Lower-level helpers (advanced)
 

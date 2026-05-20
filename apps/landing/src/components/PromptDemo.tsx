@@ -64,7 +64,7 @@ export const PromptDemo = () => {
           <span
             className={`dot ${streaming ? "live" : status === "done" ? "ok" : "ok"}`}
           />
-          prompt() · streaming
+          ask() · streaming
         </span>
         <span>session: cached · temp 0.7</span>
       </div>
