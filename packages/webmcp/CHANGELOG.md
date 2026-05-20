@@ -1,5 +1,7 @@
 # @web-ai-sdk/webmcp
 
+## 0.3.1
+
 ## 0.3.0
 
 ### Minor Changes
