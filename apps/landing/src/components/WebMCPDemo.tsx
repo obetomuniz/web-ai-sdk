@@ -151,6 +151,13 @@ export const WebMCPDemo = () => {
 
   const run = async () => {
     if (running) return;
+    // Defensive bail: on browsers without `navigator.modelContext` the demo's
+    // tool execute closures are pure JS and would still "succeed" if invoked
+    // directly, which makes the trace pretend WebMCP worked. Refuse to run
+    // when the API is missing so the unavailable banner is the only thing
+    // the visitor sees. The button below is also disabled in the same
+    // condition; this guard is the second line of defence.
+    if (available === false) return;
     setRunning(true);
     setTrace([]);
     start();
@@ -406,7 +413,7 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
             type="button"
             className="btn-sm"
             onClick={run}
-            disabled={running}
+            disabled={running || !available}
           >
             <span>{running ? "…" : "▶"}</span> Run agent
           </button>
