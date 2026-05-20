@@ -32,7 +32,7 @@ const result = await ask({
 console.log(result.response, result.cached);
 ```
 
-`ask()` shares a warm `LanguageModel` instance across same-shape callers so the cold start is paid once per persona. That's right for embeds, widgets, ask-and-display flows. It's the wrong shape for chat (two callers with the same mode would queue, not stream concurrently).
+`ask()` shares a warm `LanguageModel` instance across same-shape callers so the cold start is paid once per persona. That's right for embeds, widgets, ask-and-display flows. It's the wrong shape for chat: two callers with the same mode would share one instance, so conversation history cross-bleeds and `abort()` on one caller kills the other.
 
 ### Chat — `createSession()`
 
@@ -56,7 +56,9 @@ const text = await session.send("And what about the Prompt API?");
 session.destroy();
 ```
 
-Every `createSession()` call returns an independent `LanguageModelInstance`, so N parallel chats stream concurrently. Concurrent `send` / `sendStreaming` calls on the **same** session are NOT queued — the underlying `LanguageModel` is sequential per instance and will reject the overlapping call with `InvalidStateError`. Either `await` the previous send or call `session.abort()` before issuing a new turn. Multi-turn conversation context is tracked by the native instance itself; UI message lists are your data model.
+Every `createSession()` call returns an independent `LanguageModelInstance` with its own history, system prompt, sampling, and lifecycle — `abort()` / `destroy()` on one session never touch another. Concurrent `send` / `sendStreaming` calls on the **same** session are NOT queued — the underlying `LanguageModel` is sequential per instance and will reject the overlapping call with `InvalidStateError`. Either `await` the previous send or call `session.abort()` before issuing a new turn. Multi-turn conversation context is tracked by the native instance itself; UI message lists are your data model.
+
+**Concurrency note.** Each session is an independent `LanguageModel` instance: independent history, system prompt, sampling, and lifecycle. The underlying on-device model is single-instance, so the browser currently schedules `sendStreaming` calls across sessions FIFO. Overlapping sends do not interleave token-by-token in Chrome 138 / Edge 138 — the second send waits for the first to drain. This is a constraint of the runtime, not of the API; code written against `createSession()` becomes faster automatically if a future release exposes parallel inference.
 
 ## React
 
@@ -125,7 +127,7 @@ export function Chat({ persona }: { persona: string }) {
 }
 ```
 
-`useSession` is lifecycle-only: it creates the session on mount, destroys it on unmount, and recreates it when any primitive option changes. It deliberately does **not** track `response` / `history` / streaming status — that's your UI state, you own it. Each `useSession()` call owns its own underlying `LanguageModelInstance`, so N components → N concurrent streams.
+`useSession` is lifecycle-only: it creates the session on mount, destroys it on unmount, and recreates it when any primitive option changes. It deliberately does **not** track `response` / `history` / streaming status — that's your UI state, you own it. Each `useSession()` call owns its own underlying `LanguageModelInstance`, so component state and `abort()` / `destroy()` stay scoped to the owning component. Token-level interleaving across sessions is browser-defined (see the Concurrency note above) — N mounted components in Chrome 138 / Edge 138 still drain through one underlying model FIFO.
 
 ## API
 

@@ -150,8 +150,8 @@ const warnClobberOnce = (key: string): void => {
  *
  * For chat-shaped apps where turns need to remember each other, prefer
  * `createSession()` (or `useSession()` in React); `ask()` shares warm sessions
- * across same-shape callers, so two chats with the same persona will queue
- * instead of streaming concurrently.
+ * across same-shape callers, so two chats with the same persona would share
+ * one instance — with cross-bleeding history and `abort()` killing both.
  */
 export const ask = async (options: AskOptions): Promise<AskResult> => {
   const api = getLanguageModelApi();

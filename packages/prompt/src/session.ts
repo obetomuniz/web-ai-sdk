@@ -4,8 +4,10 @@
  * `ask()` shares warm sessions through `getOrCreateLanguageModel`, which is
  * right for embeds and widgets — the cold start is paid once per persona.
  * It's the wrong shape for chat: two callers with the same mode would share
- * one instance and queue against each other instead of streaming concurrently.
- * `createSession()` bypasses that cache so every caller gets its own instance.
+ * one instance, so conversation history cross-bleeds, `abort()` on one
+ * caller kills the other, and `destroy()` releases memory the other still
+ * needs. `createSession()` bypasses that cache so every caller gets its own
+ * instance with its own history, system prompt, sampling, and lifecycle.
  *
  * The wrapper is intentionally thin. It handles cross-browser smoothing that
  * every consumer would otherwise reimplement (delta-vs-cumulative chunk
@@ -370,9 +372,17 @@ const wrapInstance = (internal: Promise<SessionInternal>): Session => {
 
 /**
  * Create a fresh `LanguageModel` session. Unlike `ask()`, sessions returned
- * here are **never shared**: every call returns an independent instance so
- * streams can run concurrently and turn history doesn't bleed between
- * conversations.
+ * here are **never shared**: every call returns an independent instance with
+ * its own history, system prompt, sampling, and lifecycle. `abort()` /
+ * `destroy()` on one session never affect another.
+ *
+ * Token-level interleaving across sessions is implementation-defined and
+ * currently bottlenecked by the browser's FIFO scheduler — the underlying
+ * on-device model is single-instance, so Chrome 138 / Edge 138 drain one
+ * `sendStreaming` call fully before starting the next, even across
+ * independent sessions. The API is forward-compatible: code written against
+ * `createSession()` becomes faster automatically if a future release
+ * exposes parallel inference.
  *
  * Concurrent `send` / `sendStreaming` calls on the same session are NOT
  * queued; the native `LanguageModel` is sequential per instance and will
