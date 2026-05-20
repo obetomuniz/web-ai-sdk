@@ -28,15 +28,15 @@ pnpm add @web-ai-sdk/all
 Tree-shakes cleanly; the bundler only pulls in the building blocks you actually use.
 
 ```ts
-import { prompt } from "@web-ai-sdk/all/prompt";
+import { ask, createSession } from "@web-ai-sdk/all/prompt";
 import { summarize } from "@web-ai-sdk/all/summarizer";
 import { translate } from "@web-ai-sdk/all/translator";
 import { detect } from "@web-ai-sdk/all/detector";
-import { registerTool } from "@web-ai-sdk/all/webmcp";
+import { registerTool, defineTool } from "@web-ai-sdk/all/webmcp";
 ```
 
 ```tsx
-import { usePrompt } from "@web-ai-sdk/all/prompt/react";
+import { usePrompt, useSession } from "@web-ai-sdk/all/prompt/react";
 import { useSummarizer } from "@web-ai-sdk/all/summarizer/react";
 ```
 
@@ -45,7 +45,7 @@ import { useSummarizer } from "@web-ai-sdk/all/summarizer/react";
 ```ts
 import { prompt, summarizer, translator, detector, webmcp } from "@web-ai-sdk/all";
 
-await prompt.prompt({ prompt: "Hello" });
+await prompt.ask({ input: "Hello" });
 await summarizer.summarize({ language: "en", article: document.body });
 ```
 

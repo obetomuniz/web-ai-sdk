@@ -7,11 +7,11 @@
  * Two equivalent import shapes:
  *
  *   import { prompt, summarizer } from "@web-ai-sdk/all";
- *   await prompt.prompt({ prompt: "Hello" });
+ *   await prompt.ask({ input: "Hello" });
  *
  *   // or
  *
- *   import { prompt } from "@web-ai-sdk/all/prompt";
+ *   import { ask } from "@web-ai-sdk/all/prompt";
  *   import { useSummarizer } from "@web-ai-sdk/all/summarizer/react";
  *
  * The namespaced root avoids name collisions between packages

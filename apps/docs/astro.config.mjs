@@ -74,24 +74,11 @@ export default defineConfig({
           label: "React Hooks",
           items: [
             { label: "usePrompt", slug: "react/use-prompt" },
+            { label: "useSession", slug: "react/use-session" },
             { label: "useWebMCP", slug: "react/use-web-mcp" },
             { label: "useSummarizer", slug: "react/use-summarizer" },
             { label: "useTranslator", slug: "react/use-translator" },
             { label: "useDetector", slug: "react/use-detector" },
-          ],
-        },
-        {
-          // Generated from packages/*/README.md by scripts/sync-package-readmes.mjs.
-          // READMEs are the source of truth; this group mirrors them verbatim
-          // so the rendered HTML, the npm README, and llms.txt never drift.
-          label: "Packages (from README)",
-          items: [
-            { label: "@web-ai-sdk/all", slug: "packages/all" },
-            { label: "@web-ai-sdk/prompt", slug: "packages/prompt" },
-            { label: "@web-ai-sdk/webmcp", slug: "packages/webmcp" },
-            { label: "@web-ai-sdk/summarizer", slug: "packages/summarizer" },
-            { label: "@web-ai-sdk/translator", slug: "packages/translator" },
-            { label: "@web-ai-sdk/detector", slug: "packages/detector" },
           ],
         },
       ],

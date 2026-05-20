@@ -75,4 +75,4 @@ Pass `cache`, `createOptions`, `expectedInputs`, etc. as stable references. The 
 
 ## Multi-turn
 
-`usePrompt` is single-shot per `ask()`. For multi-turn conversation (carrying prior turns into the next), use the vanilla `getOrCreateLanguageModel()` directly and call `session.prompt()` with an array of messages.
+`usePrompt` is single-shot per `ask()`. For multi-turn conversation where each chat needs independent context and streams should run concurrently, use [`useSession`](./use-session/) — it returns a per-component, never-shared `LanguageModel` session with `history`, `send`, `abort`, and `clear`.

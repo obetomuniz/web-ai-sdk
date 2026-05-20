@@ -14,7 +14,7 @@ export type SummarizerStatus =
   | "unavailable";
 
 export interface UseSummarizerOptions
-  extends Omit<SummarizeOptions, "onChunk" | "signal"> {
+  extends Omit<SummarizeOptions, "onUpdate" | "signal"> {
   /** Whether to automatically run on mount. Default: `true`. */
   enabled?: boolean;
 }
@@ -85,7 +85,7 @@ export const useSummarizer = (
       minSkeletonChars,
       supportedLanguages,
       signal: controller.signal,
-      onChunk: (chunk) => {
+      onUpdate: (chunk) => {
         if (controller.signal.aborted) return;
         setSummary(chunk);
         setStatus("streaming");

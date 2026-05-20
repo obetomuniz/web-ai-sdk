@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  type StandardSchemaV1,
+  ToolValidationError,
+  defineTool,
   getModelContext,
   isWebMCPAvailable,
   registerTool,
@@ -291,6 +294,102 @@ describe("registerTool", () => {
     await Promise.resolve(); // flush microtask
     expect(map.has("t")).toBe(true); // retry landed it
     expect(registerTool_).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("defineTool", () => {
+  // Tiny Standard-Schema-shaped validator for tests; mirrors what a real
+  // Zod/Valibot schema would expose via the `~standard` property. Kept inline
+  // so the webmcp package stays dependency-free.
+  const stringSchema = (label: string): StandardSchemaV1<string, string> => ({
+    "~standard": {
+      version: 1,
+      vendor: "test",
+      validate: (value: unknown) => {
+        if (typeof value === "string") {
+          return { value };
+        }
+        return {
+          issues: [{ message: `${label} must be a string`, path: [] }],
+        };
+      },
+      types: { input: "" as string, output: "" as string },
+    },
+  });
+
+  it("returns a Tool that registers via the existing surface", () => {
+    const { registered } = installFakeModelContext();
+    const tool = defineTool({
+      name: "echo",
+      description: "echoes",
+      input: stringSchema("input"),
+      inputSchema: { type: "string" },
+      execute: (text) => ({ text }),
+    });
+    registerTool(tool);
+    expect(registered.get("echo")?.inputSchema).toEqual({ type: "string" });
+  });
+
+  it("does NOT validate by default (purely additive type narrowing)", async () => {
+    const tool = defineTool({
+      name: "echo",
+      description: "echoes",
+      input: stringSchema("input"),
+      execute: (text) => ({ text }),
+    });
+    // Pass a non-string at runtime; with validate=false the execute runs
+    // verbatim (here sync, since the user's execute is sync).
+    const out = await (tool.execute as (i: unknown) => unknown)(123);
+    expect(out).toEqual({ text: 123 });
+  });
+
+  it("validates and throws ToolValidationError when validate:true and input fails", async () => {
+    const tool = defineTool({
+      name: "echo",
+      description: "echoes",
+      input: stringSchema("input"),
+      validate: true,
+      execute: (text) => ({ text }),
+    });
+    await expect(
+      (tool.execute as (i: unknown) => unknown)(123),
+    ).rejects.toBeInstanceOf(ToolValidationError);
+  });
+
+  it("validates and passes the parsed value through when validate:true and input is valid", async () => {
+    const tool = defineTool({
+      name: "echo",
+      description: "echoes",
+      input: stringSchema("input"),
+      validate: true,
+      execute: (text) => ({ text }),
+    });
+    await expect(
+      (tool.execute as (i: unknown) => Promise<unknown>)("hi"),
+    ).resolves.toEqual({ text: "hi" });
+  });
+
+  it("forwards readOnly / destructive shorthands to the resulting Tool", () => {
+    const tool = defineTool({
+      name: "list",
+      description: "lists",
+      readOnly: true,
+      execute: () => [],
+    });
+    expect(tool.readOnly).toBe(true);
+    expect(tool.destructive).toBeUndefined();
+  });
+
+  it("works without a Standard Schema (input is unknown)", () => {
+    const { registered } = installFakeModelContext();
+    const tool = defineTool({
+      name: "plain",
+      description: "plain",
+      inputSchema: { type: "object" },
+      execute: () => ({ ok: true }),
+    });
+    registerTool(tool);
+    expect(registered.get("plain")?.inputSchema).toEqual({ type: "object" });
   });
 });
 

@@ -110,7 +110,7 @@ const TABS: Tab[] = [
       },
       {
         t: [
-          ["pl", "  onChunk: (text) => "],
+          ["pl", "  onUpdate: (text) => "],
           ["fn", "render"],
           ["pl", "(text),"],
         ],

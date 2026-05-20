@@ -14,7 +14,7 @@ const result = await summarize({
   language: "en",
   article: document.querySelector("article") ?? undefined,
   createOptions: { type: "key-points", length: "short" },
-  onChunk: (text) => render(text),
+  onUpdate: (text) => render(text),
 });
 
 console.log(result.summary, result.cached);
@@ -27,7 +27,7 @@ Pass `article` to let the wrapper extract a skeleton (title + description + ever
 1. **Build a skeleton.** For long posts the high-signal content drops the input from thousands of chars to a few hundred and produces a tighter summary. Falls back to the trimmed body when the skeleton is too thin (`minSkeletonChars`, default 200).
 2. **Trim to a sentence boundary.** So the model never sees a half-cut sentence (default cap: 3000 chars).
 3. **Cache `Summarizer.create()` sessions** by JSON-stringified options. First post pays the ~1-3s cold start; later same-config calls reuse the warm session.
-4. **Stream `summarizeStreaming()`** when the instance supports it, falling back to one-shot `summarize()`. Cleaned chunks are pushed to `onChunk` as they arrive.
+4. **Stream `summarizeStreaming()`** when the instance supports it, falling back to one-shot `summarize()`. Cleaned chunks are pushed to `onUpdate` as they arrive.
 5. **Optionally cache the final summary** when you pass a `cache` (e.g. `createSessionStorageCache()`). Off by default; opt in for revisits in the same tab to render instantly.
 
 ## Two caches, two purposes
@@ -61,7 +61,11 @@ summarize({
 
 ## Streaming
 
-When the underlying Summarizer instance exposes `summarizeStreaming()`, the library uses it and pushes cleaned chunks to `onChunk` as they arrive. Otherwise it falls back to one-shot `summarize()`. Either way, `result.summary` is the final cleaned text.
+When the underlying Summarizer instance exposes `summarizeStreaming()`, the library uses it and pushes cleaned chunks to `onUpdate` as they arrive (cumulative buffer, not deltas). Otherwise it falls back to one-shot `summarize()`. Either way, `result.summary` is the final cleaned text.
+
+## Output normalization
+
+`cleanSummary` strips wrapping quotes / whitespace and collapses internal whitespace; applied to every result regardless of `type`. Anything beyond that — e.g. trimming the trailing period from a `type: "headline"` result so it reads as a label rather than a sentence — is your concern. A one-line regex after the call covers the headline case.
 
 ## Language support beyond en/es/ja
 

@@ -14,4 +14,10 @@ export const useWebMCP = (tools: readonly Tool[]): void => {
   }, [tools]);
 };
 
-export type { Tool, ToolAnnotations } from "../index.js";
+export { defineTool, ToolValidationError } from "../index.js";
+export type {
+  Tool,
+  ToolAnnotations,
+  DefineToolOptions,
+  StandardSchemaV1,
+} from "../index.js";

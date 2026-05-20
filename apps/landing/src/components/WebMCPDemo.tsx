@@ -1,7 +1,7 @@
 import {
   PromptUnavailableError,
+  ask,
   isPromptAvailable,
-  prompt as runPrompt,
 } from "@web-ai-sdk/prompt";
 import { type Tool, isWebMCPAvailable } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
@@ -207,8 +207,8 @@ User said: "${prompt}"
 
 Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason":"one short sentence"}. Choose one of the registered tool names if the user intent maps to it. If no registered tool matches, set "tool" to null and explain briefly in "reason". No markdown, no backticks.`;
       try {
-        const result = await runPrompt({
-          prompt: agentInput,
+        const result = await ask({
+          input: agentInput,
           systemPrompt:
             "You are a tool-routing agent. Reply with valid JSON only. " +
             "Set tool to null when no registered tool fits the user intent; " +
