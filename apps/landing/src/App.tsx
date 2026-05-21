@@ -737,8 +737,9 @@ export const App = () => (
             On Edge, only the Summarizer ships in stable (enabled by default
             since Edge 138). Prompt is a developer preview in Edge Canary/Dev
             138+; Translator (Edge 143+) and Language Detector (Edge 147+) are
-            Canary/Dev-only as well, each behind its own <code>edge://flags/</code>{" "}
-            toggle. WebMCP landed in Edge 147 behind a flag.
+            Canary/Dev-only as well, each behind its own{" "}
+            <code>edge://flags/</code> toggle. WebMCP landed in Edge 147 behind
+            a flag.
             <br />
             <strong>Partial</strong> = JS API is present but the on-device model
             frequently refuses output. Prompt and Summarizer route through
