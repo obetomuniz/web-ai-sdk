@@ -3,9 +3,9 @@ title: useSession
 description: Lifecycle-only React adapter for createSession. Each call owns one never-shared LanguageModel session; UI state is the consumer's concern.
 ---
 
-Lifecycle-only React adapter for the chat-shaped [`createSession()`](../guides/prompt/#chat-createsession) primitive in `@web-ai-sdk/prompt`. Each `useSession` call owns one underlying `LanguageModelInstance` — so N components produce N concurrent streams. The hook handles feature detection, create, destroy-on-unmount, and recreate-on-options-change. It does **not** track `response`, `history`, or streaming status; iterate `session.sendStreaming()` yourself and keep UI state in your own component.
+Lifecycle-only React adapter for the chat-shaped [`createSession()`](/docs/guides/prompt/#chat-createsession) primitive in `@web-ai-sdk/prompt`. Each `useSession` call owns one underlying `LanguageModelInstance` — so N components produce N concurrent streams. The hook handles feature detection, create, destroy-on-unmount, and recreate-on-options-change. It does **not** track `response`, `history`, or streaming status; iterate `session.sendStreaming()` yourself and keep UI state in your own component.
 
-For ask-and-display flows (embeds, widgets, single-question UIs) prefer [`usePrompt`](./use-prompt/); it shares a warm session across same-shape callers.
+For ask-and-display flows (embeds, widgets, single-question UIs) prefer [`usePrompt`](/docs/react/use-prompt/); it shares a warm session across same-shape callers.
 
 ## Usage
 
@@ -122,3 +122,41 @@ const session = useSession({
 ```
 
 The seeded turns become real context for the model. UI history lives in your own component state.
+
+## Reference
+
+```ts
+import type { UseSessionOptions, UseSessionReturn, SessionStatus } from "@web-ai-sdk/prompt/react";
+
+type SessionStatus = "loading" | "ready" | "unavailable";
+
+interface UseSessionOptions extends CreateSessionOptions {
+  enabled?: boolean;       // default: true; skip session creation when false
+  // Inherited from CreateSessionOptions:
+  systemPrompt?: string;
+  temperature?: number;
+  topK?: number;
+  language?: string;
+  supportedLanguages?: readonly string[];
+  expectedInputs?: LanguageModelExpectedInput[];
+  expectedOutputs?: LanguageModelExpectedOutput[];
+  createOptions?: LanguageModelCreateOptions;
+}
+
+interface UseSessionReturn {
+  status: SessionStatus;
+  error: Error | null;     // creation error, if any
+  session: Session | null; // null until status === "ready"
+}
+
+interface Session {
+  send(input: string): Promise<string>;
+  sendStreaming(input: string): AsyncIterable<string>; // yields deltas, not cumulative
+  abort(): void;
+  destroy(): void;
+}
+
+declare const useSession: (options?: UseSessionOptions) => UseSessionReturn;
+```
+
+Source: [`packages/prompt/src/react/index.ts`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/prompt/src/react/index.ts).

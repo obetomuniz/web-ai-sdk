@@ -2,6 +2,8 @@
 
 One-install meta-package for every `@web-ai-sdk/*` building block: `prompt`, `summarizer`, `translator`, `detector`, and `webmcp`. Pulls each scoped package in as a regular dependency so consumers don't have to track them individually.
 
+**Docs:** <https://web-ai-sdk.dev/docs/guides/meta-package/> · **All packages & links:** <https://web-ai-sdk.dev/llms.txt>
+
 ## Status
 
 Each underlying scoped package is independently supported in Chrome / Edge with the corresponding Built-in AI flag enabled. See the per-package READMEs for browser support details:
