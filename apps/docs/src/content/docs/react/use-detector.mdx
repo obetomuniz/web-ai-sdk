@@ -5,7 +5,7 @@ description: React adapter for @web-ai-sdk/detector. Auto-detects the language o
 
 import { DetectorDemo } from "../../../components/DetectorDemo.tsx";
 
-React adapter for `@web-ai-sdk/detector`. Auto-detects the language of `text` on mount and re-runs whenever the text changes. For the conceptual overview see [Detector](../guides/detector/).
+React adapter for `@web-ai-sdk/detector`. Auto-detects the language of `text` on mount and re-runs whenever the text changes. For the conceptual overview see [Detector](/docs/guides/detector/).
 
 ## Live demo
 
@@ -87,3 +87,35 @@ const result = useDetector({ text, cache });
 ## Aborting
 
 The hook aborts any in-flight call when `text` changes or the component unmounts. You don't need to manage `AbortController` directly.
+
+## Reference
+
+```ts
+import type { UseDetectorOptions, UseDetectorReturn, DetectorStatus } from "@web-ai-sdk/detector/react";
+
+type DetectorStatus = "pending" | "loading" | "done" | "unavailable";
+
+interface UseDetectorOptions extends Omit<DetectOptions, "text" | "signal"> {
+  text: string;            // empty / whitespace-only keeps the hook in "pending"
+  enabled?: boolean;       // default: true
+  // Inherited from DetectOptions:
+  expectedInputLanguages?: readonly string[];
+  minConfidence?: number;
+  createOptions?: LanguageDetectorCreateOptions;
+  cache?: DetectionCache;
+  cacheKey?: string;
+}
+
+interface UseDetectorReturn {
+  status: DetectorStatus;
+  language: string | null;        // top BCP-47 candidate; null below minConfidence
+  confidence: number;             // confidence of the top result
+  all: DetectionResult[];         // full sorted list of candidates
+  error: Error | null;
+  fromCache: boolean;             // true when served by the opt-in cache
+}
+
+declare const useDetector: (options: UseDetectorOptions) => UseDetectorReturn;
+```
+
+Source: [`packages/detector/src/react/index.ts`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/detector/src/react/index.ts).

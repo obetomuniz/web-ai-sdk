@@ -5,7 +5,7 @@ description: React adapter for @web-ai-sdk/translator. Translates on mount, rest
 
 import { TranslatorDemo } from "../../../components/TranslatorDemo.tsx";
 
-React adapter for `@web-ai-sdk/translator`. Translates the provided roots on mount, restores them on unmount, and exposes a controller for imperative cancel / restore. For the conceptual overview see [Translator](../guides/translator/).
+React adapter for `@web-ai-sdk/translator`. Translates the provided roots on mount, restores them on unmount, and exposes a controller for imperative cancel / restore. For the conceptual overview see [Translator](/docs/guides/translator/).
 
 ## Live demo
 
@@ -59,3 +59,31 @@ unavailable ◄── (no API / same source+target)
 ## Errors and unavailability
 
 On browsers without `Translator`, the hook returns `status: "unavailable"` and never invokes the model. Render whatever fallback UI you want.
+
+## Reference
+
+```ts
+import type { UseTranslatorOptions, UseTranslatorReturn, TranslatorState } from "@web-ai-sdk/translator/react";
+
+type TranslatorState = "unavailable" | "idle" | "working" | "translated";
+
+interface UseTranslatorOptions {
+  sourceLanguage: string;
+  targetLanguage?: string;            // defaults to "en"
+  roots?: RootsOption;                // CSS selector, Element, or Element[]
+  blockSelector?: string;             // override the default block selector
+  opaqueInlineTags?: readonly string[]; // tags to keep verbatim
+}
+
+interface UseTranslatorReturn {
+  state: TranslatorState;
+  progress: TranslateProgress | null; // latest progress event, or null while idle
+  error: Error | null;
+  translate(): void;                  // trigger a translation run
+  restore(): void;                    // roll back translated blocks
+}
+
+declare const useTranslator: (options: UseTranslatorOptions) => UseTranslatorReturn;
+```
+
+Source: [`packages/translator/src/react/index.ts`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/translator/src/react/index.ts).

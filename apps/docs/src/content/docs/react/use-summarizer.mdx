@@ -5,7 +5,7 @@ description: React adapter for @web-ai-sdk/summarizer. Auto-runs on mount and re
 
 import { SummarizerDemo } from "../../../components/SummarizerDemo.tsx";
 
-React adapter for `@web-ai-sdk/summarizer`. Auto-runs on mount, re-runs when `article` / `text` / `language` change, and streams chunks through state updates. For the conceptual overview see [Summarizer](../guides/summarizer/).
+React adapter for `@web-ai-sdk/summarizer`. Auto-runs on mount, re-runs when `article` / `text` / `language` change, and streams chunks through state updates. For the conceptual overview see [Summarizer](/docs/guides/summarizer/).
 
 ## Live demo
 
@@ -61,3 +61,40 @@ The hook exposes the same two caches as the vanilla `summarize()`:
 ## Streaming UX
 
 `result.summary` updates on every chunk during `streaming`. A naive `<p>{result.summary}</p>` already produces a typewriter effect because React re-renders on each state change. If chunks arrive faster than you want to repaint, debounce on the consumer side.
+
+## Reference
+
+```ts
+import type { UseSummarizerOptions, UseSummarizerReturn, SummarizerStatus } from "@web-ai-sdk/summarizer/react";
+
+type SummarizerStatus = "pending" | "loading" | "streaming" | "done" | "unavailable";
+
+interface UseSummarizerOptions extends Omit<SummarizeOptions, "onUpdate" | "signal"> {
+  enabled?: boolean;       // default: true
+  // Inherited from SummarizeOptions (subset shown — see Summarizer guide):
+  article?: HTMLElement;
+  text?: string;
+  language: string;
+  title?: string;
+  description?: string;
+  cache?: SummaryCache;
+  cacheKey?: string;
+  sharedContext?: Record<string, string>;
+  createOptions?: SummarizerCreateOptions; // type, length, format, etc.
+  maxInputChars?: number;
+  minSkeletonChars?: number;
+  supportedLanguages?: readonly string[];
+}
+
+interface UseSummarizerReturn {
+  status: SummarizerStatus;
+  summary: string | null;
+  error: Error | null;
+  fromCache: boolean;
+  dismiss(): void;         // sets status to "unavailable", clears summary
+}
+
+declare const useSummarizer: (options: UseSummarizerOptions) => UseSummarizerReturn;
+```
+
+Source: [`packages/summarizer/src/react/index.ts`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/summarizer/src/react/index.ts).

@@ -2,6 +2,8 @@
 
 Building block for the Web's Built-in [Summarizer API](https://developer.chrome.com/docs/ai/summarizer-api). Skeleton extraction, sentence-boundary trimming, streaming, and sessionStorage caching.
 
+**Docs:** <https://web-ai-sdk.dev/docs/guides/summarizer/> · **React:** [`useSummarizer`](https://web-ai-sdk.dev/docs/react/use-summarizer/)
+
 ## Status
 
 Summarizer API is stable in Chrome 138+ and Edge 138+ on desktop (enabled by default since Edge 138, per the [Edge Writing Assistance APIs docs](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis)). On Edge the Phi-4-mini safety pipeline frequently returns "low quality output blocked"; the library wraps that as a typed error. On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `summarize()` throws `SummarizerUnavailableError` so callers can branch explicitly.
