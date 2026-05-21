@@ -378,7 +378,7 @@ const wrapInstance = (internal: Promise<SessionInternal>): Session => {
  *
  * Token-level interleaving across sessions is implementation-defined and
  * currently bottlenecked by the browser's FIFO scheduler — the underlying
- * on-device model is single-instance, so Chrome 138 / Edge 138 drain one
+ * on-device model is single-instance, so Chrome 148 / Edge 138 drain one
  * `sendStreaming` call fully before starting the next, even across
  * independent sessions. The API is forward-compatible: code written against
  * `createSession()` becomes faster automatically if a future release

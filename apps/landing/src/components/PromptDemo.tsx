@@ -118,7 +118,7 @@ export const PromptDemo = () => {
           streaming={streaming}
           placeholder={
             available === false
-              ? "Open in Chrome 138+ or Edge 138+ to stream a response."
+              ? "Open in Chrome 148+ or Edge 138+ to stream a response."
               : "Output will stream here…"
           }
         />

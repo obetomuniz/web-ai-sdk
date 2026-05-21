@@ -102,8 +102,8 @@ export const TranslatorDemo = ({
       </header>
       {state === "unavailable" && (
         <p className="demo-hint">
-          Translator API unavailable. Open in Chrome 138+ or Edge 138+ to
-          exercise.
+          Translator API unavailable. Open in Chrome 138+ (stable) or Edge
+          Canary/Dev 143+ (with the translation API flag enabled) to exercise.
         </p>
       )}
       {error && <p className="demo-error">{error.message}</p>}

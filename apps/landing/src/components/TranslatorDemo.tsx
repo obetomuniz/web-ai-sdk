@@ -166,7 +166,7 @@ export const TranslatorDemo = () => {
           streaming={running}
           placeholder={
             available === false
-              ? "Open in Chrome 138+ or Edge 138+ to translate."
+              ? "Open in Chrome 138+ or Edge Canary/Dev 143+ to translate."
               : `Translation (${to}) will appear here.`
           }
         />

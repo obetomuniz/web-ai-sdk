@@ -630,12 +630,14 @@ export const App = () => (
                     <span className="scope">@web-ai-sdk/</span>prompt
                   </th>
                   <td>
-                    <span className="v">138+</span>{" "}
-                    <span className="pill">flag</span>
+                    <span className="v">148+</span>{" "}
+                    <span className="pill ok">stable</span>
                   </td>
                   <td>
                     <span className="v">138+</span>{" "}
-                    <span className="pill partial">partial</span>
+                    <span className="pill">Canary/Dev</span>{" "}
+                    <span className="pill partial">partial</span>{" "}
+                    <span className="pill">flag</span>
                   </td>
                   <td>
                     <span className="pill fallback">no-op fallback</span>
@@ -654,6 +656,7 @@ export const App = () => (
                   </td>
                   <td>
                     <span className="v">138+</span>{" "}
+                    <span className="pill ok">stable</span>{" "}
                     <span className="pill partial">partial</span>
                   </td>
                   <td>
@@ -672,8 +675,9 @@ export const App = () => (
                     <span className="pill ok">stable</span>
                   </td>
                   <td>
-                    <span className="v">138+</span>{" "}
-                    <span className="pill ok">stable</span>
+                    <span className="v">143+</span>{" "}
+                    <span className="pill">Canary/Dev</span>{" "}
+                    <span className="pill">flag</span>
                   </td>
                   <td>
                     <span className="pill fallback">no-op fallback</span>
@@ -691,8 +695,9 @@ export const App = () => (
                     <span className="pill ok">stable</span>
                   </td>
                   <td>
-                    <span className="v">138+</span>{" "}
-                    <span className="pill ok">stable</span>
+                    <span className="v">147+</span>{" "}
+                    <span className="pill">Canary/Dev</span>{" "}
+                    <span className="pill">flag</span>
                   </td>
                   <td>
                     <span className="pill fallback">no-op fallback</span>
@@ -707,11 +712,12 @@ export const App = () => (
                   </th>
                   <td>
                     <span className="v">146+</span>{" "}
-                    <span className="pill ok">stable</span>
+                    <span className="pill">flag</span>{" "}
+                    <span className="pill">OT 149+</span>
                   </td>
                   <td>
-                    <span className="v">146+</span>{" "}
-                    <span className="pill ok">stable</span>
+                    <span className="v">147+</span>{" "}
+                    <span className="pill">flag</span>
                   </td>
                   <td>
                     <span className="pill fallback">no-op fallback</span>
@@ -725,15 +731,23 @@ export const App = () => (
           </div>
           <div className="support-note">
             Versions reflect when the underlying platform API became available.
-            Wrapper exports stay stable across all browsers.
+            Wrapper exports stay stable across all browsers. <strong>OT</strong>{" "}
+            = origin trial.
+            <br />
+            On Edge, only the Summarizer ships in stable (enabled by default
+            since Edge 138). Prompt is a developer preview in Edge Canary/Dev
+            138+; Translator (Edge 143+) and Language Detector (Edge 147+) are
+            Canary/Dev-only as well, each behind its own <code>edge://flags/</code>{" "}
+            toggle. WebMCP landed in Edge 147 behind a flag.
             <br />
             <strong>Partial</strong> = JS API is present but the on-device model
-            frequently refuses output. Edge ships the same surface as Chrome but
-            routes through Phi-4-mini (or Phi-Silica on Copilot+ PCs) with a
-            stricter safety pipeline: summarizer often returns "low quality
-            output blocked"; prompt may emit C0 control-character placeholders
-            instead of text. Flag names differ: <code>edge://flags/</code> →
-            search "Phi mini" instead of "Gemini Nano". Hardware check:{" "}
+            frequently refuses output. Prompt and Summarizer route through
+            Phi-4-mini (or Phi-Silica on Copilot+ PCs) with a stricter safety
+            pipeline: summarizer often returns "low quality output blocked";
+            prompt may emit C0 control-character placeholders instead of text.
+            Flag names: search "Phi mini" on <code>edge://flags/</code> for
+            Prompt/Writing Assistance, "translation api" for Translator,
+            "language detection" for Language Detector. Hardware check:{" "}
             <code>edge://on-device-internals</code> requires "High" device
             performance class and all supplementary safety models
             ("GENERALIZED_SAFETY", "TEXT_SAFETY", "LANGUAGE_DETECTION") in
