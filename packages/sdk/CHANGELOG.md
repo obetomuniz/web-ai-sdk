@@ -1,5 +1,17 @@
 # @web-ai-sdk/all
 
+## 0.3.3
+
+### Patch Changes
+
+- 9cff7cb: Adds a one-line `**Docs:**` pointer near the top of every package README linking to the canonical guide on web-ai-sdk.dev (and the matching React hook page where applicable). No API or behavior change — purely makes `npm view <pkg> README` self-routing so an agent or reader landing on a registry page can jump straight to the right docs without scanning for an external link.
+- Updated dependencies [9cff7cb]
+  - @web-ai-sdk/prompt@0.3.3
+  - @web-ai-sdk/webmcp@0.3.3
+  - @web-ai-sdk/summarizer@0.3.3
+  - @web-ai-sdk/translator@0.3.3
+  - @web-ai-sdk/detector@0.3.3
+
 ## 0.3.2
 
 ### Patch Changes
