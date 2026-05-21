@@ -4,7 +4,7 @@ Building block for the Web's Built-in [Translator API](https://developer.chrome.
 
 ## Status
 
-Translator API is in Chrome 138+ and Edge 138+ stable on desktop. On any other browser this library is a no-op. Your app stays callable, and the controller just resolves with `blocksTranslated: 0`.
+Translator API is stable in Chrome 138+ on desktop. On Edge it is a developer preview starting at Canary/Dev 143+ behind `edge://flags/#edge-translation-api` (per the [Edge Translator API docs](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/translator-api)) — not yet in Edge stable. On any other browser this library is a no-op. Your app stays callable, and the controller just resolves with `blocksTranslated: 0`.
 
 ## Install
 

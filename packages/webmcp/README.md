@@ -6,7 +6,7 @@ An ergonomic, framework-agnostic adapter over the native browser API, with safe 
 
 ## Status
 
-WebMCP ships in Chrome 146+ and Edge 146+ behind a flag (`chrome://flags/#enable-webmcp-testing`; the Edge flag has the same name). On any browser that doesn't expose `navigator.modelContext`, this library is a no-op. Your app stays callable, and no tools get registered.
+WebMCP shipped as an early preview in Chrome 146+ behind `chrome://flags/#enable-webmcp-testing`; a public [origin trial](https://developer.chrome.com/docs/ai/webmcp) opens in Chrome 149. Edge added support in 147+ behind the matching `edge://flags/` toggle. On any browser that doesn't expose `navigator.modelContext`, this library is a no-op. Your app stays callable, and no tools get registered.
 
 ## Install
 

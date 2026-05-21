@@ -131,7 +131,7 @@ export const DetectorDemo = () => {
           ) : (
             <span style={{ color: "var(--fg-4)", fontStyle: "italic" }}>
               {available === false
-                ? "Open in Chrome 138+ or Edge 138+ to detect."
+                ? "Open in Chrome 138+ or Edge Canary/Dev 147+ to detect."
                 : status === "pending"
                   ? "Type or paste text above."
                   : status === "loading"

@@ -4,7 +4,7 @@ Building block for [the Web's Built-in Language Detector API](https://developer.
 
 ## Status
 
-Language Detector ships in Chrome 138+ and Edge 138+. On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `detect()` throws `DetectorUnavailableError` so callers can branch explicitly.
+Language Detector ships stable in Chrome 138+ on desktop. On Edge it is a developer preview starting at Canary/Dev 147+ behind `edge://flags/#edge-language-detection-api` (per the [Edge Language Detector API docs](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/languagedetector-api)) — not yet in Edge stable. On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `detect()` throws `DetectorUnavailableError` so callers can branch explicitly.
 
 ## Install
 

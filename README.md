@@ -57,7 +57,7 @@ pnpm docs            # docs site on http://localhost:6006
 pnpm landing         # marketing landing on http://localhost:5173
 ```
 
-For the AI APIs to actually run, open a supporting browser (Chrome 138+ or Edge 138+) and enable the relevant flags. See [Browser support](./apps/docs/src/content/docs/browser-support.mdx) for the per-package matrix; flag names differ between Chrome and Edge.
+For the AI APIs to actually run, open a supporting browser. On Chrome, Summarizer/Translator/Detector are stable in 138+ and Prompt is stable in 148+ (no flags); WebMCP needs `chrome://flags/#enable-webmcp-testing` through Chrome 148 and joins a public origin trial in Chrome 149. On Edge, only Summarizer is in stable (138+ default-on); Prompt, Translator, Detector, and WebMCP are developer previews in Canary/Dev behind their respective `edge://flags/` toggles. See [Browser support](./apps/docs/src/content/docs/browser-support.mdx) for the per-package matrix and exact flag names.
 
 ## Repo layout
 
