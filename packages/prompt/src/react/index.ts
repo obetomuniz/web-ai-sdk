@@ -153,7 +153,7 @@ export interface UseSessionReturn {
  * `language`, `enabled`) changes.
  *
  * Token-level interleaving across sessions is browser-defined: the
- * underlying on-device model is single-instance, so Chrome 138 / Edge 138
+ * underlying on-device model is single-instance, so Chrome 148 / Edge 138
  * currently serialize `sendStreaming` calls across sessions FIFO. The
  * second component's send waits for the first to drain. The API is
  * forward-compatible for runtimes that expose parallel inference.

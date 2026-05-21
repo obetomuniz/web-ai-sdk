@@ -54,7 +54,7 @@ The wrapper is intentionally thin. It handles cross-browser smoothing every cons
 
 `createSession()` never touches the `ask()` session cache. Two sessions with identical options get two independent instances with isolated history, system prompt, sampling, and lifecycle — `abort()` / `destroy()` on one session never touch another. Concurrent `send` / `sendStreaming` calls on the **same** session are NOT queued — the underlying `LanguageModel` is sequential per instance and will reject the overlapping call with `InvalidStateError`. Either `await` the previous send or call `session.abort()` before issuing a new turn.
 
-**Concurrency note.** Each session is an independent `LanguageModel` instance, but the underlying on-device model is single-instance. Chrome 138 / Edge 138 currently schedule `sendStreaming` calls across sessions FIFO: overlapping sends do not interleave token-by-token — the second send waits for the first to drain. This is a constraint of the runtime, not of the API; code written against `createSession()` becomes faster automatically if a future release exposes parallel inference.
+**Concurrency note.** Each session is an independent `LanguageModel` instance, but the underlying on-device model is single-instance. Chrome 148 / Edge 138 currently schedule `sendStreaming` calls across sessions FIFO: overlapping sends do not interleave token-by-token — the second send waits for the first to drain. This is a constraint of the runtime, not of the API; code written against `createSession()` becomes faster automatically if a future release exposes parallel inference.
 
 ## How it works
 

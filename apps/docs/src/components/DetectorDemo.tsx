@@ -17,9 +17,9 @@ export const DetectorDemo = ({
     <div className="demo-card demo-card--narrow">
       {status === "unavailable" && (
         <p className="demo-hint">
-          Language Detector unavailable. Open in Chrome 138+ or Edge 138+ with{" "}
-          <code>chrome://flags/#language-detection-api</code> enabled, or search
-          the flags page for "language detection".
+          Language Detector unavailable. Open in Chrome 138+ (stable) or Edge
+          Canary/Dev 147+ with the language detection flag enabled (search the
+          flags page for "language detection").
         </p>
       )}
       <label className="demo-label">

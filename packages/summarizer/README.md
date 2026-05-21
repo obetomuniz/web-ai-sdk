@@ -4,7 +4,7 @@ Building block for the Web's Built-in [Summarizer API](https://developer.chrome.
 
 ## Status
 
-Summarizer API is in Chrome 138+ and Edge 138+ stable on desktop. On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `summarize()` throws `SummarizerUnavailableError` so callers can branch explicitly.
+Summarizer API is stable in Chrome 138+ and Edge 138+ on desktop (enabled by default since Edge 138, per the [Edge Writing Assistance APIs docs](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis)). On Edge the Phi-4-mini safety pipeline frequently returns "low quality output blocked"; the library wraps that as a typed error. On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `summarize()` throws `SummarizerUnavailableError` so callers can branch explicitly.
 
 ## Install
 
