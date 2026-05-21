@@ -5,7 +5,7 @@ description: React adapter for @web-ai-sdk/webmcp. Register WebMCP tools on moun
 
 import { WebMCPDemo } from "../../../components/WebMCPDemo.tsx";
 
-React adapter for `@web-ai-sdk/webmcp`. Registers WebMCP tools on mount and unregisters them on unmount via an `AbortSignal`. For the conceptual overview see [WebMCP](../guides/webmcp/).
+React adapter for `@web-ai-sdk/webmcp`. Registers WebMCP tools on mount and unregisters them on unmount via an `AbortSignal`. For the conceptual overview see [WebMCP](/docs/guides/webmcp/).
 
 ## Live demo
 
@@ -69,3 +69,33 @@ The hook returns nothing; cleanup is automatic on unmount via `useEffect`'s retu
 ## Errors and unavailability
 
 On browsers without `navigator.modelContext`, the hook is a no-op. Render whatever fallback UI you want; nothing breaks.
+
+## Reference
+
+```ts
+import type { Tool, ToolAnnotations, DefineToolOptions } from "@web-ai-sdk/webmcp/react";
+
+interface Tool {
+  name: string;
+  description: string;
+  execute: (input: unknown) => Promise<unknown> | unknown;
+  readOnly?: boolean;              // → annotations.readOnlyHint
+  destructive?: boolean;           // → annotations.destructiveHint
+  annotations?: ToolAnnotations;   // raw passthrough; merges on top of shorthand
+  inputSchema?: object;            // JSON Schema or Standard Schema v1
+}
+
+interface ToolAnnotations {
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+}
+
+declare const useWebMCP: (tools: readonly Tool[]) => void;
+
+// Helper for type-safe tool definitions with a Standard Schema.
+declare function defineTool<T extends StandardSchemaV1>(options: DefineToolOptions<T>): Tool;
+```
+
+Source: [`packages/webmcp/src/react/index.ts`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/webmcp/src/react/index.ts).

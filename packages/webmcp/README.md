@@ -4,6 +4,8 @@ Building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/
 
 An ergonomic, framework-agnostic adapter over the native browser API, with safe register/unregister cleanup and a feature-detected no-op fallback for non-supporting browsers.
 
+**Docs:** <https://web-ai-sdk.dev/docs/guides/webmcp/> · **React:** [`useWebMCP`](https://web-ai-sdk.dev/docs/react/use-web-mcp/)
+
 ## Status
 
 WebMCP shipped as an early preview in Chrome 146+ behind `chrome://flags/#enable-webmcp-testing`; a public [origin trial](https://developer.chrome.com/docs/ai/webmcp) opens in Chrome 149. Edge added support in 147+ behind the matching `edge://flags/` toggle. On any browser that doesn't expose `navigator.modelContext`, this library is a no-op. Your app stays callable, and no tools get registered.

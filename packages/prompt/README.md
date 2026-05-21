@@ -2,6 +2,8 @@
 
 Building block for the Web's Built-in [Prompt API](https://developer.chrome.com/docs/extensions/ai/prompt-api) (`LanguageModel`). One-shot `ask()` for embeds and widgets, plus a thin `createSession()` primitive (and React `useSession`) for chat-shaped apps that need independent per-conversation sessions and delta-shaped streaming. The wrapper smooths cross-browser quirks (delta-vs-cumulative chunks, output sanitization, abort wiring); UI state and conversation history are the consumer's concern.
 
+**Docs:** <https://web-ai-sdk.dev/docs/guides/prompt/> · **React:** [`usePrompt`](https://web-ai-sdk.dev/docs/react/use-prompt/) · [`useSession`](https://web-ai-sdk.dev/docs/react/use-session/)
+
 ## Status
 
 Prompt API ships stable in Chrome 148+ — no flag required. Chrome 138–147 still works with `chrome://flags/#prompt-api-for-gemini-nano` enabled. On Edge it remains a developer preview in Canary/Dev 138+ behind `edge://flags/#prompt-api-for-phi-mini`, with Phi-4-mini's stricter safety pipeline often refusing output (see [Browser support](https://web-ai-sdk.dev/browser-support)). On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `ask()` throws `PromptUnavailableError` so callers can branch explicitly.

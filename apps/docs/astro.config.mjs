@@ -36,6 +36,10 @@ export default defineConfig({
         { tag: "meta", attrs: { property: "og:image:alt", content: "web-ai-sdk — npm install @web-ai-sdk/all" } },
         { tag: "meta", attrs: { name: "twitter:card", content: "summary_large_image" } },
         { tag: "meta", attrs: { name: "twitter:image", content: "https://web-ai-sdk.dev/og-image.png" } },
+        // LLM-friendly index. Agents that follow the llmstxt.org convention
+        // can auto-discover /llms.txt and /llms-full.txt from any docs page.
+        { tag: "link", attrs: { rel: "alternate", type: "text/plain", title: "LLM-friendly docs (llms.txt)", href: "https://web-ai-sdk.dev/llms.txt" } },
+        { tag: "link", attrs: { rel: "alternate", type: "text/plain", title: "LLM-friendly docs (full text)", href: "https://web-ai-sdk.dev/llms-full.txt" } },
       ],
       // Match the landing's cinnabar/dark identity. Token overrides live
       // in src/styles/web-ai-sdk.css. Demo card styles in demos.css use

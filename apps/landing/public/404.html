@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Not found · web-ai-sdk</title>
+    <meta name="description" content="That page doesn't exist on web-ai-sdk.dev. Here are the canonical entry points: documentation, sitemap, and LLM-friendly index." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href="https://web-ai-sdk.dev/" />
+
+    <!-- Sitemap + LLM discovery so an agent that lands here can still find the site. -->
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+    <link rel="alternate" type="text/plain" title="LLM-friendly docs (llms.txt)" href="/llms.txt" />
+    <link rel="alternate" type="text/plain" title="LLM-friendly docs (full text)" href="/llms-full.txt" />
+
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0f0e0c;
+        --fg: #f5efe6;
+        --muted: #b8b1a4;
+        --accent: #e34a2c;
+        --border: rgba(245, 239, 230, 0.12);
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f7f2ea;
+          --fg: #1b1a17;
+          --muted: #5a554b;
+          --border: rgba(27, 26, 23, 0.12);
+        }
+      }
+      html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); }
+      body {
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.55;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+      }
+      main { max-width: 38rem; width: 100%; }
+      h1 { font-size: 2rem; margin: 0 0 0.25rem; letter-spacing: -0.01em; }
+      h2 { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 2rem 0 0.5rem; }
+      p { color: var(--muted); margin: 0 0 1rem; }
+      a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; }
+      a:hover { border-bottom-color: currentColor; }
+      ul { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--border); }
+      li { border-bottom: 1px solid var(--border); }
+      li a { display: flex; align-items: baseline; gap: 0.75rem; padding: 0.75rem 0; color: var(--fg); border-bottom: none; }
+      li a:hover { color: var(--accent); }
+      li code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9rem; color: var(--accent); }
+      li small { color: var(--muted); margin-left: auto; font-size: 0.85rem; }
+      .tag { display: inline-block; font-size: 0.75rem; padding: 0.1rem 0.5rem; border-radius: 999px; background: var(--border); color: var(--muted); margin-left: 0.5rem; vertical-align: middle; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p style="margin: 0; color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em;">404 · Not found</p>
+      <h1>That page isn't here.</h1>
+      <p>The URL you followed doesn't exist on <a href="/">web-ai-sdk.dev</a>. The site has two surfaces — a landing page at the root and a Starlight docs site under <code>/docs/</code>. Start with one of the entry points below, or pull the machine-readable index.</p>
+
+      <h2>Entry points</h2>
+      <ul>
+        <li><a href="/"><code>/</code><small>Landing — package matrix, install, demos</small></a></li>
+        <li><a href="/docs/"><code>/docs/</code><small>Documentation home (Starlight)</small></a></li>
+        <li><a href="/docs/browser-support/"><code>/docs/browser-support/</code><small>Chrome / Edge version matrix</small></a></li>
+      </ul>
+
+      <h2>Guides</h2>
+      <ul>
+        <li><a href="/docs/guides/meta-package/"><code>@web-ai-sdk/all</code></a></li>
+        <li><a href="/docs/guides/prompt/"><code>@web-ai-sdk/prompt</code></a></li>
+        <li><a href="/docs/guides/webmcp/"><code>@web-ai-sdk/webmcp</code></a></li>
+        <li><a href="/docs/guides/summarizer/"><code>@web-ai-sdk/summarizer</code></a></li>
+        <li><a href="/docs/guides/translator/"><code>@web-ai-sdk/translator</code></a></li>
+        <li><a href="/docs/guides/detector/"><code>@web-ai-sdk/detector</code></a></li>
+      </ul>
+
+      <h2>Machine-readable</h2>
+      <ul>
+        <li><a href="/llms.txt"><code>/llms.txt</code><small>Curated link index (llmstxt.org)</small></a></li>
+        <li><a href="/llms-full.txt"><code>/llms-full.txt</code><small>Concatenated README bodies</small></a></li>
+        <li><a href="/sitemap.xml"><code>/sitemap.xml</code><small>All site URLs</small></a></li>
+        <li><a href="https://github.com/obetomuniz/web-ai-sdk"><code>github.com/obetomuniz/web-ai-sdk</code><small>Source</small></a></li>
+      </ul>
+    </main>
+  </body>
+</html>
