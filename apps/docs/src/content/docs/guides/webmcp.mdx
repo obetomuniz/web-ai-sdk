@@ -8,7 +8,7 @@ Building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/
 ## Usage
 
 ```ts
-import { registerTool, registerTools } from "@web-ai-sdk/webmcp";
+import { registerTool } from "@web-ai-sdk/webmcp";
 
 const cleanup = registerTool({
   name: "add_to_cart",
@@ -20,7 +20,16 @@ const cleanup = registerTool({
 cleanup();
 ```
 
-Pass an array to `registerTools` to register many at once with a single cleanup.
+To register many at once, map over the array and combine the cleanups:
+
+```ts
+const cleanups = tools.map(registerTool);
+const cleanup = () => cleanups.forEach((c) => c());
+```
+
+:::caution
+`registerTools(tools)` still exists but is **deprecated** and will be removed in 0.4. Use the `map` pattern above instead.
+:::
 
 ## How it works
 
@@ -28,7 +37,7 @@ Chrome's `navigator.modelContext.registerTool({...}, { signal })` is the spec en
 
 - **Feature detection.** On browsers without `navigator.modelContext`, every entry point is a no-op so consumer code ships unchanged. `isWebMCPAvailable()` returns `false`.
 - **Last-writer-wins on duplicate names.** React effect cleanup is asynchronous; a fast re-render can attempt to register `"foo"` before Chrome processed the prior `abort()`. The wrapper detects the resulting duplicate-name error, queues a microtask retry, and tracks ownership so a stale registration can't squat the name.
-- **One AbortController per call.** `registerTool` and `registerTools` both return a single cleanup function that aborts the underlying controller, unregistering every tool registered in that call atomically.
+- **One AbortController per call.** `registerTool` returns a cleanup function that aborts the underlying controller and unregisters the tool.
 
 ## Annotations
 

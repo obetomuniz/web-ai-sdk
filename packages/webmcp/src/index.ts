@@ -329,6 +329,12 @@ export const registerTool = <TInput, TOutput>(
  *
  * All tools share one AbortController, so the cleanup tears them down
  * atomically.
+ *
+ * @deprecated Will be removed in 0.4. `registerTool` is the primitive;
+ * combine cleanups yourself when you need to register many at once:
+ *
+ *     const cleanups = tools.map(registerTool);
+ *     const cleanup = () => cleanups.forEach((c) => c());
  */
 export const registerTools = (tools: readonly Tool[]): (() => void) => {
   const mc = getModelContext();

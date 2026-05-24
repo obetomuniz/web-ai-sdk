@@ -64,7 +64,7 @@ This is necessary because Chrome's `AbortSignal`-driven unregister is asynchrono
 
 ## Cleanup
 
-The hook returns nothing; cleanup is automatic on unmount via `useEffect`'s return value. If you need imperative cleanup (e.g. log out flow), use the vanilla `registerTools(tools)` directly and call the returned cleanup.
+The hook returns nothing; cleanup is automatic on unmount via `useEffect`'s return value. If you need imperative cleanup (e.g. log out flow), call the vanilla `registerTool` directly per tool and combine the cleanups: `const cleanups = tools.map(registerTool)`.
 
 ## Errors and unavailability
 

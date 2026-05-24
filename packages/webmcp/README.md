@@ -22,9 +22,9 @@ React adapter is shipped as a subpath export, with no extra install. `react` is 
 ## Vanilla TypeScript / DOM
 
 ```ts
-import { registerTools } from "@web-ai-sdk/webmcp";
+import { registerTool } from "@web-ai-sdk/webmcp";
 
-const cleanup = registerTools([
+const tools = [
   {
     name: "list_blog_posts",
     description: "List published blog posts.",
@@ -59,13 +59,16 @@ const cleanup = registerTools([
       return { ok: true };
     },
   },
-]);
+];
+
+const cleanups = tools.map(registerTool);
+const cleanup = () => cleanups.forEach((c) => c());
 
 // later, e.g. on page teardown
 cleanup();
 ```
 
-`registerTool(tool)` registers a single tool and returns the cleanup. `registerTools([...])` registers many and returns one cleanup that disposes all of them. Re-registering a tool with the same name is safe; the previous registration is dropped first.
+`registerTool(tool)` registers a single tool and returns the cleanup. Re-registering a tool with the same name is safe; the previous registration is dropped first.
 
 ## React
 
@@ -102,9 +105,11 @@ The hook registers on mount, unregisters on unmount, and re-registers when the a
 
 Register a single tool. Returns a cleanup function. No-op on unsupported browsers.
 
-### `registerTools(tools): () => void`
+### `registerTools(tools): () => void` <sup>deprecated</sup>
 
 Register many tools at once. Returns a single cleanup that unregisters all of them.
+
+**Deprecated — will be removed in 0.4.** `registerTool` is the primitive; combine cleanups yourself when you need to register many: `const cleanups = tools.map(registerTool)`.
 
 ### `isWebMCPAvailable(): boolean`
 
@@ -173,7 +178,7 @@ const sendEmail = defineTool({
   },
 });
 
-// `sendEmail` is a plain Tool and can be passed to registerTool / registerTools / useWebMCP.
+// `sendEmail` is a plain Tool and can be passed to registerTool or useWebMCP.
 ```
 
 `defineTool` accepts any [Standard Schema](https://standardschema.dev) V1 validator (Zod 3.24+, Valibot, ArkType, Effect, …) — no SDK dependency on any specific library. The returned object is a plain `Tool`, so it composes with the rest of the API unchanged.
