@@ -354,7 +354,7 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
       <div className="card-head">
         <span className="title">
           <span className={`dot ${running ? "live" : "ok"}`} />
-          webmcp() · agentic
+          registerTool() · agentic
         </span>
         <span>
           {registeredCount} tool{registeredCount === 1 ? "" : "s"} registered
