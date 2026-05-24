@@ -61,9 +61,11 @@ The wrapper is intentionally thin. It handles cross-browser smoothing every cons
 Chrome's `LanguageModel` exposes `LanguageModel.create({...})` to spin up a session and `session.prompt(input)` / `session.promptStreaming(input)` to run it. The wrapper does the following on top:
 
 - **Feature detection.** `isPromptAvailable()` / `checkAvailability()` return `false` / `null` on browsers without the API. The vanilla `ask()` throws `PromptUnavailableError`; the React hook surfaces `status: "unavailable"`.
-- **Session reuse for `ask()`.** A bounded LRU (default 8) caches `LanguageModel.create()` by stringified create options. Cold start ≈ 1-3s; warm calls are sub-second. `createSession()` is never cached.
-- **Optional result cache for `ask()`.** Off by default; every call hits the model. Pass `cache: createSessionStorageCache()` (or any `{ get, set }`-shaped object) to memoize responses by `(input, systemPrompt, temperature, topK)`. Swap the backend (e.g. `localStorage` for cross-tab persistence) via the `cache` option.
+- **Session reuse for `ask()` (ergonomic default, scoped to `ask`).** A bounded LRU (default 8) caches `LanguageModel.create()` by stringified create options. Cold start is roughly 1 to 3 seconds; warm calls are sub-second. Tune the cap with `configurePromptCache({ max })`, drop entries with `clearSession()` / `clearSessions()`. `createSession()` never touches this cache.
+- **Optional result cache for `ask()` (off by default).** Every call hits the model unless you opt in. Pass `cache: createSessionStorageCache()` (or any `{ get, set }`-shaped object) to memoize responses by `(input, systemPrompt, temperature, topK)`. Swap the backend (e.g. `localStorage` for cross-tab persistence) via the `cache` option.
 - **Delta-vs-cumulative chunk detection.** Chrome ships delta chunks; some Edge backends ship cumulative. The wrapper normalizes per-chunk so `onUpdate` (cumulative) and `sendStreaming()` (deltas) work the same across browsers.
+
+The two cache-shaped items above are *ergonomic defaults scoped to `ask()`*, not opinions about how to use a language model. They live here because they smooth `ask()` in particular; multi-package compositions (agent loops, conversation history, tool dispatch) are not part of this package. See [Architecture](/docs/architecture/) for the split.
 
 ## System prompt + sampling
 

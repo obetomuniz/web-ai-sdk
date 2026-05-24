@@ -425,9 +425,9 @@ export const App = () => (
               </li>
               <li>
                 <span>
-                  <b>Pairs with the others.</b> Skip the manual{" "}
-                  <code>language: "en"</code> argument; detect first, then
-                  summarize / translate / prompt.
+                  <b>Wire the others.</b> Detect first, then call summarize /
+                  translate / prompt with the result — you skip the manual{" "}
+                  <code>language: "en"</code> argument.
                 </span>
               </li>
             </ul>
@@ -635,9 +635,7 @@ export const App = () => (
                   </td>
                   <td>
                     <span className="v">138+</span>{" "}
-                    <span className="pill">Canary/Dev</span>{" "}
-                    <span className="pill partial">partial</span>{" "}
-                    <span className="pill">flag</span>
+                    <span className="pill">Canary/Dev</span>
                   </td>
                   <td>
                     <span className="pill fallback">no-op fallback</span>
@@ -656,8 +654,7 @@ export const App = () => (
                   </td>
                   <td>
                     <span className="v">138+</span>{" "}
-                    <span className="pill ok">stable</span>{" "}
-                    <span className="pill partial">partial</span>
+                    <span className="pill ok">stable</span>
                   </td>
                   <td>
                     <span className="pill fallback">no-op fallback</span>
@@ -676,8 +673,7 @@ export const App = () => (
                   </td>
                   <td>
                     <span className="v">143+</span>{" "}
-                    <span className="pill">Canary/Dev</span>{" "}
-                    <span className="pill">flag</span>
+                    <span className="pill">Canary/Dev</span>
                   </td>
                   <td>
                     <span className="pill fallback">no-op fallback</span>
@@ -696,8 +692,7 @@ export const App = () => (
                   </td>
                   <td>
                     <span className="v">147+</span>{" "}
-                    <span className="pill">Canary/Dev</span>{" "}
-                    <span className="pill">flag</span>
+                    <span className="pill">Canary/Dev</span>
                   </td>
                   <td>
                     <span className="pill fallback">no-op fallback</span>
@@ -741,18 +736,18 @@ export const App = () => (
             <code>edge://flags/</code> toggle. WebMCP landed in Edge 147 behind
             a flag.
             <br />
-            <strong>Partial</strong> = JS API is present but the on-device model
-            frequently refuses output. Prompt and Summarizer route through
-            Phi-4-mini (or Phi-Silica on Copilot+ PCs) with a stricter safety
-            pipeline: summarizer often returns "low quality output blocked";
-            prompt may emit C0 control-character placeholders instead of text.
-            Flag names: search "Phi mini" on <code>edge://flags/</code> for
-            Prompt/Writing Assistance, "translation api" for Translator,
-            "language detection" for Language Detector. Hardware check:{" "}
-            <code>edge://on-device-internals</code> requires "High" device
-            performance class and all supplementary safety models
-            ("GENERALIZED_SAFETY", "TEXT_SAFETY", "LANGUAGE_DETECTION") in
-            "Ready" state. Tested on macOS; Windows behavior may differ.
+            <strong>macOS quirk:</strong> on macOS, the on-device model
+            frequently refuses output for Prompt and Summarizer — Phi-4-mini's
+            stricter safety pipeline returns "low quality output blocked" or C0
+            control-character placeholders. The library handles both. Windows
+            doesn't reproduce this; the four Built-in AI APIs work reliably
+            there once flagged. Flags on <code>edge://flags/</code>: "Phi mini"
+            (Prompt, Writing Assistance), "translation api" (Translator),
+            "language detection" (Language Detector). Hardware check:{" "}
+            <code>edge://on-device-internals</code> must show a "High" device
+            performance class. WebMCP on Edge isn't yet covered by an official
+            Microsoft developer-docs page; the version above reflects empirical
+            Canary/Dev testing.
           </div>
         </div>
       </div>

@@ -28,6 +28,12 @@ Each package exposes:
 
 Lifecycle layer on purpose. Each package only manages session lifetime, cleanup, feature detection, and the gnarly bits (block serialization in translator, skeleton extraction + caching in summarizer, safe register/unregister in webmcp). Framework adapters, polyfills, and UI primitives are opt-in subpaths, not bundled into the core packages.
 
+### Two layers: SDK and Kit
+
+The repo today ships only `@web-ai-sdk/*`. A companion scope `@web-ai-kit/*` (not yet published) is reserved for higher-level compositions on top. Internally we sometimes call these *atoms* and *molecules*: atoms wrap one capability and never depend on anything; molecules compose atoms and depend freely. Decision heuristic for new code: *if it bonds two SDK packages or needs a third-party runtime, it belongs in the future kit, not in an SDK wrapper.*
+
+Full rules in [`CONTRIBUTING.md` § Governance](./CONTRIBUTING.md#governance); user-facing version at [`apps/docs/src/content/docs/architecture.mdx`](./apps/docs/src/content/docs/architecture.mdx) ([web-ai-sdk.dev/docs/architecture/](https://web-ai-sdk.dev/docs/architecture/)).
+
 ---
 
 ## 2. Stack & runtime

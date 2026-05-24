@@ -52,7 +52,7 @@ The hint is also forwarded to `availability()` so engines that warn on shape mis
 
 ## Composing with the other packages
 
-Pair the detector with summarizer / translator / prompt to skip the manual `language: "en"` argument when the input language isn't known ahead of time:
+The detector intentionally doesn't reach into the other packages; one package wraps one capability. To skip the manual `language: "en"` argument when the input language isn't known ahead of time, wire the two yourself:
 
 ```ts
 import { detect } from "@web-ai-sdk/detector";
@@ -65,7 +65,7 @@ await summarize({
 });
 ```
 
-A first-class `language: "auto"` shortcut may land in a future release that wires this internally for you.
+A first-class `language: "auto"` shortcut isn't planned for this package. Multi-package compositions like detect-then-summarize, detect-then-translate, or detect-then-prompt are the kind of pattern the future [`web-ai-kit`](/docs/architecture/#the-companion-kit) layer is meant to host, not the SDK wrappers.
 
 ## Aborting
 

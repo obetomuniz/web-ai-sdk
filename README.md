@@ -4,6 +4,14 @@ Building blocks for the Web's Built-in AI APIs.
 
 A small, focused monorepo of framework-agnostic packages that smooth over the gnarly bits of the new `navigator.modelContext`, `Translator`, `Summarizer`, `LanguageModel`, and `LanguageDetector` browser APIs (feature detection, session caching, streaming, lifecycle, safe DOM rebuild) without bringing any UI along.
 
+## Two layers, one philosophy
+
+**`web-ai-sdk`** ships one package per browser capability. Zero runtime dependencies. Vanilla TypeScript by default, with optional React hooks. That's it. The SDK tracks a moving browser spec and intentionally stays out of the way of *how* you build an app.
+
+A companion project, **`web-ai-kit`** *(coming soon)*, will provide higher-level building blocks composed on top of these primitives: agent loops, headless UI, persistent memory, remote MCP clients. Each kit package will evolve on its own timeline; none will be required to use the SDK.
+
+See [`apps/docs/src/content/docs/architecture.mdx`](./apps/docs/src/content/docs/architecture.mdx) (rendered at [`web-ai-sdk.dev/docs/architecture/`](https://web-ai-sdk.dev/docs/architecture/)) for the full model.
+
 | Package                                          | Wraps                                          | Highlights                                                                |
 | ------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------- |
 | [`@web-ai-sdk/webmcp`](./packages/webmcp)            | `navigator.modelContext` (W3C WebMCP)          | Safe register/unregister, shorthand annotations, `useWebMCP` hook         |
@@ -57,7 +65,7 @@ pnpm docs            # docs site on http://localhost:6006
 pnpm landing         # marketing landing on http://localhost:5173
 ```
 
-For the AI APIs to actually run, open a supporting browser. On Chrome, Summarizer/Translator/Detector are stable in 138+ and Prompt is stable in 148+ (no flags); WebMCP needs `chrome://flags/#enable-webmcp-testing` through Chrome 148 and joins a public origin trial in Chrome 149. On Edge, only Summarizer is in stable (138+ default-on); Prompt, Translator, Detector, and WebMCP are developer previews in Canary/Dev behind their respective `edge://flags/` toggles. See [Browser support](./apps/docs/src/content/docs/browser-support.mdx) for the per-package matrix and exact flag names.
+For the AI APIs to actually run, open a supporting browser. On Chrome, Summarizer/Translator/Detector are stable in 138+ and Prompt is stable in 148+ (no flags); WebMCP needs `chrome://flags/#enable-webmcp-testing` through Chrome 148 and joins a public origin trial in Chrome 149. On Edge, only Summarizer is in stable (138+ default-on); Prompt, Translator, Detector, and WebMCP are developer previews in Canary/Dev behind their respective `edge://flags/` toggles. On Windows the four Built-in AI APIs (Prompt, Summarizer, Translator, Detector) work reliably once flagged; macOS sees higher refusal rates from the Phi-4-mini safety pipeline for Prompt and Summarizer. WebMCP on Edge remains rough on both platforms. See [Browser support](./apps/docs/src/content/docs/browser-support.mdx) for the per-package matrix and exact flag names.
 
 ## Repo layout
 

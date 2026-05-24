@@ -61,6 +61,7 @@ export default defineConfig({
           label: "Start",
           items: [
             { label: "Browser support", slug: "browser-support" },
+            { label: "Architecture", slug: "architecture" },
           ],
         },
         {
