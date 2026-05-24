@@ -1,0 +1,94 @@
+---
+title: Architecture
+description: How web-ai-sdk is organized. One package per browser capability, zero runtime dependencies, vanilla trunk with optional React adapters, and how the companion web-ai-kit fits on top.
+---
+
+`web-ai-sdk` is intentionally narrow. This page explains how the packages are organized, which decisions live inside the SDK and which are deferred to a future companion project, and how to reason about adding a new capability.
+
+## One package per browser capability
+
+Each `@web-ai-sdk/*` package wraps a single cohesive web capability relevant to in-browser AI:
+
+| Package | Wraps |
+| --- | --- |
+| [`@web-ai-sdk/prompt`](/docs/guides/prompt/) | `LanguageModel` (Web Built-in Prompt API) |
+| [`@web-ai-sdk/webmcp`](/docs/guides/webmcp/) | `navigator.modelContext` (W3C WebMCP) |
+| [`@web-ai-sdk/summarizer`](/docs/guides/summarizer/) | `Summarizer` |
+| [`@web-ai-sdk/translator`](/docs/guides/translator/) | `Translator` |
+| [`@web-ai-sdk/detector`](/docs/guides/detector/) | `LanguageDetector` |
+| [`@web-ai-sdk/all`](/docs/guides/meta-package/) | Meta-package; re-exports the five above |
+
+The capability can originate from an official Built-in AI API (`LanguageModel`, `Summarizer`, `Translator`, `Detector`), from an adjacent web standard (`WebMCP` today; `WebGPU` and `WebNN` are likely candidates as their on-device AI uses crystallize), or, rarely, from a zero-dependency SDK-authored primitive with no platform equivalent yet. The rules below are what define an SDK package, not the origin of the underlying capability.
+
+The structural rule is mechanical: **one package = one cohesive capability**. If the description of a package needs the word "and" to be honest about its scope, it's probably two packages.
+
+No SDK package imports from another published SDK package. Composition across capabilities (running a Prompt session over a tool registered with WebMCP, for example) is something you write in your application today, and something the future kit will offer pre-composed.
+
+## Zero-dependency policy
+
+Every `@web-ai-sdk/*` package ships with **no runtime dependencies and no peer dependencies**. The one exception is `react`, which is declared as an *optional* peer for the `/react` subpath adapter only.
+
+This is policy, not aspiration. The reasoning:
+
+- The Built-in AI APIs are still evolving. The SDK tracks a moving spec; we don't want to also be tracking a moving dependency graph.
+- A wrapper that introduces transitive dependencies imports their security surface, their breaking changes, and their abandonment risk. We don't think a `LanguageModel` wrapper should ever pull in a logging library or a polyfill.
+- Zero deps means a `pnpm add @web-ai-sdk/prompt` adds exactly one entry to your lockfile.
+
+When something useful really does need a third-party runtime (say, an IndexedDB-backed memory store or a JSON-RPC transport for a remote MCP server), it belongs in the companion kit, not here.
+
+## Vanilla trunk, React adapter as a subpath
+
+Every package has two entry points:
+
+```ts
+// Vanilla: TypeScript / DOM only, framework-agnostic.
+import { ask, createSession } from "@web-ai-sdk/prompt";
+
+// React: small hook adapter that wraps the vanilla core.
+import { usePrompt, useSession } from "@web-ai-sdk/prompt/react";
+```
+
+The vanilla trunk is the source of truth. The React adapter is a thin layer that wires the vanilla core into hook lifecycles. There is no standalone `@web-ai-sdk/prompt-react` package, and there won't be. Splitting along a framework boundary would force two release cadences for one capability.
+
+If a different framework adapter ever ships, it will follow the same shape: `@web-ai-sdk/<pkg>/<framework>` as a subpath, with the framework declared as an optional peer.
+
+## Ergonomic defaults vs. opinions
+
+The SDK is allowed to be ergonomic *within a single capability*. Examples that live inside `@web-ai-sdk/prompt`:
+
+- **Warm LRU session pool.** `ask()` reuses `LanguageModel.create()` results across same-shape callers. Cold start drops to sub-second. Override the cap with `configurePromptCache({ max })`; clear entries with `clearSession()` / `clearSessions()`.
+- **Optional result cache.** `ask()` accepts a `cache` option that memoizes responses by `(input, systemPrompt, temperature, topK)`. Off by default; you supply the backend (sessionStorage, localStorage, your own `{ get, set }` object).
+- **Delta-vs-cumulative stream normalization.** Chrome emits delta chunks; some Edge backends emit cumulative buffers. The wrapper smooths this so `onUpdate` always sees the cumulative buffer and `sendStreaming()` always yields deltas.
+
+These are **ergonomic defaults**, not opinions about *how* you build an app. They each:
+
+- live entirely inside one capability,
+- can be overridden, disabled, or replaced,
+- and would otherwise be reimplemented by every consumer.
+
+What you won't find in the SDK is anything that bonds multiple capabilities together: an agent loop that drives Prompt with WebMCP tools, a chat UI primitive, a persistent message store. Those are multi-capability compositions, and they belong in the kit, where each can evolve and version on its own timeline without touching the SDK or its users.
+
+## The companion kit
+
+**`web-ai-kit`** *(coming soon)* will be a separate scope and a separate repo. It will ship higher-level building blocks composed on top of the SDK:
+
+- agent loops with tool dispatch, step budgets, and event streams,
+- headless renderers for chat logs and streaming text,
+- IndexedDB / OPFS message stores with pluggable embedders,
+- remote MCP clients for talking to non-browser tool servers.
+
+Each kit package will be installable on its own, will depend on the relevant SDK package(s), and will be free to take third-party dependencies when they earn their place. Crucially: **no kit package will ever be a prerequisite for using an SDK package**. If you only want to call `LanguageModel`, you only need `@web-ai-sdk/prompt`.
+
+Until the kit ships, you can compose these primitives yourself: `ask()` plus `registerTool()` plus a `for await` loop is a tool-using agent in a dozen lines. The kit will eventually offer the polished, reusable version of that pattern; the SDK will keep providing the primitives underneath it.
+
+## Summary
+
+| Question                                                  | SDK              | Kit (future)        |
+| --------------------------------------------------------- | ---------------- | ------------------- |
+| Wraps one browser capability?                             | Yes              | No                  |
+| Composes multiple SDK packages?                           | No               | Yes                 |
+| Allowed runtime dependencies?                             | None             | Yes, when justified |
+| Ergonomic defaults scoped to one capability?              | Yes              | N/A                 |
+| Frame `ask()` retries or chat history or rendering here?  | No               | Yes                 |
+
+New web capabilities (Built-in AI, WebGPU, WebNN, or adjacent standards) land in the SDK as new packages. New usage patterns land in the kit.

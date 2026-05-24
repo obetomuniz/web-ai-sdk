@@ -19,6 +19,12 @@ hero:
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
 
+## Two layers, one philosophy
+
+**`web-ai-sdk`** ships building blocks for the Web's Built-in AI APIs. One package per browser capability (Prompt, WebMCP, Summarizer, Translator, Detector). Zero runtime dependencies. Vanilla TypeScript by default, with optional React hooks.
+
+A companion project, **`web-ai-kit`** *(coming soon)*, will provide higher-level building blocks composed on top of these primitives: agent loops, headless UI, persistent memory, remote MCP clients. Each kit package will evolve on its own timeline; none will be required to use the SDK. See [Architecture](/docs/architecture/) for the model.
+
 ## Composable wrappers. One philosophy.
 
 <CardGrid>

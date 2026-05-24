@@ -32,6 +32,19 @@ See the [README "Repo layout" section](./README.md#repo-layout) for the full tre
 4. **Add a changeset** if you're shipping a user-facing change. `pnpm changeset` opens an interactive picker. Skip this for docs-only or internal changes.
 5. **Open a PR** against `main`. The CI workflow will rerun the gate; the release workflow opens a "Version Packages" PR when there are pending changesets to publish.
 
+## Governance
+
+These rules define what belongs in `@web-ai-sdk/*` and what doesn't. They're the load-bearing constraints behind the [Architecture](./apps/docs/src/content/docs/architecture.mdx) page; if you're proposing a change to the SDK surface, read both.
+
+1. **No runtime dependencies in any `@web-ai-sdk/*` package.** `package.json` `dependencies` must be empty or absent. The one explicit exception is the meta-package `@web-ai-sdk/all`, which depends on the five wrapper packages as workspace deps so a single install ships the suite.
+2. **No `peerDependencies` except an optional `react` peer.** The `/react` subpath adapter is the only published surface allowed to peer on a framework. No Vue / Svelte / Solid / etc. peers; those would each be a new subpath on the same package, not a new package.
+3. **One package = one cohesive capability.** If you can't describe a package in one sentence without "and," it's two packages. The capability can originate from an official Built-in AI API (`LanguageModel`, `Summarizer`, `Translator`, `Detector`), an adjacent web standard (`WebMCP`, and likely `WebGPU` / `WebNN` in the future), or, rarely, a zero-dep SDK-authored primitive with no platform equivalent yet.
+4. **No SDK package may import from another published `@web-ai-sdk/*` package.** Composition across capabilities is the future kit's job by definition, not the SDK's. The meta-package is exempt because re-exporting is its only job.
+5. **Vanilla trunk + `/react` adapter as subpath.** A package's `src/index.ts` is the source of truth. `src/react/index.ts` is a thin wrapper. There is no `@web-ai-sdk/*-react` package and there shouldn't be.
+6. **Ergonomic defaults are allowed inside a package** (warm session pools, opt-in result caches, stream normalization), as long as they're scoped to that one capability and the user can override or disable them.
+
+For the time being these rules are enforced by review, not by CI. If you open a PR that adds `dependencies` or non-`react` `peerDependencies` to a `@web-ai-sdk/*` wrapper, expect to be asked to remove them or to land the work in the future kit instead. Shared infrastructure across packages (feature detection, stream normalization, error classes) will live in a private `@web-ai-sdk/internal` package the first time it's actually needed; until then, copy small helpers between packages rather than designing the shared layer upfront.
+
 ## Adding a new package
 
 1. Copy an existing package whose shape matches what you need (`prompt` if you want streaming + session cache + opt-in result cache, `webmcp` if you want an AbortSignal registry, `translator` if you want DOM-walking).
