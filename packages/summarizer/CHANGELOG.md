@@ -1,5 +1,147 @@
 # @web-ai-sdk/summarizer
 
+## 0.4.0
+
+### Minor Changes
+
+- 925ae50: **0.4 — API normalization pass. Breaking changes; one-shot pre-1.0 cleanup.**
+
+  The SDK now follows one consistent shape across every package:
+  - Every primitive takes `{ input, ...config }`.
+  - Every result-returning primitive returns `{ output, cached }`.
+  - Every package exports `isAvailable()` / `checkAvailability()` (no more per-package `is<X>Available` names).
+  - Every package accepts `cache: "session" | "local" | { get, set }` as a string shortcut or custom backend.
+  - Every React hook exposes `{ status, output, error, fromCache, … }` with a unified `status` enum: `"idle" | "loading" | "streaming" | "done" | "unavailable"`.
+
+  ### Migration guide
+
+  #### Renamed inputs
+
+  | Old                                              | New                                                                              |
+  | ------------------------------------------------ | -------------------------------------------------------------------------------- |
+  | `detect({ text })`                               | `detect({ input })`                                                              |
+  | `summarize({ text })` / `summarize({ article })` | `summarize({ input: string })` — see _removed: article mode_                     |
+  | `translate({ roots, ... })`                      | `translate({ input, sourceLanguage, targetLanguage })` — see _removed: DOM mode_ |
+  | `useDetector({ text })`                          | `useDetector({ input })`                                                         |
+  | `useSummarizer({ text, article })`               | `useSummarizer({ input })`                                                       |
+
+  #### Renamed results
+
+  | Old                                                  | New                                                         |
+  | ---------------------------------------------------- | ----------------------------------------------------------- |
+  | `{ summary: string \| null, cached }`                | `{ output: string \| null, cached }`                        |
+  | `{ response: string \| null, cached }`               | `{ output: string \| null, cached }`                        |
+  | `{ language, confidence, all, cached }`              | `{ output: { language, confidence, all } \| null, cached }` |
+  | `useSummarizer() → { summary, ... }`                 | `useSummarizer() → { output, ... }`                         |
+  | `usePrompt() → { response, ... }`                    | `usePrompt() → { output, ... }`                             |
+  | `useDetector() → { language, confidence, all, ... }` | `useDetector() → { output, ... }`                           |
+
+  #### Renamed availability
+
+  | Old                       | New                                             |
+  | ------------------------- | ----------------------------------------------- |
+  | `isPromptAvailable()`     | `isAvailable()` (from `@web-ai-sdk/prompt`)     |
+  | `isDetectorAvailable()`   | `isAvailable()` (from `@web-ai-sdk/detector`)   |
+  | `isSummarizerAvailable()` | `isAvailable()` (from `@web-ai-sdk/summarizer`) |
+  | `isTranslatorAvailable()` | `isAvailable()` (from `@web-ai-sdk/translator`) |
+  | `isWebMCPAvailable()`     | `isAvailable()` (from `@web-ai-sdk/webmcp`)     |
+
+  When importing several at once, alias them: `import { isAvailable as isPromptAvailable } from "@web-ai-sdk/prompt"`.
+
+  #### Cache option shortcut
+
+  `cache: createSessionStorageCache()` is no longer the preferred shape. Pass `cache: "session"` (sessionStorage) or `cache: "local"` (localStorage). Custom `{ get, set }` backends are unchanged. The factory function is no longer exported.
+
+  ```diff
+  - summarize({ input, language, cache: createSessionStorageCache() })
+  + summarize({ input, language, cache: "session" })
+  ```
+
+  #### Removed: escape hatches
+
+  These low-level exports leaked the session-cache plumbing and are deleted:
+  - `getLanguageDetectorApi`, `getOrCreateLanguageDetector`
+  - `getSummarizerApi`, `getOrCreateSummarizer`
+  - `getTranslatorApi`, `getOrCreateTranslator`
+  - `getLanguageModelApi`, `getOrCreateLanguageModel`
+  - `getModelContext`
+  - `clearSession`, `clearSessions`, `configurePromptCache`, `configureSummarizerCache`
+  - `createSessionStorageCache`, `defaultCacheKey`
+  - Summarizer: `buildSkeleton`, `cleanSummary`, `trimToSentenceBoundary`, `DEFAULT_MAX_INPUT_CHARS`, `DEFAULT_MIN_SKELETON_CHARS`
+  - Translator: `serializeBlock`, `rebuildBlock`, `buildCasingMap`, `isUntranslatableToken`, `stripTokens`, `restoreOriginalCasing`, `DEFAULT_ROOT_SELECTOR`, `DEFAULT_BLOCK_SELECTOR`, `TranslateController`, `TranslateProgress`, `RootsOption`, `SkipReason`
+  - WebMCP: `registerTools` (was already deprecated in 0.3)
+
+  If you were reaching for any of these, the principle is: the SDK wraps one platform API per package. If you need to compose them, write the composition in your app.
+
+  #### Removed: summarizer article mode
+
+  `summarize({ article: Element })` is no longer supported. The SDK is string-mode only:
+
+  ```diff
+  - summarize({ language: "en", article: document.querySelector("article") })
+  + const article = document.querySelector("article");
+  + summarize({ language: "en", input: article?.innerText ?? "" })
+  ```
+
+  For the previous skeleton-extraction behavior (title + headings + bolds, sentence-boundary trimmed), extract the text yourself with `element.querySelectorAll("h1, h2, h3, h4, strong, b")` before calling `summarize({ input })`.
+
+  #### Removed: translator DOM mode
+
+  `translate({ roots, blockSelector, onProgress, ... })` is gone. The SDK is string-mode only:
+
+  ```diff
+  - const controller = translate({
+  -   sourceLanguage: "en",
+  -   targetLanguage: "pt",
+  -   roots: "[data-translate-root]",
+  - });
+  - await controller.done;
+  + const { output } = await translate({
+  +   input: "Hello, world.",
+  +   sourceLanguage: "en",
+  +   targetLanguage: "pt",
+  + });
+  ```
+
+  For the previous block-level DOM round-trip (placeholder serialization, casing restoration, snapshot-based restore, progress events), the pipeline is consumer code: walk your blocks, call `translate({ input })` per block, and rebuild the DOM yourself.
+
+  #### Flattened: summarizer create options
+
+  `type` / `length` / `format` / `preference` are now top-level on `SummarizeOptions`:
+
+  ```diff
+  - summarize({
+  -   language: "en",
+  -   input,
+  -   createOptions: { type: "key-points", length: "short" },
+  - })
+  + summarize({
+  +   language: "en",
+  +   input,
+  +   type: "key-points",
+  +   length: "short",
+  + })
+  ```
+
+  The `createOptions` passthrough on `summarize` and `ask` is removed. `createSession()` keeps it because the chat-session primitive is the explicit power-user entry point.
+
+  #### Reshaped: `sharedContext`
+
+  `summarize.sharedContext` is now a `string` (matching the platform API), not a `Record<string, string>`. If you were keying it by language, pick the right one per call:
+
+  ```diff
+  - summarize({ language: "pt", input, sharedContext: { pt: "...", en: "..." } })
+  + summarize({ language: "pt", input, sharedContext: "..." })
+  ```
+
+  #### Removed: summarizer fallback knobs
+
+  `maxInputChars` and `minSkeletonChars` are gone (they only mattered for article mode). If you're trimming long input, do it before calling `summarize()`.
+
+  #### React hook status enum
+
+  `useDetector` and `useSummarizer` previously used `"pending"` for the initial state. `useTranslator` used `state` instead of `status` and exposed `progress` / `restore`. All hooks now use `status: "idle" | "loading" | "streaming" | "done" | "unavailable"` and a unified return shape `{ status, output, error, fromCache, ... }`. `useTranslator` is now auto-running string-mode (no `progress`, no `restore`); for block-level DOM translation see the example.
+
 ## 0.3.4
 
 ## 0.3.3
