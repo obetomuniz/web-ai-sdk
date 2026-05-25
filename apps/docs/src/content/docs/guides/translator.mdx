@@ -1,65 +1,132 @@
 ---
 title: Translator
-description: Building block for the Web's Built-in Translator with block-level DOM round-trip, casing restoration, and snapshot-based restore.
+description: Building block for the Web's Built-in Translator. String-mode translation with pair-cached sessions and opt-in result caching.
 ---
 
-Building block for the Web's Built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api) (on-demand language packs). Block-level translation with inline placeholder serialization, casing restoration, and a snapshot-based restore. See [useTranslator](/docs/react/use-translator/) for React.
+Building block for the Web's Built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api) (on-demand language packs). String-mode translation with pair-cached sessions, opt-in result caching, AbortSignal-driven cleanup. See [useTranslator](/docs/react/use-translator/) for React.
 
 ## Usage
 
 ```ts
 import { translate } from "@web-ai-sdk/translator";
 
-const controller = translate({
+const result = await translate({
+  input: "Hello, world.",
   sourceLanguage: "en",
   targetLanguage: "pt",
-  roots: "[data-translate-root]",
-  onProgress: (event) => console.log(event),
 });
 
-const { blocksTranslated } = await controller.done;
-console.log(`Translated ${blocksTranslated} blocks.`);
-
-// To roll back:
-controller.restore();
+console.log(result.output);  // → "Olá, mundo."
+console.log(result.cached);  // → false
 ```
 
-`translate()` returns a controller synchronously. Await `controller.done` for completion; call `controller.cancel()` to abort or `controller.restore()` to snap every translated block back to its original children.
+`result.output` is the translated text, or `null` when the input is empty or when `sourceLanguage` and `targetLanguage` match (the wrapper short-circuits same-language calls).
+
+## Options
+
+```ts
+interface TranslateOptions {
+  input: string;
+  sourceLanguage: string;
+  targetLanguage?: string;
+  monitor?: (m: TranslatorMonitor) => void;
+  cache?: "session" | "local" | { get, set };
+  cacheKey?: string;
+  signal?: AbortSignal;
+}
+```
+
+<div class="options-table">
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `input` <sup>required</sup> | `string` | Text to translate. Empty / whitespace resolves to `{ output: null }`. |
+| `sourceLanguage` <sup>required</sup> | `string` | BCP-47 source language (e.g. `pt`, `pt-BR`). Regional tags are normalized to their base. |
+| `targetLanguage` | `string` | BCP-47 target language. Defaults to `"en"`. |
+| `monitor` | `(m) => void` | Observe the first-call model download. |
+| `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
+| `cacheKey` | `string` | Override the default cache key (hash of `{ sourceLanguage, targetLanguage, input }`). |
+| `signal` | `AbortSignal` | Abort signal. |
+
+</div>
+
+## Returns
+
+```ts
+interface TranslateResult {
+  output: string | null;
+  cached: boolean;
+}
+```
 
 ## How it works
 
-The translator walks each root (default `[data-translate-root]`), finds block-level elements (default selector covers `p, h1-h6, li, blockquote, figcaption, dt, dd, summary`), and serializes their children into a single token string. Inline elements like `<a>`, `<strong>`, `<code>` become opaque placeholders that round-trip through the model without being translated.
+Chrome's `Translator` exposes `Translator.create({ sourceLanguage, targetLanguage })` to spin up a session and `translator.translate(text)` to run it. The wrapper does three things on top:
 
-After the model returns translated text, the wrapper rebuilds the block: re-inserts the placeholders, restores their original markup, and applies casing rules so the translated text matches the source's capitalization pattern.
+- **Feature detection.** `isAvailable()` / `checkAvailability()` return `false` / `null` on browsers without the API. The vanilla `translate()` throws `TranslatorUnavailableError`; the React hook surfaces `status: "unavailable"`.
+- **Session reuse by pair.** Internally caches `Translator.create()` keyed by `{sourceLanguage, targetLanguage}`. Switching back and forth between two language pairs reuses the warm sessions.
+- **Optional result cache.** Off by default. Pass `cache: "session"` to memoize translations in `sessionStorage`, `cache: "local"` for `localStorage`, or any `{ get, set }`-shaped object for a custom backend.
 
-A snapshot of each block's original children is kept in memory; `controller.restore()` swaps them back in. Calling `restore()` twice on the same block is a no-op.
-
-## Block-level vs string-level
-
-The wrapper is block-level by design. For a one-shot string translation, use `getOrCreateTranslator(api, opts)` directly:
+## Caching
 
 ```ts
-import { getOrCreateTranslator, getTranslatorApi } from "@web-ai-sdk/translator";
+import { translate } from "@web-ai-sdk/translator";
 
-const api = getTranslatorApi();
-if (!api) return; // unavailable
+// Off by default; every call hits the model.
+translate({ input: text, sourceLanguage: "en", targetLanguage: "pt" });
 
-const translator = await getOrCreateTranslator(api, {
+// Per-tab caching via sessionStorage
+translate({
+  input: text,
   sourceLanguage: "en",
   targetLanguage: "pt",
+  cache: "session",
 });
 
-const output = await translator.translate("Hello, world.");
+// Persistent caching across tabs
+translate({
+  input: text,
+  sourceLanguage: "en",
+  targetLanguage: "pt",
+  cache: "local",
+});
 ```
 
-Sessions are cached per `(sourceLanguage, targetLanguage)` pair, so switching back and forth is instant.
+The default cache key is `JSON.stringify([source, target, trimmedInput])`, so identical input/pair combinations hit. Pass `cacheKey` explicitly for finer-grained invalidation.
 
-## Untranslatable tokens
+## Aborting
 
-Some content shouldn't be translated: emoji, URLs, numbers, single-letter words. The wrapper detects standalone tokens of this kind and skips the block (`onProgress: { phase: "block-skipped", reason: "untranslatable-token" }`). Override via `opaqueInlineTags` to add tags that should be kept verbatim.
+`AbortSignal` is supported. Aborting mid-call throws `AbortError`; the cache is not written for aborted runs.
+
+```ts
+const controller = new AbortController();
+translate({
+  input: "long text…",
+  sourceLanguage: "en",
+  targetLanguage: "pt",
+  signal: controller.signal,
+});
+controller.abort();
+```
 
 ## Errors and unavailability
 
-The translator is feature-detected. On browsers without `Translator`, `translate()` returns a controller whose `done` resolves immediately with `{ blocksTranslated: 0 }`; no error is thrown. Branch on `isTranslatorAvailable()` if you want to render a fallback explicitly.
+The vanilla `translate()` throws `TranslatorUnavailableError` when the API is missing or reports `availability: "unavailable"`. Callers branch explicitly:
 
-`controller.cancel()` is supported at any time. Cancelling mid-translation throws `AbortError` from `controller.done`.
+```ts
+import { translate, TranslatorUnavailableError } from "@web-ai-sdk/translator";
+
+try {
+  const result = await translate({
+    input: text,
+    sourceLanguage: "en",
+    targetLanguage: "pt",
+  });
+} catch (err) {
+  if (err instanceof TranslatorUnavailableError) {
+    return null;
+  }
+  throw err;
+}
+```
+

@@ -68,7 +68,7 @@ describe("usePrompt", () => {
     });
 
     expect(result.current.status).toBe("done");
-    expect(result.current.response).toBe("hello world");
+    expect(result.current.output).toBe("hello world");
     expect(result.current.error).toBeNull();
   });
 
@@ -83,7 +83,7 @@ describe("usePrompt", () => {
     });
 
     await waitFor(() => expect(result.current.status).toBe("done"));
-    expect(result.current.response).toBe("one two three");
+    expect(result.current.output).toBe("one two three");
   });
 
   it("sets fromCache=true when the result comes from cache", async () => {
@@ -105,7 +105,7 @@ describe("usePrompt", () => {
       await result.current.ask("q");
     });
 
-    expect(result.current.response).toBe("cached!");
+    expect(result.current.output).toBe("cached!");
     expect(result.current.fromCache).toBe(true);
   });
 
@@ -118,10 +118,10 @@ describe("usePrompt", () => {
     await act(async () => {
       await result.current.ask("q");
     });
-    expect(result.current.response).toBe("x");
+    expect(result.current.output).toBe("x");
 
     act(() => result.current.reset());
-    expect(result.current.response).toBeNull();
+    expect(result.current.output).toBeNull();
     expect(result.current.status).toBe("idle");
   });
 });

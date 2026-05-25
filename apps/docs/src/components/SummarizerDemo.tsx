@@ -16,23 +16,17 @@ const DEFAULT_BODY = `
   <p>Framework adapters, polyfills, UI primitives. <strong>Composable</strong> means the consumer picks what to plug in, instead of every package shipping every dependency.</p>
 `;
 
-export const SummarizerDemo = ({
-  language = "en",
-  title = "The case for building blocks",
-  description = "Why a lifecycle layer around browser AI APIs is worth shipping.",
-}: SummarizerDemoProps) => {
+export const SummarizerDemo = ({ language = "en" }: SummarizerDemoProps) => {
   const articleRef = useRef<HTMLDivElement | null>(null);
-  const [article, setArticle] = useState<HTMLElement | undefined>(undefined);
+  const [input, setInput] = useState("");
 
   useEffect(() => {
-    setArticle(articleRef.current ?? undefined);
+    setInput(articleRef.current?.innerText ?? "");
   }, []);
 
-  const { status, summary, error, fromCache, dismiss } = useSummarizer({
+  const { status, output, error, fromCache, dismiss } = useSummarizer({
     language,
-    article,
-    title,
-    description,
+    input,
   });
 
   return (
@@ -44,7 +38,7 @@ export const SummarizerDemo = ({
         </p>
       )}
       {error && <p className="demo-error">{error.message}</p>}
-      {summary && (
+      {output && (
         <aside className="demo-response">
           <header className="demo-response__header">
             <span>
@@ -60,7 +54,7 @@ export const SummarizerDemo = ({
               ×
             </button>
           </header>
-          <p className="demo-response__body">{summary}</p>
+          <p className="demo-response__body">{output}</p>
         </aside>
       )}
       <div

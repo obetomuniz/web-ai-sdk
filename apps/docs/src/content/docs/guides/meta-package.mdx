@@ -43,10 +43,11 @@ import { useSummarizer } from "@web-ai-sdk/all/summarizer/react";
 import { prompt, summarizer, translator, detector, webmcp } from "@web-ai-sdk/all";
 
 await prompt.ask({ input: "Hello" });
-await summarizer.summarize({ language: "en", article: document.body });
+await summarizer.summarize({ language: "en", input: longText });
+await translator.translate({ input: "Olá", sourceLanguage: "pt", targetLanguage: "en" });
 ```
 
-Why namespaced and not flat? Several names (`checkAvailability`, `defaultCacheKey`, `createSessionStorageCache`) appear in more than one package, so a flat re-export at the root would collide. Namespacing keeps each block's surface intact.
+Why namespaced and not flat? Names like `isAvailable` and `checkAvailability` appear in every package, so a flat re-export at the root would collide. Namespacing keeps each block's surface intact.
 
 ## When *not* to use the meta-package
 

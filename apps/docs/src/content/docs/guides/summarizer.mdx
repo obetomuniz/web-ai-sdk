@@ -1,9 +1,9 @@
 ---
 title: Summarizer
-description: Building block for the Web's Built-in Summarizer with skeleton extraction, session reuse, opt-in result caching, and streaming.
+description: Building block for the Web's Built-in Summarizer with session reuse, opt-in result caching, and streaming.
 ---
 
-Building block for the Web's Built-in [Summarizer API](https://developer.chrome.com/docs/ai/summarizer-api). Skeleton extraction, sentence-boundary trim, streaming, and pluggable result caching. The React adapter lives at `@web-ai-sdk/summarizer/react`; see [useSummarizer](/docs/react/use-summarizer/).
+Building block for the Web's Built-in [Summarizer API](https://developer.chrome.com/docs/ai/summarizer-api). String-mode summarization with session reuse, sentence-aware output cleaning, streaming, and pluggable result caching. The React adapter lives at `@web-ai-sdk/summarizer/react`; see [useSummarizer](/docs/react/use-summarizer/).
 
 ## Usage
 
@@ -11,61 +11,102 @@ Building block for the Web's Built-in [Summarizer API](https://developer.chrome.
 import { summarize } from "@web-ai-sdk/summarizer";
 
 const result = await summarize({
+  input: longArticleText,
   language: "en",
-  article: document.querySelector("article") ?? undefined,
-  createOptions: { type: "key-points", length: "short" },
+  type: "key-points",
+  length: "short",
   onUpdate: (text) => render(text),
 });
 
-console.log(result.summary, result.cached);
+console.log(result.output, result.cached);
 ```
 
-Pass `article` to let the wrapper extract a skeleton (title + description + every `h1-h4` and `<strong>` / `<b>` inside the article); or pass `text` directly to skip skeleton extraction. The input is trimmed to a sentence boundary (default cap: 3000 chars) so the model never sees half-cut sentences.
+`result.output` is the cleaned summary text, or `null` when the input is empty. `result.cached` tells you whether the response came from the cache without invoking the model.
+
+## Options
+
+```ts
+interface SummarizeOptions {
+  input: string;
+  language: string;
+  supportedLanguages?: readonly string[];
+  type?: "tldr" | "key-points" | "teaser" | "headline";
+  length?: "short" | "medium" | "long";
+  format?: "plain-text" | "markdown";
+  preference?: "auto" | "speed" | "capability";
+  sharedContext?: string;
+  monitor?: (m: CreateMonitor) => void;
+  cache?: "session" | "local" | { get, set };
+  cacheKey?: string;
+  onUpdate?: (text: string) => void;
+  signal?: AbortSignal;
+}
+```
+
+<div class="options-table">
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `input` <sup>required</sup> | `string` | Text to summarize. Empty / whitespace resolves to `{ output: null }`. |
+| `language` <sup>required</sup> | `string` | BCP-47 language for input + output hints. Falls back to omitting hints if unsupported. |
+| `supportedLanguages` | `readonly string[]` | Languages the model supports for hints. Hints are sent when `language` is in this set; omitted otherwise. Defaults to `["en", "es", "ja"]`. |
+| `type` | `"tldr" \| "key-points" \| "teaser" \| "headline"` | Summary shape. Defaults to `"tldr"`. |
+| `length` | `"short" \| "medium" \| "long"` | Length preset. Defaults to `"medium"`. |
+| `format` | `"plain-text" \| "markdown"` | Output format. Defaults to `"plain-text"`. |
+| `preference` | `"auto" \| "speed" \| "capability"` | Performance preference. Defaults to `"speed"`. |
+| `sharedContext` | `string` | Native `sharedContext` string (a hint about who/what the summary is for). |
+| `monitor` | `(m) => void` | Observe the first-call model download (~1.7 GB on a fresh profile). |
+| `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
+| `cacheKey` | `string` | Override the default cache key (defaults to `${pathname}:${lang}`). |
+| `onUpdate` | `(text: string) => void` | Streaming update callback. Receives the cumulative buffer, not deltas. |
+| `signal` | `AbortSignal` | Abort signal. |
+
+</div>
+
+## Returns
+
+```ts
+interface SummarizeResult {
+  output: string | null;
+  cached: boolean;
+}
+```
 
 ## How it works
 
-1. **Build a skeleton.** For long posts the high-signal content drops the input from thousands of chars to a few hundred and produces a tighter summary. Falls back to the trimmed body when the skeleton is too thin (`minSkeletonChars`, default 200).
-2. **Trim to a sentence boundary.** So the model never sees a half-cut sentence (default cap: 3000 chars).
-3. **Cache `Summarizer.create()` sessions** by JSON-stringified options. First post pays the ~1-3s cold start; later same-config calls reuse the warm session.
-4. **Stream `summarizeStreaming()`** when the instance supports it, falling back to one-shot `summarize()`. Cleaned chunks are pushed to `onUpdate` as they arrive.
-5. **Optionally cache the final summary** when you pass a `cache` (e.g. `createSessionStorageCache()`). Off by default; opt in for revisits in the same tab to render instantly.
+1. **Trim and cache check.** Whitespace-only input short-circuits to `null`. If a `cache` is configured and has the key, return immediately.
+2. **Cache `Summarizer.create()` sessions** by JSON-stringified options. First call pays the ~1-3s cold start; later same-config calls reuse the warm session.
+3. **Stream `summarizeStreaming()`** when the instance supports it, falling back to one-shot `summarize()`. Cleaned chunks are pushed to `onUpdate` as they arrive (cumulative buffer, not deltas).
+4. **Optionally cache the final summary** when you pass a `cache`. Off by default; opt in for revisits in the same tab to render instantly.
 
 ## Two caches, two purposes
 
-**Session cache** (internal, in-memory, always on): a `Map<stringifiedOptions, Summarizer>` so the second call with the same `{ language, sharedContext, createOptions }` reuses the warm `Summarizer.create()` session. Cold-start is ~1-3s; warm sessions are sub-second. Cleared on full page reload.
+**Session cache** (internal, in-memory, always on): a bounded LRU of `Summarizer` instances so the second call with the same `{ language, type, length, sharedContext, … }` reuses the warm session. Cold-start is ~1-3s; warm sessions are sub-second. Cleared on full page reload.
 
-**Result cache** (opt-in): off by default; every call hits the model. Pass a `cache` (anything matching `{ get, set }`) to memoize the final summary string by `cacheKey` (or a default key derived from the inputs).
+**Result cache** (opt-in): off by default; every call hits the model. Pass `cache: "session"` for `sessionStorage`, `cache: "local"` for `localStorage`, or any `{ get, set }`-shaped object to memoize the final summary string by `cacheKey`.
 
 ```ts
-import { summarize, createSessionStorageCache } from "@web-ai-sdk/summarizer";
+import { summarize } from "@web-ai-sdk/summarizer";
 
 // Off by default; every call hits the model.
-summarize({ language: "en", article });
+summarize({ language: "en", input: text });
 
 // Per-tab caching via sessionStorage
-summarize({
-  language: "en",
-  article,
-  cache: createSessionStorageCache(),
-});
+summarize({ language: "en", input: text, cache: "session" });
 
 // Persistent caching across tabs
-summarize({
-  language: "en",
-  article,
-  cache: createSessionStorageCache({ storage: localStorage, prefix: "post-summary:" }),
-});
+summarize({ language: "en", input: text, cache: "local" });
 ```
 
 `result.cached` tells you which path served the response, so you can render a "From cache" hint or skip a re-fetch.
 
 ## Streaming
 
-When the underlying Summarizer instance exposes `summarizeStreaming()`, the library uses it and pushes cleaned chunks to `onUpdate` as they arrive (cumulative buffer, not deltas). Otherwise it falls back to one-shot `summarize()`. Either way, `result.summary` is the final cleaned text.
+When the underlying Summarizer instance exposes `summarizeStreaming()`, the library uses it and pushes cleaned chunks to `onUpdate` as they arrive (cumulative buffer, not deltas). Otherwise it falls back to one-shot `summarize()`. Either way, `result.output` is the final cleaned text.
 
 ## Output normalization
 
-`cleanSummary` strips wrapping quotes / whitespace and collapses internal whitespace; applied to every result regardless of `type`. Anything beyond that — e.g. trimming the trailing period from a `type: "headline"` result so it reads as a label rather than a sentence — is your concern. A one-line regex after the call covers the headline case.
+The wrapper strips wrapping quotes / whitespace and collapses internal whitespace on every result regardless of `type`. Anything beyond that — e.g. trimming the trailing period from a `type: "headline"` result so it reads as a label rather than a sentence — is your concern. A one-line regex after the call covers the headline case.
 
 ## Language support beyond en/es/ja
 
@@ -74,8 +115,8 @@ The Web's Built-in Summarizer (Chrome 138+, Edge 138+) only accepts `expectedInp
 ```ts
 summarize({
   language: "pt",
-  article,
-  sharedContext: { pt: "Resuma o artigo em português em 2-3 frases curtas." },
+  input: text,
+  sharedContext: "Resuma o artigo em português em 2-3 frases curtas.",
 });
 ```
 
@@ -89,7 +130,7 @@ The vanilla `summarize()` throws `SummarizerUnavailableError` when the API is mi
 import { summarize, SummarizerUnavailableError } from "@web-ai-sdk/summarizer";
 
 try {
-  const result = await summarize({ language: "en", article });
+  const result = await summarize({ language: "en", input: text });
 } catch (err) {
   if (err instanceof SummarizerUnavailableError) {
     return;
@@ -99,3 +140,4 @@ try {
 ```
 
 `AbortSignal` is supported. Aborting mid-stream resolves cleanly; an opt-in result cache is not written for aborted runs.
+

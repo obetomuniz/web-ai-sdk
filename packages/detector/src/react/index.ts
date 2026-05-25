@@ -5,52 +5,49 @@ import {
   type DetectionResult,
   DetectorUnavailableError,
   detect,
-  isDetectorAvailable,
+  isAvailable,
 } from "../index.js";
 
-export type DetectorStatus = "pending" | "loading" | "done" | "unavailable";
+export type DetectorStatus = "idle" | "loading" | "done" | "unavailable";
 
 export interface UseDetectorOptions
-  extends Omit<DetectOptions, "text" | "signal"> {
-  /** Text to detect. When falsy / whitespace-only the hook stays `pending`. */
-  text: string;
+  extends Omit<DetectOptions, "input" | "signal"> {
+  /** Text to detect. When falsy / whitespace-only the hook stays `idle`. */
+  input: string;
   /** Whether to automatically run on mount / input change. Default: `true`. */
   enabled?: boolean;
 }
 
 export interface UseDetectorReturn {
   status: DetectorStatus;
-  /** Top language (BCP-47), or `null` while pending / inconclusive. */
-  language: string | null;
-  /** Confidence of the top result. */
-  confidence: number;
-  /** Full sorted list of candidates. */
-  all: DetectionResult[];
+  /**
+   * Detection output, or `null` while idle / inconclusive. Mirrors
+   * `DetectResult["output"]`.
+   */
+  output: DetectResult["output"];
   error: Error | null;
   /** Whether the result was loaded from cache (no model call). */
   fromCache: boolean;
 }
 
 /**
- * Auto-detect the language of `text`. Re-runs when `text` changes. Stays in
- * `"pending"` until the input is non-empty. Pass `cache` (stable reference)
+ * Auto-detect the language of `input`. Re-runs when `input` changes. Stays
+ * in `"idle"` until the input is non-empty. Pass `cache` (stable reference)
  * to enable the result cache.
  */
 export const useDetector = (options: UseDetectorOptions): UseDetectorReturn => {
   const [status, setStatus] = useState<DetectorStatus>(() =>
-    isDetectorAvailable() ? "pending" : "unavailable",
+    isAvailable() ? "idle" : "unavailable",
   );
-  const [language, setLanguage] = useState<string | null>(null);
-  const [confidence, setConfidence] = useState(0);
-  const [all, setAll] = useState<DetectionResult[]>([]);
+  const [output, setOutput] = useState<DetectResult["output"]>(null);
   const [error, setError] = useState<Error | null>(null);
   const [fromCache, setFromCache] = useState(false);
 
   const {
-    text,
+    input,
     expectedInputLanguages,
     minConfidence,
-    createOptions,
+    monitor,
     cache,
     cacheKey,
     enabled = true,
@@ -63,15 +60,13 @@ export const useDetector = (options: UseDetectorOptions): UseDetectorReturn => {
 
   useEffect(() => {
     if (!enabled) return;
-    if (!isDetectorAvailable()) {
+    if (!isAvailable()) {
       setStatus("unavailable");
       return;
     }
-    if (!text.trim()) {
-      setStatus("pending");
-      setLanguage(null);
-      setConfidence(0);
-      setAll([]);
+    if (!input.trim()) {
+      setStatus("idle");
+      setOutput(null);
       return;
     }
 
@@ -80,19 +75,17 @@ export const useDetector = (options: UseDetectorOptions): UseDetectorReturn => {
     setStatus("loading");
 
     detect({
-      text,
+      input,
       expectedInputLanguages,
       minConfidence,
-      createOptions,
+      monitor,
       cache,
       cacheKey,
       signal: controller.signal,
     })
       .then((result: DetectResult) => {
         if (controller.signal.aborted) return;
-        setLanguage(result.language);
-        setConfidence(result.confidence);
-        setAll(result.all);
+        setOutput(result.output);
         setFromCache(result.cached);
         setStatus("done");
       })
@@ -112,15 +105,15 @@ export const useDetector = (options: UseDetectorOptions): UseDetectorReturn => {
     };
   }, [
     enabled,
-    text,
+    input,
     expectedInputLanguages,
     minConfidence,
-    createOptions,
+    monitor,
     cache,
     cacheKey,
   ]);
 
-  return { status, language, confidence, all, error, fromCache };
+  return { status, output, error, fromCache };
 };
 
 export type {
@@ -128,4 +121,5 @@ export type {
   DetectResult,
   DetectionResult,
   DetectionCache,
+  CacheOption,
 } from "../index.js";

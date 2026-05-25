@@ -42,40 +42,40 @@ afterEach(() => {
 
 describe("useDetector", () => {
   it("starts in 'unavailable' when the API is missing", () => {
-    const { result } = renderHook(() => useDetector({ text: "hi" }));
+    const { result } = renderHook(() => useDetector({ input: "hi" }));
     expect(result.current.status).toBe("unavailable");
   });
 
-  it("stays in 'pending' when text is empty", () => {
+  it("stays in 'idle' when input is empty", () => {
     installFakeDetector();
-    const { result } = renderHook(() => useDetector({ text: "  " }));
-    expect(result.current.status).toBe("pending");
+    const { result } = renderHook(() => useDetector({ input: "  " }));
+    expect(result.current.status).toBe("idle");
   });
 
-  it("transitions pending → loading → done", async () => {
+  it("transitions idle → loading → done", async () => {
     installFakeDetector({
       results: [{ detectedLanguage: "pt", confidence: 0.93 }],
     });
-    const { result } = renderHook(() => useDetector({ text: "Olá, mundo" }));
+    const { result } = renderHook(() => useDetector({ input: "Olá, mundo" }));
 
     await waitFor(() => expect(result.current.status).toBe("done"));
-    expect(result.current.language).toBe("pt");
-    expect(result.current.confidence).toBeCloseTo(0.93);
+    expect(result.current.output?.language).toBe("pt");
+    expect(result.current.output?.confidence).toBeCloseTo(0.93);
     expect(result.current.error).toBeNull();
   });
 
-  it("re-runs when text changes", async () => {
+  it("re-runs when input changes", async () => {
     const api = installFakeDetector({
       results: [{ detectedLanguage: "en", confidence: 0.9 }],
     });
     const { result, rerender } = renderHook(
-      ({ text }: { text: string }) => useDetector({ text }),
-      { initialProps: { text: "hello" } },
+      ({ input }: { input: string }) => useDetector({ input }),
+      { initialProps: { input: "hello" } },
     );
     await waitFor(() => expect(result.current.status).toBe("done"));
     expect(api.detectSpy).toHaveBeenCalledTimes(1);
 
-    rerender({ text: "hola" });
+    rerender({ input: "hola" });
     await waitFor(() => expect(api.detectSpy).toHaveBeenCalledTimes(2));
   });
 
@@ -93,24 +93,23 @@ describe("useDetector", () => {
       },
     };
     const { result } = renderHook(() =>
-      useDetector({ text: "こんにちは", cache, cacheKey: "k" }),
+      useDetector({ input: "こんにちは", cache, cacheKey: "k" }),
     );
 
     await waitFor(() => expect(result.current.status).toBe("done"));
-    expect(result.current.language).toBe("ja");
+    expect(result.current.output?.language).toBe("ja");
     expect(result.current.fromCache).toBe(true);
   });
 
-  it("respects minConfidence and reports null when below the threshold", async () => {
+  it("respects minConfidence and reports null output when below the threshold", async () => {
     installFakeDetector({
       results: [{ detectedLanguage: "und", confidence: 0.3 }],
     });
     const { result } = renderHook(() =>
-      useDetector({ text: "??", minConfidence: 0.9 }),
+      useDetector({ input: "??", minConfidence: 0.9 }),
     );
 
     await waitFor(() => expect(result.current.status).toBe("done"));
-    expect(result.current.language).toBeNull();
-    expect(result.current.confidence).toBe(0);
+    expect(result.current.output).toBeNull();
   });
 });

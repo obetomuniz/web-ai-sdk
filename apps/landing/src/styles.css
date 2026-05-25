@@ -38,9 +38,16 @@
   --r-lg: 14px;
   --r-pill: 999px;
 
-  --shadow-card: 0 1px 0 rgba(255,255,255,0.02) inset,
-                 0 24px 60px -30px rgba(0,0,0,0.7),
-                 0 8px 24px -16px rgba(0,0,0,0.5);
+  /* Box shadows band on high-DPI dark displays when stacked with low
+     alphas (each 1/255 alpha step shows as a discrete pixel zone). To
+     stay smooth on a 4K monitor we use just two layers, both with
+     larger blur radii and moderate alpha (no sub-10% values, no
+     negative spreads). The shadow color is tinted toward the surface
+     hue via `oklch` so the GPU has chroma headroom to interpolate
+     instead of quantizing pure black. */
+  --shadow-card: 0 1px 0 rgba(255,255,255,0.025) inset,
+                 0 6px 14px oklch(15% 0.02 35 / 0.32),
+                 0 22px 48px oklch(12% 0.015 35 / 0.28);
 
   /* Layout */
   --container: 1180px;
@@ -164,13 +171,46 @@ section + section { border-top: 1px solid var(--hairline); }
   background: var(--fg-4);
 }
 
+/* Icon-only anchor for the section header. The eyebrow
+   ("01 · packages") already names the section, so the permalink doesn't
+   repeat it — it exists only to be a clickable target. Renders as a `§`
+   symbol in a small chip; hover hits the accent color. */
 .permalink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 1;
   color: var(--fg-4);
+  text-decoration: none;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
-.permalink:hover { color: var(--accent); }
-.permalink::before { content: "§ "; opacity: 0.6; }
+.permalink:hover {
+  color: var(--accent);
+  border-color: color-mix(in oklch, var(--accent) 40%, var(--hairline));
+}
+.permalink > span[aria-hidden="true"] {
+  opacity: 0.75;
+}
+
+/* Visually-hidden text for icon-only links (screen readers still see it).
+   Standard `sr-only` pattern. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
 
 h1, h2, h3, h4 {
   font-weight: 500;
@@ -1025,6 +1065,23 @@ footer {
   display: grid;
   gap: 8px;
 }
+
+/* Real <fieldset> usage (e.g. the WebMCP demo's "registered tools"
+   group) gets the classic labeled-card look: hairline border around the
+   group, padding inside, and the <legend> punched out of the top edge
+   with a small horizontal pad so the eyebrow-style label reads as a
+   chip on the border line. */
+fieldset.field {
+  margin: 0;
+  padding: 14px 14px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r);
+  background: color-mix(in oklch, var(--surface-2) 50%, transparent);
+}
+fieldset.field > legend.label {
+  padding: 0 8px;
+  margin-left: -4px;
+}
 .label {
   font-family: var(--mono);
   font-size: 11px;
@@ -1423,4 +1480,27 @@ footer {
 :root[data-caret="block"] .cursor {
   width: 0.5em;
   border-radius: 0;
+}
+
+/* ---------- Support-table polish ---------- */
+
+/* Each cell holds a version number + a status pill. Letting them wrap makes
+   the table look broken on tablet widths; pin them to one line and let the
+   `.support-table-wrap` parent scroll horizontally instead. */
+.support-table td,
+.support-table thead th {
+  white-space: nowrap;
+}
+.support-table tbody th { white-space: nowrap; }
+
+/* ---------- Section-head consistency on mobile ---------- */
+
+/* The permalink is now a small icon chip (no redundant text), so it can
+   sit on the same row as the heading at any viewport without forcing a
+   wrap. Keep the alignment flush-top so the chip lines up with the
+   first row of the eyebrow even when the heading wraps to two lines. */
+@media (max-width: 720px) {
+  .section-head {
+    align-items: flex-start;
+  }
 }

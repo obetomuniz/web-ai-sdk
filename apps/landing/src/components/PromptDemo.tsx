@@ -1,4 +1,4 @@
-import { isPromptAvailable } from "@web-ai-sdk/prompt";
+import { isAvailable as isPromptAvailable } from "@web-ai-sdk/prompt";
 import { usePrompt } from "@web-ai-sdk/prompt/react";
 import { useEffect, useState } from "react";
 import {
@@ -22,10 +22,10 @@ export const PromptDemo = () => {
   const [available, setAvailable] = useState<boolean | null>(null);
   const { stats, start, update, finish } = useStreamStats();
   const { progress, monitor } = useDownloadMonitor();
-  const { status, response, ask, abort, reset } = usePrompt({
+  const { status, output, ask, abort, reset } = usePrompt({
     systemPrompt: "You are concise. Reply briefly and avoid preamble.",
     temperature: 0.7,
-    createOptions: { monitor },
+    monitor,
   });
 
   // Track stats off of the response stream. On `done`, also call update()
@@ -36,14 +36,14 @@ export const PromptDemo = () => {
   // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
   useEffect(() => {
     if (status === "loading") start();
-    else if (status === "streaming" && response) update(response);
+    else if (status === "streaming" && output) update(output);
     else if (status === "done") {
-      if (response) update(response);
+      if (output) update(output);
       finish("done");
     } else if (status === "idle" && stats.status === "running") {
       finish("aborted");
     }
-  }, [status, response]);
+  }, [status, output]);
 
   useEffect(() => {
     setAvailable(isPromptAvailable());
@@ -114,7 +114,7 @@ export const PromptDemo = () => {
           </div>
         </div>
         <MarkdownOutput
-          text={response ?? ""}
+          text={output ?? ""}
           streaming={streaming}
           placeholder={
             available === false

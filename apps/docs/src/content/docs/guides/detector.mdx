@@ -10,32 +10,69 @@ Building block for [the Web's Built-in Language Detector API](https://developer.
 ```ts
 import { detect } from "@web-ai-sdk/detector";
 
-const result = await detect({ text: "Olá, mundo" });
-console.log(result.language);   // → "pt"
-console.log(result.confidence); // → 0.98
-console.log(result.all);        // → [{ detectedLanguage, confidence }, ...]
+const result = await detect({ input: "Olá, mundo" });
+console.log(result.output?.language);   // → "pt"
+console.log(result.output?.confidence); // → 0.98
+console.log(result.output?.all);        // → [{ detectedLanguage, confidence }, ...]
 ```
 
-`result.language` is the top candidate (BCP-47), or `null` for empty input or when the top confidence is below `minConfidence`. `result.all` is the full sorted list for callers that want to inspect alternates.
+`result.output` is the detection result with `language` (BCP-47), `confidence`, and `all` (full sorted candidates), or `null` for empty input or when the top confidence is below `minConfidence`. `result.cached` indicates whether the response came from the cache without invoking the model.
+
+## Options
+
+```ts
+interface DetectOptions {
+  input: string;
+  expectedInputLanguages?: readonly string[];
+  minConfidence?: number;
+  monitor?: (m: CreateMonitor) => void;
+  cache?: "session" | "local" | { get, set };
+  cacheKey?: string;
+  signal?: AbortSignal;
+}
+```
+
+<div class="options-table">
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `input` <sup>required</sup> | `string` | Text to detect. Empty / whitespace resolves to `{ output: null }`. |
+| `expectedInputLanguages` | `readonly string[]` | BCP-47 languages the detector should bias toward (breaks ties between similar pairs). |
+| `minConfidence` | `number` | Suppress the result when the top confidence is below this. `output` becomes `null`. Defaults to `0`. |
+| `monitor` | `(m) => void` | Observe the first-call model download. |
+| `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. `"session"` / `"local"` wrap the matching web-storage; pass an object for a custom backend. |
+| `cacheKey` | `string` | Override the default cache key (hash of `{ input, expectedInputLanguages }`). |
+| `signal` | `AbortSignal` | Abort signal. |
+
+</div>
+
+## Returns
+
+```ts
+interface DetectResult {
+  output: { language: string; confidence: number; all: DetectionResult[] } | null;
+  cached: boolean;
+}
+```
 
 ## How it works
 
 Chrome's `LanguageDetector` exposes `LanguageDetector.create({...})` to spin up a session and `detector.detect(text)` to run it. The wrapper does the same three things on top that the other packages do:
 
-- **Feature detection.** `isDetectorAvailable()` / `checkAvailability()` return `false` / `null` on browsers without the API. The vanilla `detect()` throws `DetectorUnavailableError`; the React hook surfaces `status: "unavailable"`.
+- **Feature detection.** `isAvailable()` / `checkAvailability()` return `false` / `null` on browsers without the API. The vanilla `detect()` throws `DetectorUnavailableError`; the React hook surfaces `status: "unavailable"`.
 - **Session reuse.** Internally caches `LanguageDetector.create()` by `expectedInputLanguages` shape. Cold-start is fast on this model (~100-300ms); warm calls are sub-50ms.
-- **Optional result cache.** Off by default. Pass `cache: createSessionStorageCache()` to memoize the full sorted list by trimmed input text.
+- **Optional result cache.** Off by default. Pass `cache: "session"` to memoize results in `sessionStorage`, or `cache: "local"` for `localStorage`, or any `{ get, set }`-shaped object for a custom backend.
 
 ## Confidence threshold
 
 By default, `detect()` returns the highest-confidence candidate regardless of how confident the model actually is. For ambiguous input (single word, emoji-only, gibberish) the model may return `detectedLanguage: "und"` with low confidence. Set `minConfidence` to suppress these:
 
 ```ts
-const result = await detect({ text: "??", minConfidence: 0.8 });
-// → { language: null, confidence: 0, all: [...] }
+const result = await detect({ input: "??", minConfidence: 0.8 });
+// → { output: null, cached: false }
 ```
 
-`result.all` still contains everything the model returned, so you can inspect it even when `result.language` is `null`.
+When `output` is `null` due to threshold, the full candidate list isn't returned. Lower `minConfidence` to `0` and inspect `result.output.all` if you need to see the alternates.
 
 ## Bias hints
 
@@ -43,7 +80,7 @@ Pass `expectedInputLanguages` when you have a prior on what to expect. The model
 
 ```ts
 detect({
-  text: "Lorem ipsum dolor sit amet",
+  input: "Lorem ipsum dolor sit amet",
   expectedInputLanguages: ["la", "en", "it"],
 });
 ```
@@ -58,14 +95,14 @@ The detector intentionally doesn't reach into the other packages; one package wr
 import { detect } from "@web-ai-sdk/detector";
 import { summarize } from "@web-ai-sdk/summarizer";
 
-const { language } = await detect({ text: articleText });
+const { output } = await detect({ input: articleText });
 await summarize({
-  language: language ?? "en",
-  text: articleText,
+  language: output?.language ?? "en",
+  input: articleText,
 });
 ```
 
-A first-class `language: "auto"` shortcut isn't planned for this package. Multi-package compositions like detect-then-summarize, detect-then-translate, or detect-then-prompt are the kind of pattern the future [`web-ai-kit`](/docs/architecture/#the-companion-kit) layer is meant to host, not the SDK wrappers.
+A first-class `language: "auto"` shortcut isn't planned for this package. Multi-package compositions like detect-then-summarize, detect-then-translate, or detect-then-prompt are written in consumer code.
 
 ## Aborting
 
@@ -73,7 +110,7 @@ A first-class `language: "auto"` shortcut isn't planned for this package. Multi-
 
 ```ts
 const controller = new AbortController();
-detect({ text: "long input…", signal: controller.signal });
+detect({ input: "long input…", signal: controller.signal });
 controller.abort();
 ```
 
@@ -85,7 +122,7 @@ The vanilla `detect()` throws `DetectorUnavailableError` when the API is missing
 import { detect, DetectorUnavailableError } from "@web-ai-sdk/detector";
 
 try {
-  const result = await detect({ text });
+  const result = await detect({ input });
 } catch (err) {
   if (err instanceof DetectorUnavailableError) {
     return null;

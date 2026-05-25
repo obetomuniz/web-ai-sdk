@@ -1,4 +1,4 @@
-import { type Tool, isWebMCPAvailable } from "@web-ai-sdk/webmcp";
+import { type Tool, isAvailable } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -22,9 +22,7 @@ const getTesting = (): ModelContextTesting | undefined => {
 
 export const WebMCPDemo = () => {
   const [log, setLog] = useState<string[]>([]);
-  const [available, setAvailable] = useState<boolean>(() =>
-    isWebMCPAvailable(),
-  );
+  const [available, setAvailable] = useState<boolean>(() => isAvailable());
   const [echoInput, setEchoInput] = useState("hello world");
 
   // `useCallback` so the reference stays stable and the tools memo below
@@ -76,7 +74,7 @@ export const WebMCPDemo = () => {
   const registered = useMemo(() => tools.map((t) => t.name), [tools]);
 
   useEffect(() => {
-    setAvailable(isWebMCPAvailable());
+    setAvailable(isAvailable());
   }, []);
 
   const invoke = async (name: string, input?: string) => {
