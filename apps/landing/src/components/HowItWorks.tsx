@@ -12,7 +12,6 @@ interface CodeLine {
 interface Tab {
   id: string;
   label: string;
-  lines: number;
   code: CodeLine[];
 }
 
@@ -27,7 +26,6 @@ const TABS: Tab[] = [
   {
     id: "vanilla",
     label: "vanilla TypeScript",
-    lines: 14,
     code: [
       { t: [["com", "// summarize.ts"]] },
       {
@@ -114,7 +112,6 @@ const TABS: Tab[] = [
   {
     id: "react",
     label: "React hook",
-    lines: 15,
     code: [
       { t: [["com", "// ArticleSummary.tsx"]] },
       {
@@ -216,7 +213,6 @@ const TABS: Tab[] = [
   {
     id: "raw",
     label: "raw browser API",
-    lines: 36,
     code: [
       { t: [["com", "// what the wrappers do for you"]] },
       { t: [] },
@@ -494,7 +490,7 @@ export const HowItWorks = () => {
             onClick={() => setTab(t.id)}
           >
             {t.label}
-            <span className="lines">{t.lines}L</span>
+            <span className="lines">{t.code.length}L</span>
           </button>
         ))}
       </div>
