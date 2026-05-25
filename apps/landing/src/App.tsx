@@ -581,8 +581,8 @@ export const App = () => (
               Same task. Three levels of abstraction.
             </h2>
             <p style={{ maxWidth: "60ch", marginTop: 14 }}>
-              All three tabs do the same thing: detect an article's language
-              and summarize it into key-points. Fifteen lines with the SDK;
+              All three tabs do the same thing: detect an article's language and
+              summarize it into key-points. Fifteen lines with the SDK;
               thirty-seven calling the browser APIs yourself. Same result, less
               to wire up.
             </p>
