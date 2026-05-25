@@ -1,6 +1,6 @@
 {
   "name": "@web-ai-sdk/prompt",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "description": "Building block for the Web's Built-in Prompt API",
   "license": "MIT",
   "author": "Beto Muniz",
