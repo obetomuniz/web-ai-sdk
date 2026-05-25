@@ -8,6 +8,7 @@ import { StarWidget } from "./components/StarWidget.js";
 import { SummarizerDemo } from "./components/SummarizerDemo.js";
 import { TranslatorDemo } from "./components/TranslatorDemo.js";
 import { WebMCPDemo } from "./components/WebMCPDemo.js";
+import { SDK_VERSION } from "./sdk-version.js";
 
 const REPO = "obetomuniz/web-ai-sdk";
 
@@ -888,7 +889,7 @@ export const App = () => (
           </div>
         </div>
         <div className="footer-meta">
-          <span>web-ai-sdk v0.4.0</span>
+          <span>web-ai-sdk v{SDK_VERSION}</span>
           <span>
             <a href="#top">Back to top ↑</a>
           </span>
