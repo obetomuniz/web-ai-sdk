@@ -53,7 +53,7 @@ afterEach(() => {
 describe("useSummarizer", () => {
   it("starts as 'unavailable' when the global is missing", () => {
     const { result } = renderHook(() =>
-      useSummarizer({ language: "en", text: "body" }),
+      useSummarizer({ language: "en", input: "body" }),
     );
     expect(result.current.status).toBe("unavailable");
   });
@@ -62,22 +62,22 @@ describe("useSummarizer", () => {
     installFakeSummarizer({ summary: "Result." });
     const cache = inMemoryCache();
     const { result } = renderHook(() =>
-      useSummarizer({ language: "en", text: "body", cache, cacheKey: "k" }),
+      useSummarizer({ language: "en", input: "body", cache, cacheKey: "k" }),
     );
 
     await waitFor(() => expect(result.current.status).toBe("done"));
-    expect(result.current.summary).toBe("Result.");
+    expect(result.current.output).toBe("Result.");
   });
 
   it("streams chunks to the consumer", async () => {
     installFakeSummarizer({ chunks: ["Hel", "lo", "."] });
     const cache = inMemoryCache();
     const { result } = renderHook(() =>
-      useSummarizer({ language: "en", text: "body", cache, cacheKey: "k" }),
+      useSummarizer({ language: "en", input: "body", cache, cacheKey: "k" }),
     );
 
     await waitFor(() => expect(result.current.status).toBe("done"));
-    expect(result.current.summary).toBe("Hello.");
+    expect(result.current.output).toBe("Hello.");
   });
 
   it("flips to fromCache=true when the cache hits", async () => {
@@ -85,19 +85,19 @@ describe("useSummarizer", () => {
     const cache = inMemoryCache();
     cache.set("k", "From cache.");
     const { result } = renderHook(() =>
-      useSummarizer({ language: "en", text: "body", cache, cacheKey: "k" }),
+      useSummarizer({ language: "en", input: "body", cache, cacheKey: "k" }),
     );
 
     await waitFor(() => expect(result.current.status).toBe("done"));
     expect(result.current.fromCache).toBe(true);
-    expect(result.current.summary).toBe("From cache.");
+    expect(result.current.output).toBe("From cache.");
   });
 
   it("dismiss() clears the summary and sets unavailable", async () => {
     installFakeSummarizer({ summary: "Result." });
     const cache = inMemoryCache();
     const { result } = renderHook(() =>
-      useSummarizer({ language: "en", text: "body", cache, cacheKey: "k" }),
+      useSummarizer({ language: "en", input: "body", cache, cacheKey: "k" }),
     );
     await waitFor(() => expect(result.current.status).toBe("done"));
 
@@ -105,7 +105,7 @@ describe("useSummarizer", () => {
       result.current.dismiss();
     });
     expect(result.current.status).toBe("unavailable");
-    expect(result.current.summary).toBeNull();
+    expect(result.current.output).toBeNull();
   });
 
   it("does not run when enabled=false", async () => {
@@ -114,7 +114,7 @@ describe("useSummarizer", () => {
     renderHook(() =>
       useSummarizer({
         language: "en",
-        text: "body",
+        input: "body",
         cache,
         cacheKey: "k",
         enabled: false,
@@ -128,7 +128,7 @@ describe("useSummarizer", () => {
     installFakeSummarizer({ availability: "unavailable" });
     const cache = inMemoryCache();
     const { result } = renderHook(() =>
-      useSummarizer({ language: "en", text: "body", cache, cacheKey: "k" }),
+      useSummarizer({ language: "en", input: "body", cache, cacheKey: "k" }),
     );
     await waitFor(() => expect(result.current.status).toBe("unavailable"));
     expect(result.current.error).toBeNull();

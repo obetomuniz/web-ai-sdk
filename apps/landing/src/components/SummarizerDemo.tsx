@@ -1,7 +1,6 @@
 import {
-  type SummarizerCreateOptions,
   SummarizerUnavailableError,
-  isSummarizerAvailable,
+  isAvailable as isSummarizerAvailable,
   summarize,
 } from "@web-ai-sdk/summarizer";
 import { useEffect, useRef, useState } from "react";
@@ -19,15 +18,6 @@ const SAMPLE_ARTICLE = `The Summarizer API ships as part of the browser's built-
 
 type SummaryType = "key-points" | "tldr" | "headline";
 type SummaryLength = "short" | "medium" | "long";
-
-const toCreateOptions = (
-  type: SummaryType,
-  length: SummaryLength,
-): Partial<SummarizerCreateOptions> => ({
-  type:
-    type === "tldr" ? "tldr" : type === "headline" ? "headline" : "key-points",
-  length,
-});
 
 export const SummarizerDemo = () => {
   const [text, setText] = useState(SAMPLE_ARTICLE);
@@ -56,8 +46,10 @@ export const SummarizerDemo = () => {
     try {
       const result = await summarize({
         language: "en",
-        text,
-        createOptions: { ...toCreateOptions(type, length), monitor },
+        input: text,
+        type,
+        length,
+        monitor,
         signal: ac.signal,
         onUpdate: (chunk) => {
           if (ac.signal.aborted) return;
@@ -65,9 +57,9 @@ export const SummarizerDemo = () => {
           update(chunk);
         },
       });
-      if (!ac.signal.aborted && result.summary) {
-        setOutput(result.summary);
-        update(result.summary);
+      if (!ac.signal.aborted && result.output) {
+        setOutput(result.output);
+        update(result.output);
       }
       finish(result.cached ? "cached" : "done");
     } catch (err: unknown) {

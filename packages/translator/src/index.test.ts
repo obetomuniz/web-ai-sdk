@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __clearSessionCacheForTests } from "./api.js";
-import { isTranslatorAvailable, translate } from "./index.js";
+import {
+  type TranslationCache,
+  TranslatorUnavailableError,
+  isAvailable,
+  translate,
+} from "./index.js";
 
 interface CreateOptions {
   sourceLanguage: string;
@@ -15,12 +20,14 @@ interface CreateOptions {
 
 const installFakeTranslator = (
   translateImpl?: (text: string) => Promise<string>,
+  opts: { availability?: "available" | "unavailable" } = {},
 ) => {
   const calls: string[] = [];
   const impl = translateImpl ?? (async (text: string) => `[t]${text}`);
+  const availability = opts.availability ?? "available";
 
   const api = {
-    availability: vi.fn(async () => "available" as const),
+    availability: vi.fn(async () => availability),
     create: vi.fn(async (_options: CreateOptions) => ({
       translate: vi.fn(async (text: string) => {
         calls.push(text);
@@ -36,177 +43,191 @@ const removeFakeTranslator = () => {
   (globalThis as { Translator?: unknown }).Translator = undefined;
 };
 
+const inMemoryCache = (): TranslationCache => {
+  const store = new Map<string, string>();
+  return {
+    get: (k) => store.get(k) ?? null,
+    set: (k, v) => {
+      store.set(k, v);
+    },
+  };
+};
+
 beforeEach(() => {
   __clearSessionCacheForTests();
-  document.body.innerHTML = "";
 });
 
 afterEach(() => {
   removeFakeTranslator();
 });
 
-describe("isTranslatorAvailable", () => {
+describe("isAvailable", () => {
   it("is false when the global is missing", () => {
-    expect(isTranslatorAvailable()).toBe(false);
+    expect(isAvailable()).toBe(false);
   });
 
   it("is true when the global is present", () => {
     installFakeTranslator();
-    expect(isTranslatorAvailable()).toBe(true);
+    expect(isAvailable()).toBe(true);
   });
 });
 
 describe("translate", () => {
-  it("returns a no-op controller when WebMCP source and target match", async () => {
+  it("throws TranslatorUnavailableError when the global is missing", async () => {
+    await expect(
+      translate({ input: "Hello", sourceLanguage: "en", targetLanguage: "pt" }),
+    ).rejects.toBeInstanceOf(TranslatorUnavailableError);
+  });
+
+  it("returns null output when source and target languages match", async () => {
     installFakeTranslator();
-    const ctrl = translate({ sourceLanguage: "en", targetLanguage: "en" });
-    await expect(ctrl.done).resolves.toEqual({ blocksTranslated: 0 });
+    const result = await translate({
+      input: "Hello",
+      sourceLanguage: "en",
+      targetLanguage: "en",
+    });
+    expect(result).toEqual({ output: null, cached: false });
   });
 
-  it("returns a no-op controller when the global is missing", async () => {
-    document.body.innerHTML =
-      "<article data-translate-root><p>Olá mundo</p></article>";
-    const ctrl = translate({ sourceLanguage: "pt", targetLanguage: "en" });
-    await expect(ctrl.done).resolves.toEqual({ blocksTranslated: 0 });
-  });
-
-  it("translates each leaf block and replaces children", async () => {
-    installFakeTranslator(async (text) => text.replace("Olá", "Hello"));
-    document.body.innerHTML =
-      "<article data-translate-root>" +
-      "<p>Olá mundo</p>" +
-      "<p>Olá <strong>amigo</strong>.</p>" +
-      "</article>";
-
-    const ctrl = translate({ sourceLanguage: "pt", targetLanguage: "en" });
-    const result = await ctrl.done;
-    expect(result.blocksTranslated).toBe(2);
-
-    const ps = document.querySelectorAll("p");
-    expect(ps[0]?.textContent).toBe("Hello mundo");
-    expect(ps[1]?.querySelector("strong")?.textContent).toBe("amigo");
-  });
-
-  it("emits progress events through the full lifecycle", async () => {
+  it("returns null output when input is empty", async () => {
     installFakeTranslator();
-    document.body.innerHTML =
-      "<article data-translate-root><p>Hi</p><p>Bye</p></article>";
-
-    const events: string[] = [];
-    const ctrl = translate({
+    const result = await translate({
+      input: "  ",
       sourceLanguage: "pt",
       targetLanguage: "en",
-      onProgress: (e) => events.push(e.phase),
     });
-    await ctrl.done;
-    expect(events[0]).toBe("loading-model");
-    expect(events).toContain("translating");
-    expect(events.filter((p) => p === "block-translated")).toHaveLength(2);
-    expect(events.at(-1)).toBe("done");
+    expect(result).toEqual({ output: null, cached: false });
   });
 
-  it("skips blocks that are entirely opaque tokens (e.g. inline <code> only)", async () => {
-    const { calls } = installFakeTranslator();
-    document.body.innerHTML =
-      "<article data-translate-root><p><code>const x = 1</code></p></article>";
-
-    const ctrl = translate({ sourceLanguage: "pt", targetLanguage: "en" });
-    await ctrl.done;
-    expect(calls).toHaveLength(0);
-  });
-
-  it("skips standalone untranslatable tokens like 'PWA'", async () => {
-    const { calls } = installFakeTranslator();
-    document.body.innerHTML =
-      "<article data-translate-root><h2>PWA</h2></article>";
-
-    const ctrl = translate({ sourceLanguage: "pt", targetLanguage: "en" });
-    await ctrl.done;
-    expect(calls).toHaveLength(0);
-  });
-
-  it("ignores blocks inside <pre>", async () => {
-    const { calls } = installFakeTranslator();
-    document.body.innerHTML =
-      "<article data-translate-root>" +
-      "<pre><p>código</p></pre>" +
-      "<p>texto</p>" +
-      "</article>";
-
-    const ctrl = translate({ sourceLanguage: "pt", targetLanguage: "en" });
-    await ctrl.done;
-    expect(calls).toHaveLength(1);
-    expect(calls[0]).toBe("texto");
-  });
-
-  it("restore() returns blocks to their original children", async () => {
+  it("translates a string and returns the model's output", async () => {
     installFakeTranslator(async (text) => text.replace("Olá", "Hello"));
-    document.body.innerHTML =
-      "<article data-translate-root><p>Olá mundo</p></article>";
-    const original = document.querySelector("p")?.textContent;
-
-    const ctrl = translate({ sourceLanguage: "pt", targetLanguage: "en" });
-    await ctrl.done;
-    expect(document.querySelector("p")?.textContent).toBe("Hello mundo");
-
-    ctrl.restore();
-    expect(document.querySelector("p")?.textContent).toBe(original);
-    expect(ctrl.isTranslated()).toBe(false);
-  });
-
-  it("accepts a custom roots selector", async () => {
-    const { calls } = installFakeTranslator();
-    document.body.innerHTML =
-      '<section class="translate-me"><p>foo</p></section>' +
-      "<section><p>bar</p></section>";
-
-    const ctrl = translate({
+    const result = await translate({
+      input: "Olá mundo",
       sourceLanguage: "pt",
       targetLanguage: "en",
-      roots: ".translate-me",
     });
-    await ctrl.done;
-    expect(calls).toEqual(["foo"]);
+    expect(result.output).toBe("Hello mundo");
+    expect(result.cached).toBe(false);
   });
 
-  it("accepts roots as an Element", async () => {
-    const { calls } = installFakeTranslator();
-    document.body.innerHTML =
-      '<section id="a"><p>foo</p></section>' +
-      '<section id="b"><p>bar</p></section>';
+  it("normalizes regional language tags (e.g. pt-BR → pt)", async () => {
+    const { api } = installFakeTranslator();
+    await translate({
+      input: "Olá",
+      sourceLanguage: "pt-BR",
+      targetLanguage: "en-US",
+    });
+    const createArgs = api.create.mock.calls[0]?.[0] as unknown as Record<
+      string,
+      unknown
+    >;
+    expect(createArgs.sourceLanguage).toBe("pt");
+    expect(createArgs.targetLanguage).toBe("en");
+  });
 
-    const root = document.getElementById("a");
-    if (!root) throw new Error("root not found");
-    const ctrl = translate({
+  it("does not cache by default; same call hits the model twice without a `cache` option", async () => {
+    const { api } = installFakeTranslator();
+    await translate({
+      input: "Olá",
       sourceLanguage: "pt",
       targetLanguage: "en",
-      roots: root,
     });
-    await ctrl.done;
-    expect(calls).toEqual(["foo"]);
+    await translate({
+      input: "Olá",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+    // Same session is reused; we just check the inner translate was called twice.
+    const session = await api.create.mock.results[0]?.value;
+    expect(session.translate).toHaveBeenCalledTimes(2);
   });
 
-  it("cancel() rejects the in-flight promise with AbortError", async () => {
-    let releaseFirst: ((v: string) => void) | null = null;
-    installFakeTranslator(
-      (text) =>
-        new Promise((resolve) => {
-          if (!releaseFirst) {
-            releaseFirst = resolve;
-          } else {
-            resolve(text);
-          }
-        }),
-    );
-    document.body.innerHTML =
-      "<article data-translate-root><p>a</p><p>b</p></article>";
+  it("returns a cached value without invoking the model", async () => {
+    const { api } = installFakeTranslator();
+    const cache = inMemoryCache();
+    cache.set("k", "From cache.");
+    const result = await translate({
+      input: "irrelevant",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+      cache,
+      cacheKey: "k",
+    });
+    expect(result).toEqual({ output: "From cache.", cached: true });
+    expect(api.create).not.toHaveBeenCalled();
+  });
 
-    const ctrl = translate({ sourceLanguage: "pt", targetLanguage: "en" });
-    await Promise.resolve();
-    await Promise.resolve();
-    ctrl.cancel();
-    if (releaseFirst) (releaseFirst as (v: string) => void)("a");
+  it("writes successful translations to the cache", async () => {
+    installFakeTranslator(async () => "Hello");
+    const cache = inMemoryCache();
+    await translate({
+      input: "Olá",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+      cache,
+      cacheKey: "k",
+    });
+    expect(cache.get("k")).toBe("Hello");
+  });
 
-    await expect(ctrl.done).rejects.toMatchObject({ name: "AbortError" });
+  it("reuses sessions across same-pair calls", async () => {
+    const { api } = installFakeTranslator();
+    await translate({
+      input: "a",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+    await translate({
+      input: "b",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+    expect(api.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates a new session when the language pair differs", async () => {
+    const { api } = installFakeTranslator();
+    await translate({
+      input: "a",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+    await translate({
+      input: "b",
+      sourceLanguage: "es",
+      targetLanguage: "en",
+    });
+    expect(api.create).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws TranslatorUnavailableError when availability is 'unavailable'", async () => {
+    installFakeTranslator(undefined, { availability: "unavailable" });
+    await expect(
+      translate({ input: "Olá", sourceLanguage: "pt", targetLanguage: "en" }),
+    ).rejects.toBeInstanceOf(TranslatorUnavailableError);
+  });
+
+  it("respects an aborted signal", async () => {
+    installFakeTranslator();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      translate({
+        input: "Olá",
+        sourceLanguage: "pt",
+        targetLanguage: "en",
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("defaults targetLanguage to 'en' when omitted", async () => {
+    const { api } = installFakeTranslator();
+    await translate({ input: "Olá", sourceLanguage: "pt" });
+    const createArgs = api.create.mock.calls[0]?.[0] as unknown as Record<
+      string,
+      unknown
+    >;
+    expect(createArgs.targetLanguage).toBe("en");
   });
 });

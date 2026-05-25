@@ -142,7 +142,8 @@ export const App = () => (
             </h2>
           </div>
           <a className="permalink" href="#packages">
-            packages
+            <span aria-hidden="true">§</span>
+            <span className="sr-only">Link to Packages section</span>
           </a>
         </div>
 
@@ -455,7 +456,8 @@ export const App = () => (
             <h2 style={{ marginTop: 8 }}>Why composable.</h2>
           </div>
           <a className="permalink" href="#philosophy">
-            philosophy
+            <span aria-hidden="true">§</span>
+            <span className="sr-only">Link to Philosophy section</span>
           </a>
         </div>
 
@@ -531,7 +533,7 @@ export const App = () => (
               </div>
               <div className="stack-detail">
                 ask() &nbsp; createSession() &nbsp; summarize() &nbsp;
-                translate() &nbsp; detect() &nbsp; registerTools() &nbsp;
+                translate() &nbsp; detect() &nbsp; registerTool() &nbsp;
                 defineTool() &nbsp; AbortSignal &nbsp; session cache
               </div>
             </div>
@@ -585,7 +587,8 @@ export const App = () => (
             </p>
           </div>
           <a className="permalink" href="#how">
-            how
+            <span aria-hidden="true">§</span>
+            <span className="sr-only">Link to How it works section</span>
           </a>
         </div>
         <div className="reveal">
@@ -608,7 +611,8 @@ export const App = () => (
             </p>
           </div>
           <a className="permalink" href="#support">
-            support
+            <span aria-hidden="true">§</span>
+            <span className="sr-only">Link to Browser support section</span>
           </a>
         </div>
 

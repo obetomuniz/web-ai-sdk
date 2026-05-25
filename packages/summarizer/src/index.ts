@@ -8,86 +8,64 @@
  */
 
 import {
+  type CreateMonitor,
   type SummarizerApi,
   type SummarizerAvailability,
   type SummarizerAvailabilityOptions,
   type SummarizerCreateOptions,
   type SummarizerInstance,
   checkAvailability,
-  clearSummarizerSession,
-  clearSummarizerSessions,
-  configureSummarizerCache,
   getOrCreateSummarizer,
   getSummarizerApi,
-  isSummarizerAvailable,
+  isAvailable,
 } from "./api.js";
 import {
+  type CacheOption,
   type SummaryCache,
-  createSessionStorageCache,
   defaultCacheKey,
+  resolveCache,
 } from "./cache.js";
-import {
-  type BuildSkeletonOptions,
-  buildSkeleton,
-  cleanSummary,
-  trimToSentenceBoundary,
-} from "./skeleton.js";
+import { cleanSummary } from "./skeleton.js";
 
-export {
-  isSummarizerAvailable,
-  checkAvailability,
-  getSummarizerApi,
-  getOrCreateSummarizer,
-  buildSkeleton,
-  cleanSummary,
-  trimToSentenceBoundary,
-  createSessionStorageCache,
-  defaultCacheKey,
-  clearSummarizerSessions,
-  clearSummarizerSession,
-  configureSummarizerCache,
-};
+export { isAvailable, checkAvailability };
 
 export type {
+  CacheOption,
+  CreateMonitor,
   SummarizerApi,
   SummarizerAvailability,
   SummarizerAvailabilityOptions,
   SummarizerCreateOptions,
   SummarizerInstance,
   SummaryCache,
-  BuildSkeletonOptions,
 };
 
-export const DEFAULT_MAX_INPUT_CHARS = 3000;
-export const DEFAULT_MIN_SKELETON_CHARS = 200;
-
 export interface SummarizeOptions {
+  /** Text to summarize. Empty / whitespace input resolves to `{ output: null }`. */
+  input: string;
   /** BCP-47 language for input + output hints. Falls back to omitting hints if unsupported. */
   language: string;
-  /** Article element to skim. Required when `text` isn't passed. */
-  article?: Element;
-  /** Pre-built input text. When present, skeleton extraction is skipped. */
-  text?: string;
-  /** Optional title; folded into the skeleton. */
-  title?: string;
-  /** Optional description; folded into the skeleton. */
-  description?: string;
   /** Languages the model supports for input/output hints. Default: `["en", "es", "ja"]`. */
   supportedLanguages?: readonly string[];
-  /** `sharedContext` per language. Falls back to `sharedContext.en` if missing. */
-  sharedContext?: Record<string, string>;
-  /** Override `Summarizer.create()` options entirely. Merged on top of defaults. */
-  createOptions?: Partial<SummarizerCreateOptions>;
-  /** Hard cap on input chars. Default: `3000`. */
-  maxInputChars?: number;
+  /** Summary shape. Default: `"tldr"`. */
+  type?: "tldr" | "key-points" | "teaser" | "headline";
+  /** Length preset. Default: `"medium"`. */
+  length?: "short" | "medium" | "long";
+  /** Output format. Default: `"plain-text"`. */
+  format?: "plain-text" | "markdown";
+  /** Performance preference. Default: `"speed"`. */
+  preference?: "auto" | "speed" | "capability";
+  /** Native `sharedContext` string (a hint about who/what the summary is for). */
+  sharedContext?: string;
+  /** Observe the first-call model download (~1.7 GB on a fresh profile). */
+  monitor?: (m: CreateMonitor) => void;
   /**
-   * Below this skeleton length we fall back to `article.innerText`. Default: `200`.
-   * Set to `0` to always use the skeleton.
+   * Result cache. Off by default; every call hits the model. Pass
+   * `"session"` / `"local"` for the matching web-storage shortcut, or any
+   * `{ get, set }`-shaped object for a custom backend.
    */
-  minSkeletonChars?: number;
-  /** Optional result cache. Off by default; every call hits the model. Pass `createSessionStorageCache()` or any `{ get, set }`-shaped object to enable. */
-  cache?: SummaryCache;
-  /** Cache key. Default: `defaultCacheKey(lang)` (pathname:lang). */
+  cache?: CacheOption;
+  /** Cache key. Default: `pathname:lang`. */
   cacheKey?: string;
   /**
    * Streaming update callback (cleaned text, monotonically growing).
@@ -100,7 +78,7 @@ export interface SummarizeOptions {
 
 export interface SummarizeResult {
   /** Final summary text (cleaned), or `null` if the input was empty. */
-  summary: string | null;
+  output: string | null;
   /** Whether the result came from the cache (no model call). */
   cached: boolean;
 }
@@ -115,15 +93,15 @@ export class SummarizerUnavailableError extends Error {
 }
 
 /**
- * Generate a TL;DR. Uses streaming when the underlying instance supports it,
- * one-shot otherwise. Returns `null` when no input is available (empty
- * article, no text passed). Throws `SummarizerUnavailableError` when the API
- * isn't present in the environment.
+ * Generate a summary. Uses streaming when the underlying instance supports
+ * it, one-shot otherwise. Returns `{ output: null }` for empty input.
+ * Throws `SummarizerUnavailableError` when the API isn't present in the
+ * environment.
  *
- * Output is normalized via `cleanSummary` (wrapping quotes/whitespace stripped,
- * internal whitespace collapsed). Anything beyond that — e.g. trimming
- * terminal punctuation for headline-style use cases — is the consumer's
- * concern.
+ * Output is normalized via an internal cleaner (wrapping quotes/whitespace
+ * stripped, internal whitespace collapsed). Anything beyond that — e.g.
+ * trimming terminal punctuation for headline-style use cases — is the
+ * consumer's concern.
  */
 export const summarize = async (
   options: SummarizeOptions,
@@ -135,15 +113,15 @@ export const summarize = async (
     );
   }
 
+  const text = options.input.trim();
+  if (!text) return { output: null, cached: false };
+
   const lang = NORMALIZE_LANG(options.language);
-  // Caching is opt-in. Pass a `cache` (any `{ get, set }`-shaped object,
-  // e.g. `createSessionStorageCache()`) to enable response caching; omit
-  // it for a fresh model call every time.
-  const cache = options.cache;
+  const cache = resolveCache(options.cache);
   const cacheKey = options.cacheKey ?? defaultCacheKey(lang);
   if (cache) {
     const cached = cache.get(cacheKey);
-    if (cached) return { summary: cached, cached: true };
+    if (cached) return { output: cached, cached: true };
   }
 
   const supported = new Set(
@@ -160,49 +138,14 @@ export const summarize = async (
       }
     : {};
 
-  const sharedContext =
-    options.sharedContext?.[lang] ??
-    options.sharedContext?.en ??
-    options.createOptions?.sharedContext ??
-    "";
-
-  const maxInputChars = options.maxInputChars ?? DEFAULT_MAX_INPUT_CHARS;
-  const minSkeletonChars =
-    options.minSkeletonChars ?? DEFAULT_MIN_SKELETON_CHARS;
-
-  let text: string;
-  if (options.text !== undefined) {
-    text = trimToSentenceBoundary(options.text, maxInputChars);
-  } else if (options.article) {
-    const skeleton = buildSkeleton({
-      article: options.article,
-      title: options.title,
-      description: options.description,
-    });
-    if (skeleton.length >= minSkeletonChars) {
-      text = trimToSentenceBoundary(skeleton, maxInputChars);
-    } else {
-      const body =
-        "innerText" in options.article
-          ? (options.article as HTMLElement).innerText
-          : (options.article.textContent ?? "");
-      if (!body.trim()) return { summary: null, cached: false };
-      text = trimToSentenceBoundary(body, maxInputChars);
-    }
-  } else {
-    return { summary: null, cached: false };
-  }
-
-  if (!text.trim()) return { summary: null, cached: false };
-
   const baseCreateOptions: SummarizerCreateOptions = {
-    type: "tldr",
-    format: "plain-text",
-    length: "medium",
-    preference: "speed",
-    sharedContext,
+    type: options.type ?? "tldr",
+    format: options.format ?? "plain-text",
+    length: options.length ?? "medium",
+    preference: options.preference ?? "speed",
+    sharedContext: options.sharedContext ?? "",
     ...langOptions,
-    ...options.createOptions,
+    ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
   // Kick off session and availability in parallel; first call pays the cold
@@ -282,7 +225,7 @@ export const summarize = async (
   }
 
   if (finalText && cache) cache.set(cacheKey, finalText);
-  return { summary: finalText || null, cached: false };
+  return { output: finalText || null, cached: false };
 };
 
 class AbortError extends Error {

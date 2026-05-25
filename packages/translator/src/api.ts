@@ -46,6 +46,7 @@ export interface TranslatorApi {
   create(options: TranslatorCreateOptions): Promise<TranslatorInstance>;
 }
 
+/** Internal: read the native global. Not exported from the package. */
 export const getTranslatorApi = (): TranslatorApi | null => {
   if (typeof globalThis === "undefined") return null;
   return (
@@ -53,7 +54,8 @@ export const getTranslatorApi = (): TranslatorApi | null => {
   );
 };
 
-export const isTranslatorAvailable = (): boolean => getTranslatorApi() !== null;
+/** Whether the current environment exposes the Translator API. */
+export const isAvailable = (): boolean => getTranslatorApi() !== null;
 
 export const checkAvailability = async (
   options: TranslatorAvailabilityOptions,

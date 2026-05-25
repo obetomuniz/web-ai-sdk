@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __clearSessionCacheForTests } from "../api.js";
 import { useTranslator } from "./index.js";
@@ -19,100 +19,102 @@ const installFakeTranslator = (
 
 beforeEach(() => {
   __clearSessionCacheForTests();
-  document.body.innerHTML = "";
 });
 
 afterEach(() => {
   (globalThis as { Translator?: unknown }).Translator = undefined;
 });
 
-const flush = async () => {
-  for (let i = 0; i < 5; i++) {
-    await Promise.resolve();
-  }
-};
-
 describe("useTranslator", () => {
   it("starts as 'unavailable' when the global is missing", () => {
     const { result } = renderHook(() =>
-      useTranslator({ sourceLanguage: "pt", targetLanguage: "en" }),
+      useTranslator({
+        input: "Olá",
+        sourceLanguage: "pt",
+        targetLanguage: "en",
+      }),
     );
-    expect(result.current.state).toBe("unavailable");
+    expect(result.current.status).toBe("unavailable");
   });
 
-  it("starts as 'idle' when the API is available", () => {
+  it("stays in 'idle' when input is empty", () => {
     installFakeTranslator();
     const { result } = renderHook(() =>
-      useTranslator({ sourceLanguage: "pt", targetLanguage: "en" }),
+      useTranslator({
+        input: "  ",
+        sourceLanguage: "pt",
+        targetLanguage: "en",
+      }),
     );
-    expect(result.current.state).toBe("idle");
+    expect(result.current.status).toBe("idle");
   });
 
-  it("starts as 'unavailable' when source and target match", () => {
+  it("transitions idle → loading → done", async () => {
+    installFakeTranslator(async (text) => text.replace("Olá", "Hello"));
+    const { result } = renderHook(() =>
+      useTranslator({
+        input: "Olá mundo",
+        sourceLanguage: "pt",
+        targetLanguage: "en",
+      }),
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    expect(result.current.output).toBe("Hello mundo");
+    expect(result.current.error).toBeNull();
+  });
+
+  it("re-runs when input changes", async () => {
+    const api = installFakeTranslator();
+    const { result, rerender } = renderHook(
+      ({ input }: { input: string }) =>
+        useTranslator({ input, sourceLanguage: "pt", targetLanguage: "en" }),
+      { initialProps: { input: "Olá" } },
+    );
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    const innerSession = await api.create.mock.results[0]?.value;
+
+    rerender({ input: "Tchau" });
+    await waitFor(() =>
+      expect(innerSession.translate).toHaveBeenCalledTimes(2),
+    );
+  });
+
+  it("sets fromCache=true when the cache serves the result", async () => {
+    installFakeTranslator();
+    const store = new Map<string, string>();
+    store.set("k", "From cache.");
+    const cache = {
+      get: (k: string) => store.get(k) ?? null,
+      set: (k: string, v: string) => {
+        store.set(k, v);
+      },
+    };
+    const { result } = renderHook(() =>
+      useTranslator({
+        input: "Olá",
+        sourceLanguage: "pt",
+        targetLanguage: "en",
+        cache,
+        cacheKey: "k",
+      }),
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    expect(result.current.output).toBe("From cache.");
+    expect(result.current.fromCache).toBe(true);
+  });
+
+  it("idles when source and target match", async () => {
     installFakeTranslator();
     const { result } = renderHook(() =>
-      useTranslator({ sourceLanguage: "en", targetLanguage: "en" }),
+      useTranslator({
+        input: "Hello",
+        sourceLanguage: "en",
+        targetLanguage: "en",
+      }),
     );
-    expect(result.current.state).toBe("unavailable");
-  });
-
-  it("transitions through working → translated when translate() resolves", async () => {
-    installFakeTranslator(async (text) => text.replace("Olá", "Hello"));
-    document.body.innerHTML =
-      "<article data-translate-root><p>Olá mundo</p></article>";
-
-    const { result } = renderHook(() =>
-      useTranslator({ sourceLanguage: "pt", targetLanguage: "en" }),
-    );
-
-    await act(async () => {
-      result.current.translate();
-      await flush();
-    });
-
-    expect(result.current.state).toBe("translated");
-    expect(document.querySelector("p")?.textContent).toBe("Hello mundo");
-  });
-
-  it("restore() returns blocks to their original children and resets to idle", async () => {
-    installFakeTranslator(async (text) => text.replace("Olá", "Hello"));
-    document.body.innerHTML =
-      "<article data-translate-root><p>Olá mundo</p></article>";
-
-    const { result } = renderHook(() =>
-      useTranslator({ sourceLanguage: "pt", targetLanguage: "en" }),
-    );
-
-    await act(async () => {
-      result.current.translate();
-      await flush();
-    });
-    expect(result.current.state).toBe("translated");
-
-    act(() => {
-      result.current.restore();
-    });
-    expect(result.current.state).toBe("idle");
-    expect(document.querySelector("p")?.textContent).toBe("Olá mundo");
-  });
-
-  it("cancels in-flight translation on unmount without throwing", async () => {
-    installFakeTranslator(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(() => resolve("..."), 50);
-        }),
-    );
-    document.body.innerHTML =
-      "<article data-translate-root><p>texto</p></article>";
-
-    const { result, unmount } = renderHook(() =>
-      useTranslator({ sourceLanguage: "pt", targetLanguage: "en" }),
-    );
-
-    act(() => {
-      result.current.translate();
-    });
-    expect(() => unmount()).not.toThrow();
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    expect(result.current.output).toBeNull();
   });
 });

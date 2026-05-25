@@ -9,6 +9,7 @@
  */
 
 import {
+  type CreateMonitor,
   type LanguageModelApi,
   type LanguageModelAvailability,
   type LanguageModelCreateOptions,
@@ -18,18 +19,16 @@ import {
   type LanguageModelMessage,
   type LanguageModelParams,
   checkAvailability,
-  clearSession,
-  clearSessions,
-  configurePromptCache,
   getLanguageModelApi,
   getOrCreateLanguageModel,
-  isPromptAvailable,
+  isAvailable,
 } from "./api.js";
 import {
+  type CacheOption,
   type DefaultCacheKeyInput,
   type ResponseCache,
-  createSessionStorageCache,
   defaultCacheKey,
+  resolveCache,
 } from "./cache.js";
 import {
   type CreateSessionOptions,
@@ -44,21 +43,16 @@ import {
 } from "./session.js";
 
 export {
-  isPromptAvailable,
+  isAvailable,
   checkAvailability,
-  getLanguageModelApi,
-  getOrCreateLanguageModel,
-  createSessionStorageCache,
-  defaultCacheKey,
   createSession,
-  clearSessions,
-  clearSession,
-  configurePromptCache,
   PromptUnavailableError,
   SessionDestroyedError,
 };
 
 export type {
+  CacheOption,
+  CreateMonitor,
   LanguageModelApi,
   LanguageModelAvailability,
   LanguageModelCreateOptions,
@@ -91,17 +85,16 @@ export interface AskOptions {
   expectedInputs?: LanguageModelExpectedInput[];
   /** Advanced: full `expectedOutputs` passthrough. Overrides the `language` hint. */
   expectedOutputs?: LanguageModelExpectedOutput[];
-  /**
-   * Override `LanguageModel.create()` options entirely. Merged on top of
-   * defaults. Passing `initialPrompts` here while also passing `systemPrompt`
-   * silently disables the persona; the SDK emits a one-shot `console.warn`
-   * when this happens.
-   */
-  createOptions?: Partial<LanguageModelCreateOptions>;
+  /** Observe the first-call model download. */
+  monitor?: (m: CreateMonitor) => void;
   /** Optional JSON Schema for structured output. */
   responseConstraint?: object;
-  /** Optional result cache. Off by default; every call hits the model. Pass `createSessionStorageCache()` or any `{ get, set }`-shaped object to enable. */
-  cache?: ResponseCache;
+  /**
+   * Result cache. Off by default; every call hits the model. Pass
+   * `"session"` / `"local"` for the matching web-storage shortcut, or any
+   * `{ get, set }`-shaped object for a custom backend.
+   */
+  cache?: CacheOption;
   /** Cache key. Default: hash of `{ input, systemPrompt, temperature, topK }`. */
   cacheKey?: string;
   /**
@@ -115,8 +108,8 @@ export interface AskOptions {
 }
 
 export interface AskResult {
-  /** Final response text, or `null` if the input was empty. */
-  response: string | null;
+  /** Final response text, or `null` if the input was empty or safety-blocked. */
+  output: string | null;
   /** Whether the result came from the cache (no model call). */
   cached: boolean;
 }
@@ -128,25 +121,10 @@ class PromptAbortError extends Error {
   }
 }
 
-// Track which `(systemPrompt, createOptions.initialPrompts)` collisions we've
-// already warned about, so a chat loop doesn't drown the console.
-const warnedClobberKeys = new Set<string>();
-const warnClobberOnce = (key: string): void => {
-  if (warnedClobberKeys.has(key)) return;
-  warnedClobberKeys.add(key);
-  if (typeof console !== "undefined") {
-    console.warn(
-      "[@web-ai-sdk/prompt] `createOptions.initialPrompts` was passed alongside `systemPrompt`. " +
-        "`initialPrompts` overrides the synthesized system prompt, so the persona was lost. " +
-        "Pass only one. To silence this warning intentionally, omit `systemPrompt`.",
-    );
-  }
-};
-
 /**
  * Run a one-shot prompt. Uses streaming when the underlying instance supports
- * it, falling back to one-shot otherwise. Returns `null` when the input is
- * empty. Throws `PromptUnavailableError` when the API isn't present.
+ * it, falling back to one-shot otherwise. Returns `{ output: null }` when the
+ * input is empty. Throws `PromptUnavailableError` when the API isn't present.
  *
  * For chat-shaped apps where turns need to remember each other, prefer
  * `createSession()` (or `useSession()` in React); `ask()` shares warm sessions
@@ -162,13 +140,10 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
   }
 
   if (!options.input.trim()) {
-    return { response: null, cached: false };
+    return { output: null, cached: false };
   }
 
-  // Caching is opt-in. Pass a `cache` (any `{ get, set }`-shaped object,
-  // e.g. `createSessionStorageCache()`) to enable response caching; omit
-  // it for a fresh model call every time.
-  const cache = options.cache;
+  const cache = resolveCache(options.cache);
   const cacheKey =
     options.cacheKey ??
     defaultCacheKey({
@@ -179,7 +154,7 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
     });
   if (cache) {
     const cached = cache.get(cacheKey);
-    if (cached) return { response: cached, cached: true };
+    if (cached) return { output: cached, cached: true };
   }
 
   const langHints = buildLangHints(
@@ -189,13 +164,6 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
   const initialPrompts: LanguageModelMessage[] = options.systemPrompt
     ? [{ role: "system", content: options.systemPrompt }]
     : [];
-
-  if (
-    options.systemPrompt &&
-    options.createOptions?.initialPrompts !== undefined
-  ) {
-    warnClobberOnce(options.systemPrompt);
-  }
 
   const baseCreateOptions: LanguageModelCreateOptions = {
     ...(initialPrompts.length > 0 ? { initialPrompts } : {}),
@@ -213,7 +181,7 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
       : langHints.expectedOutputs
         ? { expectedOutputs: langHints.expectedOutputs }
         : {}),
-    ...options.createOptions,
+    ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
   const sessionPromise = getOrCreateLanguageModel(api, baseCreateOptions);
@@ -273,5 +241,5 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
 
   const cleaned = sanitizeResponse(finalText);
   if (cleaned && cache) cache.set(cacheKey, cleaned);
-  return { response: cleaned || null, cached: false };
+  return { output: cleaned || null, cached: false };
 };

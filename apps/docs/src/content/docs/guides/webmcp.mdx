@@ -27,15 +27,43 @@ const cleanups = tools.map(registerTool);
 const cleanup = () => cleanups.forEach((c) => c());
 ```
 
-:::caution
-`registerTools(tools)` still exists but is **deprecated** and will be removed in 0.4. Use the `map` pattern above instead.
-:::
+## Tool
+
+```ts
+interface Tool<TInput = unknown, TOutput = unknown> {
+  name: string;
+  description: string;
+  inputSchema?: object;
+  readOnly?: boolean;
+  destructive?: boolean;
+  annotations?: ToolAnnotations;
+  execute: (input: TInput) => Promise<TOutput> | TOutput;
+}
+```
+
+<div class="options-table">
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `name` <sup>required</sup> | `string` | Tool name. Must be unique within the model context. |
+| `description` <sup>required</sup> | `string` | What the tool does. Routed to the agent's tool selector. |
+| `execute` <sup>required</sup> | `(input) => Promise<T> \| T` | The function the agent calls. |
+| `inputSchema` | `object` | JSON Schema describing the input shape. Some hosts validate against it before dispatch. |
+| `readOnly` | `boolean` | Shorthand for `annotations.readOnlyHint = true`. |
+| `destructive` | `boolean` | Shorthand for `annotations.destructiveHint = true`. |
+| `annotations` | `ToolAnnotations` | Raw passthrough (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`). Merged on top of the shorthand flags. |
+
+</div>
+
+## Returns
+
+`registerTool(tool)` returns a cleanup function: `() => void`. Calling it unregisters the tool. Calling it twice is a no-op. On browsers without `navigator.modelContext`, the cleanup is itself a no-op.
 
 ## How it works
 
 Chrome's `navigator.modelContext.registerTool({...}, { signal })` is the spec entry point. The wrapper sits on top with three quality-of-life additions:
 
-- **Feature detection.** On browsers without `navigator.modelContext`, every entry point is a no-op so consumer code ships unchanged. `isWebMCPAvailable()` returns `false`.
+- **Feature detection.** On browsers without `navigator.modelContext`, every entry point is a no-op so consumer code ships unchanged. `isAvailable()` returns `false`.
 - **Last-writer-wins on duplicate names.** React effect cleanup is asynchronous; a fast re-render can attempt to register `"foo"` before Chrome processed the prior `abort()`. The wrapper detects the resulting duplicate-name error, queues a microtask retry, and tracks ownership so a stale registration can't squat the name.
 - **One AbortController per call.** `registerTool` returns a cleanup function that aborts the underlying controller and unregisters the tool.
 
@@ -63,9 +91,9 @@ Shorthand flags map to the spec hints (`readOnlyHint`, `destructiveHint`); pass 
 The wrapper never throws on missing API; it's a no-op. The vanilla functions return a no-op cleanup, so consumer code stays declarative:
 
 ```ts
-import { registerTool, isWebMCPAvailable } from "@web-ai-sdk/webmcp";
+import { registerTool, isAvailable } from "@web-ai-sdk/webmcp";
 
-if (!isWebMCPAvailable()) {
+if (!isAvailable()) {
   console.log("WebMCP not available; tools will not be exposed to agents.");
   return;
 }

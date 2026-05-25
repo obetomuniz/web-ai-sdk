@@ -131,8 +131,8 @@ const validateInput = async <Output>(
  * any specific library. Pass `validate: true` to also run the schema at
  * runtime; otherwise the schema is type-only and `execute` runs verbatim.
  *
- * The returned object is a plain `Tool` and can be passed to `registerTool`,
- * `registerTools`, or the React `useWebMCP` hook unchanged.
+ * The returned object is a plain `Tool` and can be passed to `registerTool`
+ * or the React `useWebMCP` hook unchanged.
  */
 export const defineTool = <
   Schema extends StandardSchemaV1 | undefined = undefined,
@@ -196,14 +196,13 @@ interface NavigatorWithModelContext {
   modelContext?: ModelContext;
 }
 
-/** Returns the native `navigator.modelContext` if present, else `undefined`. */
-export const getModelContext = (): ModelContext | undefined => {
+const getModelContext = (): ModelContext | undefined => {
   if (typeof navigator === "undefined") return undefined;
   return (navigator as NavigatorWithModelContext).modelContext;
 };
 
 /** Whether the current environment exposes the WebMCP API. */
-export const isWebMCPAvailable = (): boolean => getModelContext() !== undefined;
+export const isAvailable = (): boolean => getModelContext() !== undefined;
 
 const toRegistered = (tool: Tool): RegisteredTool => {
   const annotations: ToolAnnotations = {
@@ -314,43 +313,6 @@ export const registerTool = <TInput, TOutput>(
   const registered = toRegistered(tool as Tool);
   const controller = new AbortController();
   registerOne(mc, registered, controller);
-
-  let disposed = false;
-  return () => {
-    if (disposed) return;
-    disposed = true;
-    controller.abort();
-  };
-};
-
-/**
- * Register multiple tools in one call. Returns a single cleanup that
- * unregisters every tool that was registered.
- *
- * All tools share one AbortController, so the cleanup tears them down
- * atomically.
- *
- * @deprecated Will be removed in 0.4. `registerTool` is the primitive;
- * combine cleanups yourself when you need to register many at once:
- *
- *     const cleanups = tools.map(registerTool);
- *     const cleanup = () => cleanups.forEach((c) => c());
- */
-export const registerTools = (tools: readonly Tool[]): (() => void) => {
-  const mc = getModelContext();
-  if (!mc) return () => {};
-
-  const controller = new AbortController();
-  try {
-    for (const tool of tools) {
-      registerOne(mc, toRegistered(tool), controller);
-    }
-  } catch (err) {
-    // A non-duplicate error from the native call shouldn't leave us in a
-    // partial state. Roll back what we registered before re-throwing.
-    controller.abort();
-    throw err;
-  }
 
   let disposed = false;
   return () => {

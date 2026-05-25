@@ -4,11 +4,8 @@ import {
   PromptUnavailableError,
   type ResponseCache,
   ask,
-  clearSession,
-  clearSessions,
-  configurePromptCache,
   createSession,
-  isPromptAvailable,
+  isAvailable,
 } from "./index.js";
 
 interface FakeSession {
@@ -59,7 +56,7 @@ const installFakeLanguageModel = (
     create: vi.fn(async () => sessionFactory()),
   };
   (globalThis as { LanguageModel?: FakeApi }).LanguageModel = api;
-  return { ...api, promptSpy, streamingSpy };
+  return Object.assign(api, { promptSpy, streamingSpy });
 };
 
 const removeFakeLanguageModel = () => {
@@ -84,14 +81,14 @@ afterEach(() => {
   removeFakeLanguageModel();
 });
 
-describe("isPromptAvailable", () => {
+describe("isAvailable", () => {
   it("is false when the global is missing", () => {
-    expect(isPromptAvailable()).toBe(false);
+    expect(isAvailable()).toBe(false);
   });
 
   it("is true when the global is present", () => {
     installFakeLanguageModel();
-    expect(isPromptAvailable()).toBe(true);
+    expect(isAvailable()).toBe(true);
   });
 });
 
@@ -105,7 +102,7 @@ describe("ask", () => {
   it("returns null when the input is empty", async () => {
     installFakeLanguageModel();
     const result = await ask({ input: "   ", cache: inMemoryCache() });
-    expect(result).toEqual({ response: null, cached: false });
+    expect(result).toEqual({ output: null, cached: false });
   });
 
   it("returns the cached response without calling the model", async () => {
@@ -113,7 +110,7 @@ describe("ask", () => {
     const cache = inMemoryCache();
     cache.set('["hello","",null,null]', "cached answer");
     const result = await ask({ input: "hello", cache });
-    expect(result).toEqual({ response: "cached answer", cached: true });
+    expect(result).toEqual({ output: "cached answer", cached: true });
     expect(fake.create).not.toHaveBeenCalled();
   });
 
@@ -121,7 +118,7 @@ describe("ask", () => {
     installFakeLanguageModel({ response: "one-shot answer" });
     const cache = inMemoryCache();
     const result = await ask({ input: "ping", cache });
-    expect(result).toEqual({ response: "one-shot answer", cached: false });
+    expect(result).toEqual({ output: "one-shot answer", cached: false });
     expect(cache.get('["ping","",null,null]')).toBe("one-shot answer");
   });
 
@@ -134,7 +131,7 @@ describe("ask", () => {
       cache,
       onUpdate: (c) => updates.push(c),
     });
-    expect(result.response).toBe("Hello, world.");
+    expect(result.output).toBe("Hello, world.");
     expect(updates).toEqual(["Hel", "Hello, ", "Hello, world."]);
   });
 
@@ -147,13 +144,13 @@ describe("ask", () => {
 
   it("returns null when the response is only C0 control characters (Edge soft-block)", async () => {
     installFakeLanguageModel({
-      response: "".repeat(32),
+      response: "".repeat(32),
     });
     const result = await ask({
       input: "blocked content",
       cache: inMemoryCache(),
     });
-    expect(result.response).toBeNull();
+    expect(result.output).toBeNull();
     expect(result.cached).toBe(false);
   });
 
@@ -165,7 +162,7 @@ describe("ask", () => {
       input: "blocked content",
       cache: inMemoryCache(),
     });
-    expect(result.response).toBeNull();
+    expect(result.output).toBeNull();
     expect(result.cached).toBe(false);
   });
 
@@ -180,7 +177,7 @@ describe("ask", () => {
       cache,
       onUpdate: (c) => updates.push(c),
     });
-    expect(result.response).toBe("Hello, world.");
+    expect(result.output).toBe("Hello, world.");
     expect(updates).toEqual(["Hel", "Hello, ", "Hello, world."]);
   });
 
@@ -207,21 +204,6 @@ describe("ask", () => {
     });
     const createOpts = fake.create.mock.calls[0]?.[0];
     expect(createOpts).toMatchObject({ temperature: 0.2, topK: 5 });
-  });
-
-  it("warns when createOptions.initialPrompts is passed alongside systemPrompt", async () => {
-    installFakeLanguageModel();
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    await ask({
-      input: "ping",
-      systemPrompt: "Never see me",
-      createOptions: { initialPrompts: [{ role: "system", content: "Other" }] },
-      cache: inMemoryCache(),
-    });
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/initialPrompts.*overrides/),
-    );
-    warnSpy.mockRestore();
   });
 
   it("reuses sessions across same-shape calls", async () => {
@@ -258,53 +240,6 @@ describe("ask", () => {
         cache: inMemoryCache(),
       }),
     ).rejects.toThrow(/aborted/i);
-  });
-});
-
-describe("session cache (LRU)", () => {
-  it("evicts the oldest entry past the configured cap and destroys it", async () => {
-    const destroyed: string[] = [];
-    let id = 0;
-    installFakeLanguageModel({
-      sessionFactory: () => {
-        const tag = String(++id);
-        return {
-          prompt: vi.fn(async () => `r${tag}`),
-          destroy: vi.fn(() => {
-            destroyed.push(tag);
-          }),
-        };
-      },
-    });
-    configurePromptCache({ max: 2 });
-    await ask({ input: "a", systemPrompt: "A" });
-    await ask({ input: "a", systemPrompt: "B" });
-    await ask({ input: "a", systemPrompt: "C" });
-    // Yield to flush the destroy microtask.
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(destroyed).toEqual(["1"]);
-  });
-
-  it("clearSessions destroys every cached session and forces fresh creates next time", async () => {
-    const fake = installFakeLanguageModel();
-    await ask({ input: "ping", systemPrompt: "A" });
-    expect(fake.create).toHaveBeenCalledTimes(1);
-    clearSessions();
-    await ask({ input: "ping", systemPrompt: "A" });
-    expect(fake.create).toHaveBeenCalledTimes(2);
-  });
-
-  it("clearSession drops a specific cached session by options", async () => {
-    const fake = installFakeLanguageModel();
-    await ask({ input: "ping", systemPrompt: "A" });
-    await ask({ input: "ping", systemPrompt: "B" });
-    expect(fake.create).toHaveBeenCalledTimes(2);
-    clearSession({ initialPrompts: [{ role: "system", content: "A" }] });
-    await ask({ input: "ping", systemPrompt: "B" });
-    expect(fake.create).toHaveBeenCalledTimes(2); // B still cached
-    await ask({ input: "ping", systemPrompt: "A" });
-    expect(fake.create).toHaveBeenCalledTimes(3); // A re-created
   });
 });
 
@@ -387,9 +322,6 @@ describe("createSession", () => {
   });
 
   it("does NOT queue concurrent sends; consumers handle sequencing themselves", async () => {
-    // The wrapper is transparent — the underlying LanguageModel is sequential
-    // per instance and will reject overlapping sends. The hook returns the
-    // primitive's behavior without papering over it.
     let active = 0;
     let maxActive = 0;
     installFakeLanguageModel({
@@ -405,9 +337,6 @@ describe("createSession", () => {
     });
     const session = createSession();
     await Promise.all([session.send("a"), session.send("b")]);
-    // Both sends were dispatched to the fake instance concurrently, because
-    // the wrapper does not serialize. Real Chrome would surface
-    // InvalidStateError for the second call; our test fake is permissive.
     expect(maxActive).toBe(2);
     session.destroy();
   });

@@ -3,10 +3,8 @@ import {
   type StandardSchemaV1,
   ToolValidationError,
   defineTool,
-  getModelContext,
-  isWebMCPAvailable,
+  isAvailable,
   registerTool,
-  registerTools,
 } from "./index.js";
 
 interface RegisteredCall {
@@ -63,15 +61,13 @@ afterEach(() => {
 });
 
 describe("feature detection", () => {
-  it("isWebMCPAvailable() is false when navigator.modelContext is missing", () => {
-    expect(isWebMCPAvailable()).toBe(false);
-    expect(getModelContext()).toBeUndefined();
+  it("isAvailable() is false when navigator.modelContext is missing", () => {
+    expect(isAvailable()).toBe(false);
   });
 
-  it("isWebMCPAvailable() is true when navigator.modelContext is present", () => {
+  it("isAvailable() is true when navigator.modelContext is present", () => {
     installFakeModelContext();
-    expect(isWebMCPAvailable()).toBe(true);
-    expect(getModelContext()).toBeDefined();
+    expect(isAvailable()).toBe(true);
   });
 });
 
@@ -390,71 +386,5 @@ describe("defineTool", () => {
     });
     registerTool(tool);
     expect(registered.get("plain")?.inputSchema).toEqual({ type: "object" });
-  });
-});
-
-describe("registerTools", () => {
-  it("registers every tool and the cleanup unregisters all of them", () => {
-    const { registered } = installFakeModelContext();
-    const cleanup = registerTools([
-      { name: "a", description: "A", execute: async () => ({}) },
-      { name: "b", description: "B", execute: async () => ({}) },
-      { name: "c", description: "C", execute: async () => ({}) },
-    ]);
-    expect(registered.size).toBe(3);
-    cleanup();
-    expect(registered.size).toBe(0);
-  });
-
-  it("shares one AbortController across all tools (cleanup is atomic)", () => {
-    const { registered, registerTool: spy } = installFakeModelContext();
-    registerTools([
-      { name: "x", description: "X", execute: () => ({}) },
-      { name: "y", description: "Y", execute: () => ({}) },
-    ]);
-    const signalX = (spy.mock.calls[0]?.[1] as RegisterOptions | undefined)
-      ?.signal;
-    const signalY = (spy.mock.calls[1]?.[1] as RegisterOptions | undefined)
-      ?.signal;
-    expect(signalX).toBeDefined();
-    expect(signalX).toBe(signalY);
-    expect(registered.size).toBe(2);
-  });
-
-  it("rolls back partially-registered tools if a later registration throws a non-duplicate error", () => {
-    const registered = new Map<string, RegisteredCall>();
-    let callIndex = 0;
-    const registerTool = vi.fn(
-      (def: RegisteredCall, options?: RegisterOptions) => {
-        callIndex += 1;
-        if (callIndex === 2) {
-          throw new Error("Some other registration failure");
-        }
-        registered.set(def.name, def);
-        options?.signal?.addEventListener("abort", () => {
-          registered.delete(def.name);
-        });
-      },
-    );
-    Object.defineProperty(navigator, "modelContext", {
-      value: { registerTool },
-      configurable: true,
-    });
-
-    expect(() =>
-      registerTools([
-        { name: "ok", description: "first", execute: () => ({}) },
-        { name: "boom", description: "second", execute: () => ({}) },
-      ]),
-    ).toThrow("Some other registration failure");
-    // First registration was rolled back via the shared AbortController.
-    expect(registered.has("ok")).toBe(false);
-  });
-
-  it("returns a no-op cleanup when WebMCP is unavailable", () => {
-    const cleanup = registerTools([
-      { name: "a", description: "A", execute: async () => ({}) },
-    ]);
-    expect(() => cleanup()).not.toThrow();
   });
 });

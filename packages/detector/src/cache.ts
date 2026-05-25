@@ -14,22 +14,20 @@ export interface DetectionCache {
   set(key: string, value: string): void;
 }
 
-export interface DefaultCacheOptions {
-  /** Storage backend. Default: `globalThis.sessionStorage`. */
+/**
+ * Public-facing `cache` option. Pass `"session"` / `"local"` for storage
+ * shortcuts, or any `{ get, set }`-shaped object for a custom backend.
+ */
+export type CacheOption = "session" | "local" | DetectionCache;
+
+interface DefaultCacheOptions {
   storage?: Storage;
-  /** Prefix for cache keys. Default: `"detector:"`. */
   prefix?: string;
 }
 
-export const createSessionStorageCache = (
-  options: DefaultCacheOptions = {},
-): DetectionCache => {
+const createStorageCache = (options: DefaultCacheOptions): DetectionCache => {
   const prefix = options.prefix ?? "detector:";
-  const storage =
-    options.storage ??
-    (typeof globalThis !== "undefined"
-      ? (globalThis as { sessionStorage?: Storage }).sessionStorage
-      : undefined);
+  const storage = options.storage;
 
   return {
     get(key) {
@@ -49,6 +47,32 @@ export const createSessionStorageCache = (
       }
     },
   };
+};
+
+/**
+ * Resolve the public `cache` option into a concrete `{ get, set }` backend.
+ * `undefined` → no caching. `"session"` / `"local"` → wrap the matching
+ * web-storage backend (no-op fallback if unavailable). Object → passthrough.
+ */
+export const resolveCache = (
+  value: CacheOption | undefined,
+): DetectionCache | undefined => {
+  if (value === undefined) return undefined;
+  if (value === "session") {
+    const storage =
+      typeof globalThis !== "undefined"
+        ? (globalThis as { sessionStorage?: Storage }).sessionStorage
+        : undefined;
+    return createStorageCache({ storage });
+  }
+  if (value === "local") {
+    const storage =
+      typeof globalThis !== "undefined"
+        ? (globalThis as { localStorage?: Storage }).localStorage
+        : undefined;
+    return createStorageCache({ storage });
+  }
+  return value;
 };
 
 /**

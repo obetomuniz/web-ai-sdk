@@ -1,9 +1,12 @@
 import {
   PromptUnavailableError,
   ask,
-  isPromptAvailable,
+  isAvailable as isPromptAvailable,
 } from "@web-ai-sdk/prompt";
-import { type Tool, isWebMCPAvailable } from "@web-ai-sdk/webmcp";
+import {
+  type Tool,
+  isAvailable as isWebMcpAvailable,
+} from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -98,7 +101,7 @@ export const WebMCPDemo = () => {
   const { progress, monitor } = useDownloadMonitor();
 
   useEffect(() => {
-    setAvailable(isWebMCPAvailable());
+    setAvailable(isWebMcpAvailable());
   }, []);
 
   // Keep a live ref to the latest toggle state. The open_settings execute
@@ -214,9 +217,9 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
             "Set tool to null when no registered tool fits the user intent; " +
             "don't force a call.",
           temperature: 0.1,
-          createOptions: { monitor },
+          monitor,
         });
-        const raw = result.response ?? "";
+        const raw = result.output ?? "";
         const m = raw.match(/\{[\s\S]*\}/);
         if (m) {
           const parsed = JSON.parse(m[0]) as {

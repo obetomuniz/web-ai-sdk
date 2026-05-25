@@ -17,13 +17,12 @@ interface Tab {
 }
 
 // All three tabs do the SAME job: detect the article's language, then
-// summarize it into short key-points in that language and pipe each chunk
-// to a `render()` sink. The wrapper-based tabs treat detector and
-// summarizer as composable units of two lines; the raw tab spells out
-// what each one actually handles for you; feature detection, monitor
-// wiring, AbortSignal threading, skeleton extraction, streaming-shape
-// detection (Chrome delta vs Edge cumulative), and the C0/C1 strip Edge
-// needs.
+// summarize that text into short key-points in that language and pipe each
+// chunk to a `render()` sink. The wrapper-based tabs treat detector and
+// summarizer as composable units of one call each; the raw tab spells out
+// what each one actually handles for you — feature detection, monitor
+// wiring, AbortSignal threading, streaming-shape detection (Chrome delta
+// vs Edge cumulative), and the C0/C1 strip Edge needs.
 const TABS: Tab[] = [
   {
     id: "vanilla",
@@ -69,50 +68,44 @@ const TABS: Tab[] = [
       {
         t: [
           ["kw", "const"],
-          ["pl", " { language } = "],
+          ["pl", " detection = "],
           ["kw", "await"],
           ["fn", " detect"],
-          ["pl", "({ text })"],
+          ["pl", "({ input: text })"],
         ],
       },
       { t: [] },
       {
         t: [
           ["kw", "const"],
-          ["pl", " { summary } = "],
+          ["pl", " { output: summary } = "],
           ["kw", "await"],
           ["fn", " summarize"],
           ["pl", "({"],
         ],
       },
+      { t: [["pl", "  input: text,"]] },
       {
         t: [
-          ["pl", "  language: language ?? "],
+          ["pl", "  language: detection.output?.language ?? "],
           ["str", '"en"'],
           ["pl", ","],
         ],
       },
       {
         t: [
-          ["pl", "  article: article ?? "],
-          ["kw", "undefined"],
+          ["pl", "  type: "],
+          ["str", '"key-points"'],
+          ["pl", ", length: "],
+          ["str", '"short"'],
           ["pl", ","],
         ],
       },
       {
         t: [
-          ["pl", "  createOptions: { type: "],
-          ["str", '"key-points"'],
-          ["pl", ", length: "],
-          ["str", '"short"'],
-          ["pl", " },"],
-        ],
-      },
-      {
-        t: [
-          ["pl", "  onUpdate: (text) => "],
+          ["pl", "  onUpdate: "],
           ["fn", "render"],
-          ["pl", "(text),"],
+          ["pl", ","],
         ],
       },
       { t: [["pl", "})"]] },
@@ -164,9 +157,9 @@ const TABS: Tab[] = [
         t: [
           ["pl", "  "],
           ["kw", "const"],
-          ["pl", " { language } = "],
+          ["pl", " { output: lang } = "],
           ["fn", "useDetector"],
-          ["pl", "({ text })"],
+          ["pl", "({ input: text })"],
         ],
       },
       { t: [] },
@@ -174,32 +167,26 @@ const TABS: Tab[] = [
         t: [
           ["pl", "  "],
           ["kw", "const"],
-          ["pl", " { status, summary } = "],
+          ["pl", " { status, output } = "],
           ["fn", "useSummarizer"],
           ["pl", "({"],
         ],
       },
+      { t: [["pl", "    input: text,"]] },
       {
         t: [
-          ["pl", "    language: language ?? "],
+          ["pl", "    language: lang?.language ?? "],
           ["str", '"en"'],
           ["pl", ","],
         ],
       },
       {
         t: [
-          ["pl", "    article: article ?? "],
-          ["kw", "undefined"],
-          ["pl", ","],
-        ],
-      },
-      {
-        t: [
-          ["pl", "    createOptions: { type: "],
+          ["pl", "    type: "],
           ["str", '"key-points"'],
           ["pl", ", length: "],
           ["str", '"short"'],
-          ["pl", " },"],
+          ["pl", ","],
         ],
       },
       { t: [["pl", "  })"]] },
@@ -218,7 +205,7 @@ const TABS: Tab[] = [
           ["kw", "  return"],
           ["pl", " <"],
           ["acc", "aside"],
-          ["pl", ">{summary}</"],
+          ["pl", ">{output}</"],
           ["acc", "aside"],
           ["pl", ">"],
         ],
@@ -465,12 +452,7 @@ const TABS: Tab[] = [
       },
       { t: [["pl", "}"]] },
       {
-        t: [
-          [
-            "com",
-            "// + skeleton extraction, session cache, retry on session-lost…",
-          ],
-        ],
+        t: [["com", "// + session cache, abort wiring, error normalization…"]],
       },
     ],
   },

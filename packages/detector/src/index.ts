@@ -9,6 +9,7 @@
  */
 
 import {
+  type CreateMonitor,
   type DetectionResult,
   type LanguageDetectorApi,
   type LanguageDetectorAvailability,
@@ -18,60 +19,65 @@ import {
   checkAvailability,
   getLanguageDetectorApi,
   getOrCreateLanguageDetector,
-  isDetectorAvailable,
+  isAvailable,
 } from "./api.js";
 import {
+  type CacheOption,
   type DetectionCache,
-  createSessionStorageCache,
   defaultCacheKey,
+  resolveCache,
 } from "./cache.js";
 
-export {
-  isDetectorAvailable,
-  checkAvailability,
-  getLanguageDetectorApi,
-  getOrCreateLanguageDetector,
-  createSessionStorageCache,
-  defaultCacheKey,
-};
+export { isAvailable, checkAvailability };
 
 export type {
+  CacheOption,
+  CreateMonitor,
   DetectionResult,
+  DetectionCache,
   LanguageDetectorApi,
   LanguageDetectorAvailability,
   LanguageDetectorAvailabilityOptions,
   LanguageDetectorCreateOptions,
   LanguageDetectorInstance,
-  DetectionCache,
 };
 
 export interface DetectOptions {
-  /** Text to detect. Empty / whitespace-only input resolves to `null`. */
-  text: string;
+  /** Text to detect. Empty / whitespace-only input resolves to `{ output: null }`. */
+  input: string;
   /** BCP-47 languages the detector should bias toward. */
   expectedInputLanguages?: readonly string[];
   /**
-   * Minimum confidence (0..1) for the top result to be returned. Below
-   * this, `language` is `null` (we treat it as inconclusive). Default: `0`.
+   * Minimum confidence (0..1) for a result to be returned. Below this,
+   * `output` is `null` (we treat it as inconclusive). Default: `0`.
    */
   minConfidence?: number;
-  /** Override `LanguageDetector.create()` options entirely. Merged on top of defaults. */
-  createOptions?: Partial<LanguageDetectorCreateOptions>;
-  /** Cache backend. When omitted, no caching happens. */
-  cache?: DetectionCache;
-  /** Cache key. Default: hash of `{ text, expectedInputLanguages }`. */
+  /** Observe the first-call model download. */
+  monitor?: (m: CreateMonitor) => void;
+  /**
+   * Result cache. Off by default; every call hits the model. Pass
+   * `"session"` / `"local"` for the matching web-storage shortcut, or any
+   * `{ get, set }`-shaped object for a custom backend.
+   */
+  cache?: CacheOption;
+  /** Cache key. Default: hash of `{ input, expectedInputLanguages }`. */
   cacheKey?: string;
   /** Abort signal. */
   signal?: AbortSignal;
 }
 
 export interface DetectResult {
-  /** Top language (BCP-47), or `null` when input is empty / below `minConfidence`. */
-  language: string | null;
-  /** Confidence of the top result. `0` when `language` is `null`. */
-  confidence: number;
-  /** Full sorted list of candidates from the underlying model. */
-  all: DetectionResult[];
+  /**
+   * The detection result, or `null` when input is empty / no candidate
+   * meets `minConfidence`. When non-null, `language` is BCP-47, `confidence`
+   * is the top match's score, and `all` is the full sorted list of
+   * candidates for callers that want to inspect alternates.
+   */
+  output: {
+    language: string;
+    confidence: number;
+    all: DetectionResult[];
+  } | null;
   /** Whether the result came from the cache (no model call). */
   cached: boolean;
 }
@@ -90,7 +96,7 @@ class DetectorAbortError extends Error {
 /**
  * Detect the language of a string. Returns the top match with confidence,
  * plus the full sorted list for callers that want to inspect alternates.
- * Returns `{ language: null, ... }` for empty input or when the top
+ * Returns `{ output: null, ... }` for empty input or when the top
  * confidence is below `minConfidence`. Throws `DetectorUnavailableError`
  * when the API isn't present in the environment.
  */
@@ -102,9 +108,9 @@ export const detect = async (options: DetectOptions): Promise<DetectResult> => {
     );
   }
 
-  const text = options.text.trim();
+  const text = options.input.trim();
   if (!text) {
-    return { language: null, confidence: 0, all: [], cached: false };
+    return { output: null, cached: false };
   }
 
   const minConfidence = options.minConfidence ?? 0;
@@ -112,9 +118,7 @@ export const detect = async (options: DetectOptions): Promise<DetectResult> => {
     ? [...options.expectedInputLanguages]
     : undefined;
 
-  // Caching is opt-in. Pass a `cache` (any `{ get, set }`-shaped object)
-  // to enable result caching; omit it for a fresh model call every time.
-  const cache = options.cache;
+  const cache = resolveCache(options.cache);
   const cacheKey =
     options.cacheKey ?? defaultCacheKey({ text, expectedInputLanguages });
   if (cache) {
@@ -125,13 +129,15 @@ export const detect = async (options: DetectOptions): Promise<DetectResult> => {
         const top = parsed[0];
         if (top && top.confidence >= minConfidence) {
           return {
-            language: top.detectedLanguage,
-            confidence: top.confidence,
-            all: parsed,
+            output: {
+              language: top.detectedLanguage,
+              confidence: top.confidence,
+              all: parsed,
+            },
             cached: true,
           };
         }
-        return { language: null, confidence: 0, all: parsed, cached: true };
+        return { output: null, cached: true };
       } catch {
         // bad cache entry; fall through to fresh call.
       }
@@ -140,7 +146,7 @@ export const detect = async (options: DetectOptions): Promise<DetectResult> => {
 
   const baseCreateOptions: LanguageDetectorCreateOptions = {
     ...(expectedInputLanguages ? { expectedInputLanguages } : {}),
-    ...options.createOptions,
+    ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
   // Kick off session and availability in parallel; first call pays the
@@ -184,12 +190,14 @@ export const detect = async (options: DetectOptions): Promise<DetectResult> => {
 
   const top = sorted[0];
   if (!top || top.confidence < minConfidence) {
-    return { language: null, confidence: 0, all: sorted, cached: false };
+    return { output: null, cached: false };
   }
   return {
-    language: top.detectedLanguage,
-    confidence: top.confidence,
-    all: sorted,
+    output: {
+      language: top.detectedLanguage,
+      confidence: top.confidence,
+      all: sorted,
+    },
     cached: false,
   };
 };

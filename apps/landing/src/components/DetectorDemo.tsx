@@ -1,4 +1,4 @@
-import { isDetectorAvailable } from "@web-ai-sdk/detector";
+import { isAvailable as isDetectorAvailable } from "@web-ai-sdk/detector";
 import { useDetector } from "@web-ai-sdk/detector/react";
 import { useEffect, useState } from "react";
 import {
@@ -23,7 +23,10 @@ export const DetectorDemo = () => {
   const [text, setText] = useState<string>(DETECT_EXAMPLES[0]);
   const [available, setAvailable] = useState<boolean | null>(null);
   const { stats, start, update, finish } = useStreamStats();
-  const { status, language, confidence, all, error } = useDetector({ text });
+  const { status, output, error } = useDetector({ input: text });
+  const language = output?.language ?? null;
+  const confidence = output?.confidence ?? 0;
+  const all = output?.all ?? [];
 
   useEffect(() => {
     setAvailable(isDetectorAvailable());
@@ -57,7 +60,7 @@ export const DetectorDemo = () => {
         <span>
           {status === "done" && language
             ? `${language} · ${Math.round(confidence * 100)}%`
-            : status === "pending"
+            : status === "idle"
               ? "awaiting input"
               : status === "loading"
                 ? "detecting…"
@@ -132,7 +135,7 @@ export const DetectorDemo = () => {
             <span style={{ color: "var(--fg-4)", fontStyle: "italic" }}>
               {available === false
                 ? "Open in Chrome 138+ or Edge Canary/Dev 147+ to detect."
-                : status === "pending"
+                : status === "idle"
                   ? "Type or paste text above."
                   : status === "loading"
                     ? "Detecting…"

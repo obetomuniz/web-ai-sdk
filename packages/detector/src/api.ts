@@ -58,6 +58,7 @@ export interface LanguageDetectorApi {
   ): Promise<LanguageDetectorInstance>;
 }
 
+/** Internal: read the native global. Not exported. */
 export const getLanguageDetectorApi = (): LanguageDetectorApi | null => {
   if (typeof globalThis === "undefined") return null;
   return (
@@ -66,9 +67,13 @@ export const getLanguageDetectorApi = (): LanguageDetectorApi | null => {
   );
 };
 
-export const isDetectorAvailable = (): boolean =>
-  getLanguageDetectorApi() !== null;
+/** Whether the current environment exposes the LanguageDetector API. */
+export const isAvailable = (): boolean => getLanguageDetectorApi() !== null;
 
+/**
+ * Probe the native `availability()` for the given shape. Returns `null` on
+ * browsers without the API.
+ */
 export const checkAvailability = async (
   options?: LanguageDetectorAvailabilityOptions,
 ): Promise<LanguageDetectorAvailability | null> => {

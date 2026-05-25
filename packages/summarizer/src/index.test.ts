@@ -3,7 +3,7 @@ import { __clearSessionCacheForTests } from "./api.js";
 import {
   SummarizerUnavailableError,
   type SummaryCache,
-  isSummarizerAvailable,
+  isAvailable,
   summarize,
 } from "./index.js";
 
@@ -64,21 +64,21 @@ afterEach(() => {
   removeFakeSummarizer();
 });
 
-describe("isSummarizerAvailable", () => {
+describe("isAvailable", () => {
   it("is false when the global is missing", () => {
-    expect(isSummarizerAvailable()).toBe(false);
+    expect(isAvailable()).toBe(false);
   });
 
   it("is true when the global is present", () => {
     installFakeSummarizer();
-    expect(isSummarizerAvailable()).toBe(true);
+    expect(isAvailable()).toBe(true);
   });
 });
 
 describe("summarize", () => {
   it("throws SummarizerUnavailableError when the global is missing", async () => {
     await expect(
-      summarize({ language: "en", text: "Hello." }),
+      summarize({ language: "en", input: "Hello." }),
     ).rejects.toBeInstanceOf(SummarizerUnavailableError);
   });
 
@@ -86,10 +86,10 @@ describe("summarize", () => {
     installFakeSummarizer({ summary: "Concise overview." });
     const result = await summarize({
       language: "en",
-      text: "A long article body that the model summarizes.",
+      input: "A long article body that the model summarizes.",
       cache: inMemoryCache(),
     });
-    expect(result).toEqual({ summary: "Concise overview.", cached: false });
+    expect(result).toEqual({ output: "Concise overview.", cached: false });
   });
 
   it("streams delta chunks (Chrome shape) and returns the cleaned final text", async () => {
@@ -99,12 +99,12 @@ describe("summarize", () => {
     const chunks: string[] = [];
     const result = await summarize({
       language: "en",
-      text: "Some article body.",
+      input: "Some article body.",
       cache: inMemoryCache(),
       onUpdate: (c) => chunks.push(c),
     });
     expect(chunks.length).toBeGreaterThan(0);
-    expect(result.summary).toBe("Hello world");
+    expect(result.output).toBe("Hello world");
     expect(result.cached).toBe(false);
   });
 
@@ -116,20 +116,18 @@ describe("summarize", () => {
     const chunks: string[] = [];
     const result = await summarize({
       language: "en",
-      text: "Some article body.",
+      input: "Some article body.",
       cache: inMemoryCache(),
       onUpdate: (c) => chunks.push(c),
     });
-    expect(result.summary).toBe("Hello world");
+    expect(result.output).toBe("Hello world");
     expect(result.cached).toBe(false);
   });
 
   it("does not cache by default; same call hits the model twice without a `cache` option", async () => {
     const api = installFakeSummarizer({ summary: "Fresh." });
-    await summarize({ language: "en", text: "Some article body." });
-    await summarize({ language: "en", text: "Some article body." });
-    // No cache passed: each call should create a session (or reuse, but
-    // the underlying summarize() should be called twice).
+    await summarize({ language: "en", input: "Some article body." });
+    await summarize({ language: "en", input: "Some article body." });
     expect(api.create).toHaveBeenCalled();
   });
 
@@ -139,11 +137,11 @@ describe("summarize", () => {
     cache.set("en", "From cache.");
     const result = await summarize({
       language: "en",
-      text: "irrelevant",
+      input: "irrelevant",
       cache,
       cacheKey: "en",
     });
-    expect(result).toEqual({ summary: "From cache.", cached: true });
+    expect(result).toEqual({ output: "From cache.", cached: true });
     expect(api.create).not.toHaveBeenCalled();
   });
 
@@ -152,7 +150,7 @@ describe("summarize", () => {
     const cache = inMemoryCache();
     await summarize({
       language: "en",
-      text: "body",
+      input: "body",
       cache,
       cacheKey: "k",
     });
@@ -164,7 +162,7 @@ describe("summarize", () => {
     await expect(
       summarize({
         language: "en",
-        text: "body",
+        input: "body",
         cache: inMemoryCache(),
       }),
     ).rejects.toBeInstanceOf(SummarizerUnavailableError);
@@ -174,7 +172,7 @@ describe("summarize", () => {
     const api = installFakeSummarizer({ summary: "ok" });
     await summarize({
       language: "pt",
-      text: "olá",
+      input: "olá",
       cache: inMemoryCache(),
     });
     const createOpts = api.create.mock.calls[0]?.[0] as Record<string, unknown>;
@@ -186,7 +184,7 @@ describe("summarize", () => {
     const api = installFakeSummarizer({ summary: "ok" });
     await summarize({
       language: "en",
-      text: "hi",
+      input: "hi",
       cache: inMemoryCache(),
     });
     const createOpts = api.create.mock.calls[0]?.[0] as Record<string, unknown>;
@@ -194,38 +192,24 @@ describe("summarize", () => {
     expect(createOpts.outputLanguage).toBe("en");
   });
 
-  it("uses the article skeleton when no `text` is passed", async () => {
-    installFakeSummarizer({ summary: "ok" });
-    const article = document.createElement("article");
-    article.innerHTML = `<h2>Big idea</h2>${"<p>Body with <strong>important phrase</strong>.</p>".repeat(20)}`;
-
-    const result = await summarize({
-      language: "en",
-      article,
-      title: "My Post",
-      description: "A great description longer than the threshold here yes.",
-      cache: inMemoryCache(),
-    });
-    expect(result.summary).toBe("ok");
-  });
-
-  it("returns null summary when neither text nor article is provided", async () => {
+  it("returns null output when input is empty", async () => {
     installFakeSummarizer();
     const result = await summarize({
       language: "en",
+      input: "",
       cache: inMemoryCache(),
     });
-    expect(result).toEqual({ summary: null, cached: false });
+    expect(result).toEqual({ output: null, cached: false });
   });
 
   it("preserves sentence punctuation in the cleaned output", async () => {
     installFakeSummarizer({ summary: "Concise TL;DR." });
     const result = await summarize({
       language: "en",
-      text: "Body about a thing.",
+      input: "Body about a thing.",
       cache: inMemoryCache(),
     });
-    expect(result.summary).toBe("Concise TL;DR.");
+    expect(result.output).toBe("Concise TL;DR.");
   });
 
   it("respects an aborted signal", async () => {
@@ -235,10 +219,27 @@ describe("summarize", () => {
     await expect(
       summarize({
         language: "en",
-        text: "body",
+        input: "body",
         cache: inMemoryCache(),
         signal: controller.signal,
       }),
     ).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("forwards top-level type/length/format/preference to create()", async () => {
+    const api = installFakeSummarizer({ summary: "ok" });
+    await summarize({
+      language: "en",
+      input: "body",
+      type: "headline",
+      length: "short",
+      format: "markdown",
+      preference: "capability",
+    });
+    const createOpts = api.create.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(createOpts.type).toBe("headline");
+    expect(createOpts.length).toBe("short");
+    expect(createOpts.format).toBe("markdown");
+    expect(createOpts.preference).toBe("capability");
   });
 });

@@ -1,7 +1,7 @@
 import {
-  getOrCreateTranslator,
-  getTranslatorApi,
-  isTranslatorAvailable,
+  TranslatorUnavailableError,
+  isAvailable as isTranslatorAvailable,
+  translate,
 } from "@web-ai-sdk/translator";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -47,21 +47,27 @@ export const TranslatorDemo = () => {
     const ac = new AbortController();
     abortRef.current = ac;
     try {
-      const api = getTranslatorApi();
-      if (!api) throw new Error("Translator API missing");
-      const translator = await getOrCreateTranslator(api, {
+      const result = await translate({
+        input: text,
         sourceLanguage: from,
         targetLanguage: to,
         monitor,
+        signal: ac.signal,
       });
       if (ac.signal.aborted) return;
-      const result = await translator.translate(text);
-      if (ac.signal.aborted) return;
-      setOutput(result);
-      update(result);
-      finish("done");
-    } catch {
-      finish(ac.signal.aborted ? "aborted" : "error");
+      if (result.output) {
+        setOutput(result.output);
+        update(result.output);
+      }
+      finish(result.cached ? "cached" : "done");
+    } catch (err) {
+      if (ac.signal.aborted) {
+        finish("aborted");
+      } else if (err instanceof TranslatorUnavailableError) {
+        finish("unavailable");
+      } else {
+        finish("error");
+      }
     } finally {
       setRunning(false);
       abortRef.current = null;
