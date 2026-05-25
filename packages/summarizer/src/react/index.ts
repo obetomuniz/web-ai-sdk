@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import {
   type SummarizeOptions,
   SummarizerUnavailableError,
-  isSummarizerAvailable,
+  isAvailable,
   summarize,
 } from "../index.js";
 
 export type SummarizerStatus =
-  | "pending"
+  | "idle"
   | "loading"
   | "streaming"
   | "done"
@@ -21,49 +21,54 @@ export interface UseSummarizerOptions
 
 export interface UseSummarizerReturn {
   status: SummarizerStatus;
-  summary: string | null;
+  /** Final summary text (cleaned), or `null` while idle / unavailable. */
+  output: string | null;
   error: Error | null;
   /** Whether the result was loaded from cache (no model call). */
   fromCache: boolean;
-  /** Imperatively dismiss; sets status to `"unavailable"` and clears summary. */
+  /** Imperatively dismiss; sets status to `"unavailable"` and clears output. */
   dismiss(): void;
 }
 
 /**
  * Auto-run a summarization on mount and re-run when meaningful inputs
- * change. Pass primitive options inline; `article`, `cache`, `sharedContext`,
- * and `createOptions` should be stable references (memoize if necessary).
+ * change. Pass primitive options inline; non-primitive options (`cache`,
+ * `monitor`) should be stable references (memoize if necessary).
  */
 export const useSummarizer = (
   options: UseSummarizerOptions,
 ): UseSummarizerReturn => {
   const [status, setStatus] = useState<SummarizerStatus>(() =>
-    isSummarizerAvailable() ? "pending" : "unavailable",
+    isAvailable() ? "idle" : "unavailable",
   );
-  const [summary, setSummary] = useState<string | null>(null);
+  const [output, setOutput] = useState<string | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [fromCache, setFromCache] = useState(false);
 
   const {
-    article,
-    text,
+    input,
     language,
-    title,
-    description,
-    cacheKey,
-    cache,
-    sharedContext,
-    createOptions,
-    maxInputChars,
-    minSkeletonChars,
     supportedLanguages,
+    type,
+    length,
+    format,
+    preference,
+    sharedContext,
+    monitor,
+    cache,
+    cacheKey,
     enabled = true,
   } = options;
 
   useEffect(() => {
     if (!enabled) return;
-    if (!isSummarizerAvailable()) {
+    if (!isAvailable()) {
       setStatus("unavailable");
+      return;
+    }
+    if (!input.trim()) {
+      setStatus("idle");
+      setOutput(null);
       return;
     }
 
@@ -72,32 +77,31 @@ export const useSummarizer = (
     setStatus("loading");
 
     summarize({
-      article,
-      text,
+      input,
       language,
-      title,
-      description,
-      cacheKey,
-      cache,
-      sharedContext,
-      createOptions,
-      maxInputChars,
-      minSkeletonChars,
       supportedLanguages,
+      type,
+      length,
+      format,
+      preference,
+      sharedContext,
+      monitor,
+      cache,
+      cacheKey,
       signal: controller.signal,
       onUpdate: (chunk) => {
         if (controller.signal.aborted) return;
-        setSummary(chunk);
+        setOutput(chunk);
         setStatus("streaming");
       },
     })
       .then((result) => {
         if (controller.signal.aborted) return;
-        if (!result.summary) {
+        if (!result.output) {
           setStatus("unavailable");
           return;
         }
-        setSummary(result.summary);
+        setOutput(result.output);
         setFromCache(result.cached);
         setStatus("done");
       })
@@ -117,30 +121,30 @@ export const useSummarizer = (
     };
   }, [
     enabled,
-    article,
-    text,
+    input,
     language,
-    title,
-    description,
-    cacheKey,
-    cache,
-    sharedContext,
-    createOptions,
-    maxInputChars,
-    minSkeletonChars,
     supportedLanguages,
+    type,
+    length,
+    format,
+    preference,
+    sharedContext,
+    monitor,
+    cache,
+    cacheKey,
   ]);
 
   const dismiss = () => {
     setStatus("unavailable");
-    setSummary(null);
+    setOutput(null);
   };
 
-  return { status, summary, error, fromCache, dismiss };
+  return { status, output, error, fromCache, dismiss };
 };
 
 export type {
   SummarizeOptions,
   SummarizeResult,
   SummaryCache,
+  CacheOption,
 } from "../index.js";

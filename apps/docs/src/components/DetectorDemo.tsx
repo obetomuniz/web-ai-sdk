@@ -9,9 +9,12 @@ export const DetectorDemo = ({
   initial = "Olá, mundo! Os blocos modulares são uma boa ideia.",
 }: DetectorDemoProps) => {
   const [text, setText] = useState(initial);
-  const { status, language, confidence, all, error, fromCache } = useDetector({
-    text,
+  const { status, output, error, fromCache } = useDetector({
+    input: text,
   });
+  const language = output?.language ?? null;
+  const confidence = output?.confidence ?? 0;
+  const all = output?.all ?? [];
 
   return (
     <div className="demo-card demo-card--narrow">
@@ -40,7 +43,7 @@ export const DetectorDemo = ({
               ? "Cached"
               : status === "loading"
                 ? "Detecting…"
-                : status === "pending"
+                : status === "idle"
                   ? "Waiting for input"
                   : "Result"}
           </span>
@@ -63,7 +66,7 @@ export const DetectorDemo = ({
           </ol>
         ) : (
           <p className="demo-muted" style={{ margin: 0 }}>
-            {status === "pending"
+            {status === "idle"
               ? "Type or paste text above."
               : status === "loading"
                 ? "…"

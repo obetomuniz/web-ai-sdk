@@ -89,6 +89,7 @@ export interface LanguageModelApi {
   params?(): Promise<LanguageModelParams | null>;
 }
 
+/** Internal: read the native global. Not exported from the package. */
 export const getLanguageModelApi = (): LanguageModelApi | null => {
   if (typeof globalThis === "undefined") return null;
   return (
@@ -97,7 +98,8 @@ export const getLanguageModelApi = (): LanguageModelApi | null => {
   );
 };
 
-export const isPromptAvailable = (): boolean => getLanguageModelApi() !== null;
+/** Whether the current environment exposes the Prompt API. */
+export const isAvailable = (): boolean => getLanguageModelApi() !== null;
 
 export const checkAvailability = async (options?: {
   expectedInputs?: LanguageModelExpectedInput[];
@@ -125,24 +127,12 @@ const cacheConfig: CacheConfig = { max: DEFAULT_MAX_CACHED_SESSIONS };
 // oldest (first) entry.
 const sessionCache = new Map<string, Promise<LanguageModelInstance>>();
 
-export interface ConfigurePromptCacheOptions {
-  /** Soft cap on cached one-shot sessions. Default: `8`. */
-  max?: number;
-}
-
 /**
- * Bound the internal one-shot session cache. The cache only memoizes sessions
- * created by `ask()`; `createSession()` is never cached. Excess entries are
- * evicted in LRU order (their `destroy?()` is invoked when present).
- *
- * Lowering `max` immediately evicts down to the new ceiling.
+ * Test-only escape hatch; reconfigure the session LRU cap. Not part of the
+ * public API.
  */
-export const configurePromptCache = (
-  options: ConfigurePromptCacheOptions = {},
-): void => {
-  if (options.max !== undefined) {
-    cacheConfig.max = Math.max(0, Math.floor(options.max));
-  }
+export const __configureCacheForTests = (max: number): void => {
+  cacheConfig.max = Math.max(0, Math.floor(max));
   trim();
 };
 
@@ -168,32 +158,6 @@ const trim = (): void => {
     sessionCache.delete(oldestKey);
     if (evicted) destroySession(evicted);
   }
-};
-
-/**
- * Drop every cached one-shot session. Sessions live for the tab lifetime by
- * default; call this to free them eagerly (e.g. when navigating away from a
- * feature that won't be revisited). Does not affect sessions created via
- * `createSession()`.
- */
-export const clearSessions = (): void => {
-  for (const entry of sessionCache.values()) {
-    destroySession(entry);
-  }
-  sessionCache.clear();
-};
-
-/**
- * Drop the cached session whose create-options match `options`. Useful when
- * you know a specific persona / temperature combination is finished and the
- * memory should be released without flushing the whole cache.
- */
-export const clearSession = (options: LanguageModelCreateOptions): void => {
-  const key = JSON.stringify(options);
-  const entry = sessionCache.get(key);
-  if (!entry) return;
-  sessionCache.delete(key);
-  destroySession(entry);
 };
 
 /**

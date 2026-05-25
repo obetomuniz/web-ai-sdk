@@ -4,11 +4,14 @@ Building blocks for the Web's Built-in AI APIs.
 
 A small, focused monorepo of framework-agnostic packages that smooth over the gnarly bits of the new `navigator.modelContext`, `Translator`, `Summarizer`, `LanguageModel`, and `LanguageDetector` browser APIs (feature detection, session caching, streaming, lifecycle, safe DOM rebuild) without bringing any UI along.
 
-## Two layers, one philosophy
+## What it is
 
 **`web-ai-sdk`** ships one package per browser capability. Zero runtime dependencies. Vanilla TypeScript by default, with optional React hooks. That's it. The SDK tracks a moving browser spec and intentionally stays out of the way of *how* you build an app.
 
-A companion project, **`web-ai-kit`** *(coming soon)*, will provide higher-level building blocks composed on top of these primitives: agent loops, headless UI, persistent memory, remote MCP clients. Each kit package will evolve on its own timeline; none will be required to use the SDK.
+Compositions that bond multiple primitives (block-level DOM translation,
+article-aware summarization, detect-then-summarize chains) are
+deliberately out of scope — the SDK wraps one capability per package;
+composition is your code.
 
 See [`apps/docs/src/content/docs/architecture.mdx`](./apps/docs/src/content/docs/architecture.mdx) (rendered at [`web-ai-sdk.dev/docs/architecture/`](https://web-ai-sdk.dev/docs/architecture/)) for the full model.
 

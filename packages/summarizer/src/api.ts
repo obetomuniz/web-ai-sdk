@@ -65,6 +65,7 @@ export interface SummarizerApi {
   create(options?: SummarizerCreateOptions): Promise<SummarizerInstance>;
 }
 
+/** Internal: read the native global. Not exported from the package. */
 export const getSummarizerApi = (): SummarizerApi | null => {
   if (typeof globalThis === "undefined") return null;
   return (
@@ -72,7 +73,8 @@ export const getSummarizerApi = (): SummarizerApi | null => {
   );
 };
 
-export const isSummarizerAvailable = (): boolean => getSummarizerApi() !== null;
+/** Whether the current environment exposes the Summarizer API. */
+export const isAvailable = (): boolean => getSummarizerApi() !== null;
 
 export const checkAvailability = async (
   options?: SummarizerAvailabilityOptions,

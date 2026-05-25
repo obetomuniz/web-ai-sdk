@@ -8,161 +8,76 @@
  */
 
 import {
+  type TranslatorApi,
   type TranslatorAvailability,
   type TranslatorAvailabilityOptions,
+  type TranslatorCreateOptions,
+  type TranslatorInstance,
+  type TranslatorMonitor,
   checkAvailability,
   getOrCreateTranslator,
   getTranslatorApi,
-  isTranslatorAvailable,
+  isAvailable,
 } from "./api.js";
 import {
-  type BlockSerialization,
-  DEFAULT_OPAQUE_INLINE_TAGS,
-  buildCasingMap,
-  isUntranslatableToken,
-  rebuildBlock,
-  serializeBlock,
-  stripTokens,
-} from "./serialize.js";
+  type CacheOption,
+  type TranslationCache,
+  defaultCacheKey,
+  resolveCache,
+} from "./cache.js";
 
-export {
-  isTranslatorAvailable,
-  checkAvailability,
-  getTranslatorApi,
-  getOrCreateTranslator,
-  type TranslatorAvailability,
-  type TranslatorAvailabilityOptions,
+export { isAvailable, checkAvailability };
+
+export type {
+  CacheOption,
+  TranslationCache,
+  TranslatorApi,
+  TranslatorAvailability,
+  TranslatorAvailabilityOptions,
+  TranslatorCreateOptions,
+  TranslatorInstance,
+  TranslatorMonitor,
 };
-
-export const DEFAULT_ROOT_SELECTOR = "[data-translate-root]";
-export const DEFAULT_BLOCK_SELECTOR =
-  "p, h1, h2, h3, h4, h5, h6, li, blockquote, figcaption, dt, dd, summary";
-
-export type TranslateProgress =
-  | { phase: "loading-model" }
-  | { phase: "downloading-model"; loaded: number }
-  | { phase: "translating"; done: number; total: number }
-  | { phase: "block-translated"; block: Element; done: number; total: number }
-  | { phase: "block-skipped"; block: Element; reason: SkipReason }
-  | { phase: "block-error"; block: Element; error: unknown }
-  | { phase: "done"; blocksTranslated: number };
-
-export type SkipReason = "empty" | "all-tokens" | "untranslatable-token";
-
-export type RootsOption =
-  | string
-  | Element
-  | readonly Element[]
-  | (() => Iterable<Element>);
-
-export interface TranslateOptions {
-  /** BCP-47 source language (e.g. `pt`, `pt-BR`). */
-  sourceLanguage: string;
-  /** BCP-47 target language. Default: `"en"`. */
-  targetLanguage?: string;
-  /**
-   * Where to look for translatable blocks. Default:
-   * `document.querySelectorAll("[data-translate-root]")`.
-   */
-  roots?: RootsOption;
-  /** Block-level CSS selector. Default: standard text blocks. */
-  blockSelector?: string;
-  /** Tags whose inner text is treated as opaque (cloned wholesale, not translated). */
-  opaqueInlineTags?: readonly string[];
-  /** Streaming progress events. */
-  onProgress?: (event: TranslateProgress) => void;
-  /** `Document` to operate on. Default: `globalThis.document`. */
-  document?: Document;
-}
-
-export interface TranslateController {
-  /** Resolves with the count of successfully translated blocks. */
-  done: Promise<{ blocksTranslated: number }>;
-  /** Abort an in-flight translation. The promise rejects with `AbortError`. */
-  cancel(): void;
-  /**
-   * Restore every block that has been translated so far to its original
-   * children. Idempotent; calling twice on the same block is a no-op.
-   */
-  restore(): void;
-  /** Whether any blocks remain in the translated state. */
-  isTranslated(): boolean;
-}
-
-interface TranslatedRecord {
-  block: Element;
-  original: Node[];
-}
 
 const NORMALIZE_LANG = (lang: string): string =>
   lang.split("-")[0]?.toLowerCase() ?? lang.toLowerCase();
 
-const resolveRoots = (
-  roots: RootsOption | undefined,
-  doc: Document,
-): Element[] => {
-  if (roots === undefined) {
-    return Array.from(doc.querySelectorAll<Element>(DEFAULT_ROOT_SELECTOR));
-  }
-  if (typeof roots === "string") {
-    return Array.from(doc.querySelectorAll<Element>(roots));
-  }
-  if (typeof roots === "function") {
-    return Array.from(roots());
-  }
-  if (Array.isArray(roots)) {
-    return [...(roots as readonly Element[])];
-  }
-  return [roots as Element];
-};
+export interface TranslateOptions {
+  /** Text to translate. Empty / whitespace input resolves to `{ output: null }`. */
+  input: string;
+  /** BCP-47 source language (e.g. `pt`, `pt-BR`). */
+  sourceLanguage: string;
+  /** BCP-47 target language. Default: `"en"`. */
+  targetLanguage?: string;
+  /** Observe the first-call model download. */
+  monitor?: (m: TranslatorMonitor) => void;
+  /**
+   * Result cache. Off by default; every call hits the model. Pass
+   * `"session"` / `"local"` for the matching web-storage shortcut, or any
+   * `{ get, set }`-shaped object for a custom backend.
+   */
+  cache?: CacheOption;
+  /** Cache key. Default: hash of `{ sourceLanguage, targetLanguage, input }`. */
+  cacheKey?: string;
+  /** Abort signal. */
+  signal?: AbortSignal;
+}
 
-const findBlocks = (
-  roots: readonly Element[],
-  blockSelector: string,
-): Element[] => {
-  const seen = new Set<Element>();
-  const blocks: Element[] = [];
+export interface TranslateResult {
+  /**
+   * Translated text, or `null` when the input was empty / when source and
+   * target languages match (no-op pass-through is not emitted as text).
+   */
+  output: string | null;
+  /** Whether the result came from the cache (no model call). */
+  cached: boolean;
+}
 
-  const consider = (el: Element): void => {
-    if (seen.has(el)) return;
-    if (el.closest("pre")) return;
-    if (el.querySelector("pre")) return;
-    if (el.querySelector(blockSelector)) return;
-    if (!el.textContent?.trim()) return;
-    seen.add(el);
-    blocks.push(el);
-  };
+export class TranslatorUnavailableError extends Error {
+  override readonly name = "TranslatorUnavailableError";
+}
 
-  for (const root of roots) {
-    if (root.querySelector(blockSelector)) {
-      for (const block of root.querySelectorAll<Element>(blockSelector)) {
-        consider(block);
-      }
-    } else {
-      consider(root);
-    }
-  }
-
-  return blocks;
-};
-
-const snapshotChildren = (block: Element): Node[] =>
-  Array.from(block.childNodes).map((n) => n.cloneNode(true));
-
-const skipReason = (serialization: BlockSerialization): SkipReason | null => {
-  const trimmed = serialization.text.trim();
-  if (!trimmed) return "empty";
-  const stripped = stripTokens(serialization.text).trim();
-  if (!stripped) return "all-tokens";
-  const isStandaloneToken =
-    serialization.parts.length === 0 && !/\s/.test(trimmed);
-  if (isStandaloneToken && isUntranslatableToken(trimmed)) {
-    return "untranslatable-token";
-  }
-  return null;
-};
-
-class AbortError extends Error {
+class TranslateAbortError extends Error {
   override readonly name = "AbortError";
   constructor() {
     super("Translation aborted");
@@ -170,141 +85,71 @@ class AbortError extends Error {
 }
 
 /**
- * Start a block-level translation. Returns synchronously with a controller;
- * await `controller.done` for completion or call `controller.cancel()` /
- * `controller.restore()` at any time. On unsupported browsers, `done`
- * resolves immediately with `blocksTranslated: 0`.
+ * Translate a string from `sourceLanguage` to `targetLanguage`. Returns
+ * `{ output: null }` when the input is empty or when source and target
+ * match. Throws `TranslatorUnavailableError` when the API isn't present in
+ * the environment or reports `availability: "unavailable"`.
  */
-export const translate = (options: TranslateOptions): TranslateController => {
-  const doc = options.document ?? globalThis.document;
-  const targetLanguage = options.targetLanguage ?? "en";
-  const blockSelector = options.blockSelector ?? DEFAULT_BLOCK_SELECTOR;
-  const opaqueTags = new Set(
-    (options.opaqueInlineTags ?? DEFAULT_OPAQUE_INLINE_TAGS).map((t) =>
-      t.toUpperCase(),
-    ),
-  );
-  const onProgress = options.onProgress ?? (() => {});
+export const translate = async (
+  options: TranslateOptions,
+): Promise<TranslateResult> => {
+  const api = getTranslatorApi();
+  if (!api?.create) {
+    throw new TranslatorUnavailableError(
+      "Translator API is not available in this environment.",
+    );
+  }
 
-  const sourceShort = NORMALIZE_LANG(options.sourceLanguage);
-  const targetShort = NORMALIZE_LANG(targetLanguage);
-  const sameLanguage = sourceShort === targetShort;
+  const text = options.input.trim();
+  if (!text) return { output: null, cached: false };
 
-  let cancelled = false;
-  const translated: TranslatedRecord[] = [];
+  const sourceLanguage = NORMALIZE_LANG(options.sourceLanguage);
+  const targetLanguage = NORMALIZE_LANG(options.targetLanguage ?? "en");
+  if (sourceLanguage === targetLanguage) {
+    return { output: null, cached: false };
+  }
 
-  const controller: TranslateController = {
-    done: Promise.resolve({ blocksTranslated: 0 }),
-    cancel: () => {
-      cancelled = true;
-    },
-    restore: () => {
-      cancelled = true;
-      while (translated.length > 0) {
-        const record = translated.pop();
-        if (!record) break;
-        record.block.replaceChildren(
-          ...record.original.map((n) => n.cloneNode(true)),
-        );
-      }
-    },
-    isTranslated: () => translated.length > 0,
+  const cache = resolveCache(options.cache);
+  const cacheKey =
+    options.cacheKey ??
+    defaultCacheKey({ sourceLanguage, targetLanguage, text });
+  if (cache) {
+    const cached = cache.get(cacheKey);
+    if (cached) return { output: cached, cached: true };
+  }
+
+  const createOptions: TranslatorCreateOptions = {
+    sourceLanguage,
+    targetLanguage,
+    ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
-  if (sameLanguage || !doc) {
-    return controller;
+  // Kick off session and availability in parallel; first call pays the cold
+  // start, later calls reuse the cached session.
+  const sessionPromise = getOrCreateTranslator(api, createOptions);
+  const availability = await api
+    .availability({ sourceLanguage, targetLanguage })
+    .catch(() => "unavailable" as const);
+  if (availability === "unavailable") {
+    throw new TranslatorUnavailableError("Translator reports unavailable.");
   }
+  if (options.signal?.aborted) throw new TranslateAbortError();
 
-  const api = getTranslatorApi();
-  if (!api) {
-    return controller;
+  let session: TranslatorInstance;
+  try {
+    session = await sessionPromise;
+  } catch (err) {
+    if (err instanceof TranslateAbortError) throw err;
+    const message = (err as Error)?.message ?? String(err);
+    throw new TranslatorUnavailableError(
+      `Translator.create() failed: ${message}`,
+    );
   }
+  if (options.signal?.aborted) throw new TranslateAbortError();
 
-  controller.done = (async () => {
-    const roots = resolveRoots(options.roots, doc);
-    const blocks = findBlocks(roots, blockSelector);
-    if (blocks.length === 0) {
-      onProgress({ phase: "done", blocksTranslated: 0 });
-      return { blocksTranslated: 0 };
-    }
+  const output = await session.translate(text);
+  if (options.signal?.aborted) throw new TranslateAbortError();
 
-    onProgress({ phase: "loading-model" });
-
-    const session = await getOrCreateTranslator(api, {
-      sourceLanguage: sourceShort,
-      targetLanguage: targetShort,
-      monitor(m) {
-        m.addEventListener("downloadprogress", (event) => {
-          onProgress({ phase: "downloading-model", loaded: event.loaded });
-        });
-      },
-    });
-    if (cancelled) throw new AbortError();
-
-    const casingMap = new Map<string, string>();
-    for (const block of blocks) {
-      buildCasingMap(block.textContent ?? "", casingMap);
-    }
-
-    onProgress({ phase: "translating", done: 0, total: blocks.length });
-    let done = 0;
-
-    for (const block of blocks) {
-      if (cancelled) throw new AbortError();
-
-      const serialization = serializeBlock(block, opaqueTags);
-      const skip = skipReason(serialization);
-
-      if (skip) {
-        onProgress({ phase: "block-skipped", block, reason: skip });
-        done += 1;
-        onProgress({
-          phase: "block-translated",
-          block,
-          done,
-          total: blocks.length,
-        });
-        continue;
-      }
-
-      const original = snapshotChildren(block);
-      try {
-        const out = await session.translate(serialization.text);
-        if (cancelled) throw new AbortError();
-        const fragment = rebuildBlock(out, serialization, casingMap, doc);
-        block.replaceChildren(fragment);
-        translated.push({ block, original });
-      } catch (err) {
-        if (err instanceof AbortError) throw err;
-        onProgress({ phase: "block-error", block, error: err });
-      }
-
-      done += 1;
-      onProgress({
-        phase: "block-translated",
-        block,
-        done,
-        total: blocks.length,
-      });
-    }
-
-    onProgress({ phase: "done", blocksTranslated: translated.length });
-    return { blocksTranslated: translated.length };
-  })();
-
-  return controller;
+  if (output && cache) cache.set(cacheKey, output);
+  return { output: output || null, cached: false };
 };
-
-export {
-  buildCasingMap,
-  isUntranslatableToken,
-  rebuildBlock,
-  restoreOriginalCasing,
-  serializeBlock,
-  stripTokens,
-} from "./serialize.js";
-export type { BlockSerialization } from "./serialize.js";
-export type {
-  TranslatorApi,
-  TranslatorInstance,
-} from "./api.js";

@@ -1,144 +1,113 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  type RootsOption,
-  type TranslateController,
-  type TranslateProgress,
-  checkAvailability,
-  isTranslatorAvailable,
+  type TranslateOptions,
+  TranslatorUnavailableError,
+  isAvailable,
   translate,
 } from "../index.js";
 
-export type TranslatorState = "unavailable" | "idle" | "working" | "translated";
+export type TranslatorStatus = "idle" | "loading" | "done" | "unavailable";
 
-export interface UseTranslatorOptions {
-  sourceLanguage: string;
-  targetLanguage?: string;
-  roots?: RootsOption;
-  blockSelector?: string;
-  opaqueInlineTags?: readonly string[];
+export interface UseTranslatorOptions extends Omit<TranslateOptions, "signal"> {
+  /** Whether to automatically run on mount / option change. Default: `true`. */
+  enabled?: boolean;
 }
 
 export interface UseTranslatorReturn {
-  state: TranslatorState;
-  /** Latest progress event, or `null` while idle. */
-  progress: TranslateProgress | null;
-  /** Last error thrown by `translate()`, or `null`. */
+  status: TranslatorStatus;
+  /** Translated text, or `null` while idle / unavailable. */
+  output: string | null;
   error: Error | null;
-  /** Trigger a translation run. No-op while `state === "working"`. */
-  translate(): void;
-  /** Restore translated blocks. No-op when nothing has been translated. */
-  restore(): void;
+  /** Whether the result was loaded from cache (no model call). */
+  fromCache: boolean;
 }
 
-const NORMALIZE_LANG = (lang: string): string =>
-  lang.split("-")[0]?.toLowerCase() ?? lang.toLowerCase();
-
+/**
+ * Auto-translate `input` from `sourceLanguage` to `targetLanguage`. Re-runs
+ * when any of the inputs change. Stays in `"idle"` until `input` is
+ * non-empty and the language pair differs.
+ */
 export const useTranslator = (
   options: UseTranslatorOptions,
 ): UseTranslatorReturn => {
+  const [status, setStatus] = useState<TranslatorStatus>(() =>
+    isAvailable() ? "idle" : "unavailable",
+  );
+  const [output, setOutput] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const [fromCache, setFromCache] = useState(false);
+
   const {
+    input,
     sourceLanguage,
-    targetLanguage = "en",
-    roots,
-    blockSelector,
-    opaqueInlineTags,
+    targetLanguage,
+    monitor,
+    cache,
+    cacheKey,
+    enabled = true,
   } = options;
 
-  const sourceShort = NORMALIZE_LANG(sourceLanguage);
-  const targetShort = NORMALIZE_LANG(targetLanguage);
-  const sameLanguage = sourceShort === targetShort;
-
-  const [state, setState] = useState<TranslatorState>(() => {
-    if (sameLanguage) return "unavailable";
-    return isTranslatorAvailable() ? "idle" : "unavailable";
-  });
-  const [progress, setProgress] = useState<TranslateProgress | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-  const controllerRef = useRef<TranslateController | null>(null);
-
   useEffect(() => {
-    if (sameLanguage) return;
-    if (!isTranslatorAvailable()) {
-      setState("unavailable");
+    if (!enabled) return;
+    if (!isAvailable()) {
+      setStatus("unavailable");
+      return;
+    }
+    if (!input.trim()) {
+      setStatus("idle");
+      setOutput(null);
       return;
     }
 
-    let active = true;
-    checkAvailability({
-      sourceLanguage: sourceShort,
-      targetLanguage: targetShort,
-    }).then((availability) => {
-      if (!active) return;
-      if (availability === "unavailable") setState("unavailable");
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [sourceShort, targetShort, sameLanguage]);
-
-  useEffect(() => {
-    return () => {
-      controllerRef.current?.cancel();
-    };
-  }, []);
-
-  const triggerTranslate = useCallback(() => {
-    if (sameLanguage) return;
+    const controller = new AbortController();
     setError(null);
-    const controller = translate({
-      sourceLanguage: sourceShort,
-      targetLanguage: targetShort,
-      roots,
-      blockSelector,
-      opaqueInlineTags,
-      onProgress: setProgress,
-    });
-    controllerRef.current = controller;
-    setState("working");
+    setStatus("loading");
 
-    controller.done
-      .then(({ blocksTranslated }) => {
-        if (controllerRef.current !== controller) return;
-        if (blocksTranslated === 0) {
-          setState("idle");
-          return;
-        }
-        setState("translated");
+    translate({
+      input,
+      sourceLanguage,
+      targetLanguage,
+      monitor,
+      cache,
+      cacheKey,
+      signal: controller.signal,
+    })
+      .then((result) => {
+        if (controller.signal.aborted) return;
+        setOutput(result.output);
+        setFromCache(result.cached);
+        setStatus("done");
       })
       .catch((err: unknown) => {
-        if (controllerRef.current !== controller) return;
+        if (controller.signal.aborted) return;
         if ((err as { name?: string })?.name === "AbortError") return;
+        if (err instanceof TranslatorUnavailableError) {
+          setStatus("unavailable");
+          return;
+        }
         setError(err instanceof Error ? err : new Error(String(err)));
-        setState("idle");
+        setStatus("unavailable");
       });
+
+    return () => {
+      controller.abort();
+    };
   }, [
-    sameLanguage,
-    sourceShort,
-    targetShort,
-    roots,
-    blockSelector,
-    opaqueInlineTags,
+    enabled,
+    input,
+    sourceLanguage,
+    targetLanguage,
+    monitor,
+    cache,
+    cacheKey,
   ]);
 
-  const restore = useCallback(() => {
-    controllerRef.current?.restore();
-    controllerRef.current = null;
-    setState("idle");
-    setProgress(null);
-  }, []);
-
-  return {
-    state,
-    progress,
-    error,
-    translate: triggerTranslate,
-    restore,
-  };
+  return { status, output, error, fromCache };
 };
 
 export type {
-  RootsOption,
-  TranslateController,
-  TranslateProgress,
+  TranslateOptions,
+  TranslateResult,
+  TranslationCache,
+  CacheOption,
 } from "../index.js";

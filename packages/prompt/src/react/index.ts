@@ -7,7 +7,7 @@ import {
   type Session,
   ask,
   createSession,
-  isPromptAvailable,
+  isAvailable,
 } from "../index.js";
 
 export type PromptStatus =
@@ -22,7 +22,8 @@ export interface UsePromptOptions
 
 export interface UsePromptReturn {
   status: PromptStatus;
-  response: string | null;
+  /** Final response text, or `null` while idle / unavailable. */
+  output: string | null;
   error: Error | null;
   /** Whether the most recent result was loaded from cache (no model call). */
   fromCache: boolean;
@@ -30,15 +31,16 @@ export interface UsePromptReturn {
   ask(input: string): Promise<void>;
   /** Cancel the in-flight request, if any. Status flips to `idle`. */
   abort(): void;
-  /** Reset to `idle` and clear the response. Does not cancel an in-flight request. */
+  /** Reset to `idle` and clear the output. Does not cancel an in-flight request. */
   reset(): void;
 }
 
 /**
  * Run prompts on demand. `ask(input)` triggers the request and updates state
- * as chunks stream. Pass `cache`, `createOptions`, etc. as stable references
- * (memoize if necessary); the hook keeps them in a ref to avoid stale-closure
- * issues without forcing the consumer to re-render on every change.
+ * as chunks stream. Non-primitive options (`cache`, `monitor`, etc.) should
+ * be stable references (memoize if necessary); the hook keeps them in a ref
+ * to avoid stale-closure issues without forcing the consumer to re-render on
+ * every change.
  *
  * For multi-turn chat where each conversation needs its own context,
  * system prompt, and lifecycle (so `abort()` on one chat doesn't kill
@@ -46,9 +48,9 @@ export interface UsePromptReturn {
  */
 export const usePrompt = (options: UsePromptOptions = {}): UsePromptReturn => {
   const [status, setStatus] = useState<PromptStatus>(() =>
-    isPromptAvailable() ? "idle" : "unavailable",
+    isAvailable() ? "idle" : "unavailable",
   );
-  const [response, setResponse] = useState<string | null>(null);
+  const [output, setOutput] = useState<string | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [fromCache, setFromCache] = useState(false);
 
@@ -59,7 +61,7 @@ export const usePrompt = (options: UsePromptOptions = {}): UsePromptReturn => {
 
   // If the API disappears (e.g. across HMR), flip back to "unavailable".
   useEffect(() => {
-    if (!isPromptAvailable()) setStatus("unavailable");
+    if (!isAvailable()) setStatus("unavailable");
   }, []);
 
   const abort = useCallback(() => {
@@ -69,14 +71,14 @@ export const usePrompt = (options: UsePromptOptions = {}): UsePromptReturn => {
   }, []);
 
   const reset = useCallback(() => {
-    setResponse(null);
+    setOutput(null);
     setError(null);
     setFromCache(false);
-    setStatus(isPromptAvailable() ? "idle" : "unavailable");
+    setStatus(isAvailable() ? "idle" : "unavailable");
   }, []);
 
   const askMethod = useCallback(async (input: string): Promise<void> => {
-    if (!isPromptAvailable()) {
+    if (!isAvailable()) {
       setStatus("unavailable");
       return;
     }
@@ -85,7 +87,7 @@ export const usePrompt = (options: UsePromptOptions = {}): UsePromptReturn => {
     controllerRef.current = controller;
 
     setError(null);
-    setResponse(null);
+    setOutput(null);
     setFromCache(false);
     setStatus("loading");
 
@@ -96,16 +98,16 @@ export const usePrompt = (options: UsePromptOptions = {}): UsePromptReturn => {
         signal: controller.signal,
         onUpdate: (chunk) => {
           if (controller.signal.aborted) return;
-          setResponse(chunk);
+          setOutput(chunk);
           setStatus("streaming");
         },
       });
       if (controller.signal.aborted) return;
-      if (!result.response) {
+      if (!result.output) {
         setStatus("idle");
         return;
       }
-      setResponse(result.response);
+      setOutput(result.output);
       setFromCache(result.cached);
       setStatus("done");
     } catch (err: unknown) {
@@ -125,7 +127,7 @@ export const usePrompt = (options: UsePromptOptions = {}): UsePromptReturn => {
   // Abort any in-flight request on unmount.
   useEffect(() => () => controllerRef.current?.abort(), []);
 
-  return { status, response, error, fromCache, ask: askMethod, abort, reset };
+  return { status, output, error, fromCache, ask: askMethod, abort, reset };
 };
 
 export type SessionStatus = "loading" | "ready" | "unavailable";
@@ -158,7 +160,7 @@ export interface UseSessionReturn {
  * second component's send waits for the first to drain. The API is
  * forward-compatible for runtimes that expose parallel inference.
  *
- * The hook intentionally does **not** track `response` / `history` /
+ * The hook intentionally does **not** track `output` / `history` /
  * streaming status. Iterate `session.sendStreaming()` yourself and keep UI
  * state in your own components. The hook only solves the React lifecycle:
  * feature detection, create, destroy, recreate-on-change.
@@ -187,13 +189,13 @@ export const useSession = (
     session: Session | null;
     error: Error | null;
   }>(() => ({
-    status: isPromptAvailable() && enabled ? "loading" : "unavailable",
+    status: isAvailable() && enabled ? "loading" : "unavailable",
     session: null,
     error: null,
   }));
 
   useEffect(() => {
-    if (!enabled || !isPromptAvailable()) {
+    if (!enabled || !isAvailable()) {
       setState({ status: "unavailable", session: null, error: null });
       return;
     }
@@ -222,11 +224,6 @@ export const useSession = (
       });
       return;
     }
-    // `status: "ready"` means the session object exists and is usable.
-    // Sends await the underlying `LanguageModel.create()` internally; if
-    // creation fails, the consumer sees `PromptUnavailableError` on the
-    // first send. The hook does not pre-detect creation errors — that
-    // would require an extra observation channel we deliberately don't expose.
     setState({ status: "ready", session, error: null });
 
     return () => {
@@ -251,6 +248,7 @@ export type {
   AskOptions,
   AskResult,
   ResponseCache,
+  CacheOption,
   CreateSessionOptions,
   Session,
 } from "../index.js";

@@ -19,11 +19,14 @@ hero:
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
 
-## Two layers, one philosophy
+## What it is
 
-**`web-ai-sdk`** ships building blocks for the Web's Built-in AI APIs. One package per browser capability (Prompt, WebMCP, Summarizer, Translator, Detector). Zero runtime dependencies. Vanilla TypeScript by default, with optional React hooks.
+**`web-ai-sdk`** ships building blocks for the Web's Built-in AI APIs. One package per browser capability (Prompt, WebMCP, Summarizer, Translator, Detector). Zero runtime dependencies. Vanilla TypeScript by default, with optional React hooks. See [Architecture](/docs/architecture/) for the model.
 
-A companion project, **`web-ai-kit`** *(coming soon)*, will provide higher-level building blocks composed on top of these primitives: agent loops, headless UI, persistent memory, remote MCP clients. Each kit package will evolve on its own timeline; none will be required to use the SDK. See [Architecture](/docs/architecture/) for the model.
+Compositions that bond multiple primitives (block-level DOM translation,
+article-aware summarization, detect-then-summarize chains) are
+deliberately out of scope — the SDK wraps one capability per package;
+composition is your code.
 
 ## Composable wrappers. One philosophy.
 
@@ -45,8 +48,8 @@ A companion project, **`web-ai-kit`** *(coming soon)*, will provide higher-level
     [Read the guide →](/docs/guides/summarizer/)
   </Card>
   <Card title="@web-ai-sdk/translator" icon="translate">
-    Pair-based translation with block-level round-trip. Walks the DOM, swaps
-    text, keeps markup intact. [Read the guide →](/docs/guides/translator/)
+    String-mode translation with pair-cached sessions. Source → target in one
+    call. [Read the guide →](/docs/guides/translator/)
   </Card>
   <Card title="@web-ai-sdk/detector" icon="magnifier">
     Detect the language of any text on-device. Confidence scores plus a sorted

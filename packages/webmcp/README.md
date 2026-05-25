@@ -105,19 +105,16 @@ The hook registers on mount, unregisters on unmount, and re-registers when the a
 
 Register a single tool. Returns a cleanup function. No-op on unsupported browsers.
 
-### `registerTools(tools): () => void` <sup>deprecated</sup>
+To register many at once, map and combine:
 
-Register many tools at once. Returns a single cleanup that unregisters all of them.
+```ts
+const cleanups = tools.map(registerTool);
+const cleanup = () => cleanups.forEach((c) => c());
+```
 
-**Deprecated — will be removed in 0.4.** `registerTool` is the primitive; combine cleanups yourself when you need to register many: `const cleanups = tools.map(registerTool)`.
-
-### `isWebMCPAvailable(): boolean`
+### `isAvailable(): boolean`
 
 Feature-detect helper.
-
-### `getModelContext(): ModelContext | undefined`
-
-Escape hatch: the raw `navigator.modelContext` if present, for cases the wrapper doesn't cover (e.g. `requestUserInteraction`).
 
 ### `Tool<TInput, TOutput>`
 

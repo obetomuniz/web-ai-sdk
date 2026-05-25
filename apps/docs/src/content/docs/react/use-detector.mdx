@@ -5,7 +5,7 @@ description: React adapter for @web-ai-sdk/detector. Auto-detects the language o
 
 import { DetectorDemo } from "../../../components/DetectorDemo.tsx";
 
-React adapter for `@web-ai-sdk/detector`. Auto-detects the language of `text` on mount and re-runs whenever the text changes. For the conceptual overview see [Detector](/docs/guides/detector/).
+React adapter for `@web-ai-sdk/detector`. Auto-detects the language of `input` on mount and re-runs whenever it changes. For the conceptual overview see [Detector](/docs/guides/detector/).
 
 ## Live demo
 
@@ -19,51 +19,50 @@ Edit the input; the badge updates as you type. The list under the badge shows th
 import { useDetector } from "@web-ai-sdk/detector/react";
 
 export function LangBadge({ text }: { text: string }) {
-  const { status, language, confidence } = useDetector({ text });
+  const { status, output } = useDetector({ input: text });
 
-  if (status !== "done" || !language) return null;
+  if (status !== "done" || !output) return null;
   return (
     <span>
-      {language} · {Math.round(confidence * 100)}%
+      {output.language} · {Math.round(output.confidence * 100)}%
     </span>
   );
 }
 ```
 
-The hook auto-runs whenever `text` changes. Empty / whitespace-only inputs keep the hook in `"pending"` without invoking the model. The hook is the right choice when you want a passive badge that mirrors live input.
+The hook auto-runs whenever `input` changes. Empty / whitespace-only inputs keep the hook in `"idle"` without invoking the model. The hook is the right choice when you want a passive badge that mirrors live input.
 
 ## State machine
 
 ```
-pending ───► loading ───► done
-                            │
-unavailable ◄── (no flag /  │
-                no model)   │
-                            ▼
-              text empty ─► pending
+idle ───► loading ───► done
+                         │
+unavailable ◄── (no API) │
+                         ▼
+              input empty ─► idle
 ```
 
-- **`pending`**: hook mounted, input empty or whitespace-only.
+- **`idle`**: hook mounted, input empty or whitespace-only.
 - **`loading`**: input present, detection in flight (~100-300ms cold, sub-50ms warm).
-- **`done`**: detection complete. `language` is the top BCP-47 code (or `null` if below `minConfidence`). `confidence` is the top score. `all` is the full sorted list.
+- **`done`**: detection complete. `output` is `{ language, confidence, all }` or `null` (below `minConfidence`).
 - **`unavailable`**: API missing. Render nothing or a fallback.
 
 ## Confidence threshold
 
 ```tsx
-const { language, confidence } = useDetector({
-  text,
+const { output } = useDetector({
+  input: text,
   minConfidence: 0.8,
 });
 
-// Below 0.8 confidence, `language` is null and you can render nothing.
+// Below 0.8 confidence, `output` is null and you can render nothing.
 ```
 
 ## Bias hints
 
 ```tsx
 const result = useDetector({
-  text,
+  input: text,
   expectedInputLanguages: ["pt", "es", "en"],
 });
 ```
@@ -75,44 +74,38 @@ Use this when you have a prior on what the input language might be; it helps the
 The result cache is opt-in:
 
 ```tsx
-import { createSessionStorageCache } from "@web-ai-sdk/detector";
-
-const cache = useMemo(() => createSessionStorageCache(), []);
-
-const result = useDetector({ text, cache });
+const result = useDetector({ input: text, cache: "session" });
 ```
 
-`result.fromCache` is `true` when the cache served the result. Memoize the cache (or any `{ get, set }`-shaped object) so React doesn't restart on every render.
+`result.fromCache` is `true` when the cache served the result. Pass `"session"` / `"local"` for the matching web-storage shortcut, or any `{ get, set }`-shaped object for a custom backend (memoize it so React doesn't restart on every render).
 
 ## Aborting
 
-The hook aborts any in-flight call when `text` changes or the component unmounts. You don't need to manage `AbortController` directly.
+The hook aborts any in-flight call when `input` changes or the component unmounts. You don't need to manage `AbortController` directly.
 
 ## Reference
 
 ```ts
 import type { UseDetectorOptions, UseDetectorReturn, DetectorStatus } from "@web-ai-sdk/detector/react";
 
-type DetectorStatus = "pending" | "loading" | "done" | "unavailable";
+type DetectorStatus = "idle" | "loading" | "done" | "unavailable";
 
-interface UseDetectorOptions extends Omit<DetectOptions, "text" | "signal"> {
-  text: string;            // empty / whitespace-only keeps the hook in "pending"
+interface UseDetectorOptions extends Omit<DetectOptions, "input" | "signal"> {
+  input: string;           // empty / whitespace-only keeps the hook in "idle"
   enabled?: boolean;       // default: true
   // Inherited from DetectOptions:
   expectedInputLanguages?: readonly string[];
   minConfidence?: number;
-  createOptions?: LanguageDetectorCreateOptions;
-  cache?: DetectionCache;
+  monitor?: (m: CreateMonitor) => void;
+  cache?: "session" | "local" | { get, set };
   cacheKey?: string;
 }
 
 interface UseDetectorReturn {
   status: DetectorStatus;
-  language: string | null;        // top BCP-47 candidate; null below minConfidence
-  confidence: number;             // confidence of the top result
-  all: DetectionResult[];         // full sorted list of candidates
+  output: { language: string; confidence: number; all: DetectionResult[] } | null;
   error: Error | null;
-  fromCache: boolean;             // true when served by the opt-in cache
+  fromCache: boolean;
 }
 
 declare const useDetector: (options: UseDetectorOptions) => UseDetectorReturn;

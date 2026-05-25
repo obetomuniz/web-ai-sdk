@@ -11,7 +11,7 @@ export const PromptDemo = ({
   temperature = 0.7,
 }: PromptDemoProps) => {
   const [input, setInput] = useState("What is WebMCP, in one sentence?");
-  const { status, response, error, fromCache, ask, abort, reset } = usePrompt({
+  const { status, output, error, fromCache, ask, abort, reset } = usePrompt({
     systemPrompt,
     temperature,
   });
@@ -55,7 +55,7 @@ export const PromptDemo = ({
         )}
       </form>
       {error && <p className="demo-error">{error.message}</p>}
-      {(response || busy) && (
+      {(output || busy) && (
         <article className="demo-response">
           <header className="demo-response__header">
             <span>
@@ -67,7 +67,7 @@ export const PromptDemo = ({
                     ? "Thinking…"
                     : "Answer"}
             </span>
-            {response && (
+            {output && (
               <button
                 type="button"
                 onClick={reset}
@@ -78,8 +78,8 @@ export const PromptDemo = ({
               </button>
             )}
           </header>
-          {response ? (
-            <p className="demo-response__body">{response}</p>
+          {output ? (
+            <p className="demo-response__body">{output}</p>
           ) : (
             <p className="demo-muted" style={{ margin: 0 }}>
               …

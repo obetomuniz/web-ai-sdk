@@ -1,11 +1,10 @@
 /**
- * `sessionStorage`-backed cache so a successful summary renders instantly on
- * revisit, skipping the model entirely. The cache is best-effort: storage
- * disabled / quota exceeded falls through silently; the summary still
- * renders.
+ * `sessionStorage`-backed cache so a successful translation renders instantly
+ * on revisit, skipping the model entirely. Off by default; opt in via
+ * `cache: "session" | "local" | { get, set }`.
  */
 
-export interface SummaryCache {
+export interface TranslationCache {
   get(key: string): string | null;
   set(key: string, value: string): void;
 }
@@ -14,24 +13,16 @@ export interface SummaryCache {
  * Public-facing `cache` option. Pass `"session"` / `"local"` for storage
  * shortcuts, or any `{ get, set }`-shaped object for a custom backend.
  */
-export type CacheOption = "session" | "local" | SummaryCache;
+export type CacheOption = "session" | "local" | TranslationCache;
 
 interface DefaultCacheOptions {
-  /** Storage backend. Default: `globalThis.sessionStorage`. */
   storage?: Storage;
-  /** Prefix for cache keys. Default: `"summarizer:"`. */
   prefix?: string;
 }
 
-export const createSessionStorageCache = (
-  options: DefaultCacheOptions = {},
-): SummaryCache => {
-  const prefix = options.prefix ?? "summarizer:";
-  const storage =
-    options.storage ??
-    (typeof globalThis !== "undefined"
-      ? (globalThis as { sessionStorage?: Storage }).sessionStorage
-      : undefined);
+const createStorageCache = (options: DefaultCacheOptions): TranslationCache => {
+  const prefix = options.prefix ?? "translator:";
+  const storage = options.storage;
 
   return {
     get(key) {
@@ -60,28 +51,37 @@ export const createSessionStorageCache = (
  */
 export const resolveCache = (
   value: CacheOption | undefined,
-): SummaryCache | undefined => {
+): TranslationCache | undefined => {
   if (value === undefined) return undefined;
   if (value === "session") {
-    return createSessionStorageCache();
+    const storage =
+      typeof globalThis !== "undefined"
+        ? (globalThis as { sessionStorage?: Storage }).sessionStorage
+        : undefined;
+    return createStorageCache({ storage });
   }
   if (value === "local") {
     const storage =
       typeof globalThis !== "undefined"
         ? (globalThis as { localStorage?: Storage }).localStorage
         : undefined;
-    return createSessionStorageCache({ storage });
+    return createStorageCache({ storage });
   }
   return value;
 };
 
 /**
- * Build a default cache key from `pathname:lang`. Pass a custom string to
- * `summarize()`'s `cacheKey` option for finer-grained invalidation.
+ * Build a default cache key from `sourceLanguage`, `targetLanguage`, and the
+ * trimmed input. Pass an explicit `cacheKey` to `translate()` if you want a
+ * more stable key (e.g. a per-feature shorthand).
  */
-export const defaultCacheKey = (lang: string): string => {
-  if (typeof globalThis === "undefined") return lang;
-  const loc = (globalThis as { location?: Location }).location;
-  if (!loc) return lang;
-  return `${loc.pathname}:${lang}`;
-};
+export const defaultCacheKey = (input: {
+  sourceLanguage: string;
+  targetLanguage: string;
+  text: string;
+}): string =>
+  JSON.stringify([
+    input.sourceLanguage.toLowerCase(),
+    input.targetLanguage.toLowerCase(),
+    input.text.trim(),
+  ]);

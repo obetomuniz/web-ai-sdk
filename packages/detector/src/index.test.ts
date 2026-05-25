@@ -4,7 +4,7 @@ import {
   type DetectionCache,
   DetectorUnavailableError,
   detect,
-  isDetectorAvailable,
+  isAvailable,
 } from "./index.js";
 
 interface FakeApi {
@@ -59,33 +59,28 @@ afterEach(() => {
   removeFakeDetector();
 });
 
-describe("isDetectorAvailable", () => {
+describe("isAvailable", () => {
   it("is false when the global is missing", () => {
-    expect(isDetectorAvailable()).toBe(false);
+    expect(isAvailable()).toBe(false);
   });
 
   it("is true when the global is present", () => {
     installFakeDetector();
-    expect(isDetectorAvailable()).toBe(true);
+    expect(isAvailable()).toBe(true);
   });
 });
 
 describe("detect", () => {
   it("throws DetectorUnavailableError when the global is missing", async () => {
-    await expect(detect({ text: "hello" })).rejects.toBeInstanceOf(
+    await expect(detect({ input: "hello" })).rejects.toBeInstanceOf(
       DetectorUnavailableError,
     );
   });
 
-  it("returns null language when input is empty", async () => {
+  it("returns null output when input is empty", async () => {
     installFakeDetector();
-    const result = await detect({ text: "   " });
-    expect(result).toEqual({
-      language: null,
-      confidence: 0,
-      all: [],
-      cached: false,
-    });
+    const result = await detect({ input: "   " });
+    expect(result).toEqual({ output: null, cached: false });
   });
 
   it("returns the top result with full sorted list", async () => {
@@ -95,10 +90,10 @@ describe("detect", () => {
         { detectedLanguage: "es", confidence: 0.02 },
       ],
     });
-    const result = await detect({ text: "Olá, mundo" });
-    expect(result.language).toBe("pt");
-    expect(result.confidence).toBeCloseTo(0.97);
-    expect(result.all).toHaveLength(2);
+    const result = await detect({ input: "Olá, mundo" });
+    expect(result.output?.language).toBe("pt");
+    expect(result.output?.confidence).toBeCloseTo(0.97);
+    expect(result.output?.all).toHaveLength(2);
     expect(result.cached).toBe(false);
   });
 
@@ -109,28 +104,26 @@ describe("detect", () => {
         { detectedLanguage: "pt", confidence: 0.97 },
       ],
     });
-    const result = await detect({ text: "Olá, mundo" });
-    expect(result.language).toBe("pt");
-    expect(result.all[0]?.detectedLanguage).toBe("pt");
+    const result = await detect({ input: "Olá, mundo" });
+    expect(result.output?.language).toBe("pt");
+    expect(result.output?.all[0]?.detectedLanguage).toBe("pt");
   });
 
-  it("returns null language when top confidence is below minConfidence", async () => {
+  it("returns null output when top confidence is below minConfidence", async () => {
     installFakeDetector({
       results: [
         { detectedLanguage: "und", confidence: 0.4 },
         { detectedLanguage: "en", confidence: 0.35 },
       ],
     });
-    const result = await detect({ text: "??", minConfidence: 0.8 });
-    expect(result.language).toBeNull();
-    expect(result.confidence).toBe(0);
-    expect(result.all).toHaveLength(2);
+    const result = await detect({ input: "??", minConfidence: 0.8 });
+    expect(result.output).toBeNull();
   });
 
   it("does not cache by default; same call hits the model twice without a `cache` option", async () => {
     const api = installFakeDetector();
-    await detect({ text: "hello" });
-    await detect({ text: "hello" });
+    await detect({ input: "hello" });
+    await detect({ input: "hello" });
     expect(api.detectSpy).toHaveBeenCalledTimes(2);
   });
 
@@ -142,11 +135,11 @@ describe("detect", () => {
       JSON.stringify([{ detectedLanguage: "fr", confidence: 0.99 }]),
     );
     const result = await detect({
-      text: "irrelevant",
+      input: "irrelevant",
       cache,
       cacheKey: "k",
     });
-    expect(result.language).toBe("fr");
+    expect(result.output?.language).toBe("fr");
     expect(result.cached).toBe(true);
     expect(api.create).not.toHaveBeenCalled();
   });
@@ -156,34 +149,34 @@ describe("detect", () => {
       results: [{ detectedLanguage: "ja", confidence: 0.9 }],
     });
     const cache = inMemoryCache();
-    await detect({ text: "こんにちは", cache, cacheKey: "k" });
+    await detect({ input: "こんにちは", cache, cacheKey: "k" });
     expect(cache.get("k")).toContain("ja");
   });
 
   it("forwards expectedInputLanguages to create()", async () => {
     const api = installFakeDetector();
-    await detect({ text: "hi", expectedInputLanguages: ["en", "es"] });
+    await detect({ input: "hi", expectedInputLanguages: ["en", "es"] });
     const createArgs = api.create.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(createArgs.expectedInputLanguages).toEqual(["en", "es"]);
   });
 
   it("reuses sessions across same-shape calls", async () => {
     const api = installFakeDetector();
-    await detect({ text: "a", expectedInputLanguages: ["en"] });
-    await detect({ text: "b", expectedInputLanguages: ["en"] });
+    await detect({ input: "a", expectedInputLanguages: ["en"] });
+    await detect({ input: "b", expectedInputLanguages: ["en"] });
     expect(api.create).toHaveBeenCalledTimes(1);
   });
 
   it("creates a new session when expectedInputLanguages differs", async () => {
     const api = installFakeDetector();
-    await detect({ text: "a", expectedInputLanguages: ["en"] });
-    await detect({ text: "b", expectedInputLanguages: ["es"] });
+    await detect({ input: "a", expectedInputLanguages: ["en"] });
+    await detect({ input: "b", expectedInputLanguages: ["es"] });
     expect(api.create).toHaveBeenCalledTimes(2);
   });
 
   it("throws DetectorUnavailableError when availability is 'unavailable'", async () => {
     installFakeDetector({ availability: "unavailable" });
-    await expect(detect({ text: "hi" })).rejects.toBeInstanceOf(
+    await expect(detect({ input: "hi" })).rejects.toBeInstanceOf(
       DetectorUnavailableError,
     );
   });
@@ -193,7 +186,7 @@ describe("detect", () => {
     const controller = new AbortController();
     controller.abort();
     await expect(
-      detect({ text: "hi", signal: controller.signal }),
+      detect({ input: "hi", signal: controller.signal }),
     ).rejects.toMatchObject({ name: "AbortError" });
   });
 });

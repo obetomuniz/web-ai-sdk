@@ -1,86 +1,93 @@
 ---
 title: useTranslator
-description: React adapter for @web-ai-sdk/translator. Translates on mount, restores on unmount, with a controller exposing cancel + restore.
+description: React adapter for @web-ai-sdk/translator. Auto-translates text on mount and re-runs whenever inputs change.
 ---
 
 import { TranslatorDemo } from "../../../components/TranslatorDemo.tsx";
 
-React adapter for `@web-ai-sdk/translator`. Translates the provided roots on mount, restores them on unmount, and exposes a controller for imperative cancel / restore. For the conceptual overview see [Translator](/docs/guides/translator/).
+React adapter for `@web-ai-sdk/translator`. Auto-translates `input` from `sourceLanguage` to `targetLanguage` and re-runs whenever the inputs change. For the conceptual overview see [Translator](/docs/guides/translator/).
 
 ## Live demo
 
 <TranslatorDemo client:only="react" />
 
-Pick a source and target language; the demo translates the marked-up content in place and lets you restore the original.
+Type in the source field; the translation updates whenever the text changes.
 
 ## Usage
 
 ```tsx
 import { useTranslator } from "@web-ai-sdk/translator/react";
 
-export function TranslatedPage({ sourceLanguage }: { sourceLanguage: string }) {
-  const { status, error, restore } = useTranslator({
-    sourceLanguage,
-    targetLanguage: "en",
-    roots: "[data-translate-root]",
+export function Translation({ text }: { text: string }) {
+  const { status, output } = useTranslator({
+    input: text,
+    sourceLanguage: "en",
+    targetLanguage: "pt",
   });
 
-  if (status === "unavailable") return <p>Translator not available.</p>;
-
-  return (
-    <>
-      {status === "done" && <button onClick={restore}>Restore original</button>}
-      {error && <small>{error.message}</small>}
-    </>
-  );
+  if (status === "unavailable") return null;
+  return <p>{output}</p>;
 }
 ```
 
-The hook is opinionated: it kicks off translation as soon as it has the inputs it needs (`sourceLanguage` set, `targetLanguage` set, roots resolvable). For more imperative use cases, call the vanilla `translate()` directly.
+The hook auto-runs whenever any input changes. Empty input or matching source/target keeps the hook in `"idle"`.
 
 ## State machine
 
 ```
-pending ───► loading ───► translating ───► done
-                                            │
-unavailable ◄── (no API / same source+target)
+idle ───► loading ───► done
+                         │
+unavailable ◄── (no API) │
+                         ▼
+              input empty ─► idle
 ```
 
-- **`pending`**: hook mounted, missing inputs.
-- **`loading`**: warming the `Translator.create()` session.
-- **`translating`**: walking blocks and substituting children.
-- **`done`**: all blocks processed. `restore()` rolls everything back.
-- **`unavailable`**: API missing, or source equals target (no-op).
+- **`idle`**: hook mounted, input empty or `sourceLanguage === targetLanguage`.
+- **`loading`**: translation in flight (~1-3s cold for a new language pair, sub-second warm).
+- **`done`**: translation complete. `output` is the translated text or `null`.
+- **`unavailable`**: API missing. Render nothing or a fallback.
 
-## Restoring
+## Caching
 
-`restore()` swaps every translated block back to its original children (snapshots are kept in memory). Calling it twice is a no-op. The hook also auto-restores on unmount so unmounting the component returns the page to its untranslated state.
+```tsx
+const { output, fromCache } = useTranslator({
+  input: text,
+  sourceLanguage: "en",
+  targetLanguage: "pt",
+  cache: "session",
+});
+```
 
-## Errors and unavailability
+`fromCache` is `true` when the cache served the result. Pass `"session"` / `"local"` for the matching web-storage shortcut, or any `{ get, set }`-shaped object for a custom backend.
 
-On browsers without `Translator`, the hook returns `status: "unavailable"` and never invokes the model. Render whatever fallback UI you want.
+## Aborting
+
+The hook aborts any in-flight call when inputs change or the component unmounts. You don't need to manage `AbortController` directly.
+
 
 ## Reference
 
 ```ts
-import type { UseTranslatorOptions, UseTranslatorReturn, TranslatorState } from "@web-ai-sdk/translator/react";
+import type { UseTranslatorOptions, UseTranslatorReturn, TranslatorStatus } from "@web-ai-sdk/translator/react";
 
-type TranslatorState = "unavailable" | "idle" | "working" | "translated";
+type TranslatorStatus = "idle" | "loading" | "done" | "unavailable";
 
-interface UseTranslatorOptions {
+interface UseTranslatorOptions extends Omit<TranslateOptions, "signal"> {
+  enabled?: boolean;       // default: true
+  // Inherited from TranslateOptions:
+  input: string;
   sourceLanguage: string;
-  targetLanguage?: string;            // defaults to "en"
-  roots?: RootsOption;                // CSS selector, Element, or Element[]
-  blockSelector?: string;             // override the default block selector
-  opaqueInlineTags?: readonly string[]; // tags to keep verbatim
+  targetLanguage?: string;
+  monitor?: (m: TranslatorMonitor) => void;
+  cache?: "session" | "local" | { get, set };
+  cacheKey?: string;
 }
 
 interface UseTranslatorReturn {
-  state: TranslatorState;
-  progress: TranslateProgress | null; // latest progress event, or null while idle
+  status: TranslatorStatus;
+  output: string | null;
   error: Error | null;
-  translate(): void;                  // trigger a translation run
-  restore(): void;                    // roll back translated blocks
+  fromCache: boolean;
 }
 
 declare const useTranslator: (options: UseTranslatorOptions) => UseTranslatorReturn;
