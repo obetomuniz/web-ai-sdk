@@ -580,10 +580,10 @@ export const App = () => (
               Same task. Three levels of abstraction.
             </h2>
             <p style={{ maxWidth: "60ch", marginTop: 14 }}>
-              All three tabs do the same task; detect the article's language,
-              then summarize it into short key-points in that language. The
-              vanilla TypeScript tab is 14 lines. The raw browser API tab is 36.
-              The difference is what the wrappers do for you.
+              All three tabs do the same thing: detect an article's language
+              and summarize it into key-points. Fifteen lines with the SDK;
+              thirty-seven calling the browser APIs yourself. Same result, less
+              to wire up.
             </p>
           </div>
           <a className="permalink" href="#how">
@@ -888,7 +888,7 @@ export const App = () => (
           </div>
         </div>
         <div className="footer-meta">
-          <span>web-ai-sdk v0.1.0</span>
+          <span>web-ai-sdk v0.4.0</span>
           <span>
             <a href="#top">Back to top ↑</a>
           </span>
