@@ -2,6 +2,23 @@ import { isAvailable as isDetectorAvailable } from "@web-ai-sdk/detector";
 import { useDetector } from "@web-ai-sdk/detector/react";
 import { useEffect, useState } from "react";
 import {
+  card,
+  cardBody,
+  cardDotLive,
+  cardDotOk,
+  cardHead,
+  cardHeadTitle,
+  chip,
+  chipActive,
+  chipRow,
+  chipRowEnd,
+  demoControls,
+  fieldSpaced,
+  label,
+  outputBox,
+  textarea,
+} from "../lib/ui.js";
+import {
   DownloadNotice,
   ErrorNotice,
   StatusBar,
@@ -32,11 +49,6 @@ export const DetectorDemo = () => {
     setAvailable(isDetectorAvailable());
   }, []);
 
-  // Track stats off of the lifecycle. Detection is one-shot, but we still
-  // surface a status bar for visual consistency with the other demos. The
-  // stats setters (`start`, `update`, `finish`) are intentionally not in
-  // the deps array: they're stable across renders and re-running the
-  // effect whenever they change would just thrash the status bar.
   // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
   useEffect(() => {
     if (status === "loading") start();
@@ -51,10 +63,10 @@ export const DetectorDemo = () => {
   const running = status === "loading";
 
   return (
-    <div className="card">
-      <div className="card-head">
-        <span className="title">
-          <span className={`dot ${running ? "live" : "ok"}`} />
+    <div className={card}>
+      <div className={cardHead}>
+        <span className={cardHeadTitle}>
+          <span className={running ? cardDotLive : cardDotOk} />
           detect() · live
         </span>
         <span>
@@ -67,7 +79,7 @@ export const DetectorDemo = () => {
                 : "-"}
         </span>
       </div>
-      <div className="card-body">
+      <div className={cardBody}>
         {available === false && (
           <UnavailableNotice
             api="Language Detector API"
@@ -76,26 +88,25 @@ export const DetectorDemo = () => {
         )}
         <DownloadNotice progress={null} />
         <ErrorNotice error={error?.message ?? null} />
-        <div className="field" style={{ margin: "12px 0" }}>
-          <label className="label" htmlFor="detector-demo-input">
+        <div className={fieldSpaced}>
+          <label className={label} htmlFor="detector-demo-input">
             input
           </label>
           <textarea
             id="detector-demo-input"
-            className="textarea"
+            className={`${textarea} min-h-16`}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            style={{ minHeight: 64 }}
             spellCheck={false}
           />
         </div>
-        <div className="demo-controls">
-          <div className="chip-row chip-row-end">
+        <div className={demoControls}>
+          <div className={`${chipRow} ${chipRowEnd}`}>
             {DETECT_EXAMPLES.map((p, i) => (
               <button
                 key={p}
                 type="button"
-                className={`chip ${text === p ? "active" : ""}`}
+                className={text === p ? chipActive : chip}
                 onClick={() => setText(p)}
               >
                 {EXAMPLE_LABELS[i]}
@@ -103,36 +114,29 @@ export const DetectorDemo = () => {
             ))}
           </div>
         </div>
-        <div className="output" style={{ minHeight: 80 }}>
+        <div className={`${outputBox} min-h-20`}>
           {status === "done" && all.length > 0 ? (
-            <ol style={{ listStyle: "none", margin: 0, padding: 0 }}>
+            <ol className="m-0 list-none p-0">
               {all.slice(0, 4).map((entry, i) => (
                 <li
                   key={entry.detectedLanguage}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    padding: "3px 0",
-                    color: i === 0 ? "var(--fg)" : "var(--fg-3)",
-                  }}
+                  className={`flex justify-between py-0.5 ${i === 0 ? "text-fg" : "text-fg-3"}`}
                 >
                   <span>
                     <code
-                      style={{
-                        color: i === 0 ? "var(--accent-bright)" : "var(--fg-3)",
-                      }}
+                      className={i === 0 ? "text-accent-bright" : "text-fg-3"}
                     >
                       {entry.detectedLanguage}
                     </code>
                   </span>
-                  <span style={{ fontVariantNumeric: "tabular-nums" }}>
+                  <span className="tabular-nums">
                     {(entry.confidence * 100).toFixed(1)}%
                   </span>
                 </li>
               ))}
             </ol>
           ) : (
-            <span style={{ color: "var(--fg-4)", fontStyle: "italic" }}>
+            <span className="text-fg-4 italic">
               {available === false
                 ? "Open in Chrome 138+ or Edge Canary/Dev 147+ to detect."
                 : status === "idle"

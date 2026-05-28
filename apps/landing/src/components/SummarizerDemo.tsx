@@ -5,6 +5,24 @@ import {
 } from "@web-ai-sdk/summarizer";
 import { useEffect, useRef, useState } from "react";
 import {
+  btnSm,
+  card,
+  cardBody,
+  cardDotLive,
+  cardDotOk,
+  cardHead,
+  cardHeadTitle,
+  chip,
+  chipActive,
+  chipRow,
+  chipRowEnd,
+  chipSep,
+  demoControls,
+  fieldSpaced,
+  label,
+  textarea,
+} from "../lib/ui.js";
+import {
   DownloadNotice,
   ErrorNotice,
   MarkdownOutput,
@@ -81,57 +99,56 @@ export const SummarizerDemo = () => {
   const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
 
   return (
-    <div className="card">
-      <div className="card-head">
-        <span className="title">
-          <span className={`dot ${streaming ? "live" : "ok"}`} />
+    <div className={card}>
+      <div className={cardHead}>
+        <span className={cardHeadTitle}>
+          <span className={streaming ? cardDotLive : cardDotOk} />
           summarize() · local
         </span>
         <span>{wordCount} words in</span>
       </div>
-      <div className="card-body">
+      <div className={cardBody}>
         {available === false && <UnavailableNotice api="Summarizer API" />}
         <DownloadNotice progress={progress} />
         <ErrorNotice error={error} />
-        <div className="field" style={{ margin: "12px 0" }}>
-          <label className="label" htmlFor="summarizer-demo-input">
+        <div className={fieldSpaced}>
+          <label className={label} htmlFor="summarizer-demo-input">
             input
           </label>
           <textarea
             id="summarizer-demo-input"
-            className="textarea"
+            className={`${textarea} min-h-[110px]`}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            style={{ minHeight: 110 }}
             spellCheck={false}
           />
         </div>
-        <div className="demo-controls">
+        <div className={demoControls}>
           <button
             type="button"
-            className="btn-sm"
+            className={btnSm}
             onClick={run}
             disabled={streaming || !available}
           >
             <span>{streaming ? "…" : "▶"}</span> Summarize
           </button>
-          <div className="chip-row chip-row-end">
+          <div className={`${chipRow} ${chipRowEnd}`}>
             {(["key-points", "tldr", "headline"] as const).map((t) => (
               <button
                 key={t}
                 type="button"
-                className={`chip ${type === t ? "active" : ""}`}
+                className={type === t ? chipActive : chip}
                 onClick={() => setType(t)}
               >
                 {t}
               </button>
             ))}
-            <span className="chip-sep" aria-hidden="true" />
+            <span className={chipSep} aria-hidden="true" />
             {(["short", "medium", "long"] as const).map((l) => (
               <button
                 key={l}
                 type="button"
-                className={`chip ${length === l ? "active" : ""}`}
+                className={length === l ? chipActive : chip}
                 onClick={() => setLength(l)}
               >
                 {l}

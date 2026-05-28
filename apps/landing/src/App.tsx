@@ -8,6 +8,96 @@ import { StarWidget } from "./components/StarWidget.js";
 import { SummarizerDemo } from "./components/SummarizerDemo.js";
 import { TranslatorDemo } from "./components/TranslatorDemo.js";
 import { WebMCPDemo } from "./components/WebMCPDemo.js";
+import {
+  badge,
+  badgeAccent,
+  badgeKey,
+  badgeRow,
+  badgeVal,
+  badgeValAccent,
+  btnArrow,
+  btnGhost,
+  btnPrimary,
+  card,
+  caret,
+  container,
+  ctaBlock,
+  ctaBlockText,
+  ctaBlockTitle,
+  ctaLink,
+  ctaLinks,
+  ctaRow,
+  footer,
+  footerBrandText,
+  footerBrandTitle,
+  footerColList,
+  footerColTitle,
+  footerGrid,
+  footerMeta,
+  hero,
+  heroEyebrow,
+  heroEyebrowDot,
+  heroGrid,
+  heroTitle,
+  nav,
+  navBrand,
+  navCta,
+  navInner,
+  navLinks,
+  permalink,
+  philosophyCardBody,
+  philosophyList,
+  philosophyNum,
+  philosophyText,
+  philosophyTitle,
+  pkgActions,
+  pkgBullets,
+  pkgDocs,
+  pkgDocsArrow,
+  pkgIcon,
+  pkgInstall,
+  pkgInstallPkg,
+  pkgInstallPrompt,
+  pkgLeft,
+  pkgName,
+  pkgRight,
+  pkgRow,
+  pkgTag,
+  reveal,
+  scope,
+  section,
+  sectionAnchor,
+  sectionEyebrow,
+  sectionHead,
+  srOnly,
+  stackBody,
+  stackDetail,
+  stackDetailMuted,
+  stackDiagram,
+  stackHeader,
+  stackIdx,
+  stackIdxAccent,
+  stackIdxMuted,
+  stackName,
+  stackNameAccent,
+  stackNameMuted,
+  stackOwner,
+  stackRowApi,
+  stackRowBase,
+  stackRowHook,
+  subhead,
+  subheadSub,
+  supportHead,
+  supportNote,
+  supportPill,
+  supportPillOk,
+  supportPillWarn,
+  supportRowHead,
+  supportTable,
+  supportVersion,
+  supportWrap,
+  twoCol,
+} from "./lib/ui.js";
 import { SDK_VERSION } from "./sdk-version.js";
 
 const REPO = "obetomuniz/web-ai-sdk";
@@ -31,16 +121,19 @@ export const App = () => (
         --bg so it reads as ambient texture rather than a logo. Pure
         decoration; pointer-events off so it never blocks clicks. Hidden
         on mobile to keep small viewports clean. */}
-    <BrandMark className="brand-watermark" title="" />
+    <BrandMark
+      className="pointer-events-none fixed right-[-3vw] bottom-[-3vh] z-0 h-auto w-[clamp(360px,48vw,720px)] select-none text-[#080706] opacity-50 max-[760px]:hidden [--brand-mark-accent:currentColor]"
+      title=""
+    />
 
     {/* Top nav */}
-    <nav className="nav">
-      <div className="container nav-inner">
-        <a className="nav-brand" href="#top">
+    <nav className={nav}>
+      <div className={`${container} ${navInner}`}>
+        <a className={navBrand} href="#top">
           <span>web-ai-sdk</span>
-          <span className="caret" />
+          <span className={caret} />
         </a>
-        <div className="nav-links">
+        <div className={navLinks}>
           <a href="#packages">Packages</a>
           <a href="#philosophy">Why composable</a>
           <a href="#how">How</a>
@@ -48,7 +141,7 @@ export const App = () => (
           <a href="#start">Get started</a>
         </div>
         <a
-          className="nav-cta"
+          className={navCta}
           href={`https://github.com/${REPO}`}
           target="_blank"
           rel="noreferrer"
@@ -59,19 +152,19 @@ export const App = () => (
     </nav>
 
     {/* Hero */}
-    <header className="hero" id="top">
-      <div className="container hero-grid">
-        <div className="eyebrow">
-          <span className="dot" />
+    <header className={hero} id="top">
+      <div className={`${container} ${heroGrid}`}>
+        <div className={heroEyebrow}>
+          <span className={heroEyebrowDot} />
           Built-in AI, the right way
         </div>
-        <h1>
+        <h1 className={heroTitle}>
           web-ai-sdk
-          <span className="caret" />
+          <span className={caret} />
         </h1>
-        <p className="subhead">
+        <p className={subhead}>
           <strong>Building blocks</strong> for the Web's built-in AI APIs.
-          <span className="subhead-sub">
+          <span className={subheadSub}>
             Composable. No runtime deps. Just lifecycle, streaming, and
             AbortSignals.
             <br />
@@ -79,12 +172,12 @@ export const App = () => (
           </span>
         </p>
 
-        <div className="cta-row">
-          <a className="btn btn-primary" href="#start">
-            Get started <span className="arrow">→</span>
+        <div className={ctaRow}>
+          <a className={`${btnPrimary} group`} href="#start">
+            Get started <span className={btnArrow}>→</span>
           </a>
           <a
-            className="btn btn-ghost"
+            className={btnGhost}
             href={`https://github.com/${REPO}`}
             target="_blank"
             rel="noreferrer"
@@ -103,55 +196,53 @@ export const App = () => (
           <InstallPill pkg="@web-ai-sdk/all" />
         </div>
 
-        <div className="badge-row">
-          <span className="badge accent">
-            <span className="k">runs</span>
-            <span className="v">100% on-device</span>
+        <div className={badgeRow}>
+          <span className={badgeAccent}>
+            <span className={badgeKey}>runs</span>
+            <span className={badgeValAccent}>100% on-device</span>
           </span>
-          <span className="badge">
-            <span className="k">types</span>
-            <span className="v">TypeScript native</span>
+          <span className={badge}>
+            <span className={badgeKey}>types</span>
+            <span className={badgeVal}>TypeScript native</span>
           </span>
-          <span className="badge">
-            <span className="k">stream</span>
-            <span className="v">AsyncIterable</span>
+          <span className={badge}>
+            <span className={badgeKey}>stream</span>
+            <span className={badgeVal}>AsyncIterable</span>
           </span>
-          <span className="badge">
-            <span className="k">license</span>
-            <span className="v">MIT</span>
+          <span className={badge}>
+            <span className={badgeKey}>license</span>
+            <span className={badgeVal}>MIT</span>
           </span>
-          <span className="badge">
-            <span className="k">size</span>
-            <span className="v">8.6 kB · core</span>
+          <span className={badge}>
+            <span className={badgeKey}>size</span>
+            <span className={badgeVal}>8.6 kB · core</span>
           </span>
-          <span className="badge">
-            <span className="k">deps</span>
-            <span className="v">0</span>
+          <span className={badge}>
+            <span className={badgeKey}>deps</span>
+            <span className={badgeVal}>0</span>
           </span>
         </div>
       </div>
     </header>
 
     {/* Packages */}
-    <section id="packages">
-      <div className="container">
-        <div className="section-head">
+    <section className={section} data-section="packages">
+      <div className={container}>
+        <div className={`${sectionHead} ${sectionAnchor}`} id="packages">
           <div>
-            <div className="section-eyebrow">01 · packages</div>
-            <h2 style={{ marginTop: 8 }}>
-              Composable wrappers. One philosophy.
-            </h2>
+            <div className={sectionEyebrow}>01 · packages</div>
+            <h2 className="mt-2">Composable wrappers. One philosophy.</h2>
           </div>
-          <a className="permalink" href="#packages">
+          <a className={permalink} href="#packages">
             <span aria-hidden="true">§</span>
-            <span className="sr-only">Link to Packages section</span>
+            <span className={srOnly}>Link to Packages section</span>
           </a>
         </div>
 
         {/* Prompt */}
-        <div className="pkg-row reveal" id="prompt">
-          <div className="pkg-left">
-            <div className="pkg-icon" aria-hidden="true">
+        <div className={`${pkgRow} ${reveal}`} data-reveal id="prompt">
+          <div className={pkgLeft}>
+            <div className={pkgIcon} aria-hidden="true">
               <svg
                 aria-hidden="true"
                 width="18"
@@ -167,14 +258,14 @@ export const App = () => (
                 <path d="M16 17l3 3 5-5" />
               </svg>
             </div>
-            <div className="pkg-name">
-              <span className="scope">@web-ai-sdk/</span>prompt
+            <div className={pkgName}>
+              <span className={scope}>@web-ai-sdk/</span>prompt
             </div>
-            <div className="pkg-tag">
+            <div className={pkgTag}>
               Talk to the on-device language model. Sessions, streaming, and
               AbortSignals; done.
             </div>
-            <ul className="pkg-bullets">
+            <ul className={pkgBullets}>
               <li>
                 <span>
                   <b>Session reuse.</b> Cached by config so re-renders don't
@@ -194,23 +285,25 @@ export const App = () => (
                 </span>
               </li>
             </ul>
-            <code className="pkg-install">
-              <span className="prompt">$</span> npm install{" "}
-              <span className="pkg">@web-ai-sdk/prompt</span>
-            </code>
-            <a className="pkg-docs" href={guideLink("prompt")}>
-              Read the docs <span className="arrow">→</span>
-            </a>
+            <div className={pkgActions}>
+              <code className={pkgInstall}>
+                <span className={pkgInstallPrompt}>$</span> npm install{" "}
+                <span className={pkgInstallPkg}>@web-ai-sdk/prompt</span>
+              </code>
+              <a className={pkgDocs} href={guideLink("prompt")}>
+                Read the docs <span className={pkgDocsArrow}>→</span>
+              </a>
+            </div>
           </div>
-          <div className="pkg-right">
+          <div className={pkgRight}>
             <PromptDemo />
           </div>
         </div>
 
         {/* WebMCP */}
-        <div className="pkg-row reveal" id="webmcp">
-          <div className="pkg-left">
-            <div className="pkg-icon" aria-hidden="true">
+        <div className={`${pkgRow} ${reveal}`} data-reveal id="webmcp">
+          <div className={pkgLeft}>
+            <div className={pkgIcon} aria-hidden="true">
               <svg
                 aria-hidden="true"
                 width="18"
@@ -230,14 +323,14 @@ export const App = () => (
                 <circle cx="12" cy="12" r="2" />
               </svg>
             </div>
-            <div className="pkg-name">
-              <span className="scope">@web-ai-sdk/</span>webmcp
+            <div className={pkgName}>
+              <span className={scope}>@web-ai-sdk/</span>webmcp
             </div>
-            <div className="pkg-tag">
+            <div className={pkgTag}>
               Register tools the browser's model context can call. Real agents,
               real cleanup, no boilerplate.
             </div>
-            <ul className="pkg-bullets">
+            <ul className={pkgBullets}>
               <li>
                 <span>
                   <b>Declarative tools.</b> Register from React; AbortSignal
@@ -257,23 +350,25 @@ export const App = () => (
                 </span>
               </li>
             </ul>
-            <code className="pkg-install">
-              <span className="prompt">$</span> npm install{" "}
-              <span className="pkg">@web-ai-sdk/webmcp</span>
-            </code>
-            <a className="pkg-docs" href={guideLink("webmcp")}>
-              Read the docs <span className="arrow">→</span>
-            </a>
+            <div className={pkgActions}>
+              <code className={pkgInstall}>
+                <span className={pkgInstallPrompt}>$</span> npm install{" "}
+                <span className={pkgInstallPkg}>@web-ai-sdk/webmcp</span>
+              </code>
+              <a className={pkgDocs} href={guideLink("webmcp")}>
+                Read the docs <span className={pkgDocsArrow}>→</span>
+              </a>
+            </div>
           </div>
-          <div className="pkg-right">
+          <div className={pkgRight}>
             <WebMCPDemo />
           </div>
         </div>
 
         {/* Summarizer */}
-        <div className="pkg-row reveal" id="summarizer">
-          <div className="pkg-left">
-            <div className="pkg-icon" aria-hidden="true">
+        <div className={`${pkgRow} ${reveal}`} data-reveal id="summarizer">
+          <div className={pkgLeft}>
+            <div className={pkgIcon} aria-hidden="true">
               <svg
                 aria-hidden="true"
                 width="18"
@@ -289,13 +384,13 @@ export const App = () => (
                 <path d="M7 9h10M7 13h10M7 17h6" />
               </svg>
             </div>
-            <div className="pkg-name">
-              <span className="scope">@web-ai-sdk/</span>summarizer
+            <div className={pkgName}>
+              <span className={scope}>@web-ai-sdk/</span>summarizer
             </div>
-            <div className="pkg-tag">
+            <div className={pkgTag}>
               Key-points, TL;DR, headlines. Configurable type and length.
             </div>
-            <ul className="pkg-bullets">
+            <ul className={pkgBullets}>
               <li>
                 <span>
                   <b>Four shapes.</b> key-points · tl;dr · teaser · headline.
@@ -313,23 +408,25 @@ export const App = () => (
                 </span>
               </li>
             </ul>
-            <code className="pkg-install">
-              <span className="prompt">$</span> npm install{" "}
-              <span className="pkg">@web-ai-sdk/summarizer</span>
-            </code>
-            <a className="pkg-docs" href={guideLink("summarizer")}>
-              Read the docs <span className="arrow">→</span>
-            </a>
+            <div className={pkgActions}>
+              <code className={pkgInstall}>
+                <span className={pkgInstallPrompt}>$</span> npm install{" "}
+                <span className={pkgInstallPkg}>@web-ai-sdk/summarizer</span>
+              </code>
+              <a className={pkgDocs} href={guideLink("summarizer")}>
+                Read the docs <span className={pkgDocsArrow}>→</span>
+              </a>
+            </div>
           </div>
-          <div className="pkg-right">
+          <div className={pkgRight}>
             <SummarizerDemo />
           </div>
         </div>
 
         {/* Translator */}
-        <div className="pkg-row reveal" id="translator">
-          <div className="pkg-left">
-            <div className="pkg-icon" aria-hidden="true">
+        <div className={`${pkgRow} ${reveal}`} data-reveal id="translator">
+          <div className={pkgLeft}>
+            <div className={pkgIcon} aria-hidden="true">
               <svg
                 aria-hidden="true"
                 width="18"
@@ -345,14 +442,14 @@ export const App = () => (
                 <path d="M13 21l4-10 4 10M14.5 17h5" />
               </svg>
             </div>
-            <div className="pkg-name">
-              <span className="scope">@web-ai-sdk/</span>translator
+            <div className={pkgName}>
+              <span className={scope}>@web-ai-sdk/</span>translator
             </div>
-            <div className="pkg-tag">
+            <div className={pkgTag}>
               Pair-based translation with block-level round-trip. Walks the DOM,
               swaps text, keeps markup intact.
             </div>
-            <ul className="pkg-bullets">
+            <ul className={pkgBullets}>
               <li>
                 <span>
                   <b>Pair caching.</b> Sessions cached per source→target.
@@ -372,23 +469,25 @@ export const App = () => (
                 </span>
               </li>
             </ul>
-            <code className="pkg-install">
-              <span className="prompt">$</span> npm install{" "}
-              <span className="pkg">@web-ai-sdk/translator</span>
-            </code>
-            <a className="pkg-docs" href={guideLink("translator")}>
-              Read the docs <span className="arrow">→</span>
-            </a>
+            <div className={pkgActions}>
+              <code className={pkgInstall}>
+                <span className={pkgInstallPrompt}>$</span> npm install{" "}
+                <span className={pkgInstallPkg}>@web-ai-sdk/translator</span>
+              </code>
+              <a className={pkgDocs} href={guideLink("translator")}>
+                Read the docs <span className={pkgDocsArrow}>→</span>
+              </a>
+            </div>
           </div>
-          <div className="pkg-right">
+          <div className={pkgRight}>
             <TranslatorDemo />
           </div>
         </div>
 
         {/* Detector */}
-        <div className="pkg-row reveal" id="detector">
-          <div className="pkg-left">
-            <div className="pkg-icon" aria-hidden="true">
+        <div className={`${pkgRow} ${reveal}`} data-reveal id="detector">
+          <div className={pkgLeft}>
+            <div className={pkgIcon} aria-hidden="true">
               <svg
                 aria-hidden="true"
                 width="18"
@@ -405,14 +504,14 @@ export const App = () => (
                 <path d="M8 11h6M11 8v6" />
               </svg>
             </div>
-            <div className="pkg-name">
-              <span className="scope">@web-ai-sdk/</span>detector
+            <div className={pkgName}>
+              <span className={scope}>@web-ai-sdk/</span>detector
             </div>
-            <div className="pkg-tag">
+            <div className={pkgTag}>
               Detect the language of any text on-device. Returns BCP-47 codes
               with confidence scores and a sorted list of alternates.
             </div>
-            <ul className="pkg-bullets">
+            <ul className={pkgBullets}>
               <li>
                 <span>
                   <b>Top candidate or full list.</b> Use the single best guess,
@@ -433,15 +532,17 @@ export const App = () => (
                 </span>
               </li>
             </ul>
-            <code className="pkg-install">
-              <span className="prompt">$</span> npm install{" "}
-              <span className="pkg">@web-ai-sdk/detector</span>
-            </code>
-            <a className="pkg-docs" href={guideLink("detector")}>
-              Read the docs <span className="arrow">→</span>
-            </a>
+            <div className={pkgActions}>
+              <code className={pkgInstall}>
+                <span className={pkgInstallPrompt}>$</span> npm install{" "}
+                <span className={pkgInstallPkg}>@web-ai-sdk/detector</span>
+              </code>
+              <a className={pkgDocs} href={guideLink("detector")}>
+                Read the docs <span className={pkgDocsArrow}>→</span>
+              </a>
+            </div>
           </div>
-          <div className="pkg-right">
+          <div className={pkgRight}>
             <DetectorDemo />
           </div>
         </div>
@@ -449,32 +550,33 @@ export const App = () => (
     </section>
 
     {/* Why composable */}
-    <section id="philosophy">
-      <div className="container">
-        <div className="section-head">
+    <section className={section} data-section="philosophy">
+      <div className={container}>
+        <div className={`${sectionHead} ${sectionAnchor}`} id="philosophy">
           <div>
-            <div className="section-eyebrow">02 · philosophy</div>
-            <h2 style={{ marginTop: 8 }}>Why composable.</h2>
+            <div className={sectionEyebrow}>02 · philosophy</div>
+            <h2 className="mt-2">Why composable.</h2>
           </div>
-          <a className="permalink" href="#philosophy">
+          <a className={permalink} href="#philosophy">
             <span aria-hidden="true">§</span>
-            <span className="sr-only">Link to Philosophy section</span>
+            <span className={srOnly}>Link to Philosophy section</span>
           </a>
         </div>
 
-        <div className="two-col reveal">
-          <div className="card">
-            <div className="card-body">
-              <h3>
-                <span className="num">01</span> We handle the gnarly bits.
+        <div className={`${twoCol} ${reveal}`} data-reveal>
+          <div className={card}>
+            <div className={philosophyCardBody}>
+              <h3 className={philosophyTitle}>
+                <span className={philosophyNum}>01</span> We handle the gnarly
+                bits.
               </h3>
-              <p>
+              <p className={philosophyText}>
                 The built-in AI surface is young. Capability checks, model
                 downloads, abortable streams, session lifetimes, and DOM-rebuild
                 safety are all things you'd otherwise re-implement in every
                 component. We've already done it.
               </p>
-              <ul>
+              <ul className={philosophyList}>
                 <li>Feature detection per package</li>
                 <li>Session cache keyed by config</li>
                 <li>AsyncIterable streams + AbortSignal cleanup</li>
@@ -483,19 +585,19 @@ export const App = () => (
               </ul>
             </div>
           </div>
-          <div className="card">
-            <div className="card-body">
-              <h3>
-                <span className="num">02</span> You compose the stack.
+          <div className={card}>
+            <div className={philosophyCardBody}>
+              <h3 className={philosophyTitle}>
+                <span className={philosophyNum}>02</span> You compose the stack.
               </h3>
-              <p>
+              <p className={philosophyText}>
                 We ship the lifecycle layer: state machines, streams, abort
                 signals. Framework adapters, polyfills, UI primitives stay
                 optional subpaths so they don't constrain your design system,
                 framework, or styling stack. The same packages run in Next,
                 Astro, Solid, Svelte, vanilla; anywhere TS runs.
               </p>
-              <ul>
+              <ul className={philosophyList}>
                 <li>Framework-agnostic core (~2 kB)</li>
                 <li>
                   Optional <code>/react</code> subpath (Vue, Svelte to follow)
@@ -508,228 +610,262 @@ export const App = () => (
           </div>
         </div>
 
-        <div className="stack-diagram reveal">
-          <div className="stack-header">
+        <div className={`${stackDiagram} ${reveal}`} data-reveal>
+          <div className={stackHeader}>
             <span>Architecture</span>
             <span>Owner</span>
           </div>
 
-          <div className="stack-row" data-tier="api">
-            <span className="stack-idx">00</span>
-            <div className="stack-body">
-              <div className="stack-name">Browser built-in AI</div>
-              <div className="stack-detail">
+          <div className={`${stackRowBase} ${stackRowApi}`}>
+            <span className={stackIdx}>00</span>
+            <div className={stackBody}>
+              <div className={`${stackName} ${stackNameMuted}`}>
+                Browser built-in AI
+              </div>
+              <div className={`${stackDetail} ${stackDetailMuted}`}>
                 navigator.modelContext &nbsp; Summarizer &nbsp; Translator
                 &nbsp; LanguageModel &nbsp; LanguageDetector
               </div>
             </div>
-            <span className="stack-owner">platform</span>
+            <span className={stackOwner}>platform</span>
           </div>
 
-          <div className="stack-row" data-tier="core">
-            <span className="stack-idx">01</span>
-            <div className="stack-body">
-              <div className="stack-name">
-                <span className="scope">@web-ai-sdk/</span>X
+          <div className={stackRowBase}>
+            <span className={`${stackIdx} ${stackIdxAccent}`}>01</span>
+            <div className={stackBody}>
+              <div className={stackName}>
+                <span className={scope}>@web-ai-sdk/</span>X
               </div>
-              <div className="stack-detail">
+              <div className={stackDetail}>
                 ask() &nbsp; createSession() &nbsp; summarize() &nbsp;
                 translate() &nbsp; detect() &nbsp; registerTool() &nbsp;
                 defineTool() &nbsp; AbortSignal &nbsp; session cache
               </div>
             </div>
-            <span className="stack-owner">web-ai-sdk</span>
+            <span className={`${stackOwner} ${stackIdxAccent}`}>
+              web-ai-sdk
+            </span>
           </div>
 
-          <div className="stack-row" data-tier="hook">
-            <span className="stack-idx">02</span>
-            <div className="stack-body">
-              <div className="stack-name">
-                <span className="scope">@web-ai-sdk/</span>X
-                <span className="scope">/react</span>
+          <div className={`${stackRowBase} ${stackRowHook}`}>
+            <span className={`${stackIdx} ${stackIdxAccent}`}>02</span>
+            <div className={stackBody}>
+              <div className={`${stackName} ${stackNameAccent}`}>
+                <span className={scope}>@web-ai-sdk/</span>X
+                <span className={scope}>/react</span>
               </div>
-              <div className="stack-detail">
+              <div className={stackDetail}>
                 usePrompt() &nbsp; useSession() &nbsp; useSummarizer() &nbsp;
                 useTranslator() &nbsp; useDetector() &nbsp; useWebMCP()
               </div>
             </div>
-            <span className="stack-owner">web-ai-sdk</span>
+            <span className={`${stackOwner} ${stackIdxAccent}`}>
+              web-ai-sdk
+            </span>
           </div>
 
-          <div className="stack-row" data-tier="you">
-            <span className="stack-idx">03</span>
-            <div className="stack-body">
-              <div className="stack-name">Your application</div>
-              <div className="stack-detail">
+          <div className={stackRowBase}>
+            <span className={`${stackIdx} ${stackIdxMuted}`}>03</span>
+            <div className={stackBody}>
+              <div className={stackName}>Your application</div>
+              <div className={stackDetail}>
                 &lt;Card/&gt; &nbsp; &lt;Button/&gt; &nbsp; &lt;Spinner/&gt;
                 &nbsp; your design system
               </div>
             </div>
-            <span className="stack-owner">your code</span>
+            <span className={`${stackOwner} ${stackIdxMuted}`}>your code</span>
           </div>
         </div>
       </div>
     </section>
 
     {/* How it works */}
-    <section id="how">
-      <div className="container">
-        <div className="section-head">
+    <section className={section} data-section="how">
+      <div className={container}>
+        <div className={`${sectionHead} ${sectionAnchor}`} id="how">
           <div>
-            <div className="section-eyebrow">03 · how it works</div>
-            <h2 style={{ marginTop: 8 }}>
-              Same task. Three levels of abstraction.
-            </h2>
-            <p style={{ maxWidth: "60ch", marginTop: 14 }}>
+            <div className={sectionEyebrow}>03 · how it works</div>
+            <h2 className="mt-2">Same task. Three levels of abstraction.</h2>
+            <p className="mt-3.5 max-w-[60ch]">
               All three tabs do the same thing: detect an article's language and
               summarize it into key-points. Fifteen lines with the SDK;
               thirty-seven calling the browser APIs yourself. Same result, less
               to wire up.
             </p>
           </div>
-          <a className="permalink" href="#how">
+          <a className={permalink} href="#how">
             <span aria-hidden="true">§</span>
-            <span className="sr-only">Link to How it works section</span>
+            <span className={srOnly}>Link to How it works section</span>
           </a>
         </div>
-        <div className="reveal">
+        <div className={reveal} data-reveal>
           <HowItWorks />
         </div>
       </div>
     </section>
 
     {/* Browser support */}
-    <section id="support">
-      <div className="container">
-        <div className="section-head">
+    <section className={section} data-section="support">
+      <div className={container}>
+        <div className={`${sectionHead} ${sectionAnchor}`} id="support">
           <div>
-            <div className="section-eyebrow">04 · support</div>
-            <h2 style={{ marginTop: 8 }}>Browser support.</h2>
-            <p style={{ maxWidth: "60ch", marginTop: 14 }}>
+            <div className={sectionEyebrow}>04 · support</div>
+            <h2 className="mt-2">Browser support.</h2>
+            <p className="mt-3.5 max-w-[60ch]">
               Built-in AI lands engine by engine. Where it isn't there yet, you
               get a feature-detected no-op so your code doesn't crash; render
               whatever fallback UI you want.
             </p>
           </div>
-          <a className="permalink" href="#support">
+          <a className={permalink} href="#support">
             <span aria-hidden="true">§</span>
-            <span className="sr-only">Link to Browser support section</span>
+            <span className={srOnly}>Link to Browser support section</span>
           </a>
         </div>
 
-        <div className="reveal">
-          <div className="support-table-wrap">
-            <table className="support-table">
+        <div className={reveal} data-reveal>
+          <div className={supportWrap}>
+            <table className={supportTable}>
               <thead>
                 <tr>
-                  <th>Package</th>
-                  <th>Chrome</th>
-                  <th>Edge</th>
-                  <th>Safari</th>
-                  <th>Firefox</th>
+                  <th className={supportHead}>Package</th>
+                  <th className={supportHead}>Chrome</th>
+                  <th className={supportHead}>Edge</th>
+                  <th className={supportHead}>Safari</th>
+                  <th className={supportHead}>Firefox</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <th>
-                    <span className="scope">@web-ai-sdk/</span>prompt
+                  <th className={supportRowHead}>
+                    <span className={scope}>@web-ai-sdk/</span>prompt
                   </th>
                   <td>
-                    <span className="v">148+</span>{" "}
-                    <span className="pill ok">stable</span>
+                    <span className={supportVersion}>148+</span>{" "}
+                    <span className={`${supportPill} ${supportPillOk}`}>
+                      stable
+                    </span>
                   </td>
                   <td>
-                    <span className="v">138+</span>{" "}
-                    <span className="pill">Canary/Dev</span>
+                    <span className={supportVersion}>138+</span>{" "}
+                    <span className={supportPill}>Canary/Dev</span>
                   </td>
                   <td>
-                    <span className="pill fallback">no-op fallback</span>
+                    <span className={`${supportPill} ${supportPillWarn}`}>
+                      no-op fallback
+                    </span>
                   </td>
                   <td>
-                    <span className="pill fallback">no-op fallback</span>
+                    <span className={`${supportPill} ${supportPillWarn}`}>
+                      no-op fallback
+                    </span>
                   </td>
                 </tr>
                 <tr>
-                  <th>
-                    <span className="scope">@web-ai-sdk/</span>summarizer
+                  <th className={supportRowHead}>
+                    <span className={scope}>@web-ai-sdk/</span>summarizer
                   </th>
                   <td>
-                    <span className="v">138+</span>{" "}
-                    <span className="pill ok">stable</span>
+                    <span className={supportVersion}>138+</span>{" "}
+                    <span className={`${supportPill} ${supportPillOk}`}>
+                      stable
+                    </span>
                   </td>
                   <td>
-                    <span className="v">138+</span>{" "}
-                    <span className="pill ok">stable</span>
+                    <span className={supportVersion}>138+</span>{" "}
+                    <span className={`${supportPill} ${supportPillOk}`}>
+                      stable
+                    </span>
                   </td>
                   <td>
-                    <span className="pill fallback">no-op fallback</span>
+                    <span className={`${supportPill} ${supportPillWarn}`}>
+                      no-op fallback
+                    </span>
                   </td>
                   <td>
-                    <span className="pill fallback">no-op fallback</span>
+                    <span className={`${supportPill} ${supportPillWarn}`}>
+                      no-op fallback
+                    </span>
                   </td>
                 </tr>
                 <tr>
-                  <th>
-                    <span className="scope">@web-ai-sdk/</span>translator
+                  <th className={supportRowHead}>
+                    <span className={scope}>@web-ai-sdk/</span>translator
                   </th>
                   <td>
-                    <span className="v">138+</span>{" "}
-                    <span className="pill ok">stable</span>
+                    <span className={supportVersion}>138+</span>{" "}
+                    <span className={`${supportPill} ${supportPillOk}`}>
+                      stable
+                    </span>
                   </td>
                   <td>
-                    <span className="v">143+</span>{" "}
-                    <span className="pill">Canary/Dev</span>
+                    <span className={supportVersion}>143+</span>{" "}
+                    <span className={supportPill}>Canary/Dev</span>
                   </td>
                   <td>
-                    <span className="pill fallback">no-op fallback</span>
+                    <span className={`${supportPill} ${supportPillWarn}`}>
+                      no-op fallback
+                    </span>
                   </td>
                   <td>
-                    <span className="pill fallback">no-op fallback</span>
+                    <span className={`${supportPill} ${supportPillWarn}`}>
+                      no-op fallback
+                    </span>
                   </td>
                 </tr>
                 <tr>
-                  <th>
-                    <span className="scope">@web-ai-sdk/</span>detector
+                  <th className={supportRowHead}>
+                    <span className={scope}>@web-ai-sdk/</span>detector
                   </th>
                   <td>
-                    <span className="v">138+</span>{" "}
-                    <span className="pill ok">stable</span>
+                    <span className={supportVersion}>138+</span>{" "}
+                    <span className={`${supportPill} ${supportPillOk}`}>
+                      stable
+                    </span>
                   </td>
                   <td>
-                    <span className="v">147+</span>{" "}
-                    <span className="pill">Canary/Dev</span>
+                    <span className={supportVersion}>147+</span>{" "}
+                    <span className={supportPill}>Canary/Dev</span>
                   </td>
                   <td>
-                    <span className="pill fallback">no-op fallback</span>
+                    <span className={`${supportPill} ${supportPillWarn}`}>
+                      no-op fallback
+                    </span>
                   </td>
                   <td>
-                    <span className="pill fallback">no-op fallback</span>
+                    <span className={`${supportPill} ${supportPillWarn}`}>
+                      no-op fallback
+                    </span>
                   </td>
                 </tr>
                 <tr>
-                  <th>
-                    <span className="scope">@web-ai-sdk/</span>webmcp
+                  <th className={supportRowHead}>
+                    <span className={scope}>@web-ai-sdk/</span>webmcp
                   </th>
                   <td>
-                    <span className="v">146+</span>{" "}
-                    <span className="pill">flag</span>{" "}
-                    <span className="pill">OT 149+</span>
+                    <span className={supportVersion}>146+</span>{" "}
+                    <span className={supportPill}>flag</span>{" "}
+                    <span className={supportPill}>OT 149+</span>
                   </td>
                   <td>
-                    <span className="v">147+</span>{" "}
-                    <span className="pill">flag</span>
+                    <span className={supportVersion}>147+</span>{" "}
+                    <span className={supportPill}>flag</span>
                   </td>
                   <td>
-                    <span className="pill fallback">no-op fallback</span>
+                    <span className={`${supportPill} ${supportPillWarn}`}>
+                      no-op fallback
+                    </span>
                   </td>
                   <td>
-                    <span className="pill fallback">no-op fallback</span>
+                    <span className={`${supportPill} ${supportPillWarn}`}>
+                      no-op fallback
+                    </span>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <div className="support-note">
+          <div className={supportNote}>
             Versions reflect when the underlying platform API became available.
             Wrapper exports stay stable across all browsers. <strong>OT</strong>{" "}
             = origin trial.
@@ -759,28 +895,29 @@ export const App = () => (
     </section>
 
     {/* Get started */}
-    <section id="start">
-      <div className="container">
-        <div className="cta-block reveal">
-          <div
-            className="section-eyebrow"
-            style={{ justifyContent: "center", marginBottom: 18 }}
-          >
+    <section className={section} data-section="start">
+      <div className={container}>
+        <div
+          className={`${ctaBlock} ${sectionAnchor} ${reveal}`}
+          data-reveal
+          id="start"
+        >
+          <div className={`${sectionEyebrow} mb-5 justify-center`}>
             05 · ship it
           </div>
-          <h2>Try it in your project.</h2>
-          <p>
+          <h2 className={ctaBlockTitle}>Try it in your project.</h2>
+          <p className={ctaBlockText}>
             One install, all five blocks. Or pick the individual{" "}
             <code>@web-ai-sdk/*</code> packages. Ships ESM, CJS, and types.
             Tree-shakable.
           </p>
-          <InstallPill pkg="@web-ai-sdk/all" />
-          <div className="links">
-            <a className="link" href={DOCS_URL}>
+          <InstallPill pkg="@web-ai-sdk/all" className="mx-auto" />
+          <div className={ctaLinks}>
+            <a className={ctaLink} href={DOCS_URL}>
               Read the docs <span>↗</span>
             </a>
             <a
-              className="link"
+              className={ctaLink}
               href={`https://github.com/${REPO}`}
               target="_blank"
               rel="noreferrer"
@@ -794,19 +931,21 @@ export const App = () => (
     </section>
 
     {/* Footer */}
-    <footer>
-      <div className="container">
-        <div className="footer-grid">
-          <div className="footer-brand">
-            <div className="nav-brand">
+    <footer className={footer}>
+      <div className={container}>
+        <div className={footerGrid}>
+          <div>
+            <div className={footerBrandTitle}>
               <span>web-ai-sdk</span>
-              <span className="caret" />
+              <span className={caret} />
             </div>
-            <p>Building blocks for the Web's built-in AI APIs.</p>
+            <p className={footerBrandText}>
+              Building blocks for the Web's built-in AI APIs.
+            </p>
           </div>
-          <div className="footer-col">
-            <h4>Project</h4>
-            <ul>
+          <div>
+            <h4 className={footerColTitle}>Project</h4>
+            <ul className={footerColList}>
               <li>
                 <a href={DOCS_URL}>Docs</a>
               </li>
@@ -839,9 +978,9 @@ export const App = () => (
               </li>
             </ul>
           </div>
-          <div className="footer-col">
-            <h4>Community</h4>
-            <ul>
+          <div>
+            <h4 className={footerColTitle}>Community</h4>
+            <ul className={footerColList}>
               <li>
                 <a
                   href={`https://github.com/${REPO}/issues`}
@@ -862,9 +1001,9 @@ export const App = () => (
               </li>
             </ul>
           </div>
-          <div className="footer-col">
-            <h4>About</h4>
-            <ul>
+          <div>
+            <h4 className={footerColTitle}>About</h4>
+            <ul className={footerColList}>
               <li>
                 Built by{" "}
                 <a
@@ -888,7 +1027,7 @@ export const App = () => (
             </ul>
           </div>
         </div>
-        <div className="footer-meta">
+        <div className={footerMeta}>
           <span>web-ai-sdk v{SDK_VERSION}</span>
           <span>
             <a href="#top">Back to top ↑</a>

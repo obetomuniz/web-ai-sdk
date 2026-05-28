@@ -10,6 +10,31 @@ import {
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  btnSm,
+  card,
+  cardBody,
+  cardDotLive,
+  cardDotOk,
+  cardHead,
+  cardHeadTitle,
+  caret,
+  chip,
+  chipActive,
+  chipRow,
+  chipRowEnd,
+  demoControls,
+  fieldGroup,
+  fieldLegend,
+  fieldSpaced,
+  fieldset,
+  label,
+  outputBox,
+  textarea,
+  toolList,
+  toolToggle,
+  toolToggleTrack,
+} from "../lib/ui.js";
+import {
   DownloadNotice,
   StatusBar,
   UnavailableNotice,
@@ -353,43 +378,49 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
   const registeredCount = enabledIds.size;
 
   return (
-    <div className="card">
-      <div className="card-head">
-        <span className="title">
-          <span className={`dot ${running ? "live" : "ok"}`} />
+    <div className={card}>
+      <div className={cardHead}>
+        <span className={cardHeadTitle}>
+          <span className={running ? cardDotLive : cardDotOk} />
           registerTool() · agentic
         </span>
         <span>
           {registeredCount} tool{registeredCount === 1 ? "" : "s"} registered
         </span>
       </div>
-      <div className="card-body">
+      <div className={cardBody}>
         {available === false && (
           <UnavailableNotice api="WebMCP" flagSearch="WebMCP" />
         )}
         <DownloadNotice progress={progress} />
-        <fieldset className="field" style={{ margin: "12px 0" }}>
-          <legend className="label">registered tools</legend>
-          <ul className="tool-list">
+        <fieldset className={fieldset}>
+          <legend className={fieldLegend}>registered tools</legend>
+          <ul className={toolList}>
             {TOOL_SPECS.map((t) => {
               const on = enabledIds.has(t.id);
               return (
-                <li key={t.id} className={`tool ${on ? "on" : ""}`}>
+                <li
+                  key={t.id}
+                  className="group/tool bg-transparent"
+                  data-on={on ? "true" : "false"}
+                >
                   <button
                     type="button"
-                    className="tool-toggle"
+                    className={toolToggle}
                     onClick={() => toggle(t.id)}
                     aria-pressed={on}
                   >
-                    <span className="toggle" aria-hidden="true" />
-                    <span className="tool-body">
-                      <span className="name">
+                    <span className={toolToggleTrack} aria-hidden="true" />
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="text-fg">
                         {t.name}
-                        <span style={{ color: "var(--fg-4)" }}>()</span>
+                        <span className="text-fg-4">()</span>
                       </span>
-                      <span className="desc">{t.desc}</span>
+                      <span className="text-[11px] text-fg-4 max-[640px]:text-[10.5px]">
+                        {t.desc}
+                      </span>
                     </span>
-                    <span style={{ color: "var(--fg-4)", fontSize: 11 }}>
+                    <span className="text-[11px] text-fg-4">
                       {on ? "exposed" : "hidden"}
                     </span>
                   </button>
@@ -398,34 +429,33 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
             })}
           </ul>
         </fieldset>
-        <div className="field" style={{ marginBottom: 12 }}>
-          <label className="label" htmlFor="webmcp-demo-prompt">
+        <div className={fieldGroup}>
+          <label className={label} htmlFor="webmcp-demo-prompt">
             user intent
           </label>
           <textarea
             id="webmcp-demo-prompt"
-            className="textarea"
+            className={`${textarea} min-h-16`}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            style={{ minHeight: 64 }}
             spellCheck={false}
           />
         </div>
-        <div className="demo-controls">
+        <div className={demoControls}>
           <button
             type="button"
-            className="btn-sm"
+            className={btnSm}
             onClick={run}
             disabled={running || !available}
           >
             <span>{running ? "…" : "▶"}</span> Run agent
           </button>
-          <div className="chip-row chip-row-end">
+          <div className={`${chipRow} ${chipRowEnd}`}>
             {MCP_PROMPTS.map((p, i) => (
               <button
                 key={p}
                 type="button"
-                className={`chip ${prompt === p ? "active" : ""}`}
+                className={prompt === p ? chipActive : chip}
                 onClick={() => setPrompt(p)}
               >
                 {["cart", "order lookup", "settings"][i]}
@@ -433,43 +463,35 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
             ))}
           </div>
         </div>
-        <div className="output" style={{ minHeight: 120 }}>
+        <div className={`${outputBox} min-h-[120px]`}>
           {trace.length === 0 && !running ? (
-            <span style={{ color: "var(--fg-4)", fontStyle: "italic" }}>
+            <span className="text-fg-4 italic">
               Agent trace will appear here.
             </span>
           ) : (
             trace.map((ev, i) => {
               if (ev.kind === "call") {
                 return (
-                  <div key={`${ev.tool}-${i}`} style={{ marginBottom: 6 }}>
-                    <span style={{ color: "var(--accent)" }}>→ call</span>{" "}
+                  <div key={`${ev.tool}-${i}`} className="mb-1.5">
+                    <span className="text-accent">→ call</span>{" "}
                     <span>{ev.tool}</span>
-                    <span style={{ color: "var(--fg-4)" }}>(</span>
-                    <span style={{ color: "var(--fg-2)" }}>
-                      {JSON.stringify(ev.args)}
-                    </span>
-                    <span style={{ color: "var(--fg-4)" }}>)</span>
-                    <div
-                      style={{
-                        color: "var(--fg-4)",
-                        fontSize: 11,
-                        marginLeft: 14,
-                      }}
-                    >
+                    <span className="text-fg-4">(</span>
+                    <span className="text-fg-2">{JSON.stringify(ev.args)}</span>
+                    <span className="text-fg-4">)</span>
+                    <div className="ml-3.5 text-[11px] text-fg-4">
                       {`// ${ev.reason}`}
                     </div>
                   </div>
                 );
               }
-              const color =
+              const colorClass =
                 ev.kind === "err"
-                  ? "var(--err)"
+                  ? "text-err"
                   : ev.kind === "warn"
-                    ? "var(--warn)"
+                    ? "text-warn"
                     : ev.kind === "result"
-                      ? "var(--ok)"
-                      : "var(--fg-3)";
+                      ? "text-ok"
+                      : "text-fg-3";
               const prefix =
                 ev.kind === "err"
                   ? "✗ "
@@ -479,14 +501,14 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
                       ? "✓ "
                       : "· ";
               return (
-                <div key={`${ev.kind}-${i}`} style={{ color, marginBottom: 4 }}>
+                <div key={`${ev.kind}-${i}`} className={`${colorClass} mb-1`}>
                   {prefix}
                   {ev.text}
                 </div>
               );
             })
           )}
-          {running && <span className="cursor" />}
+          {running && <span className={`${caret} ml-[0.15em]`} />}
         </div>
         <StatusBar stats={stats} label="protocol: WebMCP/0.1" />
       </div>

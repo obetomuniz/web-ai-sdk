@@ -19,7 +19,7 @@ If you don't already have Node, install it once (via [nvm](https://github.com/nv
 
 - `packages/<name>/`: the published packages. Each is independently versioned (Changesets) and has its own `README.md`, tests, and per-package `package.json`.
 - `apps/docs/`: the Astro Starlight docs site. MDX content under `src/content/docs/`, React demo components under `src/components/`.
-- `apps/landing/`: the marketing landing page (Vite + React). Lives at the GitHub Pages root.
+- `apps/landing/`: the marketing landing page (Vite + React + Tailwind v4). Lives at the GitHub Pages root. Styling guardrails: [`apps/landing/README.md`](./apps/landing/README.md).
 - `package.json` scripts: every workflow command (build, test, lint, docs, landing, gate, pages, release) is a pnpm script. `pnpm run` lists them.
 
 See the [README "Repo layout" section](./README.md#repo-layout) for the full tree.
