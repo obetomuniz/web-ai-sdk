@@ -25,9 +25,9 @@ export const StarWidget = ({
       href={`https://github.com/${repo}`}
       target="_blank"
       rel="noreferrer"
-      className="star-widget"
+      className="inline-flex items-stretch overflow-hidden rounded-sm border border-hairline-2 font-mono text-[12.5px] transition-colors hover:border-accent-line"
     >
-      <span className="left">
+      <span className="inline-flex items-center gap-2 bg-surface-2 px-3 py-2 text-fg">
         <svg
           width="13"
           height="13"
@@ -39,8 +39,8 @@ export const StarWidget = ({
         </svg>
         Star
       </span>
-      <span className="right">
-        <span className="count">
+      <span className="inline-flex items-center gap-2 border-l border-hairline bg-surface px-3 py-2 text-accent-bright">
+        <span className="tabular-nums">
           {count != null ? count.toLocaleString() : "-"}
         </span>
       </span>

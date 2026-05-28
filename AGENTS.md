@@ -155,6 +155,16 @@ These rules apply to the API-wrapper packages (`@web-ai-sdk/prompt`, `webmcp`, `
 - **READMEs are user-facing.** Show install, the smallest possible vanilla example, the smallest possible React example, then the API surface.
 - Don't write design docs unless the user asks. Conventions live here; package-specific decisions live in the package README.
 
+### Landing styling (`apps/landing`)
+
+The marketing site uses **Tailwind CSS v4**. Full guardrails: [`apps/landing/README.md`](./apps/landing/README.md).
+
+- **Tailwind first.** New UI goes through `src/lib/ui.ts` (composed utilities), not new `.css` files or raw CSS in components.
+- **`src/index.css` is bootstrap only** — `@theme` tokens, layout CSS variables, keyframes, and minimal `@layer base` resets. No component-level rules.
+- **No inline CSS in React** except dynamic values (e.g. progress bar width). Static `<style>` / inline `style=` belong only in `index.html` (noscript fallback) and `public/404.html`.
+- **State classes must be mutually exclusive** when Tailwind utilities conflict (tabs, chips, buttons).
+- The codebase is still **partially mixed** (some inline Tailwind in components not yet in `ui.ts`); consolidate when editing, don't add more one-offs.
+
 ---
 
 ## 6. Common tasks (cookbook)

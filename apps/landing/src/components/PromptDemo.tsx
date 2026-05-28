@@ -2,6 +2,24 @@ import { isAvailable as isPromptAvailable } from "@web-ai-sdk/prompt";
 import { usePrompt } from "@web-ai-sdk/prompt/react";
 import { useEffect, useState } from "react";
 import {
+  btnSm,
+  btnSmGhost,
+  card,
+  cardBody,
+  cardDotLive,
+  cardDotOk,
+  cardHead,
+  cardHeadTitle,
+  chip,
+  chipActive,
+  chipRow,
+  chipRowEnd,
+  demoControls,
+  fieldSpaced,
+  label,
+  textarea,
+} from "../lib/ui.js";
+import {
   DownloadNotice,
   MarkdownOutput,
   StatusBar,
@@ -28,11 +46,6 @@ export const PromptDemo = () => {
     monitor,
   });
 
-  // Track stats off of the response stream. On `done`, also call update()
-  // with the final response so the char/tok counts reflect non-streaming
-  // results (e.g. Edge sometimes returns one-shot without firing chunks).
-  // Stats setters (`start`, `update`, `finish`) are stable across renders;
-  // including them in deps would only thrash the effect.
   // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
   useEffect(() => {
     if (status === "loading") start();
@@ -58,37 +71,35 @@ export const PromptDemo = () => {
   };
 
   return (
-    <div className="card">
-      <div className="card-head">
-        <span className="title">
-          <span
-            className={`dot ${streaming ? "live" : status === "done" ? "ok" : "ok"}`}
-          />
+    <div className={card}>
+      <div className={cardHead}>
+        <span className={cardHeadTitle}>
+          <span className={streaming ? cardDotLive : cardDotOk} />
           ask() · streaming
         </span>
         <span>session: cached · temp 0.7</span>
       </div>
-      <div className="card-body">
+      <div className={cardBody}>
         {available === false && (
           <UnavailableNotice api="Prompt API" flagSearch="Prompt API" />
         )}
         <DownloadNotice progress={progress} />
-        <div className="field" style={{ margin: "12px 0" }}>
-          <label className="label" htmlFor="prompt-demo-input">
+        <div className={fieldSpaced}>
+          <label className={label} htmlFor="prompt-demo-input">
             prompt
           </label>
           <textarea
             id="prompt-demo-input"
-            className="textarea"
+            className={textarea}
             value={promptText}
             onChange={(e) => setPromptText(e.target.value)}
             spellCheck={false}
           />
         </div>
-        <div className="demo-controls">
+        <div className={demoControls}>
           {!streaming ? (
             <button
-              className="btn-sm"
+              className={btnSm}
               onClick={run}
               disabled={!available || !promptText.trim()}
               type="button"
@@ -96,16 +107,16 @@ export const PromptDemo = () => {
               <span>▶</span> Run
             </button>
           ) : (
-            <button className="btn-sm ghost" onClick={abort} type="button">
+            <button className={btnSmGhost} onClick={abort} type="button">
               <span>■</span> Stop
             </button>
           )}
-          <div className="chip-row chip-row-end">
+          <div className={`${chipRow} ${chipRowEnd}`}>
             {PROMPT_EXAMPLES.map((p, i) => (
               <button
                 key={p}
                 type="button"
-                className={`chip ${promptText === p ? "active" : ""}`}
+                className={promptText === p ? chipActive : chip}
                 onClick={() => setPromptText(p)}
               >
                 {i === 0 ? "feature-detect" : i === 1 ? "haiku" : "explain"}

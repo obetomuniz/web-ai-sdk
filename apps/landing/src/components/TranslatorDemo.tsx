@@ -5,6 +5,24 @@ import {
 } from "@web-ai-sdk/translator";
 import { useEffect, useRef, useState } from "react";
 import {
+  btnSm,
+  card,
+  cardBody,
+  cardDotLive,
+  cardDotOk,
+  cardHead,
+  cardHeadTitle,
+  demoControls,
+  fieldGroup,
+  fieldSpaced,
+  label,
+  langPair,
+  langSwapBtn,
+  langSwapWrap,
+  select,
+  textarea,
+} from "../lib/ui.js";
+import {
   DownloadNotice,
   Output,
   StatusBar,
@@ -82,27 +100,27 @@ export const TranslatorDemo = () => {
   };
 
   return (
-    <div className="card">
-      <div className="card-head">
-        <span className="title">
-          <span className={`dot ${running ? "live" : "ok"}`} />
+    <div className={card}>
+      <div className={cardHead}>
+        <span className={cardHeadTitle}>
+          <span className={running ? cardDotLive : cardDotOk} />
           translate() · pair cached
         </span>
         <span>
           {from} → {to}
         </span>
       </div>
-      <div className="card-body">
+      <div className={cardBody}>
         {available === false && <UnavailableNotice api="Translator API" />}
         <DownloadNotice progress={progress} />
-        <div className="lang-pair">
-          <div className="field">
-            <label className="label" htmlFor="translator-demo-from">
+        <div className={langPair}>
+          <div className={fieldGroup}>
+            <label className={label} htmlFor="translator-demo-from">
               from
             </label>
             <select
               id="translator-demo-from"
-              className="select"
+              className={select}
               value={from}
               onChange={(e) => setFrom(e.target.value)}
             >
@@ -113,22 +131,24 @@ export const TranslatorDemo = () => {
               ))}
             </select>
           </div>
-          <button
-            type="button"
-            className="btn-sm ghost lang-swap"
-            onClick={swap}
-            title="Swap"
-            aria-label="Swap languages"
-          >
-            ⇄
-          </button>
-          <div className="field">
-            <label className="label" htmlFor="translator-demo-to">
+          <div className={langSwapWrap}>
+            <button
+              type="button"
+              className={langSwapBtn}
+              onClick={swap}
+              title="Swap"
+              aria-label="Swap languages"
+            >
+              ⇄
+            </button>
+          </div>
+          <div className={fieldGroup}>
+            <label className={label} htmlFor="translator-demo-to">
               to
             </label>
             <select
               id="translator-demo-to"
-              className="select"
+              className={select}
               value={to}
               onChange={(e) => setTo(e.target.value)}
             >
@@ -140,29 +160,29 @@ export const TranslatorDemo = () => {
             </select>
           </div>
         </div>
-        <div className="field" style={{ margin: "12px 0" }}>
-          <label className="label" htmlFor="translator-demo-source">
+        <div className={fieldSpaced}>
+          <label className={label} htmlFor="translator-demo-source">
             source
           </label>
           <textarea
             id="translator-demo-source"
-            className="textarea"
+            className={textarea}
             value={text}
             onChange={(e) => setText(e.target.value)}
             spellCheck={false}
           />
         </div>
-        <div className="demo-controls">
+        <div className={demoControls}>
           <button
             type="button"
-            className="btn-sm"
+            className={btnSm}
             onClick={run}
             disabled={running || from === to || !available}
           >
             <span>{running ? "…" : "▶"}</span> Translate
           </button>
           {from === to && (
-            <span className="notice warn chip-row-end">
+            <span className="ml-auto block rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_40%,var(--color-hairline))] px-3 py-2 font-mono text-[11.5px] text-warn max-[640px]:ml-0 max-[640px]:w-full">
               Source and target are the same.
             </span>
           )}
