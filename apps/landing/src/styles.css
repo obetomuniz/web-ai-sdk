@@ -147,13 +147,13 @@ section {
 section + section { border-top: 1px solid var(--hairline); }
 
 .section-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: baseline;
-  justify-content: space-between;
   gap: 24px;
   margin-bottom: 40px;
-  flex-wrap: wrap;
 }
+.section-head > .permalink { align-self: start; }
 
 .section-eyebrow {
   font-family: var(--mono);
@@ -196,6 +196,19 @@ section + section { border-top: 1px solid var(--hairline); }
 }
 .permalink > span[aria-hidden="true"] {
   opacity: 0.75;
+}
+
+@media (max-width: 880px) {
+  .permalink {
+    width: auto;
+    height: auto;
+    padding: 6px;
+    border: none;
+    border-radius: 0;
+  }
+  .permalink:hover {
+    border-color: transparent;
+  }
 }
 
 /* Visually-hidden text for icon-only links (screen readers still see it).
@@ -1493,14 +1506,3 @@ fieldset.field > legend.label {
 }
 .support-table tbody th { white-space: nowrap; }
 
-/* ---------- Section-head consistency on mobile ---------- */
-
-/* The permalink is now a small icon chip (no redundant text), so it can
-   sit on the same row as the heading at any viewport without forcing a
-   wrap. Keep the alignment flush-top so the chip lines up with the
-   first row of the eyebrow even when the heading wraps to two lines. */
-@media (max-width: 720px) {
-  .section-head {
-    align-items: flex-start;
-  }
-}
