@@ -1,4 +1,23 @@
 import { useState } from "react";
+import {
+  card,
+  tab,
+  tabActive,
+  tabLines,
+  tabLinesActive,
+  tabs,
+  term,
+  termBody,
+  termLine,
+  termLineBlank,
+  tokAcc,
+  tokCom,
+  tokFn,
+  tokKw,
+  tokNum,
+  tokStr,
+  tokTyp,
+} from "../lib/ui.js";
 
 type Token = [
   "kw" | "fn" | "str" | "num" | "com" | "typ" | "acc" | "pl",
@@ -15,13 +34,6 @@ interface Tab {
   code: CodeLine[];
 }
 
-// All three tabs do the SAME job: detect the article's language, then
-// summarize that text into short key-points in that language and pipe each
-// chunk to a `render()` sink. The wrapper-based tabs treat detector and
-// summarizer as composable units of one call each; the raw tab spells out
-// what each one actually handles for you — feature detection, monitor
-// wiring, AbortSignal threading, streaming-shape detection (Chrome delta
-// vs Edge cumulative), and the C0/C1 strip Edge needs.
 const TABS: Tab[] = [
   {
     id: "vanilla",
@@ -454,12 +466,24 @@ const TABS: Tab[] = [
   },
 ];
 
+const TOK_CLASS: Record<string, string> = {
+  kw: tokKw,
+  fn: tokFn,
+  str: tokStr,
+  num: tokNum,
+  com: tokCom,
+  typ: tokTyp,
+  acc: tokAcc,
+};
+
 const TermLine = ({ tokens }: { tokens: Token[] }) => (
-  <div className={`term-line${tokens.length === 0 ? " blank" : ""}`}>
+  <div
+    className={`${termLine}${tokens.length === 0 ? ` ${termLineBlank}` : ""}`}
+  >
     <span>
       {tokens.map(([k, v], i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: tokens are positional, never reordered; index is the only stable key
-        <span key={`${k}-${i}`} className={k === "pl" ? "" : `tok-${k}`}>
+        <span key={`${k}-${i}`} className={k === "pl" ? "" : TOK_CLASS[k]}>
           {v}
         </span>
       ))}
@@ -467,8 +491,6 @@ const TermLine = ({ tokens }: { tokens: Token[] }) => (
   </div>
 );
 
-// TABS is non-empty by construction; this guarantees data is always defined
-// without a non-null assertion at the call site.
 const FIRST_TAB =
   TABS[0] ?? raise("HowItWorks: TABS must contain at least one entry");
 
@@ -477,29 +499,35 @@ function raise(message: string): never {
 }
 
 export const HowItWorks = () => {
-  const [tab, setTab] = useState("vanilla");
-  const data = TABS.find((t) => t.id === tab) ?? FIRST_TAB;
+  const [tabId, setTabId] = useState("vanilla");
+  const data = TABS.find((t) => t.id === tabId) ?? FIRST_TAB;
   return (
-    <div className="card">
-      <div className="tabs">
+    <div className={card}>
+      <div className={tabs} role="tablist">
         {TABS.map((t) => (
           <button
             key={t.id}
             type="button"
-            className={`tab ${t.id === tab ? "active" : ""}`}
-            onClick={() => setTab(t.id)}
+            role="tab"
+            aria-selected={t.id === tabId}
+            className={t.id === tabId ? tabActive : tab}
+            onClick={() => setTabId(t.id)}
           >
             {t.label}
-            <span className="lines">{t.code.length}L</span>
+            <span
+              className={`${tabLines} ${t.id === tabId ? tabLinesActive : ""}`}
+            >
+              {t.code.length}L
+            </span>
           </button>
         ))}
       </div>
-      <div className="term">
-        <div className="term-body">
-          <pre>
+      <div className={term}>
+        <div className={termBody}>
+          <pre className="m-0">
             {data.code.map((line, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: code lines are positional within a tab; index is the only stable key
-              <TermLine key={`${tab}-${i}`} tokens={line.t} />
+              <TermLine key={`${tabId}-${i}`} tokens={line.t} />
             ))}
           </pre>
         </div>
