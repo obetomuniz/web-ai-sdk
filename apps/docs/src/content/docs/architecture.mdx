@@ -16,9 +16,12 @@ Each `@web-ai-sdk/*` package wraps a single cohesive web capability relevant to 
 | [`@web-ai-sdk/summarizer`](/docs/guides/summarizer/) | `Summarizer` |
 | [`@web-ai-sdk/translator`](/docs/guides/translator/) | `Translator` |
 | [`@web-ai-sdk/detector`](/docs/guides/detector/) | `LanguageDetector` |
-| [`@web-ai-sdk/all`](/docs/guides/meta-package/) | Meta-package; re-exports the five above |
+| [`@web-ai-sdk/writer`](/docs/guides/writer/) | `Writer` |
+| [`@web-ai-sdk/rewriter`](/docs/guides/rewriter/) | `Rewriter` |
+| [`@web-ai-sdk/proofreader`](/docs/guides/proofreader/) | `Proofreader` |
+| [`@web-ai-sdk/all`](/docs/guides/meta-package/) | Meta-package; re-exports the wrappers above |
 
-The capability can originate from an official Built-in AI API (`LanguageModel`, `Summarizer`, `Translator`, `Detector`), from an adjacent web standard (`WebMCP` today; `WebGPU` and `WebNN` are likely candidates as their on-device AI uses crystallize), or, rarely, from a zero-dependency SDK-authored primitive with no platform equivalent yet. The rules below are what define an SDK package, not the origin of the underlying capability.
+The capability can originate from an official Built-in AI API (`LanguageModel`, `Summarizer`, `Translator`, `LanguageDetector`, `Writer`, `Rewriter`, `Proofreader`), from an adjacent web standard (`WebMCP` today; `WebGPU` and `WebNN` are likely candidates as their on-device AI uses crystallize), or, rarely, from a zero-dependency SDK-authored primitive with no platform equivalent yet. The rules below are what define an SDK package, not the origin of the underlying capability.
 
 The structural rule is mechanical: **one package = one cohesive capability**. If the description of a package needs the word "and" to be honest about its scope, it's probably two packages.
 

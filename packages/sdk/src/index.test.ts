@@ -4,9 +4,12 @@ import * as sdk from "./index.js";
 
 import * as detectorSubpath from "./detector.js";
 import * as promptSubpath from "./prompt.js";
+import * as proofreaderSubpath from "./proofreader.js";
+import * as rewriterSubpath from "./rewriter.js";
 import * as summarizerSubpath from "./summarizer.js";
 import * as translatorSubpath from "./translator.js";
 import * as webmcpSubpath from "./webmcp.js";
+import * as writerSubpath from "./writer.js";
 
 // Smoke tests for the aggregator's two import shapes:
 //   1. Namespaced root  (`import { prompt, summarizer } from "@web-ai-sdk/all"`).
@@ -16,7 +19,7 @@ import * as webmcpSubpath from "./webmcp.js";
 // the full APIs are covered by each scoped package's own tests.
 
 describe("web-ai-sdk root namespace", () => {
-  it("exposes prompt, webmcp, summarizer, translator, detector", () => {
+  it("exposes every scoped package", () => {
     expect(typeof sdk.prompt.ask).toBe("function");
     expect(typeof sdk.prompt.createSession).toBe("function");
     expect(typeof sdk.webmcp.registerTool).toBe("function");
@@ -24,6 +27,9 @@ describe("web-ai-sdk root namespace", () => {
     expect(typeof sdk.summarizer.summarize).toBe("function");
     expect(typeof sdk.translator.translate).toBe("function");
     expect(typeof sdk.detector.detect).toBe("function");
+    expect(typeof sdk.writer.write).toBe("function");
+    expect(typeof sdk.rewriter.rewrite).toBe("function");
+    expect(typeof sdk.proofreader.proofread).toBe("function");
   });
 });
 
@@ -36,5 +42,8 @@ describe("web-ai-sdk per-package subpaths", () => {
     expect(typeof summarizerSubpath.summarize).toBe("function");
     expect(typeof translatorSubpath.translate).toBe("function");
     expect(typeof detectorSubpath.detect).toBe("function");
+    expect(typeof writerSubpath.write).toBe("function");
+    expect(typeof rewriterSubpath.rewrite).toBe("function");
+    expect(typeof proofreaderSubpath.proofread).toBe("function");
   });
 });

@@ -17,7 +17,10 @@ For human-facing context see the root [`README.md`](./README.md) and [`CONTRIBUT
 | `@web-ai-sdk/summarizer`| `Summarizer` (Web Built-in AI Summarizer API)       | Ported     |
 | `@web-ai-sdk/prompt`    | `LanguageModel` (Web Built-in AI Prompt API)        | New        |
 | `@web-ai-sdk/detector`  | `LanguageDetector` (Web Built-in AI Language Detection API) | New |
-| `@web-ai-sdk/all`       | meta-package; re-exports the five above under one install | New     |
+| `@web-ai-sdk/writer`    | `Writer` (Web Built-in AI Writer API)               | New        |
+| `@web-ai-sdk/rewriter`  | `Rewriter` (Web Built-in AI Rewriter API)           | New        |
+| `@web-ai-sdk/proofreader`| `Proofreader` (Web Built-in AI Proofreader API)    | New        |
+| `@web-ai-sdk/all`       | meta-package; re-exports the others above under one install | New     |
 
 Two private workspace apps live under `apps/`: `apps/docs` (Astro Starlight docs site with live React demos) and `apps/landing` (the marketing/demo site). Run `pnpm docs` or `pnpm landing` after `pnpm build`.
 
@@ -72,7 +75,10 @@ Full rules in [`CONTRIBUTING.md` § Governance](./CONTRIBUTING.md#governance); u
 │   ├── summarizer/               # same shape; adds skeleton.ts + cache.ts
 │   ├── prompt/                   # same shape; adds api.ts + cache.ts
 │   ├── detector/                 # same shape; adds api.ts + cache.ts
-│   └── sdk/                      # @web-ai-sdk/all meta-package; re-exports the five above
+│   ├── writer/                   # same shape; adds api.ts + cache.ts
+│   ├── rewriter/                 # same shape; adds api.ts + cache.ts
+│   ├── proofreader/              # same shape; adds api.ts + cache.ts
+│   └── sdk/                      # @web-ai-sdk/all meta-package; re-exports the eight above
 ├── apps/
 │   ├── docs/                     # Astro Starlight docs site
 │   └── landing/                  # Vite + React marketing landing
@@ -134,7 +140,7 @@ All workflow commands are pnpm scripts in `package.json`.
 
 ### Core package contract
 
-These rules apply to the API-wrapper packages (`@web-ai-sdk/prompt`, `webmcp`, `summarizer`, `translator`, `detector`). Future packages with a different role (UI primitives, polyfills, etc.) sit at different layers and get their own rules.
+These rules apply to the API-wrapper packages (`@web-ai-sdk/prompt`, `webmcp`, `summarizer`, `translator`, `detector`, `writer`, `rewriter`, `proofreader`). Future packages with a different role (UI primitives, polyfills, etc.) sit at different layers and get their own rules.
 
 - **No UI components in the core wrappers.** A core package may never render DOM. The React adapter is a hook, not a component. UI primitives would ship as a separate `@web-ai-sdk/ui` package, not bolted into a wrapper.
 - **Feature detect, never throw.** If the underlying browser API is missing, the package is a no-op (return a no-op cleanup, return `undefined`, etc.) so consumers can ship the same code to all browsers.
@@ -229,6 +235,6 @@ Or in one shot: `pnpm gate`.
 ## 9. Glossary
 
 - **Tool**; In WebMCP, a named, agent-callable function with a description, optional JSON Schema input, and an `execute` handler. Registered with `navigator.modelContext.registerTool`.
-- **Core package / lifecycle layer**; A package that ships logic, types, and session lifecycle but no DOM / no styles / no rendering primitives. The five API-wrapper packages are all core packages. Future packages with a different role (UI primitives, polyfills) sit at different layers.
+- **Core package / lifecycle layer**; A package that ships logic, types, and session lifecycle but no DOM / no styles / no rendering primitives. The eight API-wrapper packages are all core packages. Future packages with a different role (UI primitives, polyfills) sit at different layers.
 - **Subpath export**; A package entry exposed under a path like `@web-ai-sdk/webmcp/react`. Configured via `package.json#exports`. Lets one install ship multiple framework adapters that tree-shake independently.
 - **Feature-detected no-op**; The pattern this monorepo uses everywhere: if the underlying browser API is absent, the wrapper returns a no-op cleanup / `undefined` / similar, so consumer code can ship without polyfills or branching.

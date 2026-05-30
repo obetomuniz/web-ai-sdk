@@ -9,7 +9,10 @@
       "@web-ai-sdk/webmcp",
       "@web-ai-sdk/summarizer",
       "@web-ai-sdk/translator",
-      "@web-ai-sdk/detector"
+      "@web-ai-sdk/detector",
+      "@web-ai-sdk/writer",
+      "@web-ai-sdk/rewriter",
+      "@web-ai-sdk/proofreader"
     ]
   ],
   "linked": [],

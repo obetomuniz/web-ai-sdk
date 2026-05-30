@@ -1,0 +1,110 @@
+---
+title: Proofreader
+description: Building block for the Web's Built-in Proofreader API. Corrects grammar, spelling, and punctuation and returns per-issue corrections.
+---
+
+Building block for the Web's Built-in [Proofreader API](https://developer.chrome.com/docs/ai/proofreader-api). Corrects grammar, spelling, and punctuation, returning the fully corrected text plus per-issue corrections with offsets into the original input. Session reuse and pluggable result caching included. The React adapter lives at `@web-ai-sdk/proofreader/react`; see [useProofreader](/docs/react/use-proofreader/).
+
+## Usage
+
+```ts
+import { proofread } from "@web-ai-sdk/proofreader";
+
+const result = await proofread({
+  input: "I seen him yesterday at the store, and he bought two loafs of bread.",
+  expectedInputLanguages: ["en"],
+});
+
+console.log(result.output?.correctedInput);
+for (const c of result.output?.corrections ?? []) {
+  console.log(c.startIndex, c.endIndex, "→", c.correction);
+}
+```
+
+`result.output` is `null` when the input is empty; otherwise `correctedInput` is the corrected text and `corrections` is the list of per-issue edits.
+
+## Options
+
+```ts
+interface ProofreadOptions {
+  input: string;
+  expectedInputLanguages?: readonly string[];
+  monitor?: (m: CreateMonitor) => void;
+  cache?: "session" | "local" | { get, set };
+  cacheKey?: string;
+  signal?: AbortSignal;
+}
+```
+
+<div class="options-table">
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `input` <sup>required</sup> | `string` | Text to proofread. Empty / whitespace resolves to `{ output: null }`. |
+| `expectedInputLanguages` | `readonly string[]` | BCP-47 languages the proofreader should expect as input. |
+| `monitor` | `(m) => void` | Observe the first-call model download. |
+| `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache (stores the serialized output). |
+| `cacheKey` | `string` | Override the default cache key. |
+| `signal` | `AbortSignal` | Abort signal. |
+
+</div>
+
+## Returns
+
+```ts
+interface ProofreadCorrection {
+  startIndex: number;   // inclusive offset into the original input
+  endIndex: number;     // exclusive offset into the original input
+  correction: string;   // suggested replacement
+  type?: string;        // not emitted by Chrome's current build
+  explanation?: string; // not emitted by Chrome's current build
+}
+
+interface ProofreadOutput {
+  correctedInput: string;
+  corrections: ProofreadCorrection[];
+}
+
+interface ProofreadResult {
+  output: ProofreadOutput | null;
+  cached: boolean;
+}
+```
+
+## Rendering corrections in place
+
+The `corrections` offsets index into the **original** input, so you can highlight each error by slicing between offsets:
+
+```ts
+let cursor = 0;
+const spans: Array<{ text: string; error: boolean }> = [];
+for (const c of output.corrections) {
+  if (c.startIndex > cursor)
+    spans.push({ text: input.slice(cursor, c.startIndex), error: false });
+  spans.push({ text: input.slice(c.startIndex, c.endIndex), error: true });
+  cursor = c.endIndex;
+}
+if (cursor < input.length)
+  spans.push({ text: input.slice(cursor), error: false });
+```
+
+## No streaming
+
+Unlike the [Writer](/docs/guides/writer/) and [Rewriter](/docs/guides/rewriter/), the Proofreader has no streaming surface; `proofread()` resolves once with the full result.
+
+## Errors and unavailability
+
+The vanilla `proofread()` throws `ProofreaderUnavailableError` when the API is missing:
+
+```ts
+import { proofread, ProofreaderUnavailableError } from "@web-ai-sdk/proofreader";
+
+try {
+  const result = await proofread({ input: text });
+} catch (err) {
+  if (err instanceof ProofreaderUnavailableError) return;
+  throw err;
+}
+```
+
+`AbortSignal` is supported.
