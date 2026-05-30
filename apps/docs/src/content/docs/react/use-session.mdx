@@ -72,6 +72,26 @@ function ChatPane({ agent }: { agent: Agent }) {
 }
 ```
 
+## Forking with `clone()` (agents / multi-task)
+
+`session` is the vanilla `Session`, so `session.clone()` is available in React too. For agents that run many tasks against one persona, keep the `useSession` base warm (system prompt only) and clone it per task so each run gets fresh history without re-parsing the system prompt. See [Session resilience](/docs/guides/prompt/#session-resilience-base--per-task-clone) for the full rationale.
+
+```tsx
+const { session } = useSession({ systemPrompt });
+
+const runTask = async (input: string) => {
+  if (!session) return;
+  const turn = await session.clone(); // fresh history, base stays warm
+  try {
+    for await (const delta of turn.sendStreaming(input)) render(delta);
+  } finally {
+    turn.destroy();
+  }
+};
+```
+
+Destroying a clone never affects the base session. The hook still owns the base session's lifecycle (destroyed on unmount / option change); clones you create are yours to destroy.
+
 ## Return shape
 
 ```ts
@@ -153,6 +173,7 @@ interface Session {
   send(input: string): Promise<string>;
   sendStreaming(input: string): AsyncIterable<string>; // yields deltas, not cumulative
   abort(): void;
+  clone(options?: { signal?: AbortSignal }): Promise<Session>;
   destroy(): void;
 }
 

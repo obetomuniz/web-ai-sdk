@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __clearSessionCacheForTests } from "./api.js";
 import {
+  PromptAbortError,
   PromptUnavailableError,
   type ResponseCache,
   ask,
@@ -339,5 +340,120 @@ describe("createSession", () => {
     await Promise.all([session.send("a"), session.send("b")]);
     expect(maxActive).toBe(2);
     session.destroy();
+  });
+
+  it("forwards omitResponseConstraintInput to the native prompt options", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const session = createSession();
+    await session.send("hi", {
+      responseConstraint: { type: "object" },
+      omitResponseConstraintInput: true,
+    });
+    expect(fake.promptSpy).toHaveBeenCalledWith(
+      "hi",
+      expect.objectContaining({
+        responseConstraint: { type: "object" },
+        omitResponseConstraintInput: true,
+      }),
+    );
+    session.destroy();
+  });
+
+  it("drops omitResponseConstraintInput when no responseConstraint is set (native would throw)", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const session = createSession();
+    await session.send("hi", { omitResponseConstraintInput: true });
+    const opts = fake.promptSpy.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(opts).not.toHaveProperty("omitResponseConstraintInput");
+    session.destroy();
+  });
+});
+
+describe("Session.clone", () => {
+  it("forks via the native instance.clone() and the clone works independently", async () => {
+    const parentDestroy = vi.fn();
+    const childDestroy = vi.fn();
+    const cloneSpy = vi.fn(async () => ({
+      prompt: vi.fn(async () => "child reply"),
+      destroy: childDestroy,
+    }));
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => "parent reply"),
+        destroy: parentDestroy,
+        clone: cloneSpy,
+      }),
+    });
+
+    const base = createSession({ systemPrompt: "S" });
+    await base.send("warm"); // force the underlying create()
+    const turn = await base.clone();
+    expect(cloneSpy).toHaveBeenCalledTimes(1);
+    expect(await turn.send("go")).toBe("child reply");
+
+    // Destroying the clone tears down the child instance, not the parent.
+    turn.destroy();
+    await Promise.resolve();
+    expect(childDestroy).toHaveBeenCalledTimes(1);
+    expect(parentDestroy).not.toHaveBeenCalled();
+
+    // The base session still works after the clone is gone.
+    expect(await base.send("again")).toBe("parent reply");
+    base.destroy();
+  });
+
+  it("throws PromptUnavailableError when the instance has no clone()", async () => {
+    installFakeLanguageModel({
+      sessionFactory: () => ({ prompt: vi.fn(async () => "x") }),
+    });
+    const base = createSession();
+    await base.send("warm");
+    await expect(base.clone()).rejects.toBeInstanceOf(PromptUnavailableError);
+    base.destroy();
+  });
+
+  it("throws SessionDestroyedError when cloning a destroyed session", async () => {
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => "x"),
+        clone: vi.fn(),
+        destroy: vi.fn(),
+      }),
+    });
+    const base = createSession();
+    await base.send("warm");
+    base.destroy();
+    await expect(base.clone()).rejects.toMatchObject({
+      name: "SessionDestroyedError",
+    });
+  });
+});
+
+describe("PromptAbortError", () => {
+  it("is exported and an aborted send rejects with an instance of it", async () => {
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => {
+          await new Promise((r) => setTimeout(r, 20));
+          return "late";
+        }),
+        destroy: vi.fn(),
+      }),
+    });
+    const session = createSession();
+    const controller = new AbortController();
+    const pending = session.send("hi", { signal: controller.signal });
+    controller.abort();
+    await expect(pending).rejects.toBeInstanceOf(PromptAbortError);
+    session.destroy();
+  });
+
+  it("is the same error ask() throws on abort (instanceof works)", async () => {
+    installFakeLanguageModel({ chunks: ["a", "b"] });
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      ask({ input: "hi", signal: controller.signal, cache: inMemoryCache() }),
+    ).rejects.toBeInstanceOf(PromptAbortError);
   });
 });
