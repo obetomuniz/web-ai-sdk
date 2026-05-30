@@ -178,16 +178,42 @@ interface CreateSessionOptions {
   createOptions?: Partial<LanguageModelCreateOptions>;
 }
 
+interface SessionSendOptions {
+  signal?: AbortSignal;
+  responseConstraint?: object;        // JSON Schema for structured output
+  omitResponseConstraintInput?: boolean; // drop the inlined schema to save tokens
+}
+
 interface Session {
   readonly destroyed: boolean;
   send(input: string, options?: SessionSendOptions): Promise<string | null>;
   sendStreaming(input: string, options?: SessionSendOptions): AsyncIterable<string>;
   abort(): void;
+  clone(options?: { signal?: AbortSignal }): Promise<Session>;
   destroy(): void;
 }
 ```
 
 `Session.sendStreaming()` yields **deltas** (each chunk is the new text since the last yield, never cumulative). The wrapper does no extra bookkeeping: no history tracking, no concurrent-send queue, no usage telemetry. Always destroy sessions you no longer need.
+
+`omitResponseConstraintInput` is only forwarded when `responseConstraint` is also set; the native API throws a `TypeError` otherwise. When you omit the schema, include format guidance in the prompt text itself (the model no longer sees the schema).
+
+### Session resilience: base + per-task `clone()`
+
+For agents and multi-task flows, reusing one long-lived session lets history accumulate (later runs "echo" earlier ones, and you eventually hit `QuotaExceededError`), while recreating a session per task pays the cold start and can hit Chrome's single-instance degradation. The spec's [recommended pattern](https://developer.chrome.com/docs/ai/session-management) is to keep one warm **base** session (system prompt only) and `clone()` it per task: the clone inherits the system prompt and history without re-parsing or another `create()`, then gets independent history and lifecycle.
+
+```ts
+const base = createSession({ systemPrompt }); // once; keep warm
+// per task / run:
+const turn = await base.clone();              // fresh history, no re-parse
+try {
+  for await (const delta of turn.sendStreaming(input)) render(delta);
+} finally {
+  turn.destroy();                             // free the clone, keep base
+}
+```
+
+`clone()` throws `SessionDestroyedError` if the base is destroyed and `PromptUnavailableError` if the browser instance doesn't support cloning. Destroying a clone never affects the base, and vice versa.
 
 ### `useSession(options?): UseSessionReturn`
 
@@ -253,7 +279,7 @@ The vanilla `ask()` throws `PromptUnavailableError` when the API is missing or r
 
 `createSession()` returns a `Session` synchronously even if the underlying `create()` rejects; the error surfaces on the first `send` / `sendStreaming`.
 
-`AbortSignal` is supported on every surface. Aborting mid-stream resolves cleanly; the result cache is not written for aborted runs.
+`AbortSignal` is supported on every surface. Aborting mid-stream resolves cleanly; the result cache is not written for aborted runs. Aborts reject with `PromptAbortError` (exported; `instanceof PromptAbortError` works, and its `name` is `"AbortError"`), thrown by both `ask()` and sessions.
 
 ## License
 

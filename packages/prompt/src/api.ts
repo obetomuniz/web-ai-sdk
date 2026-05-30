@@ -48,6 +48,13 @@ export interface LanguageModelCreateOptions {
 export interface LanguageModelPromptOptions {
   signal?: AbortSignal;
   responseConstraint?: object;
+  /**
+   * When `responseConstraint` is set, omit the inlined JSON Schema from the
+   * model's prompt context. Saves tokens on every call when the schema is
+   * large; the constraint still shapes the output. The native API throws a
+   * `TypeError` if this is set without a `responseConstraint`.
+   */
+  omitResponseConstraintInput?: boolean;
 }
 
 export interface LanguageModelInstance {
