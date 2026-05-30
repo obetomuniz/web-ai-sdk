@@ -34,6 +34,8 @@ Browsers are shipping built-in AI APIs behind flags. The shape changes; the life
 
 **We ship that lifecycle layer.** Framework adapters, polyfills, UI primitives stay optional subpaths so they don't constrain your design system, framework, or styling stack. Pick the layers you need; skip the rest.
 
+This is the same shape mature utility libraries converge on as the platform catches up (lodash → native methods, moment/date-fns → `Temporal`): a thin shim over a native primitive that gets *thinner* as the primitive stabilizes. See [Architecture § Lineage](./apps/docs/src/content/docs/architecture.mdx) for the full reasoning.
+
 ## Install
 
 Pick the building blocks you need, or grab the whole suite in one install:

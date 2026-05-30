@@ -68,6 +68,15 @@ These are **ergonomic defaults**, not opinions about *how* you build an app. The
 
 What you won't find in the SDK is anything that bonds multiple capabilities together, walks the DOM, or needs a runtime dependency. Those concerns live in consumer code — anything you'd want to compose is yours to write.
 
+## Lineage: thin shims over platform primitives
+
+This shape isn't novel, and that's the point. The most durable JS utility libraries trend toward becoming thin layers over a platform primitive, then shrink as the platform absorbs their surface:
+
+- **lodash** ceded most of its surface to native array and object methods.
+- **moment** is superseded by the `Temporal` proposal; **date-fns** is now [reorienting to be "Temporal-first"](https://x.com/kossnocorp/status/2056306289480020338): document where `Temporal` replaces a function outright, map the gaps it can't cover, and ship the rest as functions that operate directly on `Temporal` objects.
+
+`web-ai-sdk` starts from that endpoint instead of migrating toward it. The Built-in AI APIs are the primitive; the SDK only owns the lifecycle and ergonomics the primitive leaves rough (feature detection, session reuse, stream smoothing, safe cleanup). As the APIs stabilize, the right outcome is for this layer to get *thinner*, not fatter. If a capability graduates to needing nothing but the raw API, the corresponding wrapper has done its job.
+
 ## Summary
 
 The SDK in one line: **one package per browser capability, zero runtime deps, lifecycle layer only.**
