@@ -358,6 +358,15 @@ describe("createSession", () => {
     );
     session.destroy();
   });
+
+  it("drops omitResponseConstraintInput when no responseConstraint is set (native would throw)", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const session = createSession();
+    await session.send("hi", { omitResponseConstraintInput: true });
+    const opts = fake.promptSpy.mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(opts).not.toHaveProperty("omitResponseConstraintInput");
+    session.destroy();
+  });
 });
 
 describe("Session.clone", () => {

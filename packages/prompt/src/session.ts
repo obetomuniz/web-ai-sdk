@@ -161,7 +161,9 @@ export interface SessionSendOptions {
   /**
    * When `responseConstraint` is set, omit the inlined JSON Schema from the
    * model's prompt context. Saves tokens on every turn when the schema is
-   * large; the constraint still shapes the output.
+   * large; the constraint still shapes the output. Ignored unless
+   * `responseConstraint` is also set (the native API would otherwise throw).
+   * When omitting, include format guidance in the prompt text itself.
    */
   omitResponseConstraintInput?: boolean;
 }
@@ -291,10 +293,13 @@ const wrapInstance = (internal: Promise<SessionInternal>): Session => {
     const promptOpts: LanguageModelPromptOptions = {
       signal: controller.signal,
     };
-    if (options?.responseConstraint)
+    if (options?.responseConstraint) {
       promptOpts.responseConstraint = options.responseConstraint;
-    if (options?.omitResponseConstraintInput)
-      promptOpts.omitResponseConstraintInput = true;
+      // The native call throws a TypeError when omitResponseConstraintInput
+      // is set without a responseConstraint, so only forward it alongside one.
+      if (options.omitResponseConstraintInput)
+        promptOpts.omitResponseConstraintInput = true;
+    }
 
     try {
       const raw = await instance.prompt(input, promptOpts);
@@ -325,10 +330,13 @@ const wrapInstance = (internal: Promise<SessionInternal>): Session => {
       const promptOpts: LanguageModelPromptOptions = {
         signal: controller.signal,
       };
-      if (options?.responseConstraint)
+      if (options?.responseConstraint) {
         promptOpts.responseConstraint = options.responseConstraint;
-      if (options?.omitResponseConstraintInput)
-        promptOpts.omitResponseConstraintInput = true;
+        // The native call throws a TypeError when omitResponseConstraintInput
+        // is set without a responseConstraint, so only forward it with one.
+        if (options.omitResponseConstraintInput)
+          promptOpts.omitResponseConstraintInput = true;
+      }
 
       try {
         if (typeof instance.promptStreaming === "function") {

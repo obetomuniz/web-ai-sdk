@@ -95,7 +95,9 @@ export interface AskOptions {
   /**
    * When `responseConstraint` is set, omit the inlined JSON Schema from the
    * model's prompt context to save tokens. The constraint still shapes the
-   * output.
+   * output. Ignored unless `responseConstraint` is also set (the native API
+   * would otherwise throw). When omitting, include format guidance in the
+   * prompt text itself.
    */
   omitResponseConstraintInput?: boolean;
   /**
@@ -218,10 +220,13 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
 
   const promptOpts: LanguageModelPromptOptions = {};
   if (options.signal) promptOpts.signal = options.signal;
-  if (options.responseConstraint)
+  if (options.responseConstraint) {
     promptOpts.responseConstraint = options.responseConstraint;
-  if (options.omitResponseConstraintInput)
-    promptOpts.omitResponseConstraintInput = true;
+    // The native call throws a TypeError when omitResponseConstraintInput is
+    // set without a responseConstraint, so only forward it alongside one.
+    if (options.omitResponseConstraintInput)
+      promptOpts.omitResponseConstraintInput = true;
+  }
 
   let finalText: string;
   if (typeof session.promptStreaming === "function") {

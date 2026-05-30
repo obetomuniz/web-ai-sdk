@@ -101,11 +101,28 @@ const text = await session.send("And what about the Prompt API?");
 session.destroy();
 ```
 
-The wrapper is intentionally thin. It handles cross-browser smoothing every consumer would otherwise reimplement (delta-vs-cumulative chunk detection, output sanitization, abort wiring, typed unavailability) and forwards everything else to the native instance. It does **not** track conversation history, queue concurrent sends, or wrap `clone()` — those are your data model and UI concerns.
+The wrapper is intentionally thin. It handles cross-browser smoothing every consumer would otherwise reimplement (delta-vs-cumulative chunk detection, output sanitization, abort wiring, typed unavailability) and forwards everything else to the native instance. It does **not** track conversation history or queue concurrent sends; those are your data model and UI concerns. It does surface `clone()`, since forking a warm base session is the spec's recommended way to start a fresh task (see [Session resilience](#session-resilience-base--per-task-clone) below).
 
 `createSession()` never touches the `ask()` session cache. Two sessions with identical options get two independent instances with isolated history, system prompt, sampling, and lifecycle — `abort()` / `destroy()` on one session never touch another. Concurrent `send` / `sendStreaming` calls on the **same** session are NOT queued — the underlying `LanguageModel` is sequential per instance and will reject the overlapping call with `InvalidStateError`. Either `await` the previous send or call `session.abort()` before issuing a new turn.
 
 **Concurrency note.** Each session is an independent `LanguageModel` instance, but the underlying on-device model is single-instance. Chrome 148 / Edge 138 currently schedule `sendStreaming` calls across sessions FIFO: overlapping sends do not interleave token-by-token — the second send waits for the first to drain. This is a constraint of the runtime, not of the API; code written against `createSession()` becomes faster automatically if a future release exposes parallel inference.
+
+## Session resilience: base + per-task `clone()`
+
+For agents and multi-task flows there's a lose-lose with naive session handling: reuse one long-lived session and history accumulates (later runs start echoing earlier ones, and you eventually hit `QuotaExceededError`); recreate a session per task and you pay the cold start and can trip Chrome's single-instance degradation. Chrome's [session management guidance](https://developer.chrome.com/docs/ai/session-management) recommends a third way: keep one warm **base** session (system prompt only) and `clone()` it per task. The clone inherits the system prompt and history without re-parsing instructions or paying another `create()`, then gets its own independent history and lifecycle.
+
+```ts
+const base = createSession({ systemPrompt }); // create once; keep warm
+// per task / run:
+const turn = await base.clone();              // fresh history, no re-parse
+try {
+  for await (const delta of turn.sendStreaming(input)) render(delta);
+} finally {
+  turn.destroy();                             // free the clone, keep the base warm
+}
+```
+
+`clone()` throws `SessionDestroyedError` if the base has been destroyed, and `PromptUnavailableError` if the underlying browser instance doesn't support cloning. The clone is fully independent: destroying it never affects the base, and vice versa. The React `useSession` hook returns the `Session` directly, so `session.clone()` is available there too.
 
 ## How it works
 
@@ -166,6 +183,8 @@ const parsed = JSON.parse(result.output ?? "{}");
 
 The wrapper passes `responseConstraint` straight through to `session.prompt()` / `session.promptStreaming()`. Support depends on your Chrome version.
 
+By default the schema is inlined into the prompt context, which costs tokens. Pass `omitResponseConstraintInput: true` (on `ask()` or `SessionSendOptions`) to drop it; the constraint still shapes the output, but you should then include format guidance in the prompt text itself. The flag is only forwarded when `responseConstraint` is also set — the native API throws a `TypeError` otherwise, so the wrapper ignores it on its own.
+
 ## Aborting
 
 `AbortSignal` is supported on every surface. Aborting mid-stream resolves cleanly; an opt-in result cache is not written for aborted runs:
@@ -177,6 +196,19 @@ setTimeout(() => controller.abort(), 1000);
 ```
 
 For sessions, call `session.abort()` to stop the most recent in-flight `send` / `sendStreaming`, or `session.destroy()` to tear down the underlying instance.
+
+Aborted runs reject with `PromptAbortError` (exported from the package). Both `ask()` and sessions throw the same class, so `err instanceof PromptAbortError` works; its `name` is `"AbortError"` for compatibility with standard abort handling.
+
+```ts
+import { ask, PromptAbortError } from "@web-ai-sdk/prompt";
+
+try {
+  await ask({ input: "…", signal });
+} catch (err) {
+  if (err instanceof PromptAbortError) return; // user cancelled
+  throw err;
+}
+```
 
 ## Errors and unavailability
 
