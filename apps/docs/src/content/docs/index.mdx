@@ -21,7 +21,7 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 
 ## What it is
 
-**`web-ai-sdk`** ships building blocks for the Web's Built-in AI APIs. One package per browser capability (Prompt, WebMCP, Summarizer, Translator, Detector). Zero runtime dependencies. Vanilla TypeScript by default, with optional React hooks. See [Architecture](/docs/architecture/) for the model.
+**`web-ai-sdk`** ships building blocks for the Web's Built-in AI APIs. One package per browser capability (Prompt, WebMCP, Summarizer, Translator, Detector, Writer, Rewriter, Proofreader). Zero runtime dependencies. Vanilla TypeScript by default, with optional React hooks. See [Architecture](/docs/architecture/) for the model.
 
 Compositions that bond multiple primitives (block-level DOM translation,
 article-aware summarization, detect-then-summarize chains) are
@@ -32,7 +32,7 @@ composition is your code.
 
 <CardGrid>
   <Card title="@web-ai-sdk/all" icon="open-book">
-    Meta-package — install once, get all five wrappers under a single
+    Meta-package: install once, get all eight wrappers under a single
     dependency. [Read the guide →](/docs/guides/meta-package/)
   </Card>
   <Card title="@web-ai-sdk/prompt" icon="seti:typescript">
@@ -55,6 +55,18 @@ composition is your code.
     Detect the language of any text on-device. Confidence scores plus a sorted
     list of alternates. [Read the guide →](/docs/guides/detector/)
   </Card>
+  <Card title="@web-ai-sdk/writer" icon="pencil">
+    Draft new content from a task description. Tone, format, length, streaming.
+    [Read the guide →](/docs/guides/writer/)
+  </Card>
+  <Card title="@web-ai-sdk/rewriter" icon="random">
+    Tone-shift and reshape text you already have. Shorter, longer, more formal.
+    [Read the guide →](/docs/guides/rewriter/)
+  </Card>
+  <Card title="@web-ai-sdk/proofreader" icon="approve-check">
+    Grammar, spelling, and punctuation fixes with per-issue offsets you can
+    highlight in place. [Read the guide →](/docs/guides/proofreader/)
+  </Card>
 </CardGrid>
 
 ## Install
@@ -63,7 +75,7 @@ Pick a building block, or grab the whole suite under a single install:
 
 ```sh
 pnpm add @web-ai-sdk/prompt        # one block
-pnpm add @web-ai-sdk/all           # all five blocks
+pnpm add @web-ai-sdk/all           # all eight blocks
 ```
 
 See the [meta-package guide](/docs/guides/meta-package/) for the two import shapes (`@web-ai-sdk/all/prompt` subpath vs `{ prompt } from "@web-ai-sdk/all"` namespaced root).
