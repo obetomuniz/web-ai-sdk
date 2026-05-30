@@ -32,6 +32,8 @@ Lifecycle layer on purpose. Each package only manages session lifetime, cleanup,
 
 Decision heuristic for new code: *if it bonds two SDK packages, walks the DOM, or needs a third-party runtime, it doesn't belong in an SDK wrapper.* Higher-level compositions (block-level DOM translation, article skeleton extraction, detect-then-summarize chains) are consumer-code territory; the SDK ships primitives only.
 
+The bias is toward *less* code over time, not more. This is the same trajectory mature utility libraries follow as the platform catches up (lodash → native methods, moment/date-fns → `Temporal`): own only the lifecycle and ergonomics the raw API leaves rough, and let the wrapper thin out as the Built-in AI APIs stabilize. When in doubt about whether something belongs, default to leaving it out.
+
 Full rules in [`CONTRIBUTING.md` § Governance](./CONTRIBUTING.md#governance); user-facing version at [`apps/docs/src/content/docs/architecture.mdx`](./apps/docs/src/content/docs/architecture.mdx) ([web-ai-sdk.dev/docs/architecture/](https://web-ai-sdk.dev/docs/architecture/)).
 
 ---
