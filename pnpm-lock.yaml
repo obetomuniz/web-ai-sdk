@@ -35,6 +35,12 @@ importers:
       '@web-ai-sdk/prompt':
         specifier: workspace:*
         version: link:../../packages/prompt
+      '@web-ai-sdk/proofreader':
+        specifier: workspace:*
+        version: link:../../packages/proofreader
+      '@web-ai-sdk/rewriter':
+        specifier: workspace:*
+        version: link:../../packages/rewriter
       '@web-ai-sdk/summarizer':
         specifier: workspace:*
         version: link:../../packages/summarizer
@@ -44,6 +50,9 @@ importers:
       '@web-ai-sdk/webmcp':
         specifier: workspace:*
         version: link:../../packages/webmcp
+      '@web-ai-sdk/writer':
+        specifier: workspace:*
+        version: link:../../packages/writer
       astro:
         specifier: ^5.0.0
         version: 5.18.1(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.3)(typescript@5.9.3)(yaml@2.9.0)
@@ -78,6 +87,12 @@ importers:
       '@web-ai-sdk/prompt':
         specifier: workspace:*
         version: link:../../packages/prompt
+      '@web-ai-sdk/proofreader':
+        specifier: workspace:*
+        version: link:../../packages/proofreader
+      '@web-ai-sdk/rewriter':
+        specifier: workspace:*
+        version: link:../../packages/rewriter
       '@web-ai-sdk/summarizer':
         specifier: workspace:*
         version: link:../../packages/summarizer
@@ -87,6 +102,9 @@ importers:
       '@web-ai-sdk/webmcp':
         specifier: workspace:*
         version: link:../../packages/webmcp
+      '@web-ai-sdk/writer':
+        specifier: workspace:*
+        version: link:../../packages/writer
       marked:
         specifier: ^18.0.3
         version: 18.0.3
@@ -170,6 +188,54 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@24.12.4)(happy-dom@15.11.7)(lightningcss@1.32.0)
 
+  packages/proofreader:
+    devDependencies:
+      '@testing-library/react':
+        specifier: ^16
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@types/react':
+        specifier: ^19.0.1
+        version: 19.2.14
+      happy-dom:
+        specifier: ^15.11.7
+        version: 15.11.7
+      react:
+        specifier: ^19.0.0
+        version: 19.2.6
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.14)(typescript@5.9.3)(yaml@2.9.0)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@24.12.4)(happy-dom@15.11.7)(lightningcss@1.32.0)
+
+  packages/rewriter:
+    devDependencies:
+      '@testing-library/react':
+        specifier: ^16
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@types/react':
+        specifier: ^19.0.1
+        version: 19.2.14
+      happy-dom:
+        specifier: ^15.11.7
+        version: 15.11.7
+      react:
+        specifier: ^19.0.0
+        version: 19.2.6
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.14)(typescript@5.9.3)(yaml@2.9.0)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@24.12.4)(happy-dom@15.11.7)(lightningcss@1.32.0)
+
   packages/sdk:
     dependencies:
       '@web-ai-sdk/detector':
@@ -178,6 +244,12 @@ importers:
       '@web-ai-sdk/prompt':
         specifier: workspace:*
         version: link:../prompt
+      '@web-ai-sdk/proofreader':
+        specifier: workspace:*
+        version: link:../proofreader
+      '@web-ai-sdk/rewriter':
+        specifier: workspace:*
+        version: link:../rewriter
       '@web-ai-sdk/summarizer':
         specifier: workspace:*
         version: link:../summarizer
@@ -187,6 +259,9 @@ importers:
       '@web-ai-sdk/webmcp':
         specifier: workspace:*
         version: link:../webmcp
+      '@web-ai-sdk/writer':
+        specifier: workspace:*
+        version: link:../writer
     devDependencies:
       '@testing-library/react':
         specifier: ^16
@@ -259,6 +334,30 @@ importers:
         version: 2.1.9(@types/node@24.12.4)(happy-dom@15.11.7)(lightningcss@1.32.0)
 
   packages/webmcp:
+    devDependencies:
+      '@testing-library/react':
+        specifier: ^16
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@types/react':
+        specifier: ^19.0.1
+        version: 19.2.14
+      happy-dom:
+        specifier: ^15.11.7
+        version: 15.11.7
+      react:
+        specifier: ^19.0.0
+        version: 19.2.6
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.14)(typescript@5.9.3)(yaml@2.9.0)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@24.12.4)(happy-dom@15.11.7)(lightningcss@1.32.0)
+
+  packages/writer:
     devDependencies:
       '@testing-library/react':
         specifier: ^16

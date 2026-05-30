@@ -1,0 +1,93 @@
+---
+title: Rewriter
+description: Building block for the Web's Built-in Rewriter API with session reuse, streaming, and opt-in result caching.
+---
+
+Building block for the Web's Built-in [Rewriter API](https://developer.chrome.com/docs/ai/rewriter-api). Revises and restructures existing text with tone / length adjustments, session reuse, streaming, and pluggable result caching. The React adapter lives at `@web-ai-sdk/rewriter/react`; see [useRewriter](/docs/react/use-rewriter/).
+
+## Usage
+
+```ts
+import { rewrite } from "@web-ai-sdk/rewriter";
+
+const result = await rewrite({
+  input: "hey, can u send me that doc when u get a sec? thx",
+  tone: "more-formal",
+  length: "as-is",
+  onUpdate: (text) => render(text),
+});
+
+console.log(result.output, result.cached);
+```
+
+`result.output` is the rewritten text (trimmed), or `null` when the input is empty. `result.cached` tells you whether the response came from the cache without invoking the model.
+
+## Options
+
+```ts
+interface RewriteOptions {
+  input: string;                  // text to rewrite
+  context?: string;               // per-call background info
+  language?: string;              // BCP-47; drives input/output hints when supported
+  supportedLanguages?: readonly string[];
+  tone?: "as-is" | "more-formal" | "more-casual";
+  format?: "as-is" | "markdown" | "plain-text";
+  length?: "as-is" | "shorter" | "longer";
+  sharedContext?: string;
+  monitor?: (m: CreateMonitor) => void;
+  cache?: "session" | "local" | { get, set };
+  cacheKey?: string;
+  onUpdate?: (text: string) => void;
+  signal?: AbortSignal;
+}
+```
+
+<div class="options-table">
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `input` <sup>required</sup> | `string` | Text to rewrite. Empty / whitespace resolves to `{ output: null }`. |
+| `context` | `string` | Optional per-call background information for the model. |
+| `language` | `string` | BCP-47 language for input + output hints. Falls back to omitting hints if unsupported. |
+| `supportedLanguages` | `readonly string[]` | Languages the model supports for hints. Defaults to `["en", "es", "ja"]`. |
+| `tone` | `"as-is" \| "more-formal" \| "more-casual"` | Tone adjustment. Defaults to `"as-is"`. |
+| `format` | `"as-is" \| "markdown" \| "plain-text"` | Output format. Defaults to `"as-is"`. |
+| `length` | `"as-is" \| "shorter" \| "longer"` | Length adjustment. Defaults to `"as-is"`. |
+| `sharedContext` | `string` | A hint shared across multiple rewrite tasks. |
+| `monitor` | `(m) => void` | Observe the first-call model download. |
+| `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
+| `cacheKey` | `string` | Override the default cache key. |
+| `onUpdate` | `(text: string) => void` | Streaming update callback. Receives the cumulative buffer, not deltas. |
+| `signal` | `AbortSignal` | Abort signal. |
+
+</div>
+
+## Returns
+
+```ts
+interface RewriteResult {
+  output: string | null;
+  cached: boolean;
+}
+```
+
+## Writer vs. Rewriter
+
+The [Writer](/docs/guides/writer/) generates **new** content from a task description; the Rewriter transforms text you **already have**. They share the same lifecycle (session reuse, streaming, caching) and the same `tone` / `format` / `length` ergonomics, but the Rewriter's enums are relative adjustments (`more-formal`, `shorter`, `as-is`) rather than absolute targets.
+
+## Errors and unavailability
+
+The vanilla `rewrite()` throws `RewriterUnavailableError` when the API is missing:
+
+```ts
+import { rewrite, RewriterUnavailableError } from "@web-ai-sdk/rewriter";
+
+try {
+  const result = await rewrite({ input: draft, tone: "more-formal" });
+} catch (err) {
+  if (err instanceof RewriterUnavailableError) return;
+  throw err;
+}
+```
+
+`AbortSignal` is supported. Aborting mid-stream resolves cleanly; an opt-in result cache is not written for aborted runs.

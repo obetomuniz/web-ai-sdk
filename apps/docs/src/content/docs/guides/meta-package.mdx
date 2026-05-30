@@ -1,11 +1,11 @@
 ---
 title: Meta-package
-description: One install, all five building blocks. The @web-ai-sdk/all meta-package re-exports prompt, summarizer, translator, detector, and webmcp behind a single dependency.
+description: One install, all eight building blocks. The @web-ai-sdk/all meta-package re-exports prompt, summarizer, translator, detector, writer, rewriter, proofreader, and webmcp behind a single dependency.
 ---
 
-`@web-ai-sdk/all` is a thin meta-package that re-exports the five other scoped `@web-ai-sdk/*` building blocks under a single install. It has no behaviour of its own. All logic, tests, and version history live in the scoped packages.
+`@web-ai-sdk/all` is a thin meta-package that re-exports the eight other scoped `@web-ai-sdk/*` building blocks under a single install. It has no behaviour of its own. All logic, tests, and version history live in the scoped packages.
 
-Reach for it when you want one entry in `package.json` instead of five, or when you're prototyping and don't care yet which blocks you'll keep.
+Reach for it when you want one entry in `package.json` instead of eight, or when you're prototyping and don't care yet which blocks you'll keep.
 
 ## Install
 
@@ -14,7 +14,7 @@ pnpm add @web-ai-sdk/all
 # or: npm i @web-ai-sdk/all / bun add @web-ai-sdk/all
 ```
 
-The five scoped packages come along as transitive dependencies. `react` is a peer dependency only when you import any `/react` subpath.
+The eight scoped packages come along as transitive dependencies. `react` is a peer dependency only when you import any `/react` subpath.
 
 ## Two import shapes
 
@@ -29,6 +29,9 @@ import { ask, createSession } from "@web-ai-sdk/all/prompt";
 import { summarize } from "@web-ai-sdk/all/summarizer";
 import { translate } from "@web-ai-sdk/all/translator";
 import { detect } from "@web-ai-sdk/all/detector";
+import { write } from "@web-ai-sdk/all/writer";
+import { rewrite } from "@web-ai-sdk/all/rewriter";
+import { proofread } from "@web-ai-sdk/all/proofreader";
 import { registerTool, defineTool } from "@web-ai-sdk/all/webmcp";
 ```
 
@@ -40,7 +43,7 @@ import { useSummarizer } from "@web-ai-sdk/all/summarizer/react";
 ### Namespaced root (handy for prototyping)
 
 ```ts
-import { prompt, summarizer, translator, detector, webmcp } from "@web-ai-sdk/all";
+import { prompt, summarizer, translator, detector, writer, rewriter, proofreader, webmcp } from "@web-ai-sdk/all";
 
 await prompt.ask({ input: "Hello" });
 await summarizer.summarize({ language: "en", input: longText });
@@ -60,13 +63,13 @@ For applications, the meta-package is usually the right default.
 
 ## Versioning
 
-`@web-ai-sdk/all` and the five other scoped packages release together. Every release ships all six at the same version via a Changesets `fixed` group, so pinning a single version in your `package.json` gets you the whole suite at a known state.
+`@web-ai-sdk/all` and the eight other scoped packages release together. Every release ships all nine at the same version via a Changesets `fixed` group, so pinning a single version in your `package.json` gets you the whole suite at a known state.
 
 ## Available subpaths
 
 | Subpath                            | Re-exports                          |
 | ---------------------------------- | ----------------------------------- |
-| `@web-ai-sdk/all`                  | namespaces for all five packages    |
+| `@web-ai-sdk/all`                  | namespaces for all eight packages   |
 | `@web-ai-sdk/all/prompt`           | [`@web-ai-sdk/prompt`](/docs/guides/prompt/)         |
 | `@web-ai-sdk/all/prompt/react`     | `@web-ai-sdk/prompt/react`                |
 | `@web-ai-sdk/all/webmcp`           | [`@web-ai-sdk/webmcp`](/docs/guides/webmcp/)         |
@@ -77,3 +80,9 @@ For applications, the meta-package is usually the right default.
 | `@web-ai-sdk/all/translator/react` | `@web-ai-sdk/translator/react`            |
 | `@web-ai-sdk/all/detector`         | [`@web-ai-sdk/detector`](/docs/guides/detector/)     |
 | `@web-ai-sdk/all/detector/react`   | `@web-ai-sdk/detector/react`              |
+| `@web-ai-sdk/all/writer`           | [`@web-ai-sdk/writer`](/docs/guides/writer/)         |
+| `@web-ai-sdk/all/writer/react`     | `@web-ai-sdk/writer/react`                |
+| `@web-ai-sdk/all/rewriter`         | [`@web-ai-sdk/rewriter`](/docs/guides/rewriter/)     |
+| `@web-ai-sdk/all/rewriter/react`   | `@web-ai-sdk/rewriter/react`              |
+| `@web-ai-sdk/all/proofreader`      | [`@web-ai-sdk/proofreader`](/docs/guides/proofreader/) |
+| `@web-ai-sdk/all/proofreader/react`| `@web-ai-sdk/proofreader/react`           |

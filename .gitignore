@@ -22,3 +22,6 @@ apps/*/.npmrc
 .idea/
 .claude/
 CLAUDE.md
+
+# Personal planning / scratch space for ideas and prototype follow-ups.
+.ideas/

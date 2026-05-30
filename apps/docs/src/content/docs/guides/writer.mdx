@@ -1,0 +1,101 @@
+---
+title: Writer
+description: Building block for the Web's Built-in Writer API with session reuse, streaming, and opt-in result caching.
+---
+
+Building block for the Web's Built-in [Writer API](https://developer.chrome.com/docs/ai/writer-api). Generates new content from a writing task with tone / format / length options, session reuse, streaming, and pluggable result caching. The React adapter lives at `@web-ai-sdk/writer/react`; see [useWriter](/docs/react/use-writer/).
+
+## Usage
+
+```ts
+import { write } from "@web-ai-sdk/writer";
+
+const result = await write({
+  input: "An inquiry to my bank about how to enable wire transfers.",
+  context: "I'm a longstanding customer.",
+  tone: "formal",
+  length: "medium",
+  onUpdate: (text) => render(text),
+});
+
+console.log(result.output, result.cached);
+```
+
+`result.output` is the generated text (trimmed), or `null` when the input is empty. `result.cached` tells you whether the response came from the cache without invoking the model.
+
+## Options
+
+```ts
+interface WriteOptions {
+  input: string;                  // the writing task / prompt
+  context?: string;               // per-call background info
+  language?: string;              // BCP-47; drives input/output hints when supported
+  supportedLanguages?: readonly string[];
+  tone?: "formal" | "neutral" | "casual";
+  format?: "markdown" | "plain-text";
+  length?: "short" | "medium" | "long";
+  sharedContext?: string;
+  monitor?: (m: CreateMonitor) => void;
+  cache?: "session" | "local" | { get, set };
+  cacheKey?: string;
+  onUpdate?: (text: string) => void;
+  signal?: AbortSignal;
+}
+```
+
+<div class="options-table">
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `input` <sup>required</sup> | `string` | The writing task / prompt. Empty / whitespace resolves to `{ output: null }`. |
+| `context` | `string` | Optional per-call background information for the model. |
+| `language` | `string` | BCP-47 language for input + output hints. Falls back to omitting hints if unsupported. |
+| `supportedLanguages` | `readonly string[]` | Languages the model supports for hints. Defaults to `["en", "es", "ja"]`. |
+| `tone` | `"formal" \| "neutral" \| "casual"` | Writing tone. Defaults to `"neutral"`. |
+| `format` | `"markdown" \| "plain-text"` | Output format. Defaults to `"markdown"`. |
+| `length` | `"short" \| "medium" \| "long"` | Output length. Defaults to `"short"`. |
+| `sharedContext` | `string` | A hint shared across multiple write tasks. |
+| `monitor` | `(m) => void` | Observe the first-call model download. |
+| `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
+| `cacheKey` | `string` | Override the default cache key. |
+| `onUpdate` | `(text: string) => void` | Streaming update callback. Receives the cumulative buffer, not deltas. |
+| `signal` | `AbortSignal` | Abort signal. |
+
+</div>
+
+## Returns
+
+```ts
+interface WriteResult {
+  output: string | null;
+  cached: boolean;
+}
+```
+
+## How it works
+
+1. **Trim and cache check.** Whitespace-only input short-circuits to `null`. If a `cache` is configured and has the key, return immediately.
+2. **Cache `Writer.create()` sessions** by create-options. First call pays the cold start; later same-config calls reuse the warm session.
+3. **Stream `writeStreaming()`** when the instance supports it, falling back to one-shot `write()`. Chunks are merged (delta or cumulative) and pushed to `onUpdate` as the cumulative buffer.
+4. **Optionally cache the final output** when you pass a `cache`. Off by default.
+
+## Output normalization
+
+The wrapper trims leading/trailing whitespace only, so internal markdown formatting and line breaks the model produces stay intact.
+
+## Errors and unavailability
+
+The vanilla `write()` throws `WriterUnavailableError` when the API is missing:
+
+```ts
+import { write, WriterUnavailableError } from "@web-ai-sdk/writer";
+
+try {
+  const result = await write({ input: task });
+} catch (err) {
+  if (err instanceof WriterUnavailableError) return;
+  throw err;
+}
+```
+
+`AbortSignal` is supported. Aborting mid-stream resolves cleanly; an opt-in result cache is not written for aborted runs.

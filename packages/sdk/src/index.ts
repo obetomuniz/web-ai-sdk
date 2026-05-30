@@ -1,7 +1,7 @@
 /**
- * @web-ai-sdk/all; meta-package that re-exports the five `@web-ai-sdk/*`
- * building blocks behind a single install. Each scoped package is also
- * reachable via a subpath import (e.g. `@web-ai-sdk/all/prompt`,
+ * @web-ai-sdk/all; meta-package that re-exports the `@web-ai-sdk/*` building
+ * blocks behind a single install. Each scoped package is also reachable via a
+ * subpath import (e.g. `@web-ai-sdk/all/prompt`,
  * `@web-ai-sdk/all/summarizer/react`).
  *
  * Two equivalent import shapes:
@@ -15,7 +15,7 @@
  *   import { useSummarizer } from "@web-ai-sdk/all/summarizer/react";
  *
  * The namespaced root avoids name collisions between packages
- * (e.g. `checkAvailability` is defined in all five).
+ * (e.g. `checkAvailability` is defined in most of them).
  */
 
 export * as prompt from "@web-ai-sdk/prompt";
@@ -23,3 +23,6 @@ export * as webmcp from "@web-ai-sdk/webmcp";
 export * as summarizer from "@web-ai-sdk/summarizer";
 export * as translator from "@web-ai-sdk/translator";
 export * as detector from "@web-ai-sdk/detector";
+export * as writer from "@web-ai-sdk/writer";
+export * as rewriter from "@web-ai-sdk/rewriter";
+export * as proofreader from "@web-ai-sdk/proofreader";

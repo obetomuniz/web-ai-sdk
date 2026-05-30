@@ -3,11 +3,14 @@ import { DetectorDemo } from "./components/DetectorDemo.js";
 import { HowItWorks } from "./components/HowItWorks.js";
 import { InstallPill } from "./components/InstallPill.js";
 import { PromptDemo } from "./components/PromptDemo.js";
+import { ProofreaderDemo } from "./components/ProofreaderDemo.js";
+import { RewriterDemo } from "./components/RewriterDemo.js";
 import { ScrollSpy } from "./components/ScrollSpy.js";
 import { StarWidget } from "./components/StarWidget.js";
 import { SummarizerDemo } from "./components/SummarizerDemo.js";
 import { TranslatorDemo } from "./components/TranslatorDemo.js";
 import { WebMCPDemo } from "./components/WebMCPDemo.js";
+import { WriterDemo } from "./components/WriterDemo.js";
 import {
   badge,
   badgeAccent,
@@ -546,6 +549,193 @@ export const App = () => (
             <DetectorDemo />
           </div>
         </div>
+
+        {/* Writer */}
+        <div className={`${pkgRow} ${reveal}`} data-reveal id="writer">
+          <div className={pkgLeft}>
+            <div className={pkgIcon} aria-hidden="true">
+              <svg
+                aria-hidden="true"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+            </div>
+            <div className={pkgName}>
+              <span className={scope}>@web-ai-sdk/</span>writer
+            </div>
+            <div className={pkgTag}>
+              Draft new content from a task description. Tone, format, length;
+              streamed straight into your UI.
+            </div>
+            <ul className={pkgBullets}>
+              <li>
+                <span>
+                  <b>Task in, prose out.</b> Give it a prompt; get back a
+                  paragraph, email, or post.
+                </span>
+              </li>
+              <li>
+                <span>
+                  <b>Tone &amp; length.</b> formal · neutral · casual, across
+                  short / medium / long.
+                </span>
+              </li>
+              <li>
+                <span>
+                  <b>Markdown safe.</b> Trims edges only, so formatting and line
+                  breaks survive.
+                </span>
+              </li>
+            </ul>
+            <div className={pkgActions}>
+              <code className={pkgInstall}>
+                <span className={pkgInstallPrompt}>$</span> npm install{" "}
+                <span className={pkgInstallPkg}>@web-ai-sdk/writer</span>
+              </code>
+              <a className={pkgDocs} href={guideLink("writer")}>
+                Read the docs <span className={pkgDocsArrow}>→</span>
+              </a>
+            </div>
+          </div>
+          <div className={pkgRight}>
+            <WriterDemo />
+          </div>
+        </div>
+
+        {/* Rewriter */}
+        <div className={`${pkgRow} ${reveal}`} data-reveal id="rewriter">
+          <div className={pkgLeft}>
+            <div className={pkgIcon} aria-hidden="true">
+              <svg
+                aria-hidden="true"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 2v6h-6" />
+                <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                <path d="M3 22v-6h6" />
+                <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+              </svg>
+            </div>
+            <div className={pkgName}>
+              <span className={scope}>@web-ai-sdk/</span>rewriter
+            </div>
+            <div className={pkgTag}>
+              Tone-shift and reshape text you already have. More formal,
+              shorter, or longer; one call.
+            </div>
+            <ul className={pkgBullets}>
+              <li>
+                <span>
+                  <b>Relative adjustments.</b> more-formal · more-casual,
+                  shorter · longer · as-is.
+                </span>
+              </li>
+              <li>
+                <span>
+                  <b>Streaming first.</b> Pipe the revised text in as the model
+                  produces it.
+                </span>
+              </li>
+              <li>
+                <span>
+                  <b>Same lifecycle.</b> Session reuse, AbortSignals, opt-in
+                  caching; shared with Writer.
+                </span>
+              </li>
+            </ul>
+            <div className={pkgActions}>
+              <code className={pkgInstall}>
+                <span className={pkgInstallPrompt}>$</span> npm install{" "}
+                <span className={pkgInstallPkg}>@web-ai-sdk/rewriter</span>
+              </code>
+              <a className={pkgDocs} href={guideLink("rewriter")}>
+                Read the docs <span className={pkgDocsArrow}>→</span>
+              </a>
+            </div>
+          </div>
+          <div className={pkgRight}>
+            <RewriterDemo />
+          </div>
+        </div>
+
+        {/* Proofreader */}
+        <div className={`${pkgRow} ${reveal}`} data-reveal id="proofreader">
+          <div className={pkgLeft}>
+            <div className={pkgIcon} aria-hidden="true">
+              <svg
+                aria-hidden="true"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2" />
+                <path d="M9 20h6" />
+                <path d="M12 4v16" />
+                <path d="m16 13 2 2 4-4" />
+              </svg>
+            </div>
+            <div className={pkgName}>
+              <span className={scope}>@web-ai-sdk/</span>proofreader
+            </div>
+            <div className={pkgTag}>
+              Grammar, spelling, and punctuation fixes with per-issue offsets
+              you can highlight in place.
+            </div>
+            <ul className={pkgBullets}>
+              <li>
+                <span>
+                  <b>Corrected text + diffs.</b> Get the clean string and the
+                  list of edits with offsets.
+                </span>
+              </li>
+              <li>
+                <span>
+                  <b>Highlight inline.</b> Offsets index the original input, so
+                  you can mark each error in place.
+                </span>
+              </li>
+              <li>
+                <span>
+                  <b>One-shot.</b> No streaming; resolves once with the full
+                  result and optional caching.
+                </span>
+              </li>
+            </ul>
+            <div className={pkgActions}>
+              <code className={pkgInstall}>
+                <span className={pkgInstallPrompt}>$</span> npm install{" "}
+                <span className={pkgInstallPkg}>@web-ai-sdk/proofreader</span>
+              </code>
+              <a className={pkgDocs} href={guideLink("proofreader")}>
+                Read the docs <span className={pkgDocsArrow}>→</span>
+              </a>
+            </div>
+          </div>
+          <div className={pkgRight}>
+            <ProofreaderDemo />
+          </div>
+        </div>
       </div>
     </section>
 
@@ -624,7 +814,8 @@ export const App = () => (
               </div>
               <div className={`${stackDetail} ${stackDetailMuted}`}>
                 navigator.modelContext &nbsp; Summarizer &nbsp; Translator
-                &nbsp; LanguageModel &nbsp; LanguageDetector
+                &nbsp; LanguageModel &nbsp; LanguageDetector &nbsp; Writer
+                &nbsp; Rewriter &nbsp; Proofreader
               </div>
             </div>
             <span className={stackOwner}>platform</span>
@@ -638,8 +829,9 @@ export const App = () => (
               </div>
               <div className={stackDetail}>
                 ask() &nbsp; createSession() &nbsp; summarize() &nbsp;
-                translate() &nbsp; detect() &nbsp; registerTool() &nbsp;
-                defineTool() &nbsp; AbortSignal &nbsp; session cache
+                translate() &nbsp; detect() &nbsp; write() &nbsp; rewrite()
+                &nbsp; proofread() &nbsp; registerTool() &nbsp; defineTool()
+                &nbsp; AbortSignal &nbsp; session cache
               </div>
             </div>
             <span className={`${stackOwner} ${stackIdxAccent}`}>
@@ -656,7 +848,8 @@ export const App = () => (
               </div>
               <div className={stackDetail}>
                 usePrompt() &nbsp; useSession() &nbsp; useSummarizer() &nbsp;
-                useTranslator() &nbsp; useDetector() &nbsp; useWebMCP()
+                useTranslator() &nbsp; useDetector() &nbsp; useWriter() &nbsp;
+                useRewriter() &nbsp; useProofreader() &nbsp; useWebMCP()
               </div>
             </div>
             <span className={`${stackOwner} ${stackIdxAccent}`}>
@@ -840,6 +1033,78 @@ export const App = () => (
                 </tr>
                 <tr>
                   <th className={supportRowHead}>
+                    <span className={scope}>@web-ai-sdk/</span>writer
+                  </th>
+                  <td>
+                    <span className={supportVersion}>137+</span>{" "}
+                    <span className={supportPill}>flag</span>{" "}
+                    <span className={supportPill}>OT</span>
+                  </td>
+                  <td>
+                    <span className={supportVersion}>138+</span>{" "}
+                    <span className={supportPill}>Canary/Dev</span>
+                  </td>
+                  <td>
+                    <span className={`${supportPill} ${supportPillWarn}`}>
+                      no-op fallback
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`${supportPill} ${supportPillWarn}`}>
+                      no-op fallback
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <th className={supportRowHead}>
+                    <span className={scope}>@web-ai-sdk/</span>rewriter
+                  </th>
+                  <td>
+                    <span className={supportVersion}>137+</span>{" "}
+                    <span className={supportPill}>flag</span>{" "}
+                    <span className={supportPill}>OT</span>
+                  </td>
+                  <td>
+                    <span className={supportVersion}>138+</span>{" "}
+                    <span className={supportPill}>Canary/Dev</span>
+                  </td>
+                  <td>
+                    <span className={`${supportPill} ${supportPillWarn}`}>
+                      no-op fallback
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`${supportPill} ${supportPillWarn}`}>
+                      no-op fallback
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <th className={supportRowHead}>
+                    <span className={scope}>@web-ai-sdk/</span>proofreader
+                  </th>
+                  <td>
+                    <span className={supportVersion}>141+</span>{" "}
+                    <span className={supportPill}>flag</span>{" "}
+                    <span className={supportPill}>OT</span>
+                  </td>
+                  <td>
+                    <span className={supportVersion}>142+</span>{" "}
+                    <span className={supportPill}>Canary/Dev</span>
+                  </td>
+                  <td>
+                    <span className={`${supportPill} ${supportPillWarn}`}>
+                      no-op fallback
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`${supportPill} ${supportPillWarn}`}>
+                      no-op fallback
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <th className={supportRowHead}>
                     <span className={scope}>@web-ai-sdk/</span>webmcp
                   </th>
                   <td>
@@ -907,7 +1172,7 @@ export const App = () => (
           </div>
           <h2 className={ctaBlockTitle}>Try it in your project.</h2>
           <p className={ctaBlockText}>
-            One install, all five blocks. Or pick the individual{" "}
+            One install, all eight blocks. Or pick the individual{" "}
             <code>@web-ai-sdk/*</code> packages. Ships ESM, CJS, and types.
             Tree-shakable.
           </p>

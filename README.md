@@ -2,7 +2,7 @@
 
 Building blocks for the Web's Built-in AI APIs.
 
-A small, focused monorepo of framework-agnostic packages that smooth over the gnarly bits of the new `navigator.modelContext`, `Translator`, `Summarizer`, `LanguageModel`, and `LanguageDetector` browser APIs (feature detection, session caching, streaming, lifecycle, safe DOM rebuild) without bringing any UI along.
+A small, focused monorepo of framework-agnostic packages that smooth over the gnarly bits of the new `navigator.modelContext`, `Translator`, `Summarizer`, `LanguageModel`, `LanguageDetector`, `Writer`, `Rewriter`, and `Proofreader` browser APIs (feature detection, session caching, streaming, lifecycle, safe DOM rebuild) without bringing any UI along.
 
 ## What it is
 
@@ -22,6 +22,9 @@ See [`apps/docs/src/content/docs/architecture.mdx`](./apps/docs/src/content/docs
 | [`@web-ai-sdk/summarizer`](./packages/summarizer)    | Web Built-in `Summarizer`                   | Skeleton extraction, sessionStorage caching, streaming chunks             |
 | [`@web-ai-sdk/prompt`](./packages/prompt)            | Web Built-in `LanguageModel` (Prompt API)   | System prompt + sampling, session reuse, streaming, result cache          |
 | [`@web-ai-sdk/detector`](./packages/detector)        | Web Built-in `LanguageDetector`             | Confidence thresholds, bias hints, session reuse, `useDetector` hook      |
+| [`@web-ai-sdk/writer`](./packages/writer)            | Web Built-in `Writer`                       | Tone/format/length, session reuse, streaming, `useWriter` hook            |
+| [`@web-ai-sdk/rewriter`](./packages/rewriter)        | Web Built-in `Rewriter`                     | Relative tone/length shifts, streaming, `useRewriter` hook                |
+| [`@web-ai-sdk/proofreader`](./packages/proofreader)  | Web Built-in `Proofreader`                  | Corrected text + per-issue offsets, session reuse, `useProofreader` hook  |
 
 Each package ships:
 
@@ -42,17 +45,20 @@ Pick the building blocks you need, or grab the whole suite in one install:
 
 ```sh
 pnpm add @web-ai-sdk/webmcp        # one block
-pnpm add @web-ai-sdk/all           # all five blocks under one install
+pnpm add @web-ai-sdk/all           # all eight blocks under one install
 ```
 
 Each package has its own README with install + usage:
 
-- [`@web-ai-sdk/all`](./packages/sdk/README.md) (meta-package; re-exports all five)
+- [`@web-ai-sdk/all`](./packages/sdk/README.md) (meta-package; re-exports all eight)
 - [`@web-ai-sdk/webmcp`](./packages/webmcp/README.md)
 - [`@web-ai-sdk/translator`](./packages/translator/README.md)
 - [`@web-ai-sdk/summarizer`](./packages/summarizer/README.md)
 - [`@web-ai-sdk/prompt`](./packages/prompt/README.md)
 - [`@web-ai-sdk/detector`](./packages/detector/README.md)
+- [`@web-ai-sdk/writer`](./packages/writer/README.md)
+- [`@web-ai-sdk/rewriter`](./packages/rewriter/README.md)
+- [`@web-ai-sdk/proofreader`](./packages/proofreader/README.md)
 
 ## Try it locally
 
@@ -70,7 +76,7 @@ pnpm docs            # docs site on http://localhost:6006
 pnpm landing         # marketing landing on http://localhost:5173
 ```
 
-For the AI APIs to actually run, open a supporting browser. On Chrome, Summarizer/Translator/Detector are stable in 138+ and Prompt is stable in 148+ (no flags); WebMCP needs `chrome://flags/#enable-webmcp-testing` through Chrome 148 and joins a public origin trial in Chrome 149. On Edge, only Summarizer is in stable (138+ default-on); Prompt, Translator, Detector, and WebMCP are developer previews in Canary/Dev behind their respective `edge://flags/` toggles. On Windows the four Built-in AI APIs (Prompt, Summarizer, Translator, Detector) work reliably once flagged; macOS sees higher refusal rates from the Phi-4-mini safety pipeline for Prompt and Summarizer. WebMCP on Edge remains rough on both platforms. See [Browser support](./apps/docs/src/content/docs/browser-support.mdx) for the per-package matrix and exact flag names.
+For the AI APIs to actually run, open a supporting browser. On Chrome, Summarizer/Translator/Detector are stable in 138+ and Prompt is stable in 148+ (no flags); the Writing Assistance APIs (Writer, Rewriter, Proofreader) are developer/origin trials behind their own `chrome://flags/` toggles; WebMCP needs `chrome://flags/#enable-webmcp-testing` through Chrome 148 and joins a public origin trial in Chrome 149. On Edge, only Summarizer is in stable (138+ default-on); Prompt, Translator, Detector, and WebMCP are developer previews in Canary/Dev behind their respective `edge://flags/` toggles. On Windows the four Built-in AI APIs (Prompt, Summarizer, Translator, Detector) work reliably once flagged; macOS sees higher refusal rates from the Phi-4-mini safety pipeline for Prompt and Summarizer. WebMCP on Edge remains rough on both platforms. See [Browser support](./apps/docs/src/content/docs/browser-support.mdx) for the per-package matrix and exact flag names.
 
 ## Repo layout
 
@@ -82,7 +88,10 @@ For the AI APIs to actually run, open a supporting browser. On Chrome, Summarize
 │   ├── summarizer/     # @web-ai-sdk/summarizer
 │   ├── prompt/         # @web-ai-sdk/prompt
 │   ├── detector/       # @web-ai-sdk/detector
-│   └── sdk/            # @web-ai-sdk/all (meta-package; re-exports the five above)
+│   ├── writer/         # @web-ai-sdk/writer
+│   ├── rewriter/       # @web-ai-sdk/rewriter
+│   ├── proofreader/    # @web-ai-sdk/proofreader
+│   └── sdk/            # @web-ai-sdk/all (meta-package; re-exports the eight above)
 ├── apps/
 │   ├── docs/           # @web-ai-sdk-apps/docs (private; Astro Starlight)
 │   └── landing/        # @web-ai-sdk-apps/landing (private; marketing site)

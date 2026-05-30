@@ -1,7 +1,7 @@
 {
   "name": "@web-ai-sdk/all",
   "version": "0.4.0",
-  "description": "Meta-package for the @web-ai-sdk/* building blocks: install @web-ai-sdk/all once, use the prompt, summarizer, translator, detector, and webmcp wrappers under one roof.",
+  "description": "Meta-package for the @web-ai-sdk/* building blocks: install @web-ai-sdk/all once, use the prompt, summarizer, translator, detector, writer, rewriter, proofreader, and webmcp wrappers under one roof.",
   "license": "MIT",
   "author": "Beto Muniz",
   "homepage": "https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/sdk#readme",
@@ -81,6 +81,36 @@
       "types": "./dist/react/detector.d.ts",
       "import": "./dist/react/detector.js",
       "require": "./dist/react/detector.cjs"
+    },
+    "./writer": {
+      "types": "./dist/writer.d.ts",
+      "import": "./dist/writer.js",
+      "require": "./dist/writer.cjs"
+    },
+    "./writer/react": {
+      "types": "./dist/react/writer.d.ts",
+      "import": "./dist/react/writer.js",
+      "require": "./dist/react/writer.cjs"
+    },
+    "./rewriter": {
+      "types": "./dist/rewriter.d.ts",
+      "import": "./dist/rewriter.js",
+      "require": "./dist/rewriter.cjs"
+    },
+    "./rewriter/react": {
+      "types": "./dist/react/rewriter.d.ts",
+      "import": "./dist/react/rewriter.js",
+      "require": "./dist/react/rewriter.cjs"
+    },
+    "./proofreader": {
+      "types": "./dist/proofreader.d.ts",
+      "import": "./dist/proofreader.js",
+      "require": "./dist/proofreader.cjs"
+    },
+    "./proofreader/react": {
+      "types": "./dist/react/proofreader.d.ts",
+      "import": "./dist/react/proofreader.js",
+      "require": "./dist/react/proofreader.cjs"
     }
   },
   "sideEffects": false,
@@ -96,7 +126,10 @@
     "@web-ai-sdk/webmcp": "workspace:*",
     "@web-ai-sdk/summarizer": "workspace:*",
     "@web-ai-sdk/translator": "workspace:*",
-    "@web-ai-sdk/detector": "workspace:*"
+    "@web-ai-sdk/detector": "workspace:*",
+    "@web-ai-sdk/writer": "workspace:*",
+    "@web-ai-sdk/rewriter": "workspace:*",
+    "@web-ai-sdk/proofreader": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0"
@@ -123,6 +156,9 @@
     "summarizer",
     "translator",
     "language-detector",
+    "writer",
+    "rewriter",
+    "proofreader",
     "webmcp",
     "gemini-nano",
     "meta-package",
