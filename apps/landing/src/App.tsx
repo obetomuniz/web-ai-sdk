@@ -137,6 +137,7 @@ export const App = () => (
           <span className={caret} />
         </a>
         <div className={navLinks}>
+          <a href="#why-raw">Why not raw?</a>
           <a href="#packages">Packages</a>
           <a href="#philosophy">Why composable</a>
           <a href="#how">How</a>
@@ -174,6 +175,11 @@ export const App = () => (
             Vanilla TypeScript by default, with optional React hooks.
           </span>
         </p>
+
+        <a className={`${pkgDocs} w-fit`} href="#how">
+          See the same task: 15 lines with the SDK vs 37 with the raw APIs
+          <span className={pkgDocsArrow}>→</span>
+        </a>
 
         <div className={ctaRow}>
           <a className={`${btnPrimary} group`} href="#start">
@@ -227,6 +233,65 @@ export const App = () => (
         </div>
       </div>
     </header>
+
+    {/* Why not the raw APIs? */}
+    <section className={section} data-section="why-raw">
+      <div className={container}>
+        <div className={`${sectionHead} ${sectionAnchor}`} id="why-raw">
+          <div>
+            <div className={sectionEyebrow}>00 · the question</div>
+            <h2 className="mt-2">Why not just use the APIs directly?</h2>
+          </div>
+          <a className={permalink} href="#why-raw">
+            <span aria-hidden="true">§</span>
+            <span className={srOnly}>
+              Link to the why-not-the-raw-APIs section
+            </span>
+          </a>
+        </div>
+        <div className={`${twoCol} ${reveal}`} data-reveal>
+          <div>
+            <p className={subhead}>
+              You can, and nothing here stops you. The browser's built-in AI
+              APIs are the foundation. <em>web-ai-sdk</em> owns the thin,
+              repetitive lifecycle layer you'd otherwise rewrite in every
+              component, and nothing more.
+            </p>
+            <a
+              className={`${pkgDocs} mt-6`}
+              href={`${DOCS_URL}architecture/#lineage-thin-shims-over-platform-primitives`}
+            >
+              Why this layer is designed to get thinner over time
+              <span className={pkgDocsArrow}>→</span>
+            </a>
+          </div>
+          <ul className={`${pkgBullets} mb-0 self-center`}>
+            <li>
+              <span>
+                <b>It's the same APIs.</b> Drop down to{" "}
+                <code>LanguageModel</code>, <code>Summarizer</code>,{" "}
+                <code>Writer</code> and friends whenever you want. No lock-in,
+                no wrapper objects you can't escape.
+              </span>
+            </li>
+            <li>
+              <span>
+                <b>What you'd otherwise rebuild.</b> Feature detection, session
+                reuse, delta-vs-cumulative stream smoothing, AbortSignal
+                cleanup, and feature-detected no-op fallbacks.
+              </span>
+            </li>
+            <li>
+              <span>
+                <b>It's built to shrink.</b> As the platform absorbs more, this
+                layer gets thinner, not fatter. The goal is to do less over
+                time.
+              </span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
 
     {/* Packages */}
     <section className={section} data-section="packages">
@@ -879,7 +944,7 @@ export const App = () => (
           <div>
             <div className={sectionEyebrow}>03 · how it works</div>
             <h2 className="mt-2">Same task. Three levels of abstraction.</h2>
-            <p className="mt-3.5 max-w-[60ch]">
+            <p className="mt-3.5">
               All three tabs do the same thing: detect an article's language and
               summarize it into key-points. Fifteen lines with the SDK;
               thirty-seven calling the browser APIs yourself. Same result, less
@@ -904,7 +969,7 @@ export const App = () => (
           <div>
             <div className={sectionEyebrow}>04 · support</div>
             <h2 className="mt-2">Browser support.</h2>
-            <p className="mt-3.5 max-w-[60ch]">
+            <p className="mt-3.5">
               Built-in AI lands engine by engine. Where it isn't there yet, you
               get a feature-detected no-op so your code doesn't crash; render
               whatever fallback UI you want.
