@@ -18,6 +18,7 @@ import {
   type LanguageModelInstance,
   type LanguageModelMessage,
   type LanguageModelParams,
+  type LanguageModelPromptOptions,
   checkAvailability,
   getLanguageModelApi,
   getOrCreateLanguageModel,
@@ -32,6 +33,7 @@ import {
 } from "./cache.js";
 import {
   type CreateSessionOptions,
+  PromptAbortError,
   PromptUnavailableError,
   type Session,
   SessionDestroyedError,
@@ -46,6 +48,7 @@ export {
   isAvailable,
   checkAvailability,
   createSession,
+  PromptAbortError,
   PromptUnavailableError,
   SessionDestroyedError,
 };
@@ -90,6 +93,12 @@ export interface AskOptions {
   /** Optional JSON Schema for structured output. */
   responseConstraint?: object;
   /**
+   * When `responseConstraint` is set, omit the inlined JSON Schema from the
+   * model's prompt context to save tokens. The constraint still shapes the
+   * output.
+   */
+  omitResponseConstraintInput?: boolean;
+  /**
    * Result cache. Off by default; every call hits the model. Pass
    * `"session"` / `"local"` for the matching web-storage shortcut, or any
    * `{ get, set }`-shaped object for a custom backend.
@@ -112,13 +121,6 @@ export interface AskResult {
   output: string | null;
   /** Whether the result came from the cache (no model call). */
   cached: boolean;
-}
-
-class PromptAbortError extends Error {
-  override readonly name = "AbortError";
-  constructor() {
-    super("Prompt aborted");
-  }
 }
 
 /**
@@ -214,10 +216,12 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
   }
   if (options.signal?.aborted) throw new PromptAbortError();
 
-  const promptOpts: { signal?: AbortSignal; responseConstraint?: object } = {};
+  const promptOpts: LanguageModelPromptOptions = {};
   if (options.signal) promptOpts.signal = options.signal;
   if (options.responseConstraint)
     promptOpts.responseConstraint = options.responseConstraint;
+  if (options.omitResponseConstraintInput)
+    promptOpts.omitResponseConstraintInput = true;
 
   let finalText: string;
   if (typeof session.promptStreaming === "function") {

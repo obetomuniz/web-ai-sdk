@@ -13,8 +13,10 @@
  * every consumer would otherwise reimplement (delta-vs-cumulative chunk
  * detection, output sanitization, abort composition, typed unavailability)
  * and forwards everything else to the native instance. It does NOT track
- * conversation history, queue concurrent sends, or wrap `clone()` — those
- * are the consumer's data model and UI concerns.
+ * conversation history or queue concurrent sends; those are the consumer's
+ * data model and UI concerns. It does surface `clone()`, since forking a warm
+ * base session is the spec's recommended way to start a fresh task without
+ * re-parsing the system prompt or paying another `create()`.
  */
 
 import {
@@ -23,6 +25,7 @@ import {
   type LanguageModelExpectedInput,
   type LanguageModelExpectedOutput,
   type LanguageModelInstance,
+  type LanguageModelPromptOptions,
   getLanguageModelApi,
 } from "./api.js";
 
@@ -155,6 +158,12 @@ export interface CreateSessionOptions {
 export interface SessionSendOptions {
   signal?: AbortSignal;
   responseConstraint?: object;
+  /**
+   * When `responseConstraint` is set, omit the inlined JSON Schema from the
+   * model's prompt context. Saves tokens on every turn when the schema is
+   * large; the constraint still shapes the output.
+   */
+  omitResponseConstraintInput?: boolean;
 }
 
 export interface Session {
@@ -172,6 +181,19 @@ export interface Session {
   ): AsyncIterable<string>;
   /** Abort the most recent in-flight `send` / `sendStreaming`. No-op when idle. */
   abort(): void;
+  /**
+   * Fork this session. The clone inherits the parent's system prompt and
+   * conversation history up to this point, but gets independent history,
+   * abort, and lifecycle from here on. Cloning a base session (system prompt
+   * only) is the recommended way to start a fresh task without re-parsing
+   * instructions or paying another `create()`.
+   *
+   * Throws `SessionDestroyedError` if the parent is destroyed, and
+   * `PromptUnavailableError` if the underlying browser instance doesn't
+   * support `clone()`. Destroying the clone never affects the parent, and
+   * vice versa.
+   */
+  clone(options?: { signal?: AbortSignal }): Promise<Session>;
   /** Tear down the underlying instance and refuse further sends. Idempotent. */
   destroy(): void;
 }
@@ -266,11 +288,13 @@ const wrapInstance = (internal: Promise<SessionInternal>): Session => {
     ensureLive();
 
     const { controller, cleanup } = setupController(options?.signal);
-    const promptOpts: { signal: AbortSignal; responseConstraint?: object } = {
+    const promptOpts: LanguageModelPromptOptions = {
       signal: controller.signal,
     };
     if (options?.responseConstraint)
       promptOpts.responseConstraint = options.responseConstraint;
+    if (options?.omitResponseConstraintInput)
+      promptOpts.omitResponseConstraintInput = true;
 
     try {
       const raw = await instance.prompt(input, promptOpts);
@@ -298,11 +322,13 @@ const wrapInstance = (internal: Promise<SessionInternal>): Session => {
       ensureLive();
 
       const { controller, cleanup } = setupController(options?.signal);
-      const promptOpts: { signal: AbortSignal; responseConstraint?: object } = {
+      const promptOpts: LanguageModelPromptOptions = {
         signal: controller.signal,
       };
       if (options?.responseConstraint)
         promptOpts.responseConstraint = options.responseConstraint;
+      if (options?.omitResponseConstraintInput)
+        promptOpts.omitResponseConstraintInput = true;
 
       try {
         if (typeof instance.promptStreaming === "function") {
@@ -341,6 +367,33 @@ const wrapInstance = (internal: Promise<SessionInternal>): Session => {
     currentController?.abort();
   };
 
+  const clone = async (cloneOptions?: {
+    signal?: AbortSignal;
+  }): Promise<Session> => {
+    ensureLive();
+    const { instance, api } = await ready;
+    ensureLive();
+    if (typeof instance.clone !== "function") {
+      throw new PromptUnavailableError(
+        "This LanguageModel instance does not support clone() in this browser.",
+      );
+    }
+    try {
+      const cloned = await instance.clone(
+        cloneOptions?.signal ? { signal: cloneOptions.signal } : undefined,
+      );
+      // Wrap the clone with the same smoothing / abort / typed-error behavior.
+      // It owns an independent native instance, so its history, abort, and
+      // destroy lifecycle are fully decoupled from this (parent) session.
+      return wrapInstance(Promise.resolve({ instance: cloned, api }));
+    } catch (err) {
+      if ((err as { name?: string })?.name === "AbortError") {
+        throw new PromptAbortError();
+      }
+      throw err;
+    }
+  };
+
   const destroy = (): void => {
     if (destroyed) return;
     destroyed = true;
@@ -366,6 +419,7 @@ const wrapInstance = (internal: Promise<SessionInternal>): Session => {
     send,
     sendStreaming,
     abort,
+    clone,
     destroy,
   };
 };
