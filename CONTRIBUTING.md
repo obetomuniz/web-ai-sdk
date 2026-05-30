@@ -52,8 +52,9 @@ For the time being these rules are enforced by review, not by CI. If you open a 
 3. Add the package to the Pages docs (`apps/docs/src/content/docs/guides/<name>.mdx`, `apps/docs/src/content/docs/react/use-<name>.mdx`, plus a demo component) and to the landing's package row.
 4. Add a changeset.
 5. Run `pnpm gate`.
+6. **Publish the first version locally.** A brand-new package can't be created by CI (OIDC Trusted Publishing needs the package to already exist, and a CI token can't create new `@web-ai-sdk` packages — npm returns a masked `404`). Do the initial publish by hand: `npm login`, `pnpm build`, then `cd packages/<new> && npm publish --access public --provenance=false`. After that, set up a Trusted Publisher for it on npm and CI handles every later version.
 
-See [`AGENTS.md` § "Add a new tool / wrapper package"](./AGENTS.md#add-a-new-tool--wrapper-package) for the full conventions.
+See [`AGENTS.md` § "Add a new tool / wrapper package"](./AGENTS.md#add-a-new-tool--wrapper-package) and [§ "Cut a release"](./AGENTS.md#cut-a-release) for the full conventions.
 
 ## Reporting bugs
 

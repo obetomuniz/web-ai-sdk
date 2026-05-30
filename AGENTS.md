@@ -188,6 +188,8 @@ The marketing site uses **Tailwind CSS v4**. Full guardrails: [`apps/landing/REA
 7. `pnpm changeset` to record the new package for the next release.
 8. `pnpm gate` to verify everything is wired up.
 
+Note: a brand-new package's **first** publish must be done locally; CI can't create it. See [Cut a release](#cut-a-release).
+
 ### Add a React-only feature to an existing package
 
 1. Land the logic in `src/index.ts` first. The vanilla core is the source of truth.
@@ -200,9 +202,21 @@ The marketing site uses **Tailwind CSS v4**. Full guardrails: [`apps/landing/REA
 
 ### Cut a release
 
-1. `pnpm changeset` and pick the bump kind for each touched package.
-2. Commit the generated changeset markdown.
-3. Open a PR; on merge, `pnpm release` (or a release workflow) runs `pnpm build && changeset publish`.
+Releases are automated by the [`changesets/action`](.github/workflows/release.yml) and publish through **npm Trusted Publishing (OIDC)** — there is intentionally no `NPM_TOKEN` secret in the workflow.
+
+1. `pnpm changeset` and pick the bump kind for each touched package; commit the generated markdown.
+2. Open a PR. When it merges to `main`, the release workflow opens (or updates) a **"chore: version packages"** PR that runs `pnpm version-packages` (bumps versions, writes CHANGELOGs, consumes the changesets).
+3. Merge the "Version Packages" PR. That triggers `pnpm release` (`pnpm build && changeset publish`), publishing every package whose version isn't yet on npm. `changeset publish` is idempotent, so re-runs are safe.
+
+**The first publish of a brand-new package must be done locally — CI cannot create it.** OIDC Trusted Publishing can't authenticate a package that doesn't exist yet (you can't configure a Trusted Publisher before the package exists), and a CI npm token can't *create* a new package in the `@web-ai-sdk` org either (npm returns a masked `404 Not Found` on the initial `PUT`). So the very first publish of each new package is manual:
+
+```sh
+npm login                 # as a @web-ai-sdk org member (handles 2FA)
+pnpm build
+cd packages/<new> && npm publish --access public --provenance=false
+```
+
+Provenance is disabled for that first manual publish because it requires CI/OIDC; subsequent CI releases generate it. Once the package exists, set up a Trusted Publisher for it at `npmjs.com/package/@web-ai-sdk/<new>/access` (point it at this repo + `release.yml`), and every future version publishes automatically via the workflow above. This is why pre-existing packages release through CI with no token, while a new package's `0.x.0` debut is hand-published.
 
 ---
 

@@ -51,10 +51,3 @@ jobs:
           title: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # A brand-new package can't use OIDC Trusted Publishing on its first
-          # publish (you can't configure a Trusted Publisher before the package
-          # exists). changesets/action uses NPM_TOKEN when present and falls
-          # back to OIDC otherwise, so provide a token for the initial publish.
-          # Token auth works for the existing packages too, and provenance is
-          # still generated via the `id-token: write` permission above.
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
