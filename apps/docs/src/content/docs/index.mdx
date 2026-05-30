@@ -23,10 +23,22 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 
 **`web-ai-sdk`** ships building blocks for the Web's Built-in AI APIs. One package per browser capability (Prompt, WebMCP, Summarizer, Translator, Detector, Writer, Rewriter, Proofreader). Zero runtime dependencies. Vanilla TypeScript by default, with optional React hooks. See [Architecture](/docs/architecture/) for the model.
 
+You can always use the raw browser APIs directly; the SDK doesn't replace or hide them. It just owns the lifecycle layer around them (session reuse, streaming, AbortSignals, feature-detected fallbacks) and is built to get thinner as the platform matures.
+
 Compositions that bond multiple primitives (block-level DOM translation,
 article-aware summarization, detect-then-summarize chains) are
 deliberately out of scope — the SDK wraps one capability per package;
 composition is your code.
+
+## Why not just use the APIs directly?
+
+You can, and nothing here stops you. The browser's built-in AI APIs are the foundation; web-ai-sdk owns the thin, repetitive lifecycle layer you'd otherwise rewrite in every component, and nothing more.
+
+- **It's the same APIs.** Drop down to `LanguageModel`, `Summarizer`, `Writer`, and friends whenever you want. No lock-in, no wrapper objects you can't escape.
+- **What you'd otherwise rebuild.** Feature detection, session reuse, delta-vs-cumulative stream smoothing, AbortSignal cleanup, and feature-detected no-op fallbacks when the API is missing.
+- **It's built to shrink.** As the platform absorbs more, this layer gets thinner, not fatter. The goal is to do less over time, not more.
+
+[Why this layer is designed to get thinner over time →](/docs/architecture/#lineage-thin-shims-over-platform-primitives)
 
 ## Composable wrappers. One philosophy.
 
