@@ -2,7 +2,7 @@
 
 One-install meta-package for every `@web-ai-sdk/*` building block: `prompt`, `summarizer`, `translator`, `detector`, `writer`, `rewriter`, `proofreader`, and `webmcp`. Pulls each scoped package in as a regular dependency so consumers don't have to track them individually.
 
-**Docs:** <https://web-ai-sdk.dev/docs/guides/meta-package/> · **All packages & links:** <https://web-ai-sdk.dev/llms.txt>
+**Docs:** <https://web-ai-sdk.dev/docs/guides/meta-package/>
 
 ## Status
 
