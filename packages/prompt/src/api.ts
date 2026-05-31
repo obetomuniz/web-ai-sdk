@@ -95,10 +95,37 @@ export interface LanguageModelInstance {
   ): AsyncIterable<string>;
   clone?(options?: { signal?: AbortSignal }): Promise<LanguageModelInstance>;
   destroy?(): void;
+  /**
+   * Input tokens used so far (≈ the system prompt on a fresh clone). This is
+   * the current canonical name; the Prompt API renamed `inputUsage` →
+   * `contextUsage` (`inputUsage` is now extension-only / deprecated).
+   */
+  readonly contextUsage?: number;
+  /**
+   * Max input tokens for the instance, i.e. the context window. Current
+   * canonical name; the Prompt API renamed `inputQuota` → `contextWindow`.
+   */
+  readonly contextWindow?: number;
+  /** @deprecated Renamed to `contextUsage`; extension contexts only now. */
   readonly inputUsage?: number;
+  /** @deprecated Renamed to `contextWindow`; extension contexts only now. */
   readonly inputQuota?: number;
   readonly topK?: number;
   readonly temperature?: number;
+  /**
+   * The native instance is an `EventTarget`. The `contextoverflow` event
+   * fires when a turn pushes `contextUsage` past `contextWindow` and the
+   * oldest history is dropped, letting consumers compact before hitting
+   * `QuotaExceededError`. Optional: older instances may not implement it.
+   */
+  addEventListener?(
+    type: "contextoverflow",
+    listener: (event: Event) => void,
+  ): void;
+  removeEventListener?(
+    type: "contextoverflow",
+    listener: (event: Event) => void,
+  ): void;
 }
 
 export type LanguageModelAvailability =

@@ -188,10 +188,13 @@ interface SessionSendOptions {
 
 interface Session {
   readonly destroyed: boolean;
+  readonly contextWindow?: number; // context window in tokens; undefined pre-creation
+  readonly contextUsage?: number;  // tokens used so far; undefined pre-creation
   send(input: string, options?: SessionSendOptions): Promise<string | null>;
   sendStreaming(input: string, options?: SessionSendOptions): AsyncIterable<string>;
   abort(): void;
   clone(options?: { signal?: AbortSignal }): Promise<Session>;
+  onContextOverflow(listener: () => void): () => void; // returns an idempotent cleanup
   destroy(): void;
 }
 ```
@@ -248,6 +251,39 @@ try {
 ```
 
 `clone()` throws `SessionDestroyedError` if the base is destroyed and `PromptUnavailableError` if the browser instance doesn't support cloning. Destroying a clone never affects the base, and vice versa.
+
+### Context-window introspection
+
+`Session` surfaces the live token budget the native instance reports, so consumers can size work to the actual context window instead of hardcoding a char cap. Both are `undefined` until the underlying instance exists — the instance is created lazily on the first `send` / `sendStreaming`, so read them after a `send` or (cleaner) on a session from `clone()`, whose instance is live the moment `clone()` resolves.
+
+- `session.contextWindow` — max input tokens for the session (the context window).
+- `session.contextUsage` — input tokens used so far. On a fresh base-clone this reflects the inherited history (≈ the system prompt), the right baseline to budget a turn against.
+
+These mirror the Prompt API's `contextWindow` / `contextUsage` (the renamed successors of `inputQuota` / `inputUsage`); the wrapper reads the new names and falls back to the deprecated ones on older Chrome builds.
+
+```ts
+const base = createSession({ systemPrompt }); // keep warm
+const turn = await base.clone();               // instance is live here
+const quota = turn.contextWindow;              // e.g. 4096 / 6144 tokens
+const used = turn.contextUsage ?? 0;           // ≈ system prompt
+if (quota) {
+  const available = quota - used - ANSWER_RESERVE_TOKENS;
+  const budgetChars = Math.max(0, available) * 4; // ~4 chars/token
+  // truncate fetched content to budgetChars so it fits in one turn
+}
+// Fall back to a fixed char cap when contextWindow is undefined
+// (older browsers / pre-creation).
+```
+
+`session.onContextOverflow(listener)` subscribes to the native `contextoverflow` event, which fires when a turn pushes usage past the window and the oldest history is dropped. Use it to compact or fork a fresh `clone()` before hitting `QuotaExceededError`. It returns an idempotent cleanup function, and is a no-op (returns a no-op cleanup) when the instance doesn't expose the event.
+
+```ts
+const stop = session.onContextOverflow(() => {
+  // compact, summarize, or start a fresh clone before QuotaExceededError
+});
+// later
+stop();
+```
 
 ### `useSession(options?): UseSessionReturn`
 

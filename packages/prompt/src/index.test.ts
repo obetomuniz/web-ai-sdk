@@ -14,6 +14,12 @@ interface FakeSession {
   promptStreaming?: ReturnType<typeof vi.fn>;
   destroy?: ReturnType<typeof vi.fn>;
   clone?: ReturnType<typeof vi.fn>;
+  contextWindow?: number;
+  contextUsage?: number;
+  inputQuota?: number;
+  inputUsage?: number;
+  addEventListener?: ReturnType<typeof vi.fn>;
+  removeEventListener?: ReturnType<typeof vi.fn>;
 }
 
 interface FakeApi {
@@ -489,6 +495,158 @@ describe("Session.clone", () => {
     await expect(base.clone()).rejects.toMatchObject({
       name: "SessionDestroyedError",
     });
+  });
+});
+
+describe("Session context introspection", () => {
+  it("contextWindow / contextUsage are undefined before the instance is created", () => {
+    installFakeLanguageModel({ response: "ok" });
+    const session = createSession({ systemPrompt: "S" });
+    expect(session.contextWindow).toBeUndefined();
+    expect(session.contextUsage).toBeUndefined();
+    session.destroy();
+  });
+
+  it("reads the native contextWindow / contextUsage after a send", async () => {
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => "ok"),
+        destroy: vi.fn(),
+        contextWindow: 4096,
+        contextUsage: 12,
+      }),
+    });
+    const session = createSession({ systemPrompt: "S" });
+    await session.send("warm");
+    expect(session.contextWindow).toBe(4096);
+    expect(session.contextUsage).toBe(12);
+    session.destroy();
+  });
+
+  it("falls back to the deprecated inputQuota / inputUsage on older builds", async () => {
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => "ok"),
+        destroy: vi.fn(),
+        inputQuota: 2048,
+        inputUsage: 7,
+      }),
+    });
+    const session = createSession({ systemPrompt: "S" });
+    await session.send("warm");
+    expect(session.contextWindow).toBe(2048);
+    expect(session.contextUsage).toBe(7);
+    session.destroy();
+  });
+
+  it("exposes the clone's budget synchronously the moment clone() resolves", async () => {
+    const cloneSpy = vi.fn(async () => ({
+      prompt: vi.fn(async () => "child reply"),
+      destroy: vi.fn(),
+      contextWindow: 6144,
+      contextUsage: 30,
+    }));
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => "parent reply"),
+        destroy: vi.fn(),
+        clone: cloneSpy,
+        contextWindow: 6144,
+        contextUsage: 5,
+      }),
+    });
+
+    const base = createSession({ systemPrompt: "S" });
+    await base.send("warm");
+    const turn = await base.clone();
+    // No extra await: the values must be readable right away so a consumer
+    // can budget the turn's content against the live context window.
+    expect(turn.contextWindow).toBe(6144);
+    expect(turn.contextUsage).toBe(30);
+    turn.destroy();
+    base.destroy();
+  });
+});
+
+describe("Session.onContextOverflow", () => {
+  const makeEmitter = () => {
+    const listeners = new Map<string, Set<(event: Event) => void>>();
+    return {
+      addEventListener: vi.fn((type: string, fn: (event: Event) => void) => {
+        const set = listeners.get(type) ?? new Set();
+        set.add(fn);
+        listeners.set(type, set);
+      }),
+      removeEventListener: vi.fn((type: string, fn: (event: Event) => void) => {
+        listeners.get(type)?.delete(fn);
+      }),
+      emit: (type: string) => {
+        for (const fn of listeners.get(type) ?? []) fn(new Event(type));
+      },
+    };
+  };
+
+  it("fires the listener on a native contextoverflow event and stops after cleanup", async () => {
+    const emitter = makeEmitter();
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => "ok"),
+        destroy: vi.fn(),
+        addEventListener: emitter.addEventListener,
+        removeEventListener: emitter.removeEventListener,
+      }),
+    });
+    const session = createSession({ systemPrompt: "S" });
+    await session.send("warm"); // force create() so the listener attaches
+    const onOverflow = vi.fn();
+    const stop = session.onContextOverflow(onOverflow);
+    await Promise.resolve();
+
+    emitter.emit("contextoverflow");
+    expect(onOverflow).toHaveBeenCalledTimes(1);
+
+    stop();
+    emitter.emit("contextoverflow");
+    expect(onOverflow).toHaveBeenCalledTimes(1);
+    expect(emitter.removeEventListener).toHaveBeenCalledTimes(1);
+
+    // Cleanup is idempotent.
+    expect(() => stop()).not.toThrow();
+    session.destroy();
+  });
+
+  it("never attaches when cleanup runs before the instance is created", async () => {
+    const emitter = makeEmitter();
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => "ok"),
+        destroy: vi.fn(),
+        addEventListener: emitter.addEventListener,
+        removeEventListener: emitter.removeEventListener,
+      }),
+    });
+    const session = createSession({ systemPrompt: "S" });
+    const stop = session.onContextOverflow(vi.fn());
+    stop(); // before any send → instance not created yet
+    await session.send("warm");
+    await Promise.resolve();
+    expect(emitter.addEventListener).not.toHaveBeenCalled();
+    session.destroy();
+  });
+
+  it("is a no-op (returns a no-op cleanup) when the instance has no events", async () => {
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => "ok"),
+        destroy: vi.fn(),
+      }),
+    });
+    const session = createSession();
+    await session.send("warm");
+    const stop = session.onContextOverflow(vi.fn());
+    await Promise.resolve();
+    expect(() => stop()).not.toThrow();
+    session.destroy();
   });
 });
 
