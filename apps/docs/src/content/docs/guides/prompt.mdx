@@ -217,6 +217,8 @@ This is **pass-through only** — the SDK forwards `tools` and never calls `exec
 
 The heuristic `tool_code` parser and the tool-execution loop are deliberately left to the consumer layer — parsing is model-dependent (it drifts on names and formats for less-trained tools), so it doesn't belong in a lifecycle wrapper. To declare the native tool modalities, pass `{ type: "tool-response" }` / `{ type: "tool-call" }` through the advanced `expectedInputs` / `expectedOutputs` fields.
 
+`tools` works on `ask()` too (`ask({ input, tools })`). One caveat: `ask()` shares warm sessions through an LRU keyed by `JSON.stringify(createOptions)`, and `JSON.stringify` drops functions — so a tool's `execute` doesn't contribute to the key, only its `name` / `description` / `inputSchema` do. Two `ask()` calls with identical tool metadata but different `execute` closures would share one cached session. That's harmless today (the SDK never runs `execute`), but it matters once native execution lands — so prefer `createSession()` for tool-bearing sessions. It bypasses the cache entirely and matches the base-session + per-run-`clone()` pattern.
+
 ## Aborting
 
 `AbortSignal` is supported on every surface. Aborting mid-stream resolves cleanly; an opt-in result cache is not written for aborted runs:

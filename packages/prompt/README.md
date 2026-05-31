@@ -228,6 +228,8 @@ const session = createSession({ systemPrompt, tools });
 
 This is **pass-through only**: the SDK forwards `tools` and never calls `execute` itself. Whether the model actually invokes a tool depends on the browser. Native execution is **not** wired on current stable Chrome — the option is accepted but is a silent no-op, and the model may surface its tool call as plain text (a `tool_code` block) that your code must parse. The passthrough begins working automatically on browsers that ship native execution; until then, `responseConstraint` remains the robust default. The heuristic `tool_code` parser and the tool-execution loop are deliberately left in the consumer layer.
 
+`tools` works on `ask()` too (`ask({ input, tools })`), with one caveat: `ask()` shares warm sessions through an LRU keyed by `JSON.stringify(createOptions)`, and `JSON.stringify` drops functions — so a tool's `execute` doesn't contribute to the key, only its `name` / `description` / `inputSchema` do. Two `ask()` calls with identical tool metadata but different `execute` closures would share one cached session. It's harmless today (the SDK never runs `execute`), but it matters once native execution lands, so prefer `createSession()` for tool-bearing sessions — it bypasses the cache and matches the base-session + per-run-`clone()` pattern.
+
 To declare the native tool modalities, pass them through the advanced `expectedInputs` / `expectedOutputs` fields (`{ type: "tool-response" }` / `{ type: "tool-call" }`).
 
 ### Session resilience: base + per-task `clone()`
