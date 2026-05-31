@@ -19,6 +19,7 @@ import {
   type LanguageModelMessage,
   type LanguageModelParams,
   type LanguageModelPromptOptions,
+  type LanguageModelTool,
   checkAvailability,
   getLanguageModelApi,
   getOrCreateLanguageModel,
@@ -64,6 +65,7 @@ export type {
   LanguageModelInstance,
   LanguageModelMessage,
   LanguageModelParams,
+  LanguageModelTool,
   ResponseCache,
   DefaultCacheKeyInput,
   Session,
@@ -88,6 +90,16 @@ export interface AskOptions {
   expectedInputs?: LanguageModelExpectedInput[];
   /** Advanced: full `expectedOutputs` passthrough. Overrides the `language` hint. */
   expectedOutputs?: LanguageModelExpectedOutput[];
+  /**
+   * @experimental Forwards `tools` to the browser's Prompt API
+   * (function calling). Whether the model actually INVOKES them depends
+   * on the browser: native execution is NOT wired on current stable
+   * Chrome — the option is accepted but a no-op, and the model may
+   * surface its tool call as TEXT (`tool_code`) that the caller must
+   * parse. Pass-through only: the SDK does not execute the tools. Will
+   * begin working automatically on browsers that ship native execution.
+   */
+  tools?: LanguageModelTool[];
   /** Observe the first-call model download. */
   monitor?: (m: CreateMonitor) => void;
   /** Optional JSON Schema for structured output. */
@@ -185,6 +197,7 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
       : langHints.expectedOutputs
         ? { expectedOutputs: langHints.expectedOutputs }
         : {}),
+    ...(options.tools ? { tools: options.tools } : {}),
     ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
