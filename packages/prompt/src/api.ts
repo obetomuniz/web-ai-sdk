@@ -14,13 +14,30 @@ export interface LanguageModelMessage {
 }
 
 export interface LanguageModelExpectedInput {
-  type: "text" | "image" | "audio";
+  type: "text" | "image" | "audio" | "tool-response";
   languages?: string[];
 }
 
 export interface LanguageModelExpectedOutput {
-  type: "text";
+  type: "text" | "tool-call";
   languages?: string[];
+}
+
+/**
+ * @experimental A native Prompt API tool (function calling), mirroring the
+ * W3C `LanguageModelTool` shape. `execute` is "the function to be invoked by
+ * the user agent on behalf of the language model"; it must resolve to a
+ * string the runtime feeds back into the conversation.
+ *
+ * The SDK only forwards this shape to the native `create()`; it does not call
+ * `execute` itself. See {@link LanguageModelCreateOptions.tools}.
+ */
+export interface LanguageModelTool {
+  name: string;
+  description: string;
+  /** JSON Schema for the arguments. */
+  inputSchema: object;
+  execute(args: unknown): Promise<string> | string;
 }
 
 export interface DownloadProgressEvent extends Event {
@@ -43,6 +60,16 @@ export interface LanguageModelCreateOptions {
   signal?: AbortSignal;
   /** Observe the first-call model download (~1.7 GB on a fresh profile). */
   monitor?: (m: CreateMonitor) => void;
+  /**
+   * @experimental Forwards `tools` to the browser's Prompt API
+   * (function calling). Whether the model actually INVOKES them depends
+   * on the browser: native execution is NOT wired on current stable
+   * Chrome — the option is accepted but a no-op, and the model may
+   * surface its tool call as TEXT (`tool_code`) that the caller must
+   * parse. Pass-through only: the SDK does not execute the tools. Will
+   * begin working automatically on browsers that ship native execution.
+   */
+  tools?: LanguageModelTool[];
 }
 
 export interface LanguageModelPromptOptions {
