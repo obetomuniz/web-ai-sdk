@@ -1,6 +1,6 @@
 {
   "name": "@web-ai-sdk/writer",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Building block for the Web's Built-in Writer API (Chrome)",
   "license": "MIT",
   "author": "Beto Muniz",

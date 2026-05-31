@@ -1,5 +1,19 @@
 # @web-ai-sdk/all
 
+## 0.5.2
+
+### Patch Changes
+
+- Updated dependencies [cb386ff]
+  - @web-ai-sdk/prompt@0.5.2
+  - @web-ai-sdk/webmcp@0.5.2
+  - @web-ai-sdk/summarizer@0.5.2
+  - @web-ai-sdk/translator@0.5.2
+  - @web-ai-sdk/detector@0.5.2
+  - @web-ai-sdk/writer@0.5.2
+  - @web-ai-sdk/rewriter@0.5.2
+  - @web-ai-sdk/proofreader@0.5.2
+
 ## 0.5.1
 
 ### Patch Changes
