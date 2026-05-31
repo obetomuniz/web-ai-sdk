@@ -207,6 +207,32 @@ export interface Session {
    * vice versa.
    */
   clone(options?: { signal?: AbortSignal }): Promise<Session>;
+  /**
+   * Max input tokens for this session (the context window), as reported by
+   * the underlying instance — mirrors the native `contextWindow`. `undefined`
+   * until the instance is created — the instance is created lazily on the
+   * first `send` / `sendStreaming`, so read it after a `send` or (preferably)
+   * on a session from `clone()`, whose instance is live the moment `clone()`
+   * resolves.
+   */
+  readonly contextWindow?: number;
+  /**
+   * Input tokens used so far, as reported by the underlying instance —
+   * mirrors the native `contextUsage`. `undefined` until the instance is
+   * created (see `contextWindow`). On a fresh base-clone this reflects the
+   * inherited history (≈ the system prompt), the right baseline to budget a
+   * turn's content against.
+   */
+  readonly contextUsage?: number;
+  /**
+   * Subscribe to the native `contextoverflow` event, which fires when a turn
+   * pushes usage past the context window and the oldest history is dropped.
+   * Use it to compact or fork a fresh `clone()` before hitting
+   * `QuotaExceededError`. Returns an idempotent cleanup function that detaches
+   * the listener; calling it more than once is safe. A no-op (returns a no-op
+   * cleanup) when the underlying instance doesn't expose the event.
+   */
+  onContextOverflow(listener: () => void): () => void;
   /** Tear down the underlying instance and refuse further sends. Idempotent. */
   destroy(): void;
 }
@@ -247,9 +273,17 @@ interface SessionInternal {
   api: LanguageModelApi;
 }
 
-const wrapInstance = (internal: Promise<SessionInternal>): Session => {
+const wrapInstance = (
+  internal: Promise<SessionInternal>,
+  resolvedInstance?: LanguageModelInstance,
+): Session => {
   let destroyed = false;
   let currentController: AbortController | null = null;
+  // Synchronous handle on the live instance so the `inputQuota` / `inputUsage`
+  // getters can read it without awaiting. Seeded eagerly for clones (whose
+  // instance already exists when `clone()` resolves) and otherwise populated
+  // once the lazy `create()` settles.
+  let liveInstance: LanguageModelInstance | null = resolvedInstance ?? null;
 
   // Wrap the create-failure promise once so awaiters get the typed error.
   const ready: Promise<SessionInternal> = internal.catch((err) => {
@@ -262,6 +296,11 @@ const wrapInstance = (internal: Promise<SessionInternal>): Session => {
   // Swallow the rejection on the internal promise so unhandled-rejection
   // warnings don't fire when callers never touch `ready`.
   ready.catch(() => {});
+  ready
+    .then(({ instance }) => {
+      liveInstance = instance;
+    })
+    .catch(() => {});
 
   const ensureLive = (): void => {
     if (destroyed) throw new SessionDestroyedError();
@@ -387,6 +426,30 @@ const wrapInstance = (internal: Promise<SessionInternal>): Session => {
     currentController?.abort();
   };
 
+  const onContextOverflow = (listener: () => void): (() => void) => {
+    let cancelled = false;
+    let detach: (() => void) | null = null;
+    // The instance may not exist yet (lazy create), so wait for `ready` and
+    // attach then — unless cleanup ran first.
+    ready
+      .then(({ instance }) => {
+        if (cancelled) return;
+        if (typeof instance.addEventListener !== "function") return;
+        const handler = () => listener();
+        instance.addEventListener("contextoverflow", handler);
+        detach = () =>
+          instance.removeEventListener?.("contextoverflow", handler);
+      })
+      .catch(() => {
+        // never created; nothing to detach.
+      });
+    return () => {
+      cancelled = true;
+      detach?.();
+      detach = null;
+    };
+  };
+
   const clone = async (cloneOptions?: {
     signal?: AbortSignal;
   }): Promise<Session> => {
@@ -405,7 +468,9 @@ const wrapInstance = (internal: Promise<SessionInternal>): Session => {
       // Wrap the clone with the same smoothing / abort / typed-error behavior.
       // It owns an independent native instance, so its history, abort, and
       // destroy lifecycle are fully decoupled from this (parent) session.
-      return wrapInstance(Promise.resolve({ instance: cloned, api }));
+      // Pass the instance synchronously so `inputQuota` / `inputUsage` are
+      // readable the moment `clone()` resolves, without awaiting a microtask.
+      return wrapInstance(Promise.resolve({ instance: cloned, api }), cloned);
     } catch (err) {
       if ((err as { name?: string })?.name === "AbortError") {
         throw new PromptAbortError();
@@ -436,10 +501,19 @@ const wrapInstance = (internal: Promise<SessionInternal>): Session => {
     get destroyed() {
       return destroyed;
     },
+    get contextWindow() {
+      // Prefer the current canonical name; fall back to the deprecated
+      // `inputQuota` so older Chrome builds still report a budget.
+      return liveInstance?.contextWindow ?? liveInstance?.inputQuota;
+    },
+    get contextUsage() {
+      return liveInstance?.contextUsage ?? liveInstance?.inputUsage;
+    },
     send,
     sendStreaming,
     abort,
     clone,
+    onContextOverflow,
     destroy,
   };
 };
