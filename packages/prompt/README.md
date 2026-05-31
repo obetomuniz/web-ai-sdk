@@ -145,6 +145,7 @@ interface AskOptions {
   supportedLanguages?: readonly string[];   // default ["en"]
   expectedInputs?: LanguageModelExpectedInput[];   // advanced passthrough
   expectedOutputs?: LanguageModelExpectedOutput[]; // advanced passthrough
+  tools?: LanguageModelTool[];              // experimental: native function-calling passthrough
   createOptions?: Partial<LanguageModelCreateOptions>;
   responseConstraint?: object;              // JSON Schema for structured output
   cache?: ResponseCache;
@@ -174,6 +175,7 @@ interface CreateSessionOptions {
   supportedLanguages?: readonly string[];
   expectedInputs?: LanguageModelExpectedInput[];
   expectedOutputs?: LanguageModelExpectedOutput[];
+  tools?: LanguageModelTool[]; // experimental: native function-calling passthrough
   // Pass `initialPrompts` here to seed multi-turn context.
   createOptions?: Partial<LanguageModelCreateOptions>;
 }
@@ -197,6 +199,36 @@ interface Session {
 `Session.sendStreaming()` yields **deltas** (each chunk is the new text since the last yield, never cumulative). The wrapper does no extra bookkeeping: no history tracking, no concurrent-send queue, no usage telemetry. Always destroy sessions you no longer need.
 
 `omitResponseConstraintInput` is only forwarded when `responseConstraint` is also set; the native API throws a `TypeError` otherwise. When you omit the schema, include format guidance in the prompt text itself (the model no longer sees the schema).
+
+### Native tool calling (experimental)
+
+The Prompt API spec defines native function calling: register `tools` on the session and the runtime invokes their `execute` on the model's behalf, feeding results back. `ask()` and `createSession()` forward a `tools` array straight through to `LanguageModel.create()`:
+
+```ts
+import { createSession, type LanguageModelTool } from "@web-ai-sdk/prompt";
+
+const tools: LanguageModelTool[] = [
+  {
+    name: "fetch_url",
+    description: "Fetch a URL and return its text.",
+    inputSchema: {
+      type: "object",
+      properties: { url: { type: "string" } },
+      required: ["url"],
+    },
+    async execute(args) {
+      const { url } = args as { url: string };
+      return await (await fetch(url)).text();
+    },
+  },
+];
+
+const session = createSession({ systemPrompt, tools });
+```
+
+This is **pass-through only**: the SDK forwards `tools` and never calls `execute` itself. Whether the model actually invokes a tool depends on the browser. Native execution is **not** wired on current stable Chrome — the option is accepted but is a silent no-op, and the model may surface its tool call as plain text (a `tool_code` block) that your code must parse. The passthrough begins working automatically on browsers that ship native execution; until then, `responseConstraint` remains the robust default. The heuristic `tool_code` parser and the tool-execution loop are deliberately left in the consumer layer.
+
+To declare the native tool modalities, pass them through the advanced `expectedInputs` / `expectedOutputs` fields (`{ type: "tool-response" }` / `{ type: "tool-call" }`).
 
 ### Session resilience: base + per-task `clone()`
 

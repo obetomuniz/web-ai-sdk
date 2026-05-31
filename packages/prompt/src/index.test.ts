@@ -207,6 +207,34 @@ describe("ask", () => {
     expect(createOpts).toMatchObject({ temperature: 0.2, topK: 5 });
   });
 
+  it("forwards tools to LanguageModel.create() without executing them", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const execute = vi.fn(async () => "tool result");
+    const tools = [
+      {
+        name: "get_time",
+        description: "Return the current time.",
+        inputSchema: { type: "object", properties: {} },
+        execute,
+      },
+    ];
+    await ask({ input: "what time is it", tools, cache: inMemoryCache() });
+    const createOpts = fake.create.mock.calls[0]?.[0];
+    expect(createOpts).toMatchObject({ tools });
+    // Pass-through only: the SDK must never invoke execute itself.
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it("omits the tools key entirely when no tools are passed", async () => {
+    const fake = installFakeLanguageModel();
+    await ask({ input: "ping", cache: inMemoryCache() });
+    const createOpts = fake.create.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(createOpts).not.toHaveProperty("tools");
+  });
+
   it("reuses sessions across same-shape calls", async () => {
     const fake = installFakeLanguageModel();
     const cache = inMemoryCache();
@@ -339,6 +367,41 @@ describe("createSession", () => {
     const session = createSession();
     await Promise.all([session.send("a"), session.send("b")]);
     expect(maxActive).toBe(2);
+    session.destroy();
+  });
+
+  it("forwards tools to the underlying LanguageModel.create()", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const execute = vi.fn(async () => "tool result");
+    const tools = [
+      {
+        name: "fetch_url",
+        description: "Fetch a URL and return its text.",
+        inputSchema: {
+          type: "object",
+          properties: { url: { type: "string" } },
+          required: ["url"],
+        },
+        execute,
+      },
+    ];
+    const session = createSession({ systemPrompt: "S", tools });
+    await session.send("warm");
+    const createOpts = fake.create.mock.calls[0]?.[0];
+    expect(createOpts).toMatchObject({ tools });
+    expect(execute).not.toHaveBeenCalled();
+    session.destroy();
+  });
+
+  it("does not set a tools key when none are passed", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const session = createSession({ systemPrompt: "S" });
+    await session.send("warm");
+    const createOpts = fake.create.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(createOpts).not.toHaveProperty("tools");
     session.destroy();
   });
 

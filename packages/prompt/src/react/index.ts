@@ -165,9 +165,9 @@ export interface UseSessionReturn {
  * state in your own components. The hook only solves the React lifecycle:
  * feature detection, create, destroy, recreate-on-change.
  *
- * Object options (`expectedInputs`, `createOptions`) participate in the
- * effect dependency check by reference; memoize them or accept the recreate
- * cost.
+ * Object options (`expectedInputs`, `tools`, `createOptions`) participate in
+ * the effect dependency check by reference; memoize them or accept the
+ * recreate cost.
  */
 export const useSession = (
   options: UseSessionOptions = {},
@@ -181,6 +181,7 @@ export const useSession = (
     supportedLanguages,
     expectedInputs,
     expectedOutputs,
+    tools,
     createOptions,
   } = options;
 
@@ -210,6 +211,7 @@ export const useSession = (
         supportedLanguages,
         expectedInputs,
         expectedOutputs,
+        tools,
         createOptions,
       });
     } catch (err) {
@@ -238,6 +240,7 @@ export const useSession = (
     supportedLanguages,
     expectedInputs,
     expectedOutputs,
+    tools,
     createOptions,
   ]);
 
@@ -250,5 +253,6 @@ export type {
   ResponseCache,
   CacheOption,
   CreateSessionOptions,
+  LanguageModelTool,
   Session,
 } from "../index.js";

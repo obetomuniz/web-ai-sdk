@@ -26,6 +26,7 @@ import {
   type LanguageModelExpectedOutput,
   type LanguageModelInstance,
   type LanguageModelPromptOptions,
+  type LanguageModelTool,
   getLanguageModelApi,
 } from "./api.js";
 
@@ -148,6 +149,16 @@ export interface CreateSessionOptions {
   /** Advanced: full `expectedOutputs` passthrough. Overrides the `language` hint. */
   expectedOutputs?: LanguageModelExpectedOutput[];
   /**
+   * @experimental Forwards `tools` to the browser's Prompt API
+   * (function calling). Whether the model actually INVOKES them depends
+   * on the browser: native execution is NOT wired on current stable
+   * Chrome — the option is accepted but a no-op, and the model may
+   * surface its tool call as TEXT (`tool_code`) that the caller must
+   * parse. Pass-through only: the SDK does not execute the tools. Will
+   * begin working automatically on browsers that ship native execution.
+   */
+  tools?: LanguageModelTool[];
+  /**
    * Override `LanguageModel.create()` options entirely. Merged on top of
    * defaults. Pass `initialPrompts` here to seed multi-turn context (e.g.
    * restoring a conversation from storage).
@@ -226,6 +237,7 @@ const buildCreateOptions = (
       : langHints.expectedOutputs
         ? { expectedOutputs: langHints.expectedOutputs }
         : {}),
+    ...(options.tools ? { tools: options.tools } : {}),
     ...options.createOptions,
   };
 };

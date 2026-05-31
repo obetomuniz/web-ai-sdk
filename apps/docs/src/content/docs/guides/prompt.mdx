@@ -38,6 +38,7 @@ interface AskOptions {
   supportedLanguages?: readonly string[];
   expectedInputs?: LanguageModelExpectedInput[];
   expectedOutputs?: LanguageModelExpectedOutput[];
+  tools?: LanguageModelTool[];
   monitor?: (m: CreateMonitor) => void;
   responseConstraint?: object;
   cache?: "session" | "local" | { get, set };
@@ -59,6 +60,7 @@ interface AskOptions {
 | `supportedLanguages` | `readonly string[]` | Languages the model supports for the language hint. Defaults to `["en"]`. |
 | `expectedInputs` | `LanguageModelExpectedInput[]` | Advanced: full passthrough. Overrides the `language` hint. |
 | `expectedOutputs` | `LanguageModelExpectedOutput[]` | Advanced: full passthrough. Overrides the `language` hint. |
+| `tools` | `LanguageModelTool[]` | **Experimental.** Native function-calling passthrough (see [Native tool calling](#native-tool-calling-experimental)). |
 | `monitor` | `(m) => void` | Observe the first-call model download. |
 | `responseConstraint` | `object` | JSON Schema for structured output. |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
@@ -184,6 +186,36 @@ const parsed = JSON.parse(result.output ?? "{}");
 The wrapper passes `responseConstraint` straight through to `session.prompt()` / `session.promptStreaming()`. Support depends on your Chrome version.
 
 By default the schema is inlined into the prompt context, which costs tokens. Pass `omitResponseConstraintInput: true` (on `ask()` or `SessionSendOptions`) to drop it; the constraint still shapes the output, but you should then include format guidance in the prompt text itself. The flag is only forwarded when `responseConstraint` is also set — the native API throws a `TypeError` otherwise, so the wrapper ignores it on its own.
+
+## Native tool calling (experimental)
+
+The Prompt API spec defines native [function calling](https://github.com/webmachinelearning/prompt-api#tool-use): register `tools` on the session, and the runtime invokes each tool's `execute` on the model's behalf, then feeds the result back into the conversation. `ask()` and `createSession()` forward a `tools` array straight through to `LanguageModel.create()`:
+
+```ts
+import { createSession, type LanguageModelTool } from "@web-ai-sdk/prompt";
+
+const tools: LanguageModelTool[] = [
+  {
+    name: "fetch_url",
+    description: "Fetch a URL and return its text.",
+    inputSchema: {
+      type: "object",
+      properties: { url: { type: "string" } },
+      required: ["url"],
+    },
+    async execute(args) {
+      const { url } = args as { url: string };
+      return await (await fetch(url)).text();
+    },
+  },
+];
+
+const session = createSession({ systemPrompt, tools });
+```
+
+This is **pass-through only** — the SDK forwards `tools` and never calls `execute` itself. Whether the model actually invokes a tool depends on the browser. Native execution is **not** wired on current stable Chrome: the option is accepted but is a silent no-op, and the model may surface its tool call as plain text (a `tool_code` block) that your own code must parse. The passthrough starts working automatically on browsers that ship native execution; until then, `responseConstraint` remains the robust default.
+
+The heuristic `tool_code` parser and the tool-execution loop are deliberately left to the consumer layer — parsing is model-dependent (it drifts on names and formats for less-trained tools), so it doesn't belong in a lifecycle wrapper. To declare the native tool modalities, pass `{ type: "tool-response" }` / `{ type: "tool-call" }` through the advanced `expectedInputs` / `expectedOutputs` fields.
 
 ## Aborting
 
