@@ -188,7 +188,7 @@ Mark mutating tools `destructive: true`. The host (browser, agent) is responsibl
 
 ## Troubleshooting
 
-- **Inspector / agent doesn't see the tools.** The WebMCP entry point is per-Window. Tools registered inside an `<iframe>` are scoped to that frame and invisible to extensions hooked into the top page. Register from the top-level document, not from an embedded frame.
+- **Inspector / agent doesn't see the tools.** The WebMCP entry point is per-document; each frame, including iframes, has its own `document.modelContext`. Tools registered inside an `<iframe>` are scoped to that frame and invisible to extensions hooked into the top page. Register from the top-level document, not from an embedded frame.
 
 ## License
 
