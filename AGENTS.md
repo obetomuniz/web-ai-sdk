@@ -12,7 +12,7 @@ For human-facing context see the root [`README.md`](./README.md) and [`CONTRIBUT
 
 | Package                 | Wraps                                                  | Status     |
 | ----------------------- | ------------------------------------------------------ | ---------- |
-| `@web-ai-sdk/webmcp`    | `navigator.modelContext` (W3C WebMCP)                  | Ported     |
+| `@web-ai-sdk/webmcp`    | `document.modelContext` (W3C WebMCP)                   | Ported     |
 | `@web-ai-sdk/translator`| `Translator` (Web Built-in AI Translator API)       | Ported     |
 | `@web-ai-sdk/summarizer`| `Summarizer` (Web Built-in AI Summarizer API)       | Ported     |
 | `@web-ai-sdk/prompt`    | `LanguageModel` (Web Built-in AI Prompt API)        | New        |
@@ -248,7 +248,7 @@ Or in one shot: `pnpm gate`.
 
 ## 9. Glossary
 
-- **Tool**; In WebMCP, a named, agent-callable function with a description, optional JSON Schema input, and an `execute` handler. Registered with `navigator.modelContext.registerTool`.
+- **Tool**; In WebMCP, a named, agent-callable function with a description, optional JSON Schema input, and an `execute` handler. Registered with `document.modelContext.registerTool`.
 - **Core package / lifecycle layer**; A package that ships logic, types, and session lifecycle but no DOM / no styles / no rendering primitives. The eight API-wrapper packages are all core packages. Future packages with a different role (UI primitives, polyfills) sit at different layers.
 - **Subpath export**; A package entry exposed under a path like `@web-ai-sdk/webmcp/react`. Configured via `package.json#exports`. Lets one install ship multiple framework adapters that tree-shake independently.
 - **Feature-detected no-op**; The pattern this monorepo uses everywhere: if the underlying browser API is absent, the wrapper returns a no-op cleanup / `undefined` / similar, so consumer code can ship without polyfills or branching.

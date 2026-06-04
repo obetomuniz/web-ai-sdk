@@ -1,9 +1,9 @@
 ---
 title: WebMCP
-description: Register agent-callable tools on the W3C WebMCP surface (navigator.modelContext) with AbortSignal-based cleanup.
+description: Register agent-callable tools on the W3C WebMCP surface (document.modelContext) with AbortSignal-based cleanup.
 ---
 
-Building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `navigator.modelContext`. Register agent-callable tools from any framework; the package is vanilla TypeScript / DOM with an optional React adapter shipped as a subpath export. See [useWebMCP](/docs/react/use-web-mcp/) for React.
+Building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `document.modelContext`. (For backward compatibility with the previous shape of the API, this package also reads from `navigator.modelContext`.) Register agent-callable tools from any framework; the package is vanilla TypeScript / DOM with an optional React adapter shipped as a subpath export. See [useWebMCP](/docs/react/use-web-mcp/) for React.
 
 ## Usage
 
@@ -57,13 +57,13 @@ interface Tool<TInput = unknown, TOutput = unknown> {
 
 ## Returns
 
-`registerTool(tool)` returns a cleanup function: `() => void`. Calling it unregisters the tool. Calling it twice is a no-op. On browsers without `navigator.modelContext`, the cleanup is itself a no-op.
+`registerTool(tool)` returns a cleanup function: `() => void`. Calling it unregisters the tool. Calling it twice is a no-op. On browsers without `document.modelContext` (or the legacy `navigator.modelContext`), the cleanup is itself a no-op.
 
 ## How it works
 
-Chrome's `navigator.modelContext.registerTool({...}, { signal })` is the spec entry point. The wrapper sits on top with three quality-of-life additions:
+`document.modelContext.registerTool({...}, { signal })` is the spec entry point. (For backward compatibility with the previous shape of the API, this package also reads from `navigator.modelContext`.) The wrapper sits on top with three quality-of-life additions:
 
-- **Feature detection.** On browsers without `navigator.modelContext`, every entry point is a no-op so consumer code ships unchanged. `isAvailable()` returns `false`.
+- **Feature detection.** On browsers without `document.modelContext` (or the legacy `navigator.modelContext`), every entry point is a no-op so consumer code ships unchanged. `isAvailable()` returns `false`.
 - **Last-writer-wins on duplicate names.** React effect cleanup is asynchronous; a fast re-render can attempt to register `"foo"` before Chrome processed the prior `abort()`. The wrapper detects the resulting duplicate-name error, queues a microtask retry, and tracks ownership so a stale registration can't squat the name.
 - **One AbortController per call.** `registerTool` returns a cleanup function that aborts the underlying controller and unregisters the tool.
 

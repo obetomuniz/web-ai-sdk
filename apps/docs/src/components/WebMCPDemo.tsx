@@ -102,7 +102,7 @@ export const WebMCPDemo = () => {
   return (
     <div className="demo-card demo-card--narrow">
       <p className="demo-muted">
-        Two tools registered against <code>navigator.modelContext</code>:{" "}
+        Two tools registered against <code>document.modelContext</code>:{" "}
         <code>list_demo_items</code> (read-only) and <code>echo_message</code>{" "}
         (with input schema).
       </p>

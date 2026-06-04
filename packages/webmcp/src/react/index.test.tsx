@@ -11,7 +11,17 @@ interface RegisteredCall {
   execute: (input: unknown) => unknown;
 }
 
-const installFakeModelContext = () => {
+type Host = "document" | "navigator";
+
+const setModelContext = (host: Host, value: unknown) => {
+  Object.defineProperty(
+    host === "document" ? document : navigator,
+    "modelContext",
+    { value, configurable: true },
+  );
+};
+
+const installFakeModelContext = (host: Host = "navigator") => {
   const registered = new Map<string, RegisteredCall>();
   const registerTool = vi.fn(
     (def: RegisteredCall, options?: { signal?: AbortSignal }) => {
@@ -27,19 +37,14 @@ const installFakeModelContext = () => {
     },
   );
 
-  Object.defineProperty(navigator, "modelContext", {
-    value: { registerTool },
-    configurable: true,
-  });
+  setModelContext(host, { registerTool });
 
   return { registered };
 };
 
 afterEach(() => {
-  Object.defineProperty(navigator, "modelContext", {
-    value: undefined,
-    configurable: true,
-  });
+  setModelContext("document", undefined);
+  setModelContext("navigator", undefined);
 });
 
 describe("useWebMCP", () => {
@@ -77,6 +82,18 @@ describe("useWebMCP", () => {
     rerender({ tools: v2 });
     expect(registered.has("a")).toBe(false);
     expect(registered.has("b")).toBe(true);
+  });
+
+  it("works when modelContext is exposed on document instead of navigator", () => {
+    const { registered } = installFakeModelContext("document");
+    const tools: Tool[] = [
+      { name: "a", description: "A", execute: async () => ({}) },
+    ];
+
+    const { unmount } = renderHook(() => useWebMCP(tools));
+    expect(registered.has("a")).toBe(true);
+    unmount();
+    expect(registered.has("a")).toBe(false);
   });
 
   it("is a no-op when WebMCP is unavailable", () => {
