@@ -68,7 +68,7 @@ The hook returns nothing; cleanup is automatic on unmount via `useEffect`'s retu
 
 ## Errors and unavailability
 
-On browsers without `navigator.modelContext`, the hook is a no-op. Render whatever fallback UI you want; nothing breaks.
+On browsers without `document.modelContext` (or the legacy `navigator.modelContext`), the hook is a no-op. Render whatever fallback UI you want; nothing breaks.
 
 ## Reference
 

@@ -155,8 +155,8 @@ export const WebMCPDemo = () => {
           ? async () => ({
               ok: true,
               // Only the actually-registered tools. A disabled tool is not
-              // in `navigator.modelContext` at all, so listing it here
-              // would be inaccurate.
+              // in the model context at all, so listing it here would be
+              // inaccurate.
               registered: TOOL_SPECS.filter((t) =>
                 enabledIdsRef.current.has(t.id),
               ).map((t) => ({
@@ -179,12 +179,13 @@ export const WebMCPDemo = () => {
 
   const run = async () => {
     if (running) return;
-    // Defensive bail: on browsers without `navigator.modelContext` the demo's
-    // tool execute closures are pure JS and would still "succeed" if invoked
-    // directly, which makes the trace pretend WebMCP worked. Refuse to run
-    // when the API is missing so the unavailable banner is the only thing
-    // the visitor sees. The button below is also disabled in the same
-    // condition; this guard is the second line of defence.
+    // Defensive bail: on browsers without `document.modelContext` (or the
+    // legacy `navigator.modelContext`), the demo's tool execute closures are
+    // pure JS and would still "succeed" if invoked directly, which makes the
+    // trace pretend WebMCP worked. Refuse to run when the API is missing so
+    // the unavailable banner is the only thing the visitor sees. The button
+    // below is also disabled in the same condition; this guard is the second
+    // line of defence.
     if (available === false) return;
     setRunning(true);
     setTrace([]);
@@ -201,7 +202,7 @@ export const WebMCPDemo = () => {
     await push(
       {
         kind: "step",
-        text: `navigator.modelContext.listTools() → ${enabledCount} tool${enabledCount === 1 ? "" : "s"}`,
+        text: `document.modelContext.listTools() → ${enabledCount} tool${enabledCount === 1 ? "" : "s"}`,
       },
       200,
     );

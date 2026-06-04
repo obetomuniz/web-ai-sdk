@@ -118,7 +118,7 @@ function buildLlmsIndex() {
     "- [Browser support](" + SITE_URL + "/docs/browser-support/): which Chrome/Edge versions and flags each API needs.",
     "- [Meta-package](" + SITE_URL + "/docs/guides/meta-package/): `@web-ai-sdk/all` — subpath vs namespaced import shapes.",
     "- [Prompt](" + SITE_URL + "/docs/guides/prompt/): conceptual overview — sessions, streaming, sampling, structured output, abort.",
-    "- [WebMCP](" + SITE_URL + "/docs/guides/webmcp/): registering tools with `navigator.modelContext`.",
+    "- [WebMCP](" + SITE_URL + "/docs/guides/webmcp/): registering tools with `document.modelContext`.",
     "- [Summarizer](" + SITE_URL + "/docs/guides/summarizer/): TL;DR / key-points / headline with streaming.",
     "- [Translator](" + SITE_URL + "/docs/guides/translator/): block-level DOM translation with snapshot restore.",
     "- [Detector](" + SITE_URL + "/docs/guides/detector/): on-device language detection with confidence.",

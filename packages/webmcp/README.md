@@ -1,6 +1,6 @@
 # @web-ai-sdk/webmcp
 
-Building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `navigator.modelContext`.
+Building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `document.modelContext`. (For backward compatibility with the previous shape of the API, this package also reads from `navigator.modelContext`.)
 
 An ergonomic, framework-agnostic adapter over the native browser API, with safe register/unregister cleanup and a feature-detected no-op fallback for non-supporting browsers.
 
@@ -8,7 +8,7 @@ An ergonomic, framework-agnostic adapter over the native browser API, with safe 
 
 ## Status
 
-WebMCP shipped as an early preview in Chrome 146+ behind `chrome://flags/#enable-webmcp-testing`; a public [origin trial](https://developer.chrome.com/docs/ai/webmcp) opens in Chrome 149. Edge added support in 147+ behind the matching `edge://flags/` toggle. On any browser that doesn't expose `navigator.modelContext`, this library is a no-op. Your app stays callable, and no tools get registered.
+WebMCP shipped as an early preview in Chrome 146+ behind `chrome://flags/#enable-webmcp-testing`; a public [origin trial](https://developer.chrome.com/docs/ai/webmcp) opens in Chrome 149. Edge added support in 147+ behind the matching `edge://flags/` toggle. On any browser that doesn't expose `document.modelContext` (or the legacy `navigator.modelContext`), this library is a no-op. Your app stays callable, and no tools get registered.
 
 ## Install
 
@@ -188,7 +188,7 @@ Mark mutating tools `destructive: true`. The host (browser, agent) is responsibl
 
 ## Troubleshooting
 
-- **Inspector / agent doesn't see the tools.** `navigator.modelContext` is per-Window. Tools registered inside an `<iframe>` are scoped to that frame and invisible to extensions hooked into the top page. Register from the top-level document, not from an embedded frame.
+- **Inspector / agent doesn't see the tools.** The WebMCP entry point is per-Window. Tools registered inside an `<iframe>` are scoped to that frame and invisible to extensions hooked into the top page. Register from the top-level document, not from an embedded frame.
 
 ## License
 

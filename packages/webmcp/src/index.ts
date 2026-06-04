@@ -1,5 +1,7 @@
 /**
- * Building block for the W3C WebMCP API exposed at `navigator.modelContext`.
+ * Building block for the W3C WebMCP API exposed at `document.modelContext`.
+ * For backward compatibility with the previous shape of the API, this
+ * package also reads from `navigator.modelContext`.
  *
  * Adapts the native browser API into a shape that's pleasant to call from
  * app code, with AbortSignal-based cleanup and a feature-detected no-op
@@ -192,13 +194,23 @@ interface ModelContext {
   registerTool: (def: RegisteredTool, options?: RegisterToolOptions) => void;
 }
 
-interface NavigatorWithModelContext {
+interface HostWithModelContext {
   modelContext?: ModelContext;
 }
 
+// Read from `document.modelContext` (the spec entry point). Fall back to
+// `navigator.modelContext` for backward compatibility with the previous
+// shape of the API.
 const getModelContext = (): ModelContext | undefined => {
-  if (typeof navigator === "undefined") return undefined;
-  return (navigator as NavigatorWithModelContext).modelContext;
+  if (typeof document !== "undefined") {
+    const fromDocument = (document as unknown as HostWithModelContext)
+      .modelContext;
+    if (fromDocument) return fromDocument;
+  }
+  if (typeof navigator !== "undefined") {
+    return (navigator as unknown as HostWithModelContext).modelContext;
+  }
+  return undefined;
 };
 
 /** Whether the current environment exposes the WebMCP API. */

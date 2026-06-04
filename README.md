@@ -2,7 +2,7 @@
 
 Building blocks for the Web's Built-in AI APIs.
 
-A small, focused monorepo of framework-agnostic packages that smooth over the gnarly bits of the new `navigator.modelContext`, `Translator`, `Summarizer`, `LanguageModel`, `LanguageDetector`, `Writer`, `Rewriter`, and `Proofreader` browser APIs (feature detection, session caching, streaming, lifecycle, safe DOM rebuild) without bringing any UI along.
+A small, focused monorepo of framework-agnostic packages that smooth over the gnarly bits of the new `document.modelContext`, `Translator`, `Summarizer`, `LanguageModel`, `LanguageDetector`, `Writer`, `Rewriter`, and `Proofreader` browser APIs (feature detection, session caching, streaming, lifecycle, safe DOM rebuild) without bringing any UI along.
 
 ## What it is
 
@@ -17,7 +17,7 @@ See [`apps/docs/src/content/docs/architecture.mdx`](./apps/docs/src/content/docs
 
 | Package                                          | Wraps                                          | Highlights                                                                |
 | ------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------- |
-| [`@web-ai-sdk/webmcp`](./packages/webmcp)            | `navigator.modelContext` (W3C WebMCP)          | Safe register/unregister, shorthand annotations, `useWebMCP` hook         |
+| [`@web-ai-sdk/webmcp`](./packages/webmcp)            | `document.modelContext` (W3C WebMCP)           | Safe register/unregister, shorthand annotations, `useWebMCP` hook         |
 | [`@web-ai-sdk/translator`](./packages/translator)    | Web Built-in `Translator`                   | Block serialization, casing restoration, snapshot-based restore           |
 | [`@web-ai-sdk/summarizer`](./packages/summarizer)    | Web Built-in `Summarizer`                   | Skeleton extraction, sessionStorage caching, streaming chunks             |
 | [`@web-ai-sdk/prompt`](./packages/prompt)            | Web Built-in `LanguageModel` (Prompt API)   | System prompt + sampling, session reuse, streaming, result cache          |

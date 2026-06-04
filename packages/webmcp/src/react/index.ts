@@ -6,7 +6,8 @@ import { type Tool, registerTool } from "../index.js";
  * unmount. Pass a stable `tools` reference (e.g. via `useMemo`); the effect
  * re-runs whenever the array reference changes.
  *
- * On browsers that don't expose `navigator.modelContext`, the hook is a no-op.
+ * On browsers that don't expose `document.modelContext` (or the legacy
+ * `navigator.modelContext`), the hook is a no-op.
  */
 export const useWebMCP = (tools: readonly Tool[]): void => {
   useEffect(() => {
