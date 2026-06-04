@@ -353,3 +353,8 @@ export const footerColList =
 
 export const footerMeta =
   "mt-14 flex flex-wrap justify-between gap-5 border-t border-hairline pt-6 font-mono text-[11.5px] tracking-[0.04em] text-fg-4 [&_a]:text-fg-3 [&_a:hover]:text-accent";
+
+export const backToTop =
+  "fixed bottom-5 left-1/2 z-40 inline-flex -translate-x-1/2 cursor-pointer items-center gap-1.5 rounded-pill border border-hairline-2 bg-[color-mix(in_oklch,var(--color-surface)_82%,transparent)] py-1.5 pr-3 pl-2.5 font-mono text-[11px] leading-none tracking-[0.02em] text-fg-3 shadow-card backdrop-blur-[14px] backdrop-saturate-[1.2] transition-[opacity,transform,color,border-color] duration-300 ease-[cubic-bezier(0.2,0.6,0.2,1)] hover:-translate-y-px hover:border-accent-line hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent data-[visible=false]:pointer-events-none data-[visible=false]:translate-y-3 data-[visible=false]:opacity-0";
+
+export const backToTopArrow = "text-accent transition-transform";
