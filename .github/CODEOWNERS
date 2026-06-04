@@ -1,0 +1,4 @@
+# Default owner for everything in the repo. Auto-requests review on PRs.
+# Review is requested, not required (no "require code owner reviews" rule),
+# so this never blocks external contributors.
+* @obetomuniz
