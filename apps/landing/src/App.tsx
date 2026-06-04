@@ -1,3 +1,4 @@
+import { BackToTop } from "./components/BackToTop.js";
 import { BrandMark } from "./components/BrandMark.js";
 import { DetectorDemo } from "./components/DetectorDemo.js";
 import { HowItWorks } from "./components/HowItWorks.js";
@@ -1367,5 +1368,6 @@ export const App = () => (
     </footer>
 
     <ScrollSpy />
+    <BackToTop />
   </>
 );
