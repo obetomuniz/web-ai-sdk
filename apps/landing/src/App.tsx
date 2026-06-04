@@ -878,9 +878,9 @@ export const App = () => (
                 Browser built-in AI
               </div>
               <div className={`${stackDetail} ${stackDetailMuted}`}>
-                document.modelContext &nbsp; Summarizer &nbsp; Translator
-                &nbsp; LanguageModel &nbsp; LanguageDetector &nbsp; Writer
-                &nbsp; Rewriter &nbsp; Proofreader
+                document.modelContext &nbsp; Summarizer &nbsp; Translator &nbsp;
+                LanguageModel &nbsp; LanguageDetector &nbsp; Writer &nbsp;
+                Rewriter &nbsp; Proofreader
               </div>
             </div>
             <span className={stackOwner}>platform</span>
