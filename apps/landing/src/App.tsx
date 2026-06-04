@@ -414,7 +414,7 @@ export const App = () => (
               </li>
               <li>
                 <span>
-                  <b>Spec aligned.</b> Wraps <code>navigator.modelContext</code>{" "}
+                  <b>Spec aligned.</b> Wraps <code>document.modelContext</code>{" "}
                   verbatim.
                 </span>
               </li>
@@ -879,9 +879,9 @@ export const App = () => (
                 Browser built-in AI
               </div>
               <div className={`${stackDetail} ${stackDetailMuted}`}>
-                navigator.modelContext &nbsp; Summarizer &nbsp; Translator
-                &nbsp; LanguageModel &nbsp; LanguageDetector &nbsp; Writer
-                &nbsp; Rewriter &nbsp; Proofreader
+                document.modelContext &nbsp; Summarizer &nbsp; Translator &nbsp;
+                LanguageModel &nbsp; LanguageDetector &nbsp; Writer &nbsp;
+                Rewriter &nbsp; Proofreader
               </div>
             </div>
             <span className={stackOwner}>platform</span>

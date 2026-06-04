@@ -19,12 +19,23 @@ interface RegisterOptions {
   signal?: AbortSignal;
 }
 
+type Host = "document" | "navigator";
+
+const setModelContext = (host: Host, value: unknown) => {
+  Object.defineProperty(
+    host === "document" ? document : navigator,
+    "modelContext",
+    { value, configurable: true },
+  );
+};
+
 /**
- * Mirror Chrome's native `navigator.modelContext` shape: a single
- * `registerTool(def, { signal? })` method. There is no `unregisterTool`;
- * cleanup happens by aborting the signal that was passed at registration.
+ * Mirror the native WebMCP shape: a single `registerTool(def, { signal? })`
+ * method. There is no `unregisterTool`; cleanup happens by aborting the signal
+ * that was passed at registration. Installs on `navigator` by default; pass
+ * `host: "document"` to mount on `document.modelContext` instead.
  */
-const installFakeModelContext = () => {
+const installFakeModelContext = (host: Host = "navigator") => {
   const registered = new Map<string, RegisteredCall>();
   const registerTool = vi.fn(
     (def: RegisteredCall, options?: RegisterOptions) => {
@@ -41,33 +52,43 @@ const installFakeModelContext = () => {
   );
 
   const mc = { registerTool };
-  Object.defineProperty(navigator, "modelContext", {
-    value: mc,
-    configurable: true,
-  });
+  setModelContext(host, mc);
 
   return { mc, registered, registerTool };
 };
 
-const removeModelContext = () => {
-  Object.defineProperty(navigator, "modelContext", {
-    value: undefined,
-    configurable: true,
-  });
-};
-
 afterEach(() => {
-  removeModelContext();
+  setModelContext("document", undefined);
+  setModelContext("navigator", undefined);
 });
 
 describe("feature detection", () => {
-  it("isAvailable() is false when navigator.modelContext is missing", () => {
+  it("isAvailable() is false when modelContext is missing on both hosts", () => {
     expect(isAvailable()).toBe(false);
   });
 
   it("isAvailable() is true when navigator.modelContext is present", () => {
-    installFakeModelContext();
+    installFakeModelContext("navigator");
     expect(isAvailable()).toBe(true);
+  });
+
+  it("isAvailable() is true when document.modelContext is present", () => {
+    installFakeModelContext("document");
+    expect(isAvailable()).toBe(true);
+  });
+
+  it("prefers document.modelContext over navigator.modelContext when both are present", () => {
+    const onDoc = installFakeModelContext("document");
+    const onNav = installFakeModelContext("navigator");
+
+    registerTool({
+      name: "ping",
+      description: "Returns pong.",
+      execute: async () => ({ result: "pong" }),
+    });
+
+    expect(onDoc.registerTool).toHaveBeenCalledTimes(1);
+    expect(onNav.registerTool).not.toHaveBeenCalled();
   });
 });
 
@@ -81,7 +102,7 @@ describe("registerTool", () => {
     expect(() => cleanup()).not.toThrow();
   });
 
-  it("forwards name/description/execute to navigator.modelContext", async () => {
+  it("forwards name/description/execute to the host modelContext", async () => {
     const { registered, registerTool: spy } = installFakeModelContext();
 
     registerTool({
