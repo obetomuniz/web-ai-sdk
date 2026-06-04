@@ -1,6 +1,13 @@
 import { useEffect } from "react";
 
-const IDS = ["packages", "philosophy", "how", "support", "start"] as const;
+const IDS = [
+  "why-raw",
+  "packages",
+  "philosophy",
+  "how",
+  "support",
+  "start",
+] as const;
 
 const scrollMarker = (): number => {
   const root = document.documentElement;
@@ -24,7 +31,7 @@ export const ScrollSpy = () => {
     const syncActive = () => {
       frame = 0;
       const marker = scrollMarker();
-      let activeIndex = 0;
+      let activeIndex = -1;
 
       for (let i = 0; i < sections.length; i++) {
         const section = sections[i];

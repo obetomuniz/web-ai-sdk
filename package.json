@@ -25,6 +25,7 @@
     "docs": "pnpm --filter \"./apps/docs\" run dev",
     "landing": "pnpm --filter \"./apps/landing\" run dev",
     "og:build": "pnpm --filter \"./apps/landing\" run og:build",
+    "pages:dev": "pnpm --filter \"./apps/**\" -r --parallel run dev",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm --filter \"./packages/**\" -r run test",
     "lint": "biome check .",
