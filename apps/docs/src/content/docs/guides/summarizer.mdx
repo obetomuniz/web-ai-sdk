@@ -120,7 +120,27 @@ summarize({ language: "en", input: text, preference: "speed", length: "short" })
 summarize({ language: "en", input: text, preference: "capability" });
 ```
 
-It's a hint, not a guarantee. The browser may override `"speed"` and fall back to a more capable model when a functional requirement — such as the requested language, type, or length — needs one. When a configuration can't be served at all, the wrapper surfaces it as unavailability (the availability probe receives the same `preference`, so it stays consistent with what `create()` would do). The default is `"auto"` to match the platform default; opt into `"speed"` or `"capability"` explicitly when you have a clear preference.
+The default is `"auto"` to match the platform default; `"speed"` and `"capability"` are explicit opt-ins.
+
+### `"speed"` is narrower than `"auto"`
+
+The faster model behind `"speed"` does not serve every configuration. Some combinations of `language`, `type`, `length`, and `format` are not available on the speed path, and there is no promise that the browser silently upgrades you to a more capable model when they aren't — the configuration can instead be reported as **unavailable**. When that happens, `summarize()` throws `SummarizerUnavailableError`, the same way it does for any unavailable configuration.
+
+This wrapper forwards `preference` into the `availability()` probe, so the probe and the session `create()` agree: if `availability()` reports the `"speed"` configuration as unavailable, `summarize()` fails fast instead of creating a session that can't serve the request. Because of this, treat `"speed"` as an opt-in you guard — be ready to fall back to `"auto"` on unavailability (or pre-check with `checkAvailability({ preference: "speed", … })`):
+
+```ts
+import { summarize, SummarizerUnavailableError } from "@web-ai-sdk/summarizer";
+
+const opts = { language: "en", input: text, type: "tldr", length: "short" } as const;
+
+try {
+  await summarize({ ...opts, preference: "speed" });
+} catch (err) {
+  if (err instanceof SummarizerUnavailableError) {
+    await summarize({ ...opts, preference: "auto" });
+  } else throw err;
+}
+```
 
 ## Output normalization
 
