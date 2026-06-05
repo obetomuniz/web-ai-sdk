@@ -242,4 +242,21 @@ describe("summarize", () => {
     expect(createOpts.format).toBe("markdown");
     expect(createOpts.preference).toBe("capability");
   });
+
+  it("defaults preference to 'auto' when omitted", async () => {
+    const api = installFakeSummarizer({ summary: "ok" });
+    await summarize({ language: "en", input: "body" });
+    const createOpts = api.create.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(createOpts.preference).toBe("auto");
+  });
+
+  it("forwards preference to the availability() probe", async () => {
+    const api = installFakeSummarizer({ summary: "ok" });
+    await summarize({ language: "en", input: "body", preference: "speed" });
+    const availabilityOpts = api.availability.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >;
+    expect(availabilityOpts.preference).toBe("speed");
+  });
 });

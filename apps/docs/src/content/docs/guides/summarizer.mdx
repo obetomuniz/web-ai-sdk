@@ -53,7 +53,7 @@ interface SummarizeOptions {
 | `type` | `"tldr" \| "key-points" \| "teaser" \| "headline"` | Summary shape. Defaults to `"tldr"`. |
 | `length` | `"short" \| "medium" \| "long"` | Length preset. Defaults to `"medium"`. |
 | `format` | `"plain-text" \| "markdown"` | Output format. Defaults to `"plain-text"`. |
-| `preference` | `"auto" \| "speed" \| "capability"` | Performance preference. Defaults to `"speed"`. |
+| `preference` | `"auto" \| "speed" \| "capability"` | Performance preference hint. Defaults to `"auto"`. See [Performance preference](#performance-preference). |
 | `sharedContext` | `string` | Native `sharedContext` string (a hint about who/what the summary is for). |
 | `monitor` | `(m) => void` | Observe the first-call model download (~1.7 GB on a fresh profile). |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
@@ -103,6 +103,44 @@ summarize({ language: "en", input: text, cache: "local" });
 ## Streaming
 
 When the underlying Summarizer instance exposes `summarizeStreaming()`, the library uses it and pushes cleaned chunks to `onUpdate` as they arrive (cumulative buffer, not deltas). Otherwise it falls back to one-shot `summarize()`. Either way, `result.output` is the final cleaned text.
+
+## Performance preference
+
+`preference` is a hint about the speed/quality tradeoff the browser should make when it picks the underlying model. It maps straight to the native `Summarizer.create()` option:
+
+- `"auto"` (default) — the browser balances execution speed with summarization capability, and may adjust based on the environment, system constraints, or context.
+- `"speed"` — prioritizes low latency and fast execution. This can route to a smaller, faster model, which may produce less nuanced or simpler summaries.
+- `"capability"` — prioritizes comprehensiveness and coherence, capturing subtler context at the cost of higher latency.
+
+```ts
+// Fast path for short, low-stakes summaries (e.g. list previews).
+summarize({ language: "en", input: text, preference: "speed", length: "short" });
+
+// Quality path for a single, carefully written summary.
+summarize({ language: "en", input: text, preference: "capability" });
+```
+
+The default is `"auto"` to match the platform default; `"speed"` and `"capability"` are explicit opt-ins.
+
+### `"speed"` is narrower than `"auto"`
+
+The faster model behind `"speed"` does not serve every configuration. Some combinations of `language`, `type`, `length`, and `format` are not available on the speed path, and there is no promise that the browser silently upgrades you to a more capable model when they aren't — the configuration can instead be reported as **unavailable**. When that happens, `summarize()` throws `SummarizerUnavailableError`, the same way it does for any unavailable configuration.
+
+This wrapper forwards `preference` into the `availability()` probe, so the probe and the session `create()` agree: if `availability()` reports the `"speed"` configuration as unavailable, `summarize()` fails fast instead of creating a session that can't serve the request. Because of this, treat `"speed"` as an opt-in you guard — be ready to fall back to `"auto"` on unavailability (or pre-check with `checkAvailability({ preference: "speed", … })`):
+
+```ts
+import { summarize, SummarizerUnavailableError } from "@web-ai-sdk/summarizer";
+
+const opts = { language: "en", input: text, type: "tldr", length: "short" } as const;
+
+try {
+  await summarize({ ...opts, preference: "speed" });
+} catch (err) {
+  if (err instanceof SummarizerUnavailableError) {
+    await summarize({ ...opts, preference: "auto" });
+  } else throw err;
+}
+```
 
 ## Output normalization
 
