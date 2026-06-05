@@ -6,9 +6,10 @@
 // (title, description, url, author, publisher) without changing visible
 // markup.
 import Default from "@astrojs/starlight/components/Head.astro";
-import type { Props } from "@astrojs/starlight/props";
 
-const { entry } = Astro.props as Props;
+// Starlight 0.32+ exposes route data (including `entry`) via
+// `Astro.locals.starlightRoute` instead of component props.
+const { entry } = Astro.locals.starlightRoute;
 const { data } = entry;
 
 const canonical = Astro.site
@@ -43,5 +44,5 @@ const ld = {
 };
 ---
 
-<Default {...Astro.props}><slot /></Default>
+<Default><slot /></Default>
 <script type="application/ld+json" set:html={JSON.stringify(ld)} />
