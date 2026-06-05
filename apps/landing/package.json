@@ -21,7 +21,7 @@
     "@web-ai-sdk/translator": "workspace:*",
     "@web-ai-sdk/webmcp": "workspace:*",
     "@web-ai-sdk/writer": "workspace:*",
-    "marked": "^18.0.3",
+    "marked": "^18.0.5",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
