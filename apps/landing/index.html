@@ -83,7 +83,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
   </head>
@@ -99,58 +99,58 @@
     <div id="root">
       <noscript>
         <style>
-          .ssr-fallback { color-scheme: dark; background: #0f0e0c; color: #f5efe6; min-height: 100vh; }
+          .ssr-fallback { color-scheme: dark; background: #0a0a0a; color: #ececee; min-height: 100vh; }
         </style>
       </noscript>
       <article class="ssr-fallback" style="max-width: 48rem; margin: 0 auto; padding: 3rem 1.25rem; font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; line-height: 1.55;">
         <header>
           <h1 style="font-size: 2.25rem; margin: 0 0 0.5rem; letter-spacing: -0.01em;">web-ai-sdk</h1>
-          <p style="margin: 0 0 1.5rem; color: #b8b1a4; font-size: 1.05rem;">Building blocks for the Web's built-in AI APIs. Composable. No runtime deps. Just lifecycle, streaming, AbortSignals. Vanilla TypeScript by default, with optional React hooks.</p>
+          <p style="margin: 0 0 1.5rem; color: #b4b4ba; font-size: 1.05rem;">Building blocks for the Web's built-in AI APIs. Composable. No runtime deps. Just lifecycle, streaming, AbortSignals. Vanilla TypeScript by default, with optional React hooks.</p>
         </header>
 
         <section>
-          <h2 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: #b8b1a4; margin: 1.5rem 0 0.5rem;">Install</h2>
-          <pre style="background: rgba(245,239,230,0.06); padding: 0.75rem 1rem; border-radius: 6px; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.95rem; color: #f5efe6;"><code>npm i @web-ai-sdk/all        # all five wrappers
+          <h2 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: #b4b4ba; margin: 1.5rem 0 0.5rem;">Install</h2>
+          <pre style="background: rgba(255,255,255,0.06); padding: 0.75rem 1rem; border-radius: 6px; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.95rem; color: #ececee;"><code>npm i @web-ai-sdk/all        # all five wrappers
 npm i @web-ai-sdk/prompt     # one wrapper at a time</code></pre>
         </section>
 
         <section>
-          <h2 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: #b8b1a4; margin: 1.5rem 0 0.5rem;">Packages</h2>
+          <h2 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: #b4b4ba; margin: 1.5rem 0 0.5rem;">Packages</h2>
           <table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
             <thead>
-              <tr style="text-align: left; color: #b8b1a4; font-weight: 500;">
-                <th style="padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid rgba(245,239,230,0.12);">Package</th>
-                <th style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(245,239,230,0.12);">Guide</th>
-                <th style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(245,239,230,0.12);">React hook</th>
+              <tr style="text-align: left; color: #b4b4ba; font-weight: 500;">
+                <th style="padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.12);">Package</th>
+                <th style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.12);">Guide</th>
+                <th style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.12);">React hook</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td style="padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid rgba(245,239,230,0.06); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">@web-ai-sdk/all</td>            <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(245,239,230,0.06);"><a href="/docs/guides/meta-package/" style="color: #e34a2c; text-decoration: none;">Meta-package</a></td><td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(245,239,230,0.06); color: #b8b1a4;">—</td></tr>
-              <tr><td style="padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid rgba(245,239,230,0.06); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">@web-ai-sdk/prompt</td>          <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(245,239,230,0.06);"><a href="/docs/guides/prompt/" style="color: #e34a2c; text-decoration: none;">Prompt</a></td>             <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(245,239,230,0.06);"><a href="/docs/react/use-prompt/" style="color: #e34a2c; text-decoration: none;">usePrompt</a> · <a href="/docs/react/use-session/" style="color: #e34a2c; text-decoration: none;">useSession</a></td></tr>
-              <tr><td style="padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid rgba(245,239,230,0.06); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">@web-ai-sdk/webmcp</td>          <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(245,239,230,0.06);"><a href="/docs/guides/webmcp/" style="color: #e34a2c; text-decoration: none;">WebMCP</a></td>             <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(245,239,230,0.06);"><a href="/docs/react/use-web-mcp/" style="color: #e34a2c; text-decoration: none;">useWebMCP</a></td></tr>
-              <tr><td style="padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid rgba(245,239,230,0.06); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">@web-ai-sdk/summarizer</td>      <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(245,239,230,0.06);"><a href="/docs/guides/summarizer/" style="color: #e34a2c; text-decoration: none;">Summarizer</a></td>     <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(245,239,230,0.06);"><a href="/docs/react/use-summarizer/" style="color: #e34a2c; text-decoration: none;">useSummarizer</a></td></tr>
-              <tr><td style="padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid rgba(245,239,230,0.06); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">@web-ai-sdk/translator</td>      <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(245,239,230,0.06);"><a href="/docs/guides/translator/" style="color: #e34a2c; text-decoration: none;">Translator</a></td>     <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(245,239,230,0.06);"><a href="/docs/react/use-translator/" style="color: #e34a2c; text-decoration: none;">useTranslator</a></td></tr>
-              <tr><td style="padding: 0.5rem 0.75rem 0.5rem 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">@web-ai-sdk/detector</td>                                                                                                                                                                <td style="padding: 0.5rem 0.75rem;"><a href="/docs/guides/detector/" style="color: #e34a2c; text-decoration: none;">Detector</a></td>                                                                          <td style="padding: 0.5rem 0.75rem;"><a href="/docs/react/use-detector/" style="color: #e34a2c; text-decoration: none;">useDetector</a></td></tr>
+              <tr><td style="padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">@web-ai-sdk/all</td>            <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06);"><a href="/docs/guides/meta-package/" style="color: #fafafa; text-decoration: none;">Meta-package</a></td><td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06); color: #b4b4ba;">—</td></tr>
+              <tr><td style="padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">@web-ai-sdk/prompt</td>          <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06);"><a href="/docs/guides/prompt/" style="color: #fafafa; text-decoration: none;">Prompt</a></td>             <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06);"><a href="/docs/react/use-prompt/" style="color: #fafafa; text-decoration: none;">usePrompt</a> · <a href="/docs/react/use-session/" style="color: #fafafa; text-decoration: none;">useSession</a></td></tr>
+              <tr><td style="padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">@web-ai-sdk/webmcp</td>          <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06);"><a href="/docs/guides/webmcp/" style="color: #fafafa; text-decoration: none;">WebMCP</a></td>             <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06);"><a href="/docs/react/use-web-mcp/" style="color: #fafafa; text-decoration: none;">useWebMCP</a></td></tr>
+              <tr><td style="padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">@web-ai-sdk/summarizer</td>      <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06);"><a href="/docs/guides/summarizer/" style="color: #fafafa; text-decoration: none;">Summarizer</a></td>     <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06);"><a href="/docs/react/use-summarizer/" style="color: #fafafa; text-decoration: none;">useSummarizer</a></td></tr>
+              <tr><td style="padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">@web-ai-sdk/translator</td>      <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06);"><a href="/docs/guides/translator/" style="color: #fafafa; text-decoration: none;">Translator</a></td>     <td style="padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.06);"><a href="/docs/react/use-translator/" style="color: #fafafa; text-decoration: none;">useTranslator</a></td></tr>
+              <tr><td style="padding: 0.5rem 0.75rem 0.5rem 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">@web-ai-sdk/detector</td>                                                                                                                                                                <td style="padding: 0.5rem 0.75rem;"><a href="/docs/guides/detector/" style="color: #fafafa; text-decoration: none;">Detector</a></td>                                                                          <td style="padding: 0.5rem 0.75rem;"><a href="/docs/react/use-detector/" style="color: #fafafa; text-decoration: none;">useDetector</a></td></tr>
             </tbody>
           </table>
         </section>
 
         <section>
-          <h2 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: #b8b1a4; margin: 1.5rem 0 0.5rem;">Browser support</h2>
-          <p style="margin: 0 0 0.5rem;">Chrome and Edge 138+ with the Built-in AI flags enabled. See <a href="/docs/browser-support/" style="color: #e34a2c; text-decoration: none;">the support matrix</a> for the per-API breakdown.</p>
+          <h2 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: #b4b4ba; margin: 1.5rem 0 0.5rem;">Browser support</h2>
+          <p style="margin: 0 0 0.5rem;">Chrome and Edge 138+ with the Built-in AI flags enabled. See <a href="/docs/browser-support/" style="color: #fafafa; text-decoration: none;">the support matrix</a> for the per-API breakdown.</p>
         </section>
 
         <section>
-          <h2 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: #b8b1a4; margin: 1.5rem 0 0.5rem;">Links</h2>
+          <h2 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: #b4b4ba; margin: 1.5rem 0 0.5rem;">Links</h2>
           <ul style="list-style: none; padding: 0; margin: 0;">
-            <li style="margin: 0.25rem 0;"><a href="/docs/" style="color: #e34a2c; text-decoration: none;">Documentation</a> — Starlight site with guides, React hooks, browser support.</li>
-            <li style="margin: 0.25rem 0;"><a href="https://github.com/obetomuniz/web-ai-sdk" style="color: #e34a2c; text-decoration: none;">github.com/obetomuniz/web-ai-sdk</a> — source, issues, releases.</li>
-            <li style="margin: 0.25rem 0;"><a href="https://www.npmjs.com/org/web-ai-sdk" style="color: #e34a2c; text-decoration: none;">npmjs.com/org/web-ai-sdk</a> — published packages.</li>
-            <li style="margin: 0.25rem 0;"><a href="/llms.txt" style="color: #e34a2c; text-decoration: none;">/llms.txt</a> · <a href="/llms-full.txt" style="color: #e34a2c; text-decoration: none;">/llms-full.txt</a> · <a href="/sitemap.xml" style="color: #e34a2c; text-decoration: none;">/sitemap.xml</a> — machine-readable index.</li>
+            <li style="margin: 0.25rem 0;"><a href="/docs/" style="color: #fafafa; text-decoration: none;">Documentation</a> — Starlight site with guides, React hooks, browser support.</li>
+            <li style="margin: 0.25rem 0;"><a href="https://github.com/obetomuniz/web-ai-sdk" style="color: #fafafa; text-decoration: none;">github.com/obetomuniz/web-ai-sdk</a> — source, issues, releases.</li>
+            <li style="margin: 0.25rem 0;"><a href="https://www.npmjs.com/org/web-ai-sdk" style="color: #fafafa; text-decoration: none;">npmjs.com/org/web-ai-sdk</a> — published packages.</li>
+            <li style="margin: 0.25rem 0;"><a href="/llms.txt" style="color: #fafafa; text-decoration: none;">/llms.txt</a> · <a href="/llms-full.txt" style="color: #fafafa; text-decoration: none;">/llms-full.txt</a> · <a href="/sitemap.xml" style="color: #fafafa; text-decoration: none;">/sitemap.xml</a> — machine-readable index.</li>
           </ul>
         </section>
 
-        <footer style="margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(245,239,230,0.12); color: #b8b1a4; font-size: 0.85rem;">
+        <footer style="margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.12); color: #b4b4ba; font-size: 0.85rem;">
           <p style="margin: 0;">This is the static fallback. The interactive landing — live demos, scroll-spy, the full feature tour — renders here when JavaScript is enabled.</p>
         </footer>
       </article>

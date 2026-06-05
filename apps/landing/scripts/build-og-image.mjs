@@ -20,32 +20,32 @@ const OUT = resolve(ROOT, "public/og-image.png");
 const W = 1200;
 const H = 630;
 
-// Colors lifted from the brand canon (apps/docs/internal/visual-identity.html).
-const INK = "#0C0A09";
-const INK_2 = "#14110F";
-const RULE_2 = "#3A302A";
-const PAPER = "#EDE6DA";
-const PAPER_2 = "#C9C0B1";
-const MUTED = "#8A8175";
-const FLAME = "#F26B3B";
+// Colors: Noir / Dark identity (apps/docs/internal/identity-decisions.md).
+const INK = "#0A0A0A";
+const INK_2 = "#111111";
+const RULE_2 = "#2A2A2E";
+const PAPER = "#ECECEE";
+const PAPER_2 = "#B4B4BA";
+const MUTED = "#A2A2AA";
+const ACCENT = "#FAFAFA"; // white is primary in Noir
+const ACCENT_HI = "#FFFFFF";
 
-// Fonts: Geist Mono is the brand canon. Fall back to system monospace so
-// resvg renders something legible even without bundled font files.
-const MONO = "'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace";
+// Fonts: IBM Plex Mono for the wordmark/code, Geist for body. Fall back to
+// system fonts so resvg renders something legible without bundled font files.
+const MONO = "'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace";
 const SANS = "'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif";
 
 const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <defs>
-    <!-- Ambient warm-orange glow at the top of the frame, matching the
-         landing's body::before radial gradient. -->
+    <!-- Faint neutral top glow, matching the landing's body::before radial. -->
     <radialGradient id="glow-top" cx="50%" cy="0%" r="60%">
-      <stop offset="0%" stop-color="${FLAME}" stop-opacity="0.12"/>
-      <stop offset="60%" stop-color="${FLAME}" stop-opacity="0"/>
+      <stop offset="0%" stop-color="${ACCENT}" stop-opacity="0.05"/>
+      <stop offset="60%" stop-color="${ACCENT}" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="glow-corner" cx="90%" cy="10%" r="40%">
-      <stop offset="0%" stop-color="${FLAME}" stop-opacity="0.06"/>
-      <stop offset="60%" stop-color="${FLAME}" stop-opacity="0"/>
+      <stop offset="0%" stop-color="${ACCENT}" stop-opacity="0.03"/>
+      <stop offset="60%" stop-color="${ACCENT}" stop-opacity="0"/>
     </radialGradient>
   </defs>
 
@@ -55,7 +55,7 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
   <rect width="${W}" height="${H}" fill="url(#glow-corner)"/>
 
   <!-- Brand mark, top-left signature. Canonical 96×64 geometry scaled to
-       ~144×96 (×1.5) so the brackets, ring, stem and flame dot all stay
+       ~144×96 (×1.5) so the brackets, ring, stem and spark dot all stay
        legible. Pulled tight into the top-left corner so the whole card
        reads as a compact composition instead of floating in dead space. -->
   <g transform="translate(70, 56) scale(1.5)">
@@ -65,22 +65,20 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
       <line x1="56" y1="27" x2="56" y2="49"/>
       <path d="M68 27 L76 38 L68 49"/>
     </g>
-    <circle cx="56" cy="18" r="3.8" fill="${FLAME}"/>
+    <circle cx="56" cy="18" r="3.8" fill="${ACCENT_HI}"/>
   </g>
 
-  <!-- Eyebrow pill: flame bullet + "Built-in AI, the right way" -->
+  <!-- Eyebrow pill: white spark bullet + "Built-in AI, the right way" -->
   <g transform="translate(70, 220)">
-    <circle cx="8" cy="12" r="5" fill="${FLAME}"/>
+    <circle cx="8" cy="12" r="5" fill="${ACCENT}"/>
     <text x="24" y="18" font-family="${MONO}" font-size="20" fill="${PAPER_2}" letter-spacing="0">Built-in AI, the right way</text>
   </g>
 
-  <!-- Wordmark — the hero. "web-ai-sdk" with the canonical flame "ai"
-       ligature plus the flame caret right after "sdk". Caret dimensions
-       are 20×108 (= 0.16em × 0.9em at this font size), mirroring the
-       landing's .caret CSS exactly. The x-coordinate is hand-tuned to
-       sit ~8px after Menlo's rendering of "web-ai-sdk" at 120px. -->
-  <text x="70" y="355" font-family="${MONO}" font-weight="500" font-size="120" fill="${PAPER}">web-<tspan fill="${FLAME}">ai</tspan>-sdk</text>
-  <rect x="828" y="267" width="20" height="108" fill="${FLAME}"/>
+  <!-- Wordmark, the hero. "web-ai-sdk" with the "ai" in bright accent, plus an
+       underscore caret right after "sdk" (matching the landing's "_" caret). The
+       x-coordinate is hand-tuned to sit just after the wordmark at 120px. -->
+  <text x="70" y="355" font-family="${MONO}" font-weight="500" font-size="120" fill="${PAPER}">web-<tspan fill="${ACCENT_HI}">ai</tspan>-sdk</text>
+  <rect x="828" y="349" width="66" height="11" rx="2" fill="${ACCENT}"/>
 
   <!-- Tagline -->
   <text x="70" y="425" font-family="${SANS}" font-weight="600" font-size="32" fill="${PAPER}">Building blocks <tspan font-weight="400" fill="${PAPER_2}">for the Web's built-in AI APIs.</tspan></text>
@@ -91,7 +89,7 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
        monospace advance — no manual x-positioning, no accidental gap. -->
   <g transform="translate(70, 504)">
     <rect x="0" y="0" width="448" height="56" rx="10" fill="${INK_2}" stroke="${RULE_2}" stroke-width="1"/>
-    <text x="22" y="38" font-family="${MONO}" font-size="24" fill="${PAPER}"><tspan fill="${FLAME}">$ npm install</tspan> @web-ai-sdk/all</text>
+    <text x="22" y="38" font-family="${MONO}" font-size="24" fill="${PAPER}"><tspan fill="${ACCENT}">$ npm install</tspan> @web-ai-sdk/all</text>
   </g>
 
   <!-- Domain stamp, bottom-right -->

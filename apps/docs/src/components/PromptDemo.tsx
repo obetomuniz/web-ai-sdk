@@ -10,7 +10,7 @@ export const PromptDemo = ({
   systemPrompt = "You are a concise assistant. Reply with a single short paragraph.",
   temperature = 0.7,
 }: PromptDemoProps) => {
-  const [input, setInput] = useState("What is WebMCP, in one sentence?");
+  const [input, setInput] = useState("What is React.js, in one sentence?");
   const { status, output, error, fromCache, ask, abort, reset } = usePrompt({
     systemPrompt,
     temperature,

@@ -1,39 +1,56 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0c0a09;
-  --color-surface: #14110f;
-  --color-surface-2: #1f1a17;
-  --color-surface-3: #2a231e;
-  --color-hairline: #2a231e;
-  --color-hairline-2: #3a302a;
-  --color-fg: #ede6da;
-  --color-fg-2: #c9c0b1;
-  --color-fg-3: #8a8175;
-  --color-fg-4: #5e574e;
-  --color-accent: #f26b3b;
-  --color-accent-bright: #ff8456;
-  --color-accent-dim: #b94a22;
-  --color-accent-soft: rgba(242, 107, 59, 0.12);
-  --color-accent-line: rgba(242, 107, 59, 0.45);
-  --color-ok: oklch(0.74 0.13 150);
-  --color-warn: oklch(0.78 0.13 80);
-  --color-err: oklch(0.65 0.2 25);
-  --color-brand-dark: #1a0a05;
+  /* Default theme = Noir · Dark. These are the design-token *defaults*; the
+   * runtime ThemeSwitcher (src/lib/themes.ts) overrides any of them on :root to
+   * swap the whole skin. Nothing visual hardcodes a color outside these tokens. */
+  --color-bg: #0a0a0a;
+  --color-surface: #111111;
+  --color-surface-2: #1b1b1b;
+  --color-surface-3: #252525;
+  --color-hairline: rgba(255, 255, 255, 0.07);
+  --color-hairline-2: rgba(255, 255, 255, 0.13);
+  --color-fg: #ececee;
+  --color-fg-2: #bcbcc4;
+  --color-fg-3: #a2a2aa;
+  --color-fg-4: #93939c;
+  --color-accent: #fafafa;
+  --color-accent-bright: #ffffff;
+  --color-accent-dim: #c8c8ce;
+  --color-accent-soft: rgba(255, 255, 255, 0.1);
+  --color-accent-line: rgba(255, 255, 255, 0.3);
+  /* Status lights: fixed semantic meaning; a theme may retint --color-ok. */
+  --color-ok: #57d9a3;
+  --color-warn: #ffc861;
+  --color-err: #ff6b7a;
+  --color-brand-dark: #0a0a0a;
 
-  --font-sans: "Geist", "Inter", ui-sans-serif, system-ui, -apple-system,
-    sans-serif;
-  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", Menlo,
+  --font-display: "Space Grotesk", "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, "SF Mono", Menlo,
     monospace;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   --radius-pill: 999px;
 
-  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.025) inset,
-    0 6px 14px oklch(15% 0.02 35 / 0.32),
-    0 22px 48px oklch(12% 0.015 35 / 0.28);
+  /* Matches the tone-lab cards: tight, offset dual-tone "raised" shadow. */
+  --shadow-card: -1px -1px 2px rgba(255, 255, 255, 0.03),
+    3px 5px 14px rgba(0, 0, 0, 0.55);
+
+  /* Highlight: theme-aware gradient fill + neon glow for emphasized text.
+   * Both derive from the accent ramp, so they read as a metallic sheen in Noir
+   * and as colored neon in tinted themes. Use via the `gradientText` utility. */
+  --gradient-text: linear-gradient(
+    120deg,
+    var(--color-accent-bright) 0%,
+    var(--color-accent) 50%,
+    var(--color-accent-dim) 100%
+  );
+  --glow-text: drop-shadow(
+    0 0 10px color-mix(in oklch, var(--color-accent) 38%, transparent)
+  );
 
   --container-landing: 1180px;
 
@@ -103,7 +120,7 @@
   body {
     @apply overflow-x-hidden text-[15px] leading-[1.55] tracking-[-0.005em]
       before:fixed before:inset-0 before:pointer-events-none before:z-0 before:content-['']
-      before:bg-[radial-gradient(1200px_600px_at_50%_-10%,oklch(0.68_0.18_35/0.08),transparent_60%),radial-gradient(800px_400px_at_90%_10%,oklch(0.68_0.18_35/0.04),transparent_60%)];
+      before:bg-[radial-gradient(1200px_600px_at_50%_-10%,rgba(255,255,255,0.04),transparent_60%)];
   }
 
   button {
@@ -121,7 +138,7 @@
   }
 
   a {
-    @apply text-fg no-underline;
+    @apply text-fg no-underline transition-colors;
   }
 
   a:hover {
@@ -138,7 +155,7 @@
   h2,
   h3,
   h4 {
-    @apply m-0 font-medium leading-[1.1] tracking-[-0.02em];
+    @apply m-0 font-display font-medium leading-[1.1] tracking-[-0.02em];
   }
 
   h2 {
@@ -157,6 +174,17 @@
     :root {
       --gutter: 20px;
       --section-py: 4rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
     }
   }
 }
