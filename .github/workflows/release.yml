@@ -49,5 +49,9 @@ jobs:
           version: pnpm version-packages
           commit: "chore: version packages"
           title: "chore: version packages"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # A PAT (not the default GITHUB_TOKEN) so the opened "Version
+          # Packages" PR triggers the CI workflow. GitHub intentionally
+          # suppresses workflow runs for events created by GITHUB_TOKEN.
+          # Passed via the action input (not step-level env) so it is not
+          # exposed to the publish/version subprocesses.
+          github-token: ${{ secrets.CHANGESETS_TOKEN }}
