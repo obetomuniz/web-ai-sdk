@@ -5,6 +5,14 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    # Wait before proposing a freshly-published version, giving the ecosystem
+    # time to flag a malicious or broken release (supply-chain hygiene). Mirrors
+    # the repo's >=72h freshness guidance. Security/advisory updates are exempt
+    # by Dependabot, so urgent fixes still land immediately. Note: cooldown
+    # applies to direct deps only, not transitives.
+    cooldown:
+      default-days: 3
+      semver-major-days: 7
     # Group only minor/patch updates so a single green PR can sweep them up.
     # Major updates are intentionally excluded from the groups: each lands as
     # its own PR so a breaking bump can't block the rest of the batch (a single
@@ -28,6 +36,9 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 3
+      semver-major-days: 7
     groups:
       github-actions:
         patterns:
