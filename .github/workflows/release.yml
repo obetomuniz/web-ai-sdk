@@ -50,4 +50,7 @@ jobs:
           commit: "chore: version packages"
           title: "chore: version packages"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # A PAT (not the default GITHUB_TOKEN) so the opened "Version
+          # Packages" PR triggers the CI workflow. GitHub intentionally
+          # suppresses workflow runs for events created by GITHUB_TOKEN.
+          GITHUB_TOKEN: ${{ secrets.CHANGESETS_TOKEN }}
