@@ -11,7 +11,7 @@
     "typecheck": "astro check"
   },
   "dependencies": {
-    "@astrojs/react": "^4.2.0",
+    "@astrojs/react": "^5.0.7",
     "@astrojs/starlight": "^0.30.0",
     "@web-ai-sdk/detector": "workspace:*",
     "@web-ai-sdk/prompt": "workspace:*",
