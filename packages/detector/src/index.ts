@@ -10,16 +10,16 @@
 
 import {
   type CreateMonitor,
+  checkAvailability,
   type DetectionResult,
+  getLanguageDetectorApi,
+  getOrCreateLanguageDetector,
+  isAvailable,
   type LanguageDetectorApi,
   type LanguageDetectorAvailability,
   type LanguageDetectorAvailabilityOptions,
   type LanguageDetectorCreateOptions,
   type LanguageDetectorInstance,
-  checkAvailability,
-  getLanguageDetectorApi,
-  getOrCreateLanguageDetector,
-  isAvailable,
 } from "./api.js";
 import {
   type CacheOption,
@@ -28,19 +28,18 @@ import {
   resolveCache,
 } from "./cache.js";
 
-export { isAvailable, checkAvailability };
-
 export type {
   CacheOption,
   CreateMonitor,
-  DetectionResult,
   DetectionCache,
+  DetectionResult,
   LanguageDetectorApi,
   LanguageDetectorAvailability,
   LanguageDetectorAvailabilityOptions,
   LanguageDetectorCreateOptions,
   LanguageDetectorInstance,
 };
+export { checkAvailability, isAvailable };
 
 export interface DetectOptions {
   /** Text to detect. Empty / whitespace-only input resolves to `{ output: null }`. */

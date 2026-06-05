@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { type Tool, registerTool } from "../index.js";
+import { registerTool, type Tool } from "../index.js";
 
 /**
  * React hook that registers WebMCP tools on mount and unregisters them on
@@ -18,10 +18,10 @@ export const useWebMCP = (tools: readonly Tool[]): void => {
   }, [tools]);
 };
 
-export { defineTool, ToolValidationError } from "../index.js";
 export type {
-  Tool,
-  ToolAnnotations,
   DefineToolOptions,
   StandardSchemaV1,
+  Tool,
+  ToolAnnotations,
 } from "../index.js";
+export { defineTool, ToolValidationError } from "../index.js";

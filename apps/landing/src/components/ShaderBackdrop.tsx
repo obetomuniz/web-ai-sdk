@@ -77,6 +77,7 @@ export function ShaderBackdrop({
     gl.attachShader(prog, fs);
     gl.linkProgram(prog);
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
+    // biome-ignore lint/correctness/useHookAtTopLevel: gl.useProgram is the WebGL rendering API, not a React hook
     gl.useProgram(prog);
 
     const buf = gl.createBuffer();

@@ -18,11 +18,11 @@
  * (e.g. `checkAvailability` is defined in most of them).
  */
 
+export * as detector from "@web-ai-sdk/detector";
 export * as prompt from "@web-ai-sdk/prompt";
-export * as webmcp from "@web-ai-sdk/webmcp";
+export * as proofreader from "@web-ai-sdk/proofreader";
+export * as rewriter from "@web-ai-sdk/rewriter";
 export * as summarizer from "@web-ai-sdk/summarizer";
 export * as translator from "@web-ai-sdk/translator";
-export * as detector from "@web-ai-sdk/detector";
+export * as webmcp from "@web-ai-sdk/webmcp";
 export * as writer from "@web-ai-sdk/writer";
-export * as rewriter from "@web-ai-sdk/rewriter";
-export * as proofreader from "@web-ai-sdk/proofreader";

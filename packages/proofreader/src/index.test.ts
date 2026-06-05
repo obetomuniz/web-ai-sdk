@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __clearSessionCacheForTests } from "./api.js";
 import {
+  isAvailable,
   type ProofreadCache,
   ProofreaderUnavailableError,
-  isAvailable,
   proofread,
 } from "./index.js";
 

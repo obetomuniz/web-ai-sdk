@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __clearSessionCacheForTests } from "./api.js";
 import {
-  PromptAbortError,
-  PromptUnavailableError,
-  type ResponseCache,
   ask,
   createSession,
   isAvailable,
+  PromptAbortError,
+  PromptUnavailableError,
+  type ResponseCache,
 } from "./index.js";
 
 interface FakeSession {
