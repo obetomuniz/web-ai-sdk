@@ -52,7 +52,13 @@ export interface SummarizeOptions {
   length?: "short" | "medium" | "long";
   /** Output format. Default: `"plain-text"`. */
   format?: "plain-text" | "markdown";
-  /** Performance preference. Default: `"speed"`. */
+  /**
+   * Performance preference hint. `"speed"` biases toward a faster, lighter
+   * model; `"capability"` toward a more comprehensive one; `"auto"` lets the
+   * browser balance the two. The browser may override the hint when a
+   * functional requirement (e.g. the requested language) needs a more capable
+   * model. Default: `"auto"` (matches the platform default).
+   */
   preference?: "auto" | "speed" | "capability";
   /** Native `sharedContext` string (a hint about who/what the summary is for). */
   sharedContext?: string;
@@ -141,7 +147,7 @@ export const summarize = async (
     type: options.type ?? "tldr",
     format: options.format ?? "plain-text",
     length: options.length ?? "medium",
-    preference: options.preference ?? "speed",
+    preference: options.preference ?? "auto",
     sharedContext: options.sharedContext ?? "",
     ...langOptions,
     ...(options.monitor ? { monitor: options.monitor } : {}),
@@ -153,14 +159,19 @@ export const summarize = async (
   // We pass the same options shape to availability() as we do to create().
   // Edge requires this for accurate results and warns when fields like
   // outputLanguage are missing; Chrome is more lenient but accepts the same
-  // input. The narrower SummarizerAvailabilityOptions shape filters out
-  // create-only fields like `sharedContext` and `preference`.
+  // input. `preference` is a create-core option, so availability() accepts it
+  // too; forwarding it keeps the probe honest about the configuration we're
+  // actually about to create. The narrower SummarizerAvailabilityOptions shape
+  // still filters out create-only fields like `sharedContext`.
   const sessionPromise = getOrCreateSummarizer(api, baseCreateOptions);
   const availability = await api
     .availability({
       ...(baseCreateOptions.type ? { type: baseCreateOptions.type } : {}),
       ...(baseCreateOptions.format ? { format: baseCreateOptions.format } : {}),
       ...(baseCreateOptions.length ? { length: baseCreateOptions.length } : {}),
+      ...(baseCreateOptions.preference
+        ? { preference: baseCreateOptions.preference }
+        : {}),
       ...(baseCreateOptions.expectedInputLanguages
         ? { expectedInputLanguages: baseCreateOptions.expectedInputLanguages }
         : {}),

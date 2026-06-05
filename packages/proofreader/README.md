@@ -8,6 +8,8 @@ Building block for the Web's Built-in [Proofreader API](https://developer.chrome
 
 The Proofreader API is in an origin trial in Chrome 141 to 145, behind `chrome://flags/#proofreader-api-for-gemini-nano` on localhost (`chrome://flags/#optimization-guide-on-device-model` must also be enabled). In Edge it's a developer preview in Canary/Dev 142+ behind "Proofreader API for Phi mini". On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `proofread()` throws `ProofreaderUnavailableError` so callers can branch explicitly.
 
+The API is **English-only** today. `expectedInputLanguages` accepts an array, but a request for an unsupported language causes the underlying `create()` to reject (surfaced here as `ProofreaderUnavailableError`); pass `["en"]` or omit it.
+
 ## Install
 
 ```sh
