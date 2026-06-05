@@ -11,8 +11,8 @@
     "typecheck": "astro check"
   },
   "dependencies": {
-    "@astrojs/react": "5.0.6",
-    "@astrojs/starlight": "0.39.2",
+    "@astrojs/react": "5.0.7",
+    "@astrojs/starlight": "0.39.3",
     "@web-ai-sdk/detector": "workspace:*",
     "@web-ai-sdk/prompt": "workspace:*",
     "@web-ai-sdk/proofreader": "workspace:*",
@@ -21,15 +21,15 @@
     "@web-ai-sdk/translator": "workspace:*",
     "@web-ai-sdk/webmcp": "workspace:*",
     "@web-ai-sdk/writer": "workspace:*",
-    "astro": "6.4.2",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "sharp": "^0.33.5"
+    "astro": "6.4.4",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
     "@tailwindcss/vite": "4.3.0",
-    "@types/react": "^19.0.1",
+    "@types/react": "^19.2.16",
     "@types/react-dom": "^19.0.2",
     "tailwindcss": "4.3.0",
     "typescript": "^5.7.2"
