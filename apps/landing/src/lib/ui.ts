@@ -1,7 +1,7 @@
 /** Composed Tailwind classes shared across landing demos and sections. */
 
 export const card =
-  "relative min-w-0 overflow-hidden rounded-lg border border-hairline bg-surface shadow-card transition-colors hover:border-accent-line";
+  "relative min-w-0 overflow-hidden rounded-lg bg-surface shadow-card transition-colors hover:bg-surface-2";
 
 export const cardHead =
   "flex items-center justify-between border-b border-hairline px-4 py-3 font-mono text-xs text-fg-3";
@@ -18,10 +18,10 @@ export const cardDotLive =
 export const cardDotOk = "size-[7px] rounded-full bg-ok";
 
 export const btnSm =
-  "inline-flex cursor-pointer items-center gap-2 rounded-sm border border-accent bg-accent px-3.5 py-2 font-mono text-[12.5px] font-semibold text-brand-dark transition-colors hover:border-accent-bright hover:bg-accent-bright disabled:cursor-not-allowed disabled:opacity-50 max-[640px]:w-full max-[640px]:justify-center max-[640px]:px-3.5 max-[640px]:py-2.5";
+  "inline-flex cursor-pointer items-center gap-2 rounded-sm border border-accent bg-accent px-3.5 py-2 font-mono text-[12.5px] font-semibold text-brand-dark transition-all hover:border-accent-bright hover:bg-accent-bright active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 max-[640px]:w-full max-[640px]:justify-center max-[640px]:px-3.5 max-[640px]:py-2.5";
 
 export const btnSmGhost =
-  "inline-flex cursor-pointer items-center gap-2 rounded-sm border border-hairline-2 bg-transparent px-3.5 py-2 font-mono text-[12.5px] font-semibold text-fg-2 transition-colors hover:border-fg-3 hover:bg-transparent hover:text-fg disabled:cursor-not-allowed disabled:opacity-50 max-[640px]:w-full max-[640px]:justify-center max-[640px]:px-3.5 max-[640px]:py-2.5";
+  "inline-flex cursor-pointer items-center gap-2 rounded-sm border border-fg-4 bg-transparent px-3.5 py-2 font-mono text-[12.5px] font-semibold text-fg-2 transition-all hover:border-fg-3 hover:bg-transparent hover:text-fg active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 max-[640px]:w-full max-[640px]:justify-center max-[640px]:px-3.5 max-[640px]:py-2.5";
 
 export const demoControls =
   "flex flex-wrap items-center gap-2 max-[640px]:gap-2.5";
@@ -64,7 +64,7 @@ const selectChevron =
 export const select = `h-[38px] w-full cursor-pointer appearance-none rounded-sm border border-hairline bg-bg px-3 pr-9 font-mono text-[13px] leading-[38px] text-fg transition-[border-color,background] focus:border-accent-line focus:bg-surface-2 focus:outline-none ${selectChevron}`;
 
 export const caret =
-  "inline-block h-[0.9em] w-[0.16em] shrink-0 animate-blink rounded-[1px] bg-accent align-[-0.1em]";
+  "inline-block h-[0.08em] w-[0.5em] shrink-0 animate-blink rounded-[1px] bg-accent align-baseline ml-[0.06em]";
 
 export const tabs =
   "flex gap-1 border-b border-hairline px-2 max-[880px]:flex-nowrap max-[880px]:overflow-x-auto max-[880px]:[scrollbar-width:thin]";
@@ -83,7 +83,11 @@ export const tabLinesActive = "text-accent-dim";
 export const term =
   "relative bg-surface font-mono text-[13px] leading-[1.6] text-fg-2";
 
-export const termBody = "overflow-x-auto px-[22px] py-5 [counter-reset:ln]";
+// overflow-y-hidden is required: with only overflow-x set, the spec promotes
+// overflow-y to auto, which shows a phantom vertical scrollbar on mobile (where
+// the horizontal scrollbar reserves height). py-5 keeps the last line clear.
+export const termBody =
+  "overflow-x-auto overflow-y-hidden px-[22px] py-5 [counter-reset:ln]";
 
 export const termLine =
   "grid grid-cols-[28px_1fr] gap-3.5 before:text-right before:text-fg-4 before:tabular-nums before:content-[counter(ln)] before:[counter-increment:ln]";
@@ -132,7 +136,11 @@ export const reveal =
 export const container =
   "relative z-1 mx-auto min-w-0 max-w-[1180px] px-[var(--gutter)] max-[880px]:px-5";
 
-export const section = "relative py-[var(--section-py)]";
+// content-visibility skips rendering offscreen sections for smoother scroll FPS;
+// `contain-intrinsic-size: auto <estimate>` remembers each section's real height
+// after first render, so the scrollbar doesn't keep jumping.
+export const section =
+  "relative py-[var(--section-py)] [content-visibility:auto] [contain-intrinsic-size:auto_700px]";
 
 export const sectionAnchor = "scroll-mt-[calc(var(--nav-height)+1.5rem)]";
 
@@ -143,7 +151,7 @@ export const sectionEyebrow =
   "inline-flex items-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-4 before:h-px before:w-[18px] before:bg-fg-4 before:content-['']";
 
 export const permalink =
-  "inline-flex size-7 items-center justify-center rounded-sm border border-hairline font-mono text-[13px] leading-none text-fg-4 no-underline transition-[color,border-color] hover:border-[color-mix(in_oklch,var(--color-accent)_40%,var(--color-hairline))] hover:text-accent max-[880px]:size-auto max-[880px]:rounded-none max-[880px]:border-0 max-[880px]:p-1.5 max-[880px]:hover:border-transparent [&>span[aria-hidden=true]]:opacity-75";
+  "inline-flex size-7 items-center justify-center rounded-sm border border-hairline font-mono text-[13px] leading-none text-fg-4 no-underline transition-[color,border-color] hover:border-[color-mix(in_oklch,var(--color-accent)_40%,var(--color-hairline))] hover:text-accent max-[880px]:size-auto max-[880px]:rounded-none max-[880px]:border-0 max-[880px]:p-1.5 max-[880px]:hover:border-transparent [&>span[aria-hidden=true]]:translate-y-[-0.9px] [&>span[aria-hidden=true]]:opacity-75";
 
 export const srOnly =
   "absolute m-[-1px] h-px w-px overflow-hidden border-0 p-0 whitespace-nowrap [clip:rect(0,0,0,0)]";
@@ -154,10 +162,10 @@ export const nav =
 export const navInner = "flex h-14 items-center justify-between";
 
 export const navBrand =
-  "flex items-center gap-[0.1em] font-mono text-sm tracking-[-0.01em]";
+  "flex items-baseline gap-[0.1em] font-mono text-sm tracking-[-0.01em]";
 
 export const navLinks =
-  "flex items-center gap-6 font-mono text-[12.5px] text-fg-3 max-[880px]:hidden [&_a]:text-fg-3 [&_a]:transition-colors [&_a:hover]:text-fg [&_a.active]:text-accent";
+  "flex items-center gap-6 font-mono text-[12.5px] text-fg-3 max-[880px]:hidden [&_a]:relative [&_a]:text-fg-3 [&_a]:transition-colors [&_a:hover]:text-fg [&_a.active]:text-accent [&_a]:after:pointer-events-none [&_a]:after:absolute [&_a]:after:-bottom-1 [&_a]:after:left-0 [&_a]:after:h-px [&_a]:after:w-full [&_a]:after:origin-left [&_a]:after:scale-x-0 [&_a]:after:bg-accent [&_a]:after:transition-transform [&_a]:after:duration-200 [&_a]:after:ease-out [&_a]:after:content-[''] [&_a:hover]:after:scale-x-100 [&_a.active]:after:scale-x-100";
 
 export const navCta =
   "rounded-sm border border-hairline-2 px-3 py-2 font-mono text-[12.5px] text-fg-2 transition-all hover:border-accent-line hover:text-fg";
@@ -173,8 +181,14 @@ export const heroEyebrow =
 export const heroEyebrowDot =
   "size-1.5 rounded-full bg-accent shadow-[0_0_0_3px_var(--color-accent-soft)]";
 
+// Highlight: theme-aware gradient fill + neon glow for emphasized inline text.
+// Apply to any element; reads as a metallic sheen in Noir, colored neon in
+// tinted themes. Tokens live in index.css (--gradient-text / --glow-text).
+export const gradientText =
+  "bg-[image:var(--gradient-text)] bg-clip-text text-transparent [filter:var(--glow-text)]";
+
 export const heroTitle =
-  "flex flex-nowrap items-center gap-[0.1em] font-mono text-[clamp(54px,9vw,112px)] leading-[0.95] font-medium tracking-[-0.04em] max-[640px]:text-[56px] max-[480px]:text-[44px]";
+  "flex flex-nowrap items-baseline gap-[0.1em] font-mono text-[clamp(54px,9vw,112px)] leading-[0.95] font-medium tracking-[-0.04em] max-[640px]:text-[56px] max-[480px]:text-[44px]";
 
 export const subhead =
   "max-w-[640px] text-[clamp(17px,1.6vw,20px)] leading-[1.5] tracking-[-0.01em] text-fg-2 [&_strong]:font-medium [&_strong]:text-fg";
@@ -186,13 +200,13 @@ export const ctaRow =
   "mt-2 flex flex-wrap items-center gap-3 max-[640px]:gap-2.5";
 
 const btnBase =
-  "inline-flex cursor-pointer items-center gap-2.5 rounded-sm border px-5 py-3 font-mono text-[13px] tracking-[-0.005em] no-underline transition-all max-[640px]:px-4 max-[640px]:py-2.5 max-[640px]:text-[13px]";
+  "inline-flex cursor-pointer items-center gap-2.5 rounded-pill border px-5 py-3 font-mono text-[13px] tracking-[-0.005em] no-underline transition-all active:translate-y-px max-[640px]:px-4 max-[640px]:py-2.5 max-[640px]:text-[13px]";
 
 export const btn = `${btnBase} border-transparent`;
 
 export const btnPrimary = `${btnBase} border-accent bg-accent font-semibold text-brand-dark hover:border-accent-bright hover:bg-accent-bright hover:text-brand-dark`;
 
-export const btnGhost = `${btnBase} border-hairline-2 bg-transparent text-fg hover:border-fg-3 hover:text-fg`;
+export const btnGhost = `${btnBase} border-fg-4 bg-bg text-fg hover:border-fg-3 hover:text-fg`;
 
 export const btnArrow = "transition-transform group-hover:translate-x-[3px]";
 
@@ -261,7 +275,7 @@ export const philosophyList =
   "mt-5 grid list-none gap-2 p-0 [&_li]:relative [&_li]:pl-[18px] [&_li]:font-mono [&_li]:text-[12.5px] [&_li]:text-fg-3 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-accent [&_li]:before:content-['✓']";
 
 export const stackDiagram =
-  "relative mt-10 overflow-hidden rounded-lg border border-hairline bg-surface shadow-card";
+  "relative mt-10 overflow-hidden rounded-lg bg-surface shadow-card";
 
 export const stackHeader =
   "flex items-center justify-between border-b border-hairline bg-surface-2 px-6 py-3 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-4";
@@ -299,10 +313,11 @@ export const stackDetailMuted = "text-fg-4";
 export const stackOwner =
   "whitespace-nowrap rounded-sm border border-hairline-2 bg-bg px-2.5 py-[5px] font-mono text-[10.5px] uppercase tracking-[0.12em] text-fg-4 max-[640px]:col-start-2 max-[640px]:mt-[-2px] max-[640px]:w-fit";
 
-export const supportWrap = "overflow-x-auto [-webkit-overflow-scrolling:touch]";
+export const supportWrap =
+  "overflow-x-auto overflow-y-hidden [-webkit-overflow-scrolling:touch]";
 
 export const supportTable =
-  "min-w-[560px] w-full border-separate border-spacing-0 overflow-hidden rounded-lg border border-hairline bg-surface font-mono text-[13px] [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap [&_td]:border-r [&_td]:border-b [&_td]:border-hairline [&_td]:px-5 [&_td]:py-3.5 [&_td]:align-middle [&_td]:text-fg-2 [&_td:last-child]:border-r-0 [&_th]:border-r [&_th]:border-b [&_th]:border-hairline [&_th]:px-5 [&_th]:py-3.5 [&_th]:text-left [&_th:last-child]:border-r-0 [&_tr:last-child_td]:border-b-0 [&_tr:last-child_th]:border-b-0";
+  "min-w-[560px] w-full border-separate border-spacing-0 overflow-hidden rounded-lg bg-surface shadow-card font-mono text-[13px] [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap [&_td]:border-r [&_td]:border-b [&_td]:border-hairline [&_td]:px-5 [&_td]:py-3.5 [&_td]:align-middle [&_td]:text-fg-2 [&_td:last-child]:border-r-0 [&_th]:border-r [&_th]:border-b [&_th]:border-hairline [&_th]:px-5 [&_th]:py-3.5 [&_th]:text-left [&_th:last-child]:border-r-0 [&_tr:last-child_td]:border-b-0 [&_tr:last-child_th]:border-b-0";
 
 export const supportHead =
   "bg-surface-2 text-[11px] font-medium uppercase tracking-[0.1em] text-fg-4";
@@ -324,7 +339,7 @@ export const supportNote =
   "mt-3.5 font-mono text-[11.5px] leading-[1.6] tracking-[0.02em] text-fg-4";
 
 export const ctaBlock =
-  "rounded-lg border border-hairline bg-surface bg-[radial-gradient(600px_200px_at_50%_0%,var(--color-accent-soft),transparent_70%)] px-14 py-14 text-center max-[880px]:px-6 max-[880px]:py-9";
+  "rounded-lg bg-surface shadow-card bg-[radial-gradient(600px_200px_at_50%_0%,var(--color-accent-soft),transparent_70%)] px-14 py-14 text-center max-[880px]:px-6 max-[880px]:py-9";
 
 export const ctaBlockTitle = "mb-3";
 
@@ -341,7 +356,7 @@ export const footerGrid =
   "grid grid-cols-[1.4fr_1fr_1fr_1fr] items-start gap-10 max-[880px]:grid-cols-2 max-[480px]:grid-cols-1";
 
 export const footerBrandTitle =
-  "mb-3.5 flex items-center gap-[0.1em] font-mono text-base tracking-[-0.01em]";
+  "mb-3.5 flex items-baseline gap-[0.1em] font-mono text-base tracking-[-0.01em]";
 
 export const footerBrandText = "max-w-[28ch] text-[13px] text-fg-3";
 
@@ -349,7 +364,7 @@ export const footerColTitle =
   "mb-4 font-mono text-[11px] uppercase tracking-[0.12em] text-fg-4";
 
 export const footerColList =
-  "grid list-none gap-2.5 p-0 [&_a]:font-mono [&_a]:text-[13px] [&_a]:text-fg-2 [&_a:hover]:text-accent";
+  "grid list-none gap-2.5 p-0 [&_a]:relative [&_a]:inline-block [&_a]:font-mono [&_a]:text-[13px] [&_a]:text-fg-2 [&_a]:transition-colors [&_a:hover]:text-accent [&_a]:after:pointer-events-none [&_a]:after:absolute [&_a]:after:-bottom-0.5 [&_a]:after:left-0 [&_a]:after:h-px [&_a]:after:w-full [&_a]:after:origin-left [&_a]:after:scale-x-0 [&_a]:after:bg-accent [&_a]:after:transition-transform [&_a]:after:duration-200 [&_a]:after:content-[''] [&_a:hover]:after:scale-x-100";
 
 export const footerMeta =
   "mt-14 flex flex-wrap justify-between gap-5 border-t border-hairline pt-6 font-mono text-[11.5px] tracking-[0.04em] text-fg-4 [&_a]:text-fg-3 [&_a:hover]:text-accent";

@@ -13,7 +13,7 @@
   --demo-card-shadow:
     0 1px 2px rgba(15, 23, 42, 0.04),
     0 1px 3px rgba(15, 23, 42, 0.06);
-  --demo-card-radius: 12px;
+  --demo-card-radius: var(--radius-lg);
 
   --demo-input-bg: var(--sl-color-bg);
   --demo-input-fg: var(--sl-color-text);
@@ -53,9 +53,8 @@
 
 :root[data-theme="dark"] {
   --demo-card-bg: var(--sl-color-gray-6);
-  --demo-card-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.02) inset,
-    0 4px 12px rgba(0, 0, 0, 0.4);
+  /* Outer-only raised shadow (no inner shadows), matching the landing cards. */
+  --demo-card-shadow: var(--shadow-card);
 
   --demo-button-bg: transparent;
   --demo-button-border: var(--sl-color-hairline);
@@ -108,7 +107,7 @@
   flex: 1;
   padding: 8px 10px;
   border: 1px solid var(--demo-input-border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 14px;
   font-family: inherit;
   background: var(--demo-input-bg);
@@ -127,18 +126,27 @@
 
 .demo-button {
   padding: 8px 14px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--demo-button-border);
   background: var(--demo-button-bg);
   color: var(--demo-button-fg);
   cursor: pointer;
   font-size: 14px;
   font-family: inherit;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.09s ease;
 }
 
 .demo-button:hover:not(:disabled) {
   border-color: var(--sl-color-accent);
   color: var(--sl-color-text);
+}
+
+/* Press drops the button 1px (no inset), matching the landing buttons. */
+.demo-button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .demo-button:disabled {

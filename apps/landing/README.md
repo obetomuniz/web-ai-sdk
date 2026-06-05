@@ -7,7 +7,7 @@ pnpm build          # build packages first (demos import SDK dist)
 pnpm landing        # http://localhost:5173
 ```
 
-Brand tokens and type stack: [`apps/docs/internal/visual-identity.html`](../docs/internal/visual-identity.html).
+Brand tokens and type stack (Noir / Dark): [`apps/docs/internal/identity-decisions.md`](../docs/internal/identity-decisions.md).
 
 ---
 
