@@ -5,9 +5,16 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    # Group only minor/patch updates so a single green PR can sweep them up.
+    # Major updates are intentionally excluded from the groups: each lands as
+    # its own PR so a breaking bump can't block the rest of the batch (a single
+    # major in a group turns the whole grouped PR red).
     groups:
       dev-dependencies:
         dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
         patterns:
           - "*"
       production-dependencies:
