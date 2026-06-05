@@ -11,8 +11,8 @@
     "typecheck": "astro check"
   },
   "dependencies": {
-    "@astrojs/react": "^4.2.0",
-    "@astrojs/starlight": "^0.30.0",
+    "@astrojs/react": "5.0.6",
+    "@astrojs/starlight": "0.39.2",
     "@web-ai-sdk/detector": "workspace:*",
     "@web-ai-sdk/prompt": "workspace:*",
     "@web-ai-sdk/proofreader": "workspace:*",
@@ -21,7 +21,7 @@
     "@web-ai-sdk/translator": "workspace:*",
     "@web-ai-sdk/webmcp": "workspace:*",
     "@web-ai-sdk/writer": "workspace:*",
-    "astro": "^5.0.0",
+    "astro": "6.4.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "sharp": "^0.33.5"
