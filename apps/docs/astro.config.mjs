@@ -70,9 +70,13 @@ export default defineConfig({
         "./src/styles/web-ai-sdk.css",
         "./src/styles/demos.css",
       ],
-      social: {
-        github: "https://github.com/obetomuniz/web-ai-sdk",
-      },
+      social: [
+        {
+          icon: "github",
+          label: "GitHub",
+          href: "https://github.com/obetomuniz/web-ai-sdk",
+        },
+      ],
       editLink: {
         baseUrl:
           "https://github.com/obetomuniz/web-ai-sdk/edit/main/apps/docs/",
