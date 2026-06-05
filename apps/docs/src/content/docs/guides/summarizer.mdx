@@ -53,7 +53,7 @@ interface SummarizeOptions {
 | `type` | `"tldr" \| "key-points" \| "teaser" \| "headline"` | Summary shape. Defaults to `"tldr"`. |
 | `length` | `"short" \| "medium" \| "long"` | Length preset. Defaults to `"medium"`. |
 | `format` | `"plain-text" \| "markdown"` | Output format. Defaults to `"plain-text"`. |
-| `preference` | `"auto" \| "speed" \| "capability"` | Performance preference. Defaults to `"speed"`. |
+| `preference` | `"auto" \| "speed" \| "capability"` | Performance preference hint. Defaults to `"auto"`. See [Performance preference](#performance-preference). |
 | `sharedContext` | `string` | Native `sharedContext` string (a hint about who/what the summary is for). |
 | `monitor` | `(m) => void` | Observe the first-call model download (~1.7 GB on a fresh profile). |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
@@ -103,6 +103,24 @@ summarize({ language: "en", input: text, cache: "local" });
 ## Streaming
 
 When the underlying Summarizer instance exposes `summarizeStreaming()`, the library uses it and pushes cleaned chunks to `onUpdate` as they arrive (cumulative buffer, not deltas). Otherwise it falls back to one-shot `summarize()`. Either way, `result.output` is the final cleaned text.
+
+## Performance preference
+
+`preference` is a hint about the speed/quality tradeoff the browser should make when it picks the underlying model. It maps straight to the native `Summarizer.create()` option:
+
+- `"auto"` (default) — the browser balances execution speed with summarization capability, and may adjust based on the environment, system constraints, or context.
+- `"speed"` — prioritizes low latency and fast execution. This can route to a smaller, faster model, which may produce less nuanced or simpler summaries.
+- `"capability"` — prioritizes comprehensiveness and coherence, capturing subtler context at the cost of higher latency.
+
+```ts
+// Fast path for short, low-stakes summaries (e.g. list previews).
+summarize({ language: "en", input: text, preference: "speed", length: "short" });
+
+// Quality path for a single, carefully written summary.
+summarize({ language: "en", input: text, preference: "capability" });
+```
+
+It's a hint, not a guarantee. The browser may override `"speed"` and fall back to a more capable model when a functional requirement — such as the requested language, type, or length — needs one. When a configuration can't be served at all, the wrapper surfaces it as unavailability (the availability probe receives the same `preference`, so it stays consistent with what `create()` would do). The default is `"auto"` to match the platform default; opt into `"speed"` or `"capability"` explicitly when you have a clear preference.
 
 ## Output normalization
 

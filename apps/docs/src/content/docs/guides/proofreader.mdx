@@ -41,7 +41,7 @@ interface ProofreadOptions {
 | Name | Type | Description |
 | --- | --- | --- |
 | `input` <sup>required</sup> | `string` | Text to proofread. Empty / whitespace resolves to `{ output: null }`. |
-| `expectedInputLanguages` | `readonly string[]` | BCP-47 languages the proofreader should expect as input. |
+| `expectedInputLanguages` | `readonly string[]` | BCP-47 languages the proofreader should expect as input. English-only today; see [Language support](#language-support). |
 | `monitor` | `(m) => void` | Observe the first-call model download. |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache (stores the serialized output). |
 | `cacheKey` | `string` | Override the default cache key. |
@@ -87,6 +87,10 @@ for (const c of output.corrections) {
 if (cursor < input.length)
   spans.push({ text: input.slice(cursor), error: false });
 ```
+
+## Language support
+
+The Proofreader API is **English-only** today. `expectedInputLanguages` accepts an array for forward compatibility, but requesting a language the browser can't proofread causes the native `create()` to reject, which this wrapper surfaces as `ProofreaderUnavailableError`. Pass `["en"]` or omit the option until more languages ship.
 
 ## No streaming
 

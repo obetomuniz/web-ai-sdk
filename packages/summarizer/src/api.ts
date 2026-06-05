@@ -53,6 +53,7 @@ export interface SummarizerAvailabilityOptions {
   type?: SummarizerCreateOptions["type"];
   format?: SummarizerCreateOptions["format"];
   length?: SummarizerCreateOptions["length"];
+  preference?: SummarizerCreateOptions["preference"];
   expectedInputLanguages?: string[];
   expectedContextLanguages?: string[];
   outputLanguage?: string;
