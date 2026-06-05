@@ -57,11 +57,11 @@
   "devDependencies": {
     "@testing-library/react": "^16",
     "@types/react": "^19.0.1",
-    "happy-dom": "^20.8.9",
+    "happy-dom": "^20.10.1",
     "react": "^19.0.0",
     "tsup": "^8.3.5",
-    "typescript": "^5.7.2",
-    "vitest": "^4.1.0"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   },
   "keywords": [
     "webmcp",
