@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import {
+  isAvailable,
   type SummarizeOptions,
   SummarizerUnavailableError,
-  isAvailable,
   summarize,
 } from "../index.js";
 
@@ -143,8 +143,8 @@ export const useSummarizer = (
 };
 
 export type {
+  CacheOption,
   SummarizeOptions,
   SummarizeResult,
   SummaryCache,
-  CacheOption,
 } from "../index.js";

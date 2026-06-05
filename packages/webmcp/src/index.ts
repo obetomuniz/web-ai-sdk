@@ -66,9 +66,8 @@ export namespace StandardSchemaV1 {
     readonly key: PropertyKey;
   }
 
-  export type InferInput<S> = S extends StandardSchemaV1<infer In, unknown>
-    ? In
-    : unknown;
+  export type InferInput<S> =
+    S extends StandardSchemaV1<infer In, unknown> ? In : unknown;
 }
 
 export class ToolValidationError extends Error {

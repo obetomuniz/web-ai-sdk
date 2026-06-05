@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import {
+  applyTheme,
+  clearTheme,
   DEFAULT_MODE,
   DEFAULT_THEME_ID,
   type Mode,
-  THEMES,
-  applyTheme,
-  clearTheme,
   resolveTheme,
+  THEMES,
 } from "../lib/themes.js";
 
 const LS_THEME = "wais-theme";
@@ -39,13 +39,11 @@ export function ThemeSwitcher() {
   }, [themeId, mode]);
 
   return (
-    <div
-      className="fixed top-[4.5rem] right-3 z-40 flex items-center gap-1 rounded-pill border border-hairline-2 bg-surface px-1.5 py-1 font-mono text-[11px] text-fg-4 transition-colors hover:bg-surface-2 hover:text-fg-2"
-      aria-label="Tone Lab theme selector"
-    >
+    <div className="fixed top-[4.5rem] right-3 z-40 flex items-center gap-1 rounded-pill border border-hairline-2 bg-surface px-1.5 py-1 font-mono text-[11px] text-fg-4 transition-colors hover:bg-surface-2 hover:text-fg-2">
       <select
         value={themeId}
         onChange={(e) => setThemeId(e.target.value)}
+        aria-label="Tone Lab theme selector"
         className="cursor-pointer rounded-pill bg-transparent px-1.5 py-0.5 text-fg-2 outline-none transition-colors hover:text-fg"
       >
         {THEMES.map((t) => (

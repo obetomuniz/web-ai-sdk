@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   type DetectOptions,
-  type DetectResult,
-  type DetectionResult,
   DetectorUnavailableError,
+  type DetectResult,
   detect,
   isAvailable,
 } from "../index.js";
@@ -117,9 +116,9 @@ export const useDetector = (options: UseDetectorOptions): UseDetectorReturn => {
 };
 
 export type {
+  CacheOption,
+  DetectionCache,
+  DetectionResult,
   DetectOptions,
   DetectResult,
-  DetectionResult,
-  DetectionCache,
-  CacheOption,
 } from "../index.js";

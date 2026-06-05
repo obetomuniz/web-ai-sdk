@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import * as sdk from "./index.js";
-
 import * as detectorSubpath from "./detector.js";
+import * as sdk from "./index.js";
 import * as promptSubpath from "./prompt.js";
 import * as proofreaderSubpath from "./proofreader.js";
 import * as rewriterSubpath from "./rewriter.js";

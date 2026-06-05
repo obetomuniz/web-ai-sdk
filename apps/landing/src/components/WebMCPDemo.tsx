@@ -1,11 +1,11 @@
 import {
-  PromptUnavailableError,
   ask,
   isAvailable as isPromptAvailable,
+  PromptUnavailableError,
 } from "@web-ai-sdk/prompt";
 import {
-  type Tool,
   isAvailable as isWebMcpAvailable,
+  type Tool,
 } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -25,7 +25,6 @@ import {
   demoControls,
   fieldGroup,
   fieldLegend,
-  fieldSpaced,
   fieldset,
   label,
   outputBox,
@@ -473,6 +472,7 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
             trace.map((ev, i) => {
               if (ev.kind === "call") {
                 return (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: the trace is an append-only log rendered in order; entries are never reordered or removed, so the index is a stable key
                   <div key={`${ev.tool}-${i}`} className="mb-1.5">
                     <span className="text-accent">→ call</span>{" "}
                     <span>{ev.tool}</span>
@@ -502,6 +502,7 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
                       ? "✓ "
                       : "· ";
               return (
+                // biome-ignore lint/suspicious/noArrayIndexKey: the trace is an append-only log rendered in order; entries are never reordered or removed, so the index is a stable key
                 <div key={`${ev.kind}-${i}`} className={`${colorClass} mb-1`}>
                   {prefix}
                   {ev.text}

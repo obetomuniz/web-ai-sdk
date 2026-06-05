@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import {
+  isAvailable,
   type WriteOptions,
   WriterUnavailableError,
-  isAvailable,
   write,
 } from "../index.js";
 
@@ -141,8 +141,8 @@ export const useWriter = (options: UseWriterOptions): UseWriterReturn => {
 };
 
 export type {
+  CacheOption,
+  WriteCache,
   WriteOptions,
   WriteResult,
-  WriteCache,
-  CacheOption,
 } from "../index.js";

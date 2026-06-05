@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __clearSessionCacheForTests } from "./api.js";
 import {
+  isAvailable,
   SummarizerUnavailableError,
   type SummaryCache,
-  isAvailable,
   summarize,
 } from "./index.js";
 

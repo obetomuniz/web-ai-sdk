@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import {
+  isAvailable,
+  ProofreaderUnavailableError,
   type ProofreadOptions,
   type ProofreadResult,
-  ProofreaderUnavailableError,
-  isAvailable,
   proofread,
 } from "../index.js";
 
@@ -100,10 +100,10 @@ export const useProofreader = (
 };
 
 export type {
-  ProofreadOptions,
-  ProofreadResult,
-  ProofreadOutput,
-  ProofreadCorrection,
-  ProofreadCache,
   CacheOption,
+  ProofreadCache,
+  ProofreadCorrection,
+  ProofreadOptions,
+  ProofreadOutput,
+  ProofreadResult,
 } from "../index.js";
