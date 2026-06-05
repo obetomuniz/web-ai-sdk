@@ -35,6 +35,7 @@ export default defineConfig({
       // apps/landing/scripts/build-og-image.mjs). Absolute URL because
       // most scrapers won't resolve relative og:image paths.
       head: [
+        { tag: "script", attrs: { defer: true, src: "https://cloud.umami.is/script.js", "data-website-id": "9e24f5c3-6b64-48fc-8679-610907092f1c" } },
         // Brand fonts: Space Grotesk (display), Geist (body), IBM Plex Mono (code).
         { tag: "link", attrs: { rel: "preconnect", href: "https://fonts.googleapis.com" } },
         { tag: "link", attrs: { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: true } },
