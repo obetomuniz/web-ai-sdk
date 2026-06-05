@@ -36,9 +36,10 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # The github-actions ecosystem only supports `default-days` for cooldown
+    # (no semver-*-days tiers).
     cooldown:
       default-days: 3
-      semver-major-days: 7
     groups:
       github-actions:
         patterns:
