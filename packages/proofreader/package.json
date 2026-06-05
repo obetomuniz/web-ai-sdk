@@ -1,6 +1,6 @@
 {
   "name": "@web-ai-sdk/proofreader",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "Building block for the Web's Built-in Proofreader API (Chrome)",
   "license": "MIT",
   "author": "Beto Muniz",
