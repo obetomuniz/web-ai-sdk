@@ -20,10 +20,10 @@ import {
 } from "../lib/ui.js";
 import {
   DownloadNotice,
+  detectModelName,
   ErrorNotice,
   StatusBar,
   UnavailableNotice,
-  detectModelName,
   useStreamStats,
 } from "./shared.js";
 

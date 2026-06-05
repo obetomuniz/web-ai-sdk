@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import {
+  isAvailable,
   type RewriteOptions,
   RewriterUnavailableError,
-  isAvailable,
   rewrite,
 } from "../index.js";
 
@@ -141,8 +141,8 @@ export const useRewriter = (options: UseRewriterOptions): UseRewriterReturn => {
 };
 
 export type {
+  CacheOption,
+  RewriteCache,
   RewriteOptions,
   RewriteResult,
-  RewriteCache,
-  CacheOption,
 } from "../index.js";

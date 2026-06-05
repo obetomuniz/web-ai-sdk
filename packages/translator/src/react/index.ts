@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import {
+  isAvailable,
   type TranslateOptions,
   TranslatorUnavailableError,
-  isAvailable,
   translate,
 } from "../index.js";
 
@@ -106,8 +106,8 @@ export const useTranslator = (
 };
 
 export type {
+  CacheOption,
   TranslateOptions,
   TranslateResult,
   TranslationCache,
-  CacheOption,
 } from "../index.js";

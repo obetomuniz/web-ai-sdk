@@ -21,10 +21,10 @@ import {
 } from "../lib/ui.js";
 import {
   DownloadNotice,
+  detectModelName,
   MarkdownOutput,
   StatusBar,
   UnavailableNotice,
-  detectModelName,
   useDownloadMonitor,
   useStreamStats,
 } from "./shared.js";

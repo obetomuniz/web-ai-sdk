@@ -9,25 +9,23 @@
 
 import {
   type CreateMonitor,
+  checkAvailability,
+  getOrCreateSummarizer,
+  getSummarizerApi,
+  isAvailable,
   type SummarizerApi,
   type SummarizerAvailability,
   type SummarizerAvailabilityOptions,
   type SummarizerCreateOptions,
   type SummarizerInstance,
-  checkAvailability,
-  getOrCreateSummarizer,
-  getSummarizerApi,
-  isAvailable,
 } from "./api.js";
 import {
   type CacheOption,
-  type SummaryCache,
   defaultCacheKey,
   resolveCache,
+  type SummaryCache,
 } from "./cache.js";
 import { cleanSummary } from "./skeleton.js";
-
-export { isAvailable, checkAvailability };
 
 export type {
   CacheOption,
@@ -39,6 +37,7 @@ export type {
   SummarizerInstance,
   SummaryCache,
 };
+export { checkAvailability, isAvailable };
 
 export interface SummarizeOptions {
   /** Text to summarize. Empty / whitespace input resolves to `{ output: null }`. */

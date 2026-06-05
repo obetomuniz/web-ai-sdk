@@ -10,31 +10,29 @@
 
 import {
   type CreateMonitor,
+  getOrCreateProofreader,
+  getProofreaderApi,
   type ProofreadCorrection,
-  type ProofreadOutput,
   type ProofreaderApi,
   type ProofreaderAvailability,
   type ProofreaderAvailabilityOptions,
   type ProofreaderCreateOptions,
   type ProofreaderInstance,
-  checkAvailability,
-  getOrCreateProofreader,
-  getProofreaderApi,
-  isAvailable,
+  type ProofreadOutput,
 } from "./api.js";
 import {
   type CacheOption,
-  type ProofreadCache,
   defaultCacheKey,
+  type ProofreadCache,
   resolveCache,
 } from "./cache.js";
 
 export {
-  isAvailable,
   checkAvailability,
   clearProofreaderSessions,
   getOrCreateProofreader,
   getProofreaderApi,
+  isAvailable,
 } from "./api.js";
 
 export { defaultCacheKey, resolveCache } from "./cache.js";
@@ -44,12 +42,12 @@ export type {
   CreateMonitor,
   ProofreadCache,
   ProofreadCorrection,
-  ProofreadOutput,
   ProofreaderApi,
   ProofreaderAvailability,
   ProofreaderAvailabilityOptions,
   ProofreaderCreateOptions,
   ProofreaderInstance,
+  ProofreadOutput,
 };
 
 export interface ProofreadOptions {

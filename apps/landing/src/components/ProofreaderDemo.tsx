@@ -1,6 +1,6 @@
 import {
-  ProofreaderUnavailableError,
   isAvailable as isProofreaderAvailable,
+  ProofreaderUnavailableError,
   proofread,
 } from "@web-ai-sdk/proofreader";
 import { useEffect, useRef, useState } from "react";

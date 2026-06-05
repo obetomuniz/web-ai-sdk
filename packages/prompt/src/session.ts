@@ -20,6 +20,7 @@
  */
 
 import {
+  getLanguageModelApi,
   type LanguageModelApi,
   type LanguageModelCreateOptions,
   type LanguageModelExpectedInput,
@@ -27,7 +28,6 @@ import {
   type LanguageModelInstance,
   type LanguageModelPromptOptions,
   type LanguageModelTool,
-  getLanguageModelApi,
 } from "./api.js";
 
 const NORMALIZE_LANG = (lang: string): string =>

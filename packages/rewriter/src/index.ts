@@ -9,31 +9,29 @@
 
 import {
   type CreateMonitor,
+  getOrCreateRewriter,
+  getRewriterApi,
   type RewriterApi,
   type RewriterAvailability,
   type RewriterAvailabilityOptions,
   type RewriterCreateOptions,
   type RewriterInstance,
-  checkAvailability,
-  getOrCreateRewriter,
-  getRewriterApi,
-  isAvailable,
 } from "./api.js";
 import {
   type CacheOption,
-  type RewriteCache,
   defaultCacheKey,
+  type RewriteCache,
   resolveCache,
 } from "./cache.js";
 
 export {
-  isAvailable,
   checkAvailability,
-  clearRewriterSessions,
   clearRewriterSession,
+  clearRewriterSessions,
   configureRewriterCache,
   getOrCreateRewriter,
   getRewriterApi,
+  isAvailable,
 } from "./api.js";
 
 export { defaultCacheKey, resolveCache } from "./cache.js";

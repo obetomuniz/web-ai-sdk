@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __clearSessionCacheForTests } from "./api.js";
 import {
+  isAvailable,
   type TranslationCache,
   TranslatorUnavailableError,
-  isAvailable,
   translate,
 } from "./index.js";
 

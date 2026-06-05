@@ -9,31 +9,29 @@
 
 import {
   type CreateMonitor,
+  getOrCreateWriter,
+  getWriterApi,
   type WriterApi,
   type WriterAvailability,
   type WriterAvailabilityOptions,
   type WriterCreateOptions,
   type WriterInstance,
-  checkAvailability,
-  getOrCreateWriter,
-  getWriterApi,
-  isAvailable,
 } from "./api.js";
 import {
   type CacheOption,
-  type WriteCache,
   defaultCacheKey,
   resolveCache,
+  type WriteCache,
 } from "./cache.js";
 
 export {
-  isAvailable,
   checkAvailability,
-  clearWriterSessions,
   clearWriterSession,
+  clearWriterSessions,
   configureWriterCache,
   getOrCreateWriter,
   getWriterApi,
+  isAvailable,
 } from "./api.js";
 
 export { defaultCacheKey, resolveCache } from "./cache.js";

@@ -1,6 +1,6 @@
 import {
-  SummarizerUnavailableError,
   isAvailable as isSummarizerAvailable,
+  SummarizerUnavailableError,
   summarize,
 } from "@web-ai-sdk/summarizer";
 import { useEffect, useRef, useState } from "react";
