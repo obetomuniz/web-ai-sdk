@@ -13,6 +13,14 @@ updates:
     cooldown:
       default-days: 3
       semver-major-days: 7
+    # Hold Astro on 6.3.x. Astro 6.4.0 bumped @astrojs/markdown-remark to the
+    # 7.2.0 `processor` pipeline, which requires @astrojs/mdx 6.x. Starlight
+    # (latest 0.39.3) still pins @astrojs/mdx ^5.0.4, so astro >=6.4.0 breaks
+    # GFM table rendering in .mdx docs pages. Lift this once Starlight ships
+    # @astrojs/mdx 6 support, then bump astro to 6.4.x.
+    ignore:
+      - dependency-name: "astro"
+        versions: [">=6.4.0"]
     # Group only minor/patch updates so a single green PR can sweep them up.
     # Major updates are intentionally excluded from the groups: each lands as
     # its own PR so a breaking bump can't block the rest of the batch (a single
