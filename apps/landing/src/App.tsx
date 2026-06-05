@@ -1373,7 +1373,9 @@ export const App = () => (
         <div className={footerMeta}>
           <span>web-ai-sdk v{SDK_VERSION}</span>
           <span>
-            <a href="#top">Back to top ↑</a>
+            <a href="#top" data-footer-top-link>
+              Back to top ↑
+            </a>
           </span>
         </div>
       </div>
