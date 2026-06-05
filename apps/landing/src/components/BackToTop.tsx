@@ -16,12 +16,22 @@ export const BackToTop = () => {
     const firstSection = document.querySelector<HTMLElement>(
       '[data-section="why-raw"]',
     );
+    // The footer carries its own "Back to top" link, so hand off to it: hide
+    // the floating button once that link itself scrolls into view.
+    const footerLink = document.querySelector<HTMLElement>(
+      "[data-footer-top-link]",
+    );
     let frame = 0;
 
     const sync = () => {
       frame = 0;
       if (!firstSection) return;
-      setVisible(firstSection.getBoundingClientRect().top <= scrollMarker());
+      const pastFirstSection =
+        firstSection.getBoundingClientRect().top <= scrollMarker();
+      const footerLinkInView = footerLink
+        ? footerLink.getBoundingClientRect().top <= window.innerHeight
+        : false;
+      setVisible(pastFirstSection && !footerLinkInView);
     };
 
     const onScroll = () => {

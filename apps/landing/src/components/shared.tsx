@@ -220,8 +220,11 @@ export const MarkdownOutput = ({
   }
   return (
     <div className={`${outputBase} ${markdownProse} ${className}`}>
-      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: model output, demo only */}
-      <div dangerouslySetInnerHTML={{ __html: html }} />
+      <div
+        className="whitespace-normal"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: model output, demo only
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
       {cursor}
     </div>
   );
