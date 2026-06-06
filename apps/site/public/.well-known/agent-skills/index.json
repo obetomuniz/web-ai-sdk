@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/agent-skills-discovery-rfc/main/schema/index.schema.json",
+  "version": "0.2.0",
+  "skills": [
+    {
+      "name": "web-ai-sdk-docs",
+      "type": "skill-md",
+      "description": "Use web-ai-sdk documentation and package references to build with the Web's built-in AI APIs.",
+      "url": "https://web-ai-sdk.dev/.well-known/agent-skills/web-ai-sdk-docs/SKILL.md",
+      "digest": "sha256:4ff5c2fc09d4cc2fee24b8f3899abcc002cb618b44069818878e3de51e319e18"
+    }
+  ]
+}
