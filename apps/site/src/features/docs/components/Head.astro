@@ -1,0 +1,54 @@
+---
+// Starlight component override. Wraps the default `<Head>` and appends a
+// per-page TechArticle JSON-LD blob. Google's AI Optimization Guide doesn't
+// require structured data for AI search, but recommends it as part of
+// overall SEO — this gives every doc page a machine-readable identity
+// (title, description, url, author, publisher) without changing visible
+// markup.
+import Default from "@astrojs/starlight/components/Head.astro";
+
+// Starlight exposes route data (including `entry`) via
+// `Astro.locals.starlightRoute`. The default 404 route can omit an entry, so
+// keep the schema payload conditional.
+const starlightRoute = (
+  Astro.locals as {
+    starlightRoute?: { entry?: { data?: { title?: string; description?: string } } };
+  }
+).starlightRoute;
+const entry = starlightRoute?.entry;
+const data = entry?.data;
+
+const canonical = Astro.site
+  ? new URL(Astro.url.pathname, Astro.site).href
+  : undefined;
+
+const ld = {
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  headline: data?.title,
+  description: data?.description,
+  url: canonical,
+  inLanguage: "en",
+  author: {
+    "@type": "Person",
+    name: "Beto Muniz",
+    url: "https://github.com/obetomuniz",
+  },
+  publisher: {
+    "@type": "Organization",
+    name: "web-ai-sdk",
+    url: "https://web-ai-sdk.dev/",
+  },
+  isPartOf: {
+    "@type": "WebSite",
+    name: "web-ai-sdk",
+    url: "https://web-ai-sdk.dev/",
+  },
+  ...(canonical
+    ? { mainEntityOfPage: { "@type": "WebPage", "@id": canonical } }
+    : {}),
+};
+---
+
+<Default><slot /></Default>
+{data && <script is:inline type="application/ld+json" set:html={JSON.stringify(ld)} />}

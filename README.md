@@ -13,7 +13,7 @@ article-aware summarization, detect-then-summarize chains) are
 deliberately out of scope — the SDK wraps one capability per package;
 composition is your code.
 
-See [`apps/docs/src/content/docs/architecture.mdx`](./apps/docs/src/content/docs/architecture.mdx) (rendered at [`web-ai-sdk.dev/docs/architecture/`](https://web-ai-sdk.dev/docs/architecture/)) for the full model.
+See [`apps/site/src/content/docs/architecture.mdx`](./apps/site/src/content/docs/architecture.mdx) (rendered at [`web-ai-sdk.dev/docs/architecture/`](https://web-ai-sdk.dev/docs/architecture/)) for the full model.
 
 | Package                                          | Wraps                                          | Highlights                                                                |
 | ------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------- |
@@ -37,7 +37,7 @@ Browsers are shipping built-in AI APIs behind flags. The shape changes; the life
 
 **We ship that lifecycle layer.** Framework adapters, polyfills, UI primitives stay optional subpaths so they don't constrain your design system, framework, or styling stack. Pick the layers you need; skip the rest.
 
-This is the same shape mature utility libraries converge on as the platform catches up (lodash → native methods, moment/date-fns → `Temporal`): a thin shim over a native primitive that gets *thinner* as the primitive stabilizes. See [Architecture § Lineage](./apps/docs/src/content/docs/architecture.mdx) for the full reasoning.
+This is the same shape mature utility libraries converge on as the platform catches up (lodash → native methods, moment/date-fns → `Temporal`): a thin shim over a native primitive that gets *thinner* as the primitive stabilizes. See [Architecture § Lineage](./apps/site/src/content/docs/architecture.mdx) for the full reasoning.
 
 ## Install
 
@@ -62,7 +62,7 @@ Each package has its own README with install + usage:
 
 ## Try it locally
 
-Two workspace apps ship under `apps/`: a marketing landing (`apps/landing`) and a Starlight-powered docs site with live demos (`apps/docs`).
+One workspace app ships under `apps/site`: an Astro marketing site with Starlight docs mounted at `/docs/`.
 
 ```sh
 git clone https://github.com/obetomuniz/web-ai-sdk.git
@@ -71,12 +71,11 @@ cd web-ai-sdk
 # Node 24 (or any version-manager that respects .nvmrc) + Corepack picks up
 # pnpm 9.15.0 automatically from package.json's "packageManager" field.
 pnpm install
-pnpm build           # build packages so workspace consumers can resolve them
-pnpm docs            # docs site on http://localhost:6006
-pnpm landing         # marketing landing on http://localhost:5173
+pnpm build:packages  # build packages so workspace consumers can resolve them
+pnpm dev             # site at http://localhost:5173/, docs at /docs/
 ```
 
-For the AI APIs to actually run, open a supporting browser. On Chrome, Summarizer/Translator/Detector are stable in 138+ and Prompt is stable in 148+ (no flags); the Writing Assistance APIs (Writer, Rewriter, Proofreader) are developer/origin trials behind their own `chrome://flags/` toggles; WebMCP needs `chrome://flags/#enable-webmcp-testing` through Chrome 148 and joins a public origin trial in Chrome 149. On Edge, only Summarizer is in stable (138+ default-on); Prompt, Translator, Detector, and WebMCP are developer previews in Canary/Dev behind their respective `edge://flags/` toggles. On Windows the four Built-in AI APIs (Prompt, Summarizer, Translator, Detector) work reliably once flagged; macOS sees higher refusal rates from the Phi-4-mini safety pipeline for Prompt and Summarizer. WebMCP on Edge remains rough on both platforms. See [Browser support](./apps/docs/src/content/docs/browser-support.mdx) for the per-package matrix and exact flag names.
+For the AI APIs to actually run, open a supporting browser. On Chrome, Summarizer/Translator/Detector are stable in 138+ and Prompt is stable in 148+ (no flags); the Writing Assistance APIs (Writer, Rewriter, Proofreader) are developer/origin trials behind their own `chrome://flags/` toggles; WebMCP needs `chrome://flags/#enable-webmcp-testing` through Chrome 148 and joins a public origin trial in Chrome 149. On Edge, only Summarizer is in stable (138+ default-on); Prompt, Translator, Detector, and WebMCP are developer previews in Canary/Dev behind their respective `edge://flags/` toggles. On Windows the four Built-in AI APIs (Prompt, Summarizer, Translator, Detector) work reliably once flagged; macOS sees higher refusal rates from the Phi-4-mini safety pipeline for Prompt and Summarizer. WebMCP on Edge remains rough on both platforms. See [Browser support](./apps/site/src/content/docs/browser-support.mdx) for the per-package matrix and exact flag names.
 
 ## Repo layout
 
@@ -93,9 +92,8 @@ For the AI APIs to actually run, open a supporting browser. On Chrome, Summarize
 │   ├── proofreader/    # @web-ai-sdk/proofreader
 │   └── sdk/            # @web-ai-sdk/all (meta-package; re-exports the eight above)
 ├── apps/
-│   ├── docs/           # @web-ai-sdk-apps/docs (private; Astro Starlight)
-│   └── landing/        # @web-ai-sdk-apps/landing (private; marketing site)
-├── AGENTS.md           # source of truth for AI agents on this repo
+│   └── site/           # @web-ai-sdk-apps/site (private; Astro site + Starlight docs)
+├── .agents/agents.md           # agent instructions (AGENTS.md symlink kept at root)
 ├── README.md           # ← you are here
 └── …
 ```
@@ -104,23 +102,26 @@ For the AI APIs to actually run, open a supporting browser. On Chrome, Summarize
 
 | Task                            | Command               |
 | ------------------------------- | --------------------- |
-| Build every package             | `pnpm build`          |
-| Watch + rebuild packages        | `pnpm dev`            |
-| Boot the docs site (`:6006`)    | `pnpm docs`           |
-| Boot the landing site (`:5173`) | `pnpm landing`        |
+| Watch site + docs               | `pnpm dev`            |
+| Watch wrapper packages          | `pnpm dev:packages`   |
+| Watch meta-package              | `pnpm dev:sdk`        |
+| Boot unified app (`:5173`)      | `pnpm site`           |
+| Build everything                | `pnpm build`          |
+| Build publishable packages only | `pnpm build:packages` |
+| Build app only                  | `pnpm build:apps`     |
 | Typecheck everything            | `pnpm typecheck`      |
 | Run tests                       | `pnpm test`           |
 | Lint + format audit             | `pnpm lint`           |
 | Auto-fix lint + format          | `pnpm lint:fix`       |
 | Full quality gate               | `pnpm gate`           |
-| Build combined Pages artifact   | `pnpm pages:build`    |
+| Build Pages artifact            | `pnpm pages:build`    |
 | Preview combined Pages locally  | `pnpm pages:preview`  |
 
 Toolchain: Node 24 (pinned in `.nvmrc`) + pnpm 9.15.0 (pinned via `package.json#packageManager` and provisioned automatically by Corepack on Node 16.13+).
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the human-facing onboarding, and [`AGENTS.md`](./AGENTS.md) for the deeper conventions (same rules apply to humans and AI agents).
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the human-facing onboarding, and [`.agents/agents.md`](./.agents/agents.md) for the deeper conventions (same rules apply to humans and AI agents).
 
 ## License
 

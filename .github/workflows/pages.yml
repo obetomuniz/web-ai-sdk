@@ -52,35 +52,20 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # Build the packages first so the app workspaces can resolve
-      # @web-ai-sdk/* from dist (matches local `pnpm build && pnpm landing`).
+      # @web-ai-sdk/* from dist (matches local `pnpm build:packages && pnpm site`).
       - name: Build packages
-        run: pnpm build
+        run: pnpm build:packages
 
-      - name: Build landing
-        run: pnpm --filter @web-ai-sdk-apps/landing build
+      - name: Build app
+        run: pnpm build:site
         env:
-          VITE_BASE: ${{ env.SITE_BASE }}
-
-      - name: Build docs
-        run: pnpm --filter @web-ai-sdk-apps/docs build
-        env:
-          DOCS_BASE: ${{ env.SITE_BASE }}docs/
-
-      # Combine the two builds into a single Pages artifact:
-      #   _site/         ← landing (root)
-      #   _site/docs/    ← Astro Starlight docs (under /docs/)
-      - name: Combine outputs
-        run: |
-          mkdir -p _site
-          cp -r apps/landing/dist/. _site/
-          mkdir -p _site/docs
-          cp -r apps/docs/dist/. _site/docs/
+          SITE_BASE: ${{ env.SITE_BASE }}
 
       - uses: actions/configure-pages@v6
 
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: _site
+          path: apps/site/dist
 
       - id: deploy
         uses: actions/deploy-pages@v5
