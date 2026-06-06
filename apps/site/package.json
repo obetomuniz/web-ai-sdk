@@ -1,0 +1,41 @@
+{
+  "name": "@web-ai-sdk-apps/site",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Unified site for web-ai-sdk (Astro + Starlight docs + React islands)",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --port 5173 --strictPort",
+    "build": "astro build && node scripts/build-llms.mjs",
+    "preview": "astro preview --port 4173",
+    "typecheck": "astro check",
+    "og:build": "node scripts/build-og-image.mjs",
+    "llms:build": "node scripts/build-llms.mjs"
+  },
+  "dependencies": {
+    "@astrojs/react": "5.0.6",
+    "@astrojs/starlight": "0.39.2",
+    "@web-ai-sdk/detector": "workspace:*",
+    "@web-ai-sdk/prompt": "workspace:*",
+    "@web-ai-sdk/proofreader": "workspace:*",
+    "@web-ai-sdk/rewriter": "workspace:*",
+    "@web-ai-sdk/summarizer": "workspace:*",
+    "@web-ai-sdk/translator": "workspace:*",
+    "@web-ai-sdk/webmcp": "workspace:*",
+    "@web-ai-sdk/writer": "workspace:*",
+    "astro": "6.3.8",
+    "marked": "^18.0.4",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@resvg/resvg-js": "^2.6.2",
+    "@tailwindcss/vite": "^4.3.0",
+    "@types/react": "^19.2.16",
+    "@types/react-dom": "^19.0.2",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^6.0.3"
+  }
+}

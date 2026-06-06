@@ -19,5 +19,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@web-ai-sdk-apps/docs", "@web-ai-sdk-apps/landing"]
+  "ignore": ["@web-ai-sdk-apps/site"]
 }

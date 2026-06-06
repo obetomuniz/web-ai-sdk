@@ -1,0 +1,248 @@
+/* Starlight token overrides for the Noir / Dark identity, so the docs read as
+   the same product as the home page. Tailwind utilities are available too (see
+   tailwind.css); Starlight's own chrome stays driven by these --sl-* vars.
+   See DESIGN.md. */
+
+:root {
+  --sl-font: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --sl-font-mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, "SF Mono",
+    Menlo, monospace;
+}
+
+/* Headings use the display face (Space Grotesk). */
+:is(h1, h2, h3, h4, h5, h6),
+.sl-markdown-content :is(h1, h2, h3, h4, h5, h6) {
+  font-family: "Space Grotesk", "Geist", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Dark: Noir. Monochrome surfaces, white = accent. */
+:root[data-theme="dark"] {
+  --sl-color-bg: #0a0a0a;
+  --sl-color-bg-nav: #0a0a0a;
+  --sl-color-bg-sidebar: #0a0a0a;
+  --sl-color-bg-inline-code: #1b1b1b;
+
+  --sl-color-text: #ececee;
+  --sl-color-text-accent: #ffffff;
+  --sl-color-text-invert: #0a0a0a;
+
+  --sl-color-accent-low: rgba(255, 255, 255, 0.12);
+  --sl-color-accent: #fafafa;
+  --sl-color-accent-high: #ffffff;
+
+  --sl-color-white: #ececee;
+  --sl-color-gray-1: #ececee;
+  --sl-color-gray-2: #bcbcc4;
+  --sl-color-gray-3: #a2a2aa;
+  --sl-color-gray-4: #8c8c96;
+  --sl-color-gray-5: #2a2a2e;
+  --sl-color-gray-6: #16161a;
+  --sl-color-black: #0a0a0a;
+
+  --sl-color-hairline-light: rgba(255, 255, 255, 0.13);
+  --sl-color-hairline: rgba(255, 255, 255, 0.09);
+  --sl-color-hairline-shade: rgba(255, 255, 255, 0.07);
+}
+
+/* Light: Noir light. Near-black accent on bright surfaces. */
+:root[data-theme="light"] {
+  --sl-color-text-accent: #16161a;
+  --sl-color-accent: #16161a;
+  --sl-color-accent-high: #000000;
+  --sl-color-accent-low: rgba(0, 0, 0, 0.08);
+}
+
+/* Monochrome accent means links can't rely on hue alone, so underline content
+   links for a clear affordance (UI links in the shell keep Starlight's styling). */
+.sl-markdown-content a {
+  text-decoration: underline;
+  text-decoration-color: var(--sl-color-hairline-light);
+  text-underline-offset: 0.2em;
+  transition: text-decoration-color 0.15s ease;
+}
+.sl-markdown-content a:hover {
+  text-decoration-color: currentColor;
+}
+
+/* Minor tightening: monospaced inline code with hairline border so it
+   reads as a chip, not just colored text. Matches the site demos. */
+.sl-markdown-content :not(pre) > code {
+  border: 1px solid var(--sl-color-hairline);
+  padding: 0.05rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+/* Subtle accent under the active sidebar entry, matching the home page
+   .nav-links a.active styling. */
+[data-current-parent="true"] > a,
+.sl-nav-link[aria-current="page"] {
+  font-weight: 500;
+}
+
+/* Markdown tables: full-width, auto-laid-out, with type signatures kept on
+   one line via `<code>` rather than the whole cell. The Description column
+   inherits the remaining horizontal space so long descriptions never get
+   squeezed into a narrow gutter.
+   Starlight's default sets `display: block; overflow: auto` on tables,
+   which kills the natural table-layout that distributes width across
+   columns. We restore `display: table` here so `width: 100%` and column
+   sharing actually work, and only fall back to block + scroll on narrow
+   viewports where overflow is genuinely needed. */
+.sl-markdown-content table:not(:where(.not-content *, .options-table *)) {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  overflow: visible;
+}
+.sl-markdown-content table th,
+.sl-markdown-content table td {
+  vertical-align: top;
+  white-space: normal;
+  padding: 0.6rem 0.75rem;
+}
+/* Keep inline code chips whole. Cells around them wrap naturally so the
+   Required chip can sit on the same line as the name without forcing the
+   whole row to a single line. */
+.sl-markdown-content table code {
+  white-space: nowrap;
+}
+/* The Required marker reads as a small chip next to the option name.
+   Inline-block so it sits on the baseline of the code chip; accent-tinted
+   border to match the accent without screaming. */
+.sl-markdown-content table sup {
+  display: inline-block;
+  margin-left: 0.4em;
+  padding: 0.05rem 0.45rem;
+  font-size: 0.75em;
+  font-weight: 500;
+  vertical-align: baseline;
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: 4px;
+  color: var(--sl-color-text-accent);
+  white-space: nowrap;
+}
+/* Mobile: tables overflow horizontally rather than crushing the
+   Description column. The block + overflow combo only kicks in below
+   720px where the native table layout no longer has the budget to
+   honor all columns at a readable width. Options tables (the card-style
+   override below) opt out — they're already viewport-friendly. */
+@media (max-width: 720px) {
+  .sl-markdown-content table:not(:where(.not-content *, .options-table *)) {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ---------- Options tables ---------- */
+
+/* Reference-style Options/Returns tables in guide MDX wrap their Markdown
+   table in `<div class="options-table">`. We restructure the rendered
+   table into a stacked card list: each row is a card, Name + required +
+   Type sit as inline pills on the first line, Description flows below.
+   This sidesteps every column-width problem that bites a real table when
+   one cell needs a chip and another needs a paragraph, and degrades to
+   single-column on narrow viewports without any media-query special-cases.
+
+   The selectors are prefixed with `.sl-markdown-content` to outrank
+   Starlight's default cell padding (same class+element specificity
+   otherwise), and to keep their effect scoped to actual page content. */
+.sl-markdown-content .options-table table {
+  display: block;
+  width: 100%;
+  margin: 0.5rem 0 1.25rem;
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: 8px;
+  overflow: hidden;
+  border-collapse: collapse;
+}
+.sl-markdown-content .options-table thead { display: none; }
+.sl-markdown-content .options-table tbody { display: block; width: 100%; }
+.sl-markdown-content .options-table tr {
+  display: block;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--sl-color-hairline);
+}
+/* Starlight's universal sibling rule (`.sl-markdown-content :not(inline) +
+   :not(inline)`) adds `margin-top: 1rem` between any two block-level
+   siblings. Once we make `tr` display: block, every row past the first
+   inherits that 1rem gap. Same for `tbody` (it follows the hidden
+   `thead`, which still counts as a DOM sibling). Reset both. */
+.sl-markdown-content .options-table tr + tr,
+.sl-markdown-content .options-table thead + tbody {
+  margin-top: 0;
+}
+.sl-markdown-content .options-table tr:last-child { border-bottom: none; }
+.sl-markdown-content .options-table tr:nth-child(odd) {
+  background: color-mix(in oklch, var(--sl-color-gray-6) 40%, transparent);
+}
+.sl-markdown-content .options-table td {
+  display: inline;
+  padding: 0;
+  border: none;
+  vertical-align: baseline;
+}
+/* First two cells (Name+required, Type) flow inline as pill chips with
+   a small gap. The browser line-breaks them when the row is narrow,
+   so on mobile the type chip drops to the next line gracefully. */
+.sl-markdown-content .options-table tr td:nth-child(1)::after,
+.sl-markdown-content .options-table tr td:nth-child(2)::after {
+  content: "";
+  display: inline-block;
+  width: 0.5rem;
+}
+/* Type chip (cell 2): tint the border + text to distinguish it from the
+   identifier chip in cell 1. Same shape, different mood. Long union
+   types (e.g. `"tldr" | "key-points" | "teaser" | "headline"`) are
+   allowed to wrap at the spaces between `|` separators so the chip
+   never overflows the card on narrow viewports — the border wraps with
+   the content. */
+.sl-markdown-content .options-table tr td:nth-child(2) code {
+  display: inline-block;
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-word;
+  color: var(--sl-color-text-accent);
+  border-color: color-mix(
+    in oklch,
+    var(--sl-color-text-accent) 35%,
+    var(--sl-color-hairline)
+  );
+  background: color-mix(
+    in oklch,
+    var(--sl-color-text-accent) 6%,
+    transparent
+  );
+}
+/* Description gets its own line below the pill row, aligned with the
+   left edge of the pills (no extra indent). */
+.sl-markdown-content .options-table tr td:nth-child(3) {
+  display: block;
+  margin-top: 0.5rem;
+  padding: 0;
+  color: var(--sl-color-gray-2);
+}
+/* Inline code inside a description can wrap; only the pill chips in the
+   first two cells should stay whole. */
+.sl-markdown-content .options-table tr td:nth-child(3) code {
+  white-space: normal;
+}
+
+/* Copy button on code blocks: ship a sensible size and don't dominate the
+   block on mobile. Starlight's default is too large at narrow viewports. */
+.expressive-code .copy button {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+@media (max-width: 600px) {
+  .expressive-code .copy button {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  .expressive-code .copy button svg {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+}

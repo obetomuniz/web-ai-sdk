@@ -1,0 +1,73 @@
+---
+title: useWriter
+description: React adapter for @web-ai-sdk/writer. Auto-runs on mount and re-runs when inputs change.
+---
+
+import { WriterDemo } from "../../../features/docs/components/WriterDemo.tsx";
+
+React adapter for `@web-ai-sdk/writer`. Auto-runs on mount, re-runs when `input` / config options change, and streams chunks through state updates. For the conceptual overview see [Writer](/docs/guides/writer/).
+
+## Live demo
+
+<WriterDemo client:only="react" />
+
+Edit the writing task; the draft streams in as the model produces it.
+
+## Usage
+
+```tsx
+import { useWriter } from "@web-ai-sdk/writer/react";
+
+export function Draft({ task }: { task: string }) {
+  const { status, output } = useWriter({
+    input: task,
+    tone: "casual",
+    length: "short",
+  });
+
+  if (status === "unavailable") return null;
+  return <article>{output}</article>;
+}
+```
+
+The hook auto-runs whenever its meaningful inputs change. Empty / whitespace-only `input` keeps the hook in `"idle"` without invoking the model.
+
+## State machine
+
+```
+idle ───► loading ───► streaming ───► done
+                                        │
+unavailable ◄─── (no API)               │
+                                        ▼
+                          dismiss()
+```
+
+- **`idle`**: hook mounted, waiting for `input` to be non-empty.
+- **`loading`**: warming the `Writer.create()` session.
+- **`streaming`**: chunks arriving. `output` grows as they land.
+- **`done`**: final text in `output`. `fromCache` is `true` if the response came from the opt-in result cache.
+- **`unavailable`**: API missing. Render nothing.
+
+## Reference
+
+```ts
+import type { UseWriterOptions, UseWriterReturn, WriterStatus } from "@web-ai-sdk/writer/react";
+
+type WriterStatus = "idle" | "loading" | "streaming" | "done" | "unavailable";
+
+interface UseWriterOptions extends Omit<WriteOptions, "onUpdate" | "signal"> {
+  enabled?: boolean; // default: true
+}
+
+interface UseWriterReturn {
+  status: WriterStatus;
+  output: string | null;
+  error: Error | null;
+  fromCache: boolean;
+  dismiss(): void;
+}
+
+declare const useWriter: (options: UseWriterOptions) => UseWriterReturn;
+```
+
+Source: [`packages/writer/src/react/index.ts`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/writer/src/react/index.ts).

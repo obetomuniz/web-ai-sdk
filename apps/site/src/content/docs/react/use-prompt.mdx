@@ -1,0 +1,115 @@
+---
+title: usePrompt
+description: React adapter for @web-ai-sdk/prompt with an idle / loading / streaming / done state machine, abort + reset controls.
+---
+
+import { PromptDemo } from "../../../features/docs/components/PromptDemo.tsx";
+
+React adapter for `@web-ai-sdk/prompt`. Runs single-shot prompts on demand via `ask(input)` and exposes status, streaming output text, and abort / reset controls. For the conceptual overview of the underlying API see [Prompt](/docs/guides/prompt/).
+
+## Live demo
+
+<PromptDemo client:only="react" />
+
+Type a question and click "Ask". Tokens stream in as the model produces them. Click "Cancel" to abort mid-stream.
+
+## Usage
+
+```tsx
+import { usePrompt } from "@web-ai-sdk/prompt/react";
+
+export function AskBox() {
+  const { status, output, error, ask, abort } = usePrompt({
+    systemPrompt: "You are a helpful assistant. Be concise.",
+    temperature: 0.7,
+  });
+
+  if (status === "unavailable") return null;
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const input = new FormData(e.currentTarget).get("q") as string;
+        if (input) ask(input);
+      }}
+    >
+      <input name="q" placeholder="Ask anything" />
+      <button type="submit" disabled={status === "loading" || status === "streaming"}>
+        {status === "streaming" ? "Streaming…" : "Ask"}
+      </button>
+      {output && <p>{output}</p>}
+      {error && <small>{error.message}</small>}
+    </form>
+  );
+}
+```
+
+The hook doesn't auto-run on mount; you call `ask(input)` from a form submit, button click, or any event. Each call cancels any in-flight request and starts a fresh one.
+
+## State machine
+
+```
+idle ───► loading ───► streaming ───► done
+                                       │
+unavailable ◄─── (no flag / no model)  │
+                                       ▼
+                                    reset() / abort()
+```
+
+- **`idle`**: ready. Call `ask(input)` to start.
+- **`loading`**: warming the `LanguageModel.create()` session (~1-3s cold start).
+- **`streaming`**: chunks arriving. `output` grows on each chunk; render it directly for a typewriter effect.
+- **`done`**: final output in `output`. `fromCache` is `true` if the result came from the opt-in result cache (i.e. you passed `cache` and a prior call wrote to it).
+- **`unavailable`**: API missing. Render nothing or a fallback.
+
+`abort()` cancels the current request and flips status back to `idle`. `reset()` clears the output and returns to `idle` without touching any in-flight request.
+
+## Stable options
+
+Pass `cache`, `expectedInputs`, etc. as stable references. The hook keeps the latest options in a ref so the `ask` callback stays stable across renders without restarting on every render.
+
+## Streaming UX
+
+`output` updates on every chunk during `streaming`. A naive `<p>{output}</p>` already produces a typewriter effect because React re-renders on each state change. If chunks arrive faster than you want to repaint, debounce on the consumer side.
+
+## Multi-turn
+
+`usePrompt` is single-shot per `ask()`. For multi-turn conversation where each chat needs independent context and streams should run concurrently, use [`useSession`](/docs/react/use-session/) — it returns a per-component, never-shared `LanguageModel` session with `history`, `send`, `abort`, and `clear`.
+
+## Reference
+
+```ts
+import type { UsePromptOptions, UsePromptReturn, PromptStatus } from "@web-ai-sdk/prompt/react";
+
+type PromptStatus = "idle" | "loading" | "streaming" | "done" | "unavailable";
+
+interface UsePromptOptions extends Omit<AskOptions, "input" | "onUpdate" | "signal"> {
+  // Inherited from AskOptions (subset shown — see Prompt guide):
+  systemPrompt?: string;
+  temperature?: number;
+  topK?: number;
+  language?: string;
+  supportedLanguages?: readonly string[];
+  expectedInputs?: LanguageModelExpectedInput[];
+  expectedOutputs?: LanguageModelExpectedOutput[];
+  responseConstraint?: object;        // JSON Schema for structured output
+  monitor?: (m: CreateMonitor) => void;
+  cache?: "session" | "local" | { get, set };
+  cacheKey?: string;
+}
+
+interface UsePromptReturn {
+  status: PromptStatus;
+  output: string | null;
+  error: Error | null;
+  fromCache: boolean;
+  ask(input: string): Promise<void>;  // cancels any in-flight request first
+  abort(): void;                      // cancel in-flight; status → "idle"
+  reset(): void;                      // clear output without aborting
+}
+
+declare const usePrompt: (options?: UsePromptOptions) => UsePromptReturn;
+```
+
+Source: [`packages/prompt/src/react/index.ts`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/prompt/src/react/index.ts).

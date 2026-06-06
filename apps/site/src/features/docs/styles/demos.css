@@ -1,0 +1,274 @@
+/* Shared styles for the React demo components embedded in MDX pages.
+ *
+ * Each docs demo lives in src/features/docs/components/*Demo.tsx and uses these classes
+ * instead of inline styles so the host's theme (Starlight light/dark)
+ * actually flows through. All colors derive from Starlight's CSS custom
+ * properties; light/dark variants are picked up automatically via the
+ * `data-theme` attribute Starlight sets on the html element.
+ */
+
+:root {
+  --demo-card-bg: var(--sl-color-bg);
+  --demo-card-border: var(--sl-color-hairline);
+  --demo-card-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 1px 3px rgba(15, 23, 42, 0.06);
+  --demo-card-radius: var(--radius-lg);
+
+  --demo-input-bg: var(--sl-color-bg);
+  --demo-input-fg: var(--sl-color-text);
+  --demo-input-border: var(--sl-color-hairline-shade, var(--sl-color-hairline));
+
+  --demo-button-bg: var(--sl-color-bg);
+  --demo-button-border: var(--sl-color-gray-4);
+  --demo-button-fg: var(--sl-color-text);
+
+  --demo-panel-bg: var(--sl-color-gray-7);
+  --demo-panel-border: var(--sl-color-hairline);
+
+  --demo-muted-fg: var(--sl-color-gray-3);
+  --demo-hint-bg: var(--sl-color-gray-7);
+
+  /* Response / "success" panel: soft accent tint. */
+  --demo-accent-bg: color-mix(
+    in oklch,
+    var(--sl-color-accent) 8%,
+    var(--sl-color-bg)
+  );
+  --demo-accent-border: color-mix(
+    in oklch,
+    var(--sl-color-accent) 30%,
+    var(--sl-color-bg)
+  );
+  --demo-accent-fg: var(--sl-color-text-accent);
+
+  /* Error panel: soft red tint that works in both themes. */
+  --demo-error-bg: color-mix(in oklch, oklch(0.65 0.2 25) 10%, var(--sl-color-bg));
+  --demo-error-fg: oklch(0.5 0.18 25);
+
+  /* Log panel: terminal aesthetic in both themes. */
+  --demo-log-bg: #0d0d10;
+  --demo-log-fg: oklch(0.78 0.18 145);
+}
+
+:root[data-theme="dark"] {
+  --demo-card-bg: var(--sl-color-gray-6);
+  /* Outer-only raised shadow (no inner shadows), matching the site cards. */
+  --demo-card-shadow: var(--shadow-card);
+
+  --demo-button-bg: transparent;
+  --demo-button-border: var(--sl-color-hairline);
+
+  --demo-input-bg: var(--sl-color-black, #0a0a0c);
+  --demo-input-border: var(--sl-color-hairline);
+
+  --demo-panel-bg: color-mix(in oklch, var(--sl-color-gray-6) 50%, var(--sl-color-bg));
+  --demo-error-fg: oklch(0.72 0.18 25);
+}
+
+/* ---------- shared building blocks ---------- */
+
+.demo-card {
+  font-family: var(--sl-font);
+  width: 100%;
+  max-width: 640px;
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 28px;
+  border: 1px solid var(--demo-card-border);
+  border-radius: var(--demo-card-radius);
+  background: var(--demo-card-bg);
+  box-shadow: var(--demo-card-shadow);
+  color: var(--sl-color-text);
+}
+
+.demo-card--narrow {
+  max-width: 560px;
+}
+
+.demo-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.demo-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--demo-muted-fg);
+}
+
+.demo-input,
+.demo-textarea {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--demo-input-border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--demo-input-bg);
+  color: var(--demo-input-fg);
+}
+
+.demo-textarea {
+  resize: vertical;
+}
+
+.demo-input:focus,
+.demo-textarea:focus {
+  outline: none;
+  border-color: var(--sl-color-accent);
+}
+
+.demo-button {
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--demo-button-border);
+  background: var(--demo-button-bg);
+  color: var(--demo-button-fg);
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.09s ease;
+}
+
+.demo-button:hover:not(:disabled) {
+  border-color: var(--sl-color-accent);
+  color: var(--sl-color-text);
+}
+
+/* Press drops the button 1px (no inset), matching the site buttons. */
+.demo-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.demo-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.demo-button--small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.demo-hint {
+  background: var(--demo-hint-bg);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--demo-muted-fg);
+  margin: 0;
+}
+
+.demo-error {
+  background: var(--demo-error-bg);
+  color: var(--demo-error-fg);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin: 0;
+  border: 1px solid var(--demo-error-fg);
+}
+
+.demo-muted {
+  color: var(--demo-muted-fg);
+  margin: 0;
+}
+
+.demo-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--demo-panel-bg);
+  padding: 10px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--demo-panel-border);
+}
+
+.demo-panel__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sl-color-text);
+}
+
+.demo-response {
+  background: var(--demo-accent-bg);
+  border: 1px solid var(--demo-accent-border);
+  border-radius: 6px;
+  padding: 12px;
+  color: var(--sl-color-text);
+}
+
+.demo-response__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--demo-accent-fg);
+  margin-bottom: 6px;
+}
+
+.demo-response__body {
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--sl-color-text);
+}
+
+.demo-badge {
+  font-family: var(--sl-font-mono);
+  font-size: 12px;
+  padding: 2px 8px;
+  background: var(--demo-card-bg);
+  border: 1px solid var(--demo-accent-border);
+  border-radius: 999px;
+  color: var(--sl-color-text);
+}
+
+.demo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.demo-list__item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.demo-log {
+  background: var(--demo-log-bg);
+  color: var(--demo-log-fg);
+  font-family: var(--sl-font-mono);
+  font-size: 12px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  min-height: 80px;
+  white-space: pre-wrap;
+}
+
+.demo-log__empty {
+  color: var(--demo-log-fg);
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.demo-dismiss {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--sl-color-text);
+}

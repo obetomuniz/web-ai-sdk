@@ -1,0 +1,552 @@
+---
+import { BackToTop } from "../features/home/components/BackToTop.js";
+import { DetectorDemo } from "../features/home/components/DetectorDemo.js";
+import { HowItWorks } from "../features/home/components/HowItWorks.js";
+import { InstallPill } from "../features/home/components/InstallPill.js";
+import { MeshShader } from "../features/home/components/MeshShader.js";
+import { PromptDemo } from "../features/home/components/PromptDemo.js";
+import { ProofreaderDemo } from "../features/home/components/ProofreaderDemo.js";
+import { RewriterDemo } from "../features/home/components/RewriterDemo.js";
+import { ScrollSpy } from "../features/home/components/ScrollSpy.js";
+import { StarWidget } from "../features/home/components/StarWidget.js";
+import { SummarizerDemo } from "../features/home/components/SummarizerDemo.js";
+import { ThemeSwitcher } from "../features/home/components/ThemeSwitcher.js";
+import { TranslatorDemo } from "../features/home/components/TranslatorDemo.js";
+import { WebMCPDemo } from "../features/home/components/WebMCPDemo.js";
+import { WriterDemo } from "../features/home/components/WriterDemo.js";
+import * as ui from "../shared/ui.js";
+import { SDK_VERSION } from "../features/home/sdk-version.js";
+import "../styles/home.css";
+
+const REPO = "obetomuniz/web-ai-sdk";
+const CANONICAL_URL = "https://web-ai-sdk.dev/";
+const SITE_ORIGIN = "https://web-ai-sdk.dev";
+const baseUrl = new URL(import.meta.env.BASE_URL, "https://web-ai-sdk.dev");
+const pathFromBase = (path: string) => new URL(path, baseUrl).pathname;
+const docsUrl = pathFromBase("docs/");
+const guideLink = (slug: string) => pathFromBase(`docs/guides/${slug}/`);
+const repoUrl = new URL(REPO, "https://github.com/").toString();
+const issuesUrl = new URL(`${REPO}/issues`, "https://github.com/").toString();
+const discussionsUrl = new URL(
+  `${REPO}/discussions`,
+  "https://github.com/",
+).toString();
+const changelogUrl = new URL(
+  `${REPO}/blob/main/.changeset/initial-release.md`,
+  "https://github.com/",
+).toString();
+const licenseUrl = new URL(
+  `${REPO}/blob/main/LICENSE`,
+  "https://github.com/",
+).toString();
+const npmOrgUrl = new URL("org/web-ai-sdk", "https://www.npmjs.com/").toString();
+const authorUrl = new URL("https://betomuniz.com").toString();
+const ogImageUrl = new URL("og-image.png", SITE_ORIGIN).toString();
+const heroTextShadow =
+  "[text-shadow:0_0_10px_var(--color-bg),0_0_22px_var(--color-bg)]";
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://web-ai-sdk.dev/#website",
+      name: "web-ai-sdk",
+      url: CANONICAL_URL,
+      description:
+        "Building blocks for the Web's built-in AI APIs. Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals.",
+      inLanguage: "en",
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "@id": "https://web-ai-sdk.dev/#sourcecode",
+      name: "web-ai-sdk",
+      description:
+        "Headless wrappers for the Web's built-in AI APIs. Vanilla TypeScript by default, with optional React hooks.",
+      url: CANONICAL_URL,
+      codeRepository: repoUrl,
+      programmingLanguage: ["TypeScript", "JavaScript"],
+      license: "https://opensource.org/licenses/MIT",
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web",
+      author: {
+        "@type": "Person",
+        name: "Beto Muniz",
+        url: "https://github.com/obetomuniz",
+      },
+      mainEntityOfPage: { "@id": "https://web-ai-sdk.dev/#website" },
+    },
+  ],
+};
+
+const packageRows = [
+  {
+    slug: "prompt",
+    title: "prompt",
+    tag: "Talk to the on-device language model. Sessions, streaming, and AbortSignals; done.",
+    bullets: [
+      ["Session reuse.", "Cached by config so re-renders do not churn the model."],
+      ["Streaming first.", "AsyncIterable out of the box; React hook gives you a string."],
+      ["Clean lifecycle.", "AbortController on unmount, retry on session-lost."],
+    ],
+  },
+  {
+    slug: "webmcp",
+    title: "webmcp",
+    tag: "Register tools the browser's model context can call. Real agents, real cleanup, no boilerplate.",
+    bullets: [
+      ["Declarative tools.", "Register from React; AbortSignal cleanup on unmount."],
+      ["Last writer wins.", "Re-registers on hot reload without duplicate errors."],
+      ["Spec aligned.", "Wraps document.modelContext verbatim."],
+    ],
+  },
+  {
+    slug: "summarizer",
+    title: "summarizer",
+    tag: "Key-points, TL;DR, headlines. Configurable type and length.",
+    bullets: [
+      ["Four shapes.", "key-points, tl;dr, teaser, headline."],
+      ["Three lengths.", "short, medium, long. Deterministic with the same seed."],
+      ["Streaming summaries.", "Pipe chunks straight into your UI."],
+    ],
+  },
+  {
+    slug: "translator",
+    title: "translator",
+    tag: "Pair-based translation with block-level round-trip. Walks the DOM, swaps text, keeps markup intact.",
+    bullets: [
+      ["Pair caching.", "Sessions cached per source to target pair. Switching is instant."],
+      ["Block round-trip.", "Walks the DOM, swaps text, keeps the markup intact."],
+      ["Graceful fallback.", "No-op fallback when the API is missing."],
+    ],
+  },
+  {
+    slug: "detector",
+    title: "detector",
+    tag: "Detect the language of any text on-device. Returns BCP-47 codes with confidence scores.",
+    bullets: [
+      ["Top candidate or full list.", "Use the best guess, or inspect every alternate above your threshold."],
+      ["Bias hints.", "Pass expectedInputLanguages to break ties between similar languages."],
+      ["Wire the others.", "Detect first, then summarize, translate, or prompt with the result."],
+    ],
+  },
+  {
+    slug: "writer",
+    title: "writer",
+    tag: "Draft new content from a task description. Tone, format, length; streamed straight into your UI.",
+    bullets: [
+      ["Task in, prose out.", "Give it a prompt; get back a paragraph, email, or post."],
+      ["Tone and length.", "formal, neutral, casual, across short, medium, and long."],
+      ["Markdown safe.", "Trims edges only, so formatting and line breaks survive."],
+    ],
+  },
+  {
+    slug: "rewriter",
+    title: "rewriter",
+    tag: "Tone-shift and reshape text you already have. More formal, shorter, or longer; one call.",
+    bullets: [
+      ["Relative adjustments.", "more-formal, more-casual, shorter, longer, as-is."],
+      ["Streaming first.", "Pipe the revised text in as the model produces it."],
+      ["Same lifecycle.", "Session reuse, AbortSignals, opt-in caching; shared with Writer."],
+    ],
+  },
+  {
+    slug: "proofreader",
+    title: "proofreader",
+    tag: "Grammar, spelling, and punctuation fixes with per-issue offsets you can highlight in place.",
+    bullets: [
+      ["Corrected text and diffs.", "Get the clean string and the list of edits with offsets."],
+      ["Highlight inline.", "Offsets index the original input, so you can mark each error in place."],
+      ["One-shot.", "No streaming; resolves once with the full result and optional caching."],
+    ],
+  },
+];
+
+const supportRows = [
+  ["prompt", "148+ stable", "138+ Canary/Dev"],
+  ["summarizer", "138+ stable", "138+ stable"],
+  ["translator", "138+ stable", "143+ Canary/Dev"],
+  ["detector", "138+ stable", "147+ Canary/Dev"],
+  ["writer", "137+ flag, OT", "138+ Canary/Dev"],
+  ["rewriter", "137+ flag, OT", "138+ Canary/Dev"],
+  ["proofreader", "141+ flag, OT", "142+ Canary/Dev"],
+  ["webmcp", "146+ flag, OT 149+", "147+ flag"],
+];
+---
+
+<!doctype html>
+<html lang="en" class="density-tight">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>web-ai-sdk · building blocks for the Web's built-in AI</title>
+    <meta
+      name="description"
+      content="Building blocks for the Web's Built-in AI APIs. Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals. Vanilla TypeScript by default, with optional React hooks."
+    />
+    <link rel="icon" type="image/svg+xml" href={pathFromBase("favicon.svg")} />
+    <link rel="canonical" href={CANONICAL_URL} />
+    <link rel="sitemap" type="application/xml" href={pathFromBase("sitemap.xml")} />
+    <link rel="alternate" type="text/plain" title="LLM-friendly docs (llms.txt)" href={pathFromBase("llms.txt")} />
+    <link rel="alternate" type="text/plain" title="LLM-friendly docs (full text)" href={pathFromBase("llms-full.txt")} />
+    <script is:inline defer src="https://cloud.umami.is/script.js" data-website-id="9e24f5c3-6b64-48fc-8679-610907092f1c"></script>
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={CANONICAL_URL} />
+    <meta property="og:site_name" content="web-ai-sdk" />
+    <meta property="og:title" content="web-ai-sdk · Building blocks for the Web's built-in AI" />
+    <meta property="og:description" content="Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals. Vanilla TypeScript by default, with optional React hooks." />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="web-ai-sdk · npm install @web-ai-sdk/all" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="web-ai-sdk · Building blocks for the Web's built-in AI" />
+    <meta name="twitter:description" content="Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals." />
+    <meta name="twitter:image" content={ogImageUrl} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <nav class={ui.nav}>
+      <div class={`${ui.container} ${ui.navInner}`}>
+        <a class={ui.navBrand} href="#top">
+          <span>web-ai-sdk</span>
+          <span class={ui.caret}></span>
+        </a>
+        <div class={ui.navLinks}>
+          <a href="#why-raw">Why not raw?</a>
+          <a href="#packages">Packages</a>
+          <a href="#philosophy">Why composable</a>
+          <a href="#how">How</a>
+          <a href="#support">Support</a>
+          <a href="#start">Get started</a>
+        </div>
+        <a class={ui.navCta} href={repoUrl} target="_blank" rel="noreferrer">GitHub ↗</a>
+      </div>
+    </nav>
+
+    <main>
+      <header class={`${ui.hero} relative overflow-hidden`} id="top">
+        <MeshShader client:visible />
+        <div
+          aria-hidden="true"
+          class="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,var(--color-bg)_0%,var(--color-bg)_34%,color-mix(in_oklch,var(--color-bg)_50%,transparent)_60%,transparent_88%)] max-[880px]:bg-[linear-gradient(180deg,color-mix(in_oklch,var(--color-bg)_64%,transparent)_0%,color-mix(in_oklch,var(--color-bg)_52%,transparent)_100%)]"
+        >
+        </div>
+        <div class={`${ui.container} ${ui.heroGrid}`}>
+          <div class={ui.heroEyebrow}>
+            <span class={ui.heroEyebrowDot}></span>
+            <span class={ui.gradientText}>Built-in AI, the right way</span>
+          </div>
+          <h1 class={`${ui.heroTitle} ${heroTextShadow}`}>
+            web-ai-sdk
+            <span class={ui.caret}></span>
+          </h1>
+          <p class={`${ui.subhead} ${heroTextShadow}`}>
+            Building blocks for the Web's Built-in AI APIs. Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.
+            <span class={ui.subheadSub}>Vanilla TypeScript by default, with optional React hooks.</span>
+          </p>
+          <a class={`${ui.pkgDocs} ${heroTextShadow} w-fit`} href="#how">
+            See the same task: 15 lines with the SDK vs 37 with the raw APIs
+            <span class={ui.pkgDocsArrow}>→</span>
+          </a>
+          <div class={ui.ctaRow}>
+            <a class={`${ui.btnPrimary} group`} href="#start">
+              Get started <span class={ui.btnArrow}>→</span>
+            </a>
+            <a class={ui.btnGhost} href={repoUrl} target="_blank" rel="noreferrer">View on GitHub</a>
+            <InstallPill pkg="@web-ai-sdk/all" client:idle />
+          </div>
+          <div class={ui.badgeRow}>
+            <span class={ui.badgeAccent}><span class={ui.badgeKey}>runs</span><span class={ui.gradientText}>100% on-device</span></span>
+            <span class={ui.badge}><span class={ui.badgeKey}>types</span><span class={ui.badgeVal}>TypeScript native</span></span>
+            <span class={ui.badge}><span class={ui.badgeKey}>stream</span><span class={ui.badgeVal}>AsyncIterable</span></span>
+            <span class={ui.badge}><span class={ui.badgeKey}>license</span><span class={ui.badgeVal}>MIT</span></span>
+            <span class={ui.badge}><span class={ui.badgeKey}>deps</span><span class={ui.badgeVal}>0</span></span>
+          </div>
+        </div>
+      </header>
+
+      <section class={ui.section} data-section="why-raw">
+        <div class={ui.container}>
+          <div class={`${ui.sectionHead} ${ui.sectionAnchor}`} id="why-raw">
+            <div>
+              <div class={ui.sectionEyebrow}>00 · the question</div>
+              <h2 class="mt-2">Why not just use the APIs directly?</h2>
+            </div>
+            <a class={ui.permalink} href="#why-raw"><span aria-hidden="true">§</span><span class={ui.srOnly}>Link to the why-not-the-raw-APIs section</span></a>
+          </div>
+          <div class={`${ui.twoCol} ${ui.reveal}`} data-reveal>
+            <div class={ui.card}>
+              <div class={ui.philosophyCardBody}>
+                <h3 class={ui.philosophyTitle}>The browser APIs are powerful but young.</h3>
+                <p class={ui.philosophyText}>
+                  Capability checks, model downloads, abortable streams, session cleanup, and no-op fallbacks are the parts every app needs before it can show a useful interface.
+                </p>
+              </div>
+            </div>
+            <div class={ui.card}>
+              <div class={ui.philosophyCardBody}>
+                <h3 class={ui.philosophyTitle}>The SDK keeps that lifecycle small.</h3>
+                <p class={ui.philosophyText}>
+                  Each package wraps one platform surface and exposes the same feature-detected contract to vanilla TypeScript and React hooks.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class={ui.section} data-section="packages">
+        <div class={ui.container}>
+          <div class={`${ui.sectionHead} ${ui.sectionAnchor}`} id="packages">
+            <div>
+              <div class={ui.sectionEyebrow}>01 · packages</div>
+              <h2 class="mt-2">Composable wrappers. One philosophy.</h2>
+            </div>
+            <a class={ui.permalink} href="#packages"><span aria-hidden="true">§</span><span class={ui.srOnly}>Link to Packages section</span></a>
+          </div>
+
+          {
+            packageRows.map((pkg) => (
+              <div class={`${ui.pkgRow} ${ui.reveal}`} data-reveal id={pkg.slug}>
+                <div class={ui.pkgLeft}>
+                  <div class={ui.pkgIcon} aria-hidden="true">{pkg.title.slice(0, 1)}</div>
+                  <div class={ui.pkgName}><span class={ui.scope}>@web-ai-sdk/</span>{pkg.title}</div>
+                  <div class={ui.pkgTag}>{pkg.tag}</div>
+                  <ul class={ui.pkgBullets}>
+                    {pkg.bullets.map(([strong, text]) => (
+                      <li><span><b>{strong}</b> {text}</span></li>
+                    ))}
+                  </ul>
+                  <div class={ui.pkgActions}>
+                    <code class={ui.pkgInstall}>
+                      <span class={ui.pkgInstallPrompt}>$</span> npm install <span class={ui.pkgInstallPkg}>@web-ai-sdk/{pkg.title}</span>
+                    </code>
+                    <a class={ui.pkgDocs} href={guideLink(pkg.slug)}>Read the docs <span class={ui.pkgDocsArrow}>→</span></a>
+                  </div>
+                </div>
+                <div class={ui.pkgRight}>
+                  {pkg.slug === "prompt" && <PromptDemo client:visible />}
+                  {pkg.slug === "webmcp" && <WebMCPDemo client:visible />}
+                  {pkg.slug === "summarizer" && <SummarizerDemo client:visible />}
+                  {pkg.slug === "translator" && <TranslatorDemo client:visible />}
+                  {pkg.slug === "detector" && <DetectorDemo client:visible />}
+                  {pkg.slug === "writer" && <WriterDemo client:visible />}
+                  {pkg.slug === "rewriter" && <RewriterDemo client:visible />}
+                  {pkg.slug === "proofreader" && <ProofreaderDemo client:visible />}
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </section>
+
+      <section class={ui.section} data-section="philosophy">
+        <div class={ui.container}>
+          <div class={`${ui.sectionHead} ${ui.sectionAnchor}`} id="philosophy">
+            <div>
+              <div class={ui.sectionEyebrow}>02 · philosophy</div>
+              <h2 class="mt-2">Why composable.</h2>
+            </div>
+            <a class={ui.permalink} href="#philosophy"><span aria-hidden="true">§</span><span class={ui.srOnly}>Link to Philosophy section</span></a>
+          </div>
+          <div class={`${ui.twoCol} ${ui.reveal}`} data-reveal>
+            <div class={ui.card}>
+              <div class={ui.philosophyCardBody}>
+                <h3 class={ui.philosophyTitle}><span class={ui.philosophyNum}>01</span> We handle the rough edges.</h3>
+                <p class={ui.philosophyText}>
+                  The built-in AI surface is young. Capability checks, model downloads, abortable streams, session lifetimes, and DOM-rebuild safety are all things you would otherwise re-implement in every component.
+                </p>
+                <ul class={ui.philosophyList}>
+                  <li>Feature detection per package</li>
+                  <li>Session cache keyed by config</li>
+                  <li>AsyncIterable streams plus AbortSignal cleanup</li>
+                  <li>Hot-reload and StrictMode safe</li>
+                  <li>Zero-runtime fallback when API missing</li>
+                </ul>
+              </div>
+            </div>
+            <div class={ui.card}>
+              <div class={ui.philosophyCardBody}>
+                <h3 class={ui.philosophyTitle}><span class={ui.philosophyNum}>02</span> You compose the stack.</h3>
+                <p class={ui.philosophyText}>
+                  We ship the lifecycle layer: state machines, streams, abort signals. Framework adapters, polyfills, and UI primitives stay optional so they do not constrain your design system.
+                </p>
+                <ul class={ui.philosophyList}>
+                  <li>Framework-agnostic core</li>
+                  <li>Optional <code>/react</code> subpath</li>
+                  <li>No global state, no providers required</li>
+                  <li>Tree-shakable per package</li>
+                  <li>Pick the layers you need</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class={`${ui.stackDiagram} ${ui.reveal}`} data-reveal>
+            <div class={ui.stackHeader}><span>Architecture</span><span>Owner</span></div>
+            <div class={`${ui.stackRowBase} ${ui.stackRowApi}`}>
+              <span class={ui.stackIdx}>00</span>
+              <div class={ui.stackBody}>
+                <div class={`${ui.stackName} ${ui.stackNameMuted}`}>Browser built-in AI</div>
+                <div class={`${ui.stackDetail} ${ui.stackDetailMuted}`}>document.modelContext, Summarizer, Translator, LanguageModel, LanguageDetector, Writer, Rewriter, Proofreader</div>
+              </div>
+              <span class={ui.stackOwner}>platform</span>
+            </div>
+            <div class={ui.stackRowBase}>
+              <span class={`${ui.stackIdx} ${ui.stackIdxAccent}`}>01</span>
+              <div class={ui.stackBody}>
+                <div class={ui.stackName}><span class={ui.scope}>@web-ai-sdk/</span>X</div>
+                <div class={ui.stackDetail}>ask(), createSession(), summarize(), translate(), detect(), write(), rewrite(), proofread(), registerTool(), AbortSignal, session cache</div>
+              </div>
+              <span class={`${ui.stackOwner} ${ui.stackIdxAccent}`}>web-ai-sdk</span>
+            </div>
+            <div class={`${ui.stackRowBase} ${ui.stackRowHook}`}>
+              <span class={`${ui.stackIdx} ${ui.stackIdxAccent}`}>02</span>
+              <div class={ui.stackBody}>
+                <div class={`${ui.stackName} ${ui.stackNameAccent}`}><span class={ui.scope}>@web-ai-sdk/</span>X<span class={ui.scope}>/react</span></div>
+                <div class={ui.stackDetail}>usePrompt(), useSession(), useSummarizer(), useTranslator(), useDetector(), useWriter(), useRewriter(), useProofreader(), useWebMCP()</div>
+              </div>
+              <span class={`${ui.stackOwner} ${ui.stackIdxAccent}`}>web-ai-sdk</span>
+            </div>
+            <div class={ui.stackRowBase}>
+              <span class={`${ui.stackIdx} ${ui.stackIdxMuted}`}>03</span>
+              <div class={ui.stackBody}>
+                <div class={ui.stackName}>Your application</div>
+                <div class={ui.stackDetail}>Card, Button, Spinner, your design system</div>
+              </div>
+              <span class={`${ui.stackOwner} ${ui.stackIdxMuted}`}>your code</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class={ui.section} data-section="how">
+        <div class={ui.container}>
+          <div class={`${ui.sectionHead} ${ui.sectionAnchor}`} id="how">
+            <div>
+              <div class={ui.sectionEyebrow}>03 · how it works</div>
+              <h2 class="mt-2">Same task. Three levels of abstraction.</h2>
+              <p class="mt-3.5">All three tabs do the same thing: detect an article's language and summarize it into key-points. Same result, less to wire up.</p>
+            </div>
+            <a class={ui.permalink} href="#how"><span aria-hidden="true">§</span><span class={ui.srOnly}>Link to How it works section</span></a>
+          </div>
+          <div class={ui.reveal} data-reveal>
+            <HowItWorks client:visible />
+          </div>
+        </div>
+      </section>
+
+      <section class={ui.section} data-section="support">
+        <div class={ui.container}>
+          <div class={`${ui.sectionHead} ${ui.sectionAnchor}`} id="support">
+            <div>
+              <div class={ui.sectionEyebrow}>04 · support</div>
+              <h2 class="mt-2">Browser support.</h2>
+              <p class="mt-3.5">Built-in AI lands engine by engine. Where it is not there yet, you get a feature-detected no-op so your code does not crash.</p>
+            </div>
+            <a class={ui.permalink} href="#support"><span aria-hidden="true">§</span><span class={ui.srOnly}>Link to Browser support section</span></a>
+          </div>
+          <div class={ui.reveal} data-reveal>
+            <div class={ui.supportWrap}>
+              <table class={ui.supportTable}>
+                <thead>
+                  <tr>
+                    <th class={ui.supportHead}>Package</th>
+                    <th class={ui.supportHead}>Chrome</th>
+                    <th class={ui.supportHead}>Edge</th>
+                    <th class={ui.supportHead}>Safari</th>
+                    <th class={ui.supportHead}>Firefox</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {supportRows.map(([pkg, chrome, edge]) => (
+                    <tr>
+                      <th class={ui.supportRowHead}><span class={ui.scope}>@web-ai-sdk/</span>{pkg}</th>
+                      <td><span class={ui.supportVersion}>{chrome}</span></td>
+                      <td><span class={ui.supportVersion}>{edge}</span></td>
+                      <td><span class={`${ui.supportPill} ${ui.supportPillWarn}`}>no-op fallback</span></td>
+                      <td><span class={`${ui.supportPill} ${ui.supportPillWarn}`}>no-op fallback</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div class={ui.supportNote}>
+              Versions reflect when the underlying platform API became available. Wrapper exports stay stable across all browsers. <strong>OT</strong> = origin trial.
+              <br />
+              On Edge, only the Summarizer ships in stable. Prompt, Translator, Language Detector, and WebMCP are Canary/Dev-only or flag-gated at the versions shown.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class={ui.section} data-section="start">
+        <div class={ui.container}>
+          <div class={`${ui.ctaBlock} ${ui.sectionAnchor} ${ui.reveal}`} data-reveal id="start">
+            <div class={`${ui.sectionEyebrow} mb-5 justify-center`}>05 · ship it</div>
+            <h2 class={`${ui.ctaBlockTitle} ${ui.gradientText}`}>Try it in your project.</h2>
+            <p class={ui.ctaBlockText}>
+              One install, all eight blocks. Or pick the individual <code>@web-ai-sdk/*</code> packages. Ships ESM, CJS, and types. Tree-shakable.
+            </p>
+            <InstallPill pkg="@web-ai-sdk/all" className="mx-auto" client:idle />
+            <div class={ui.ctaLinks}>
+              <a class={ui.ctaLink} href={docsUrl}>Read the docs <span>↗</span></a>
+              <a class={ui.ctaLink} href={repoUrl} target="_blank" rel="noreferrer">GitHub repo <span>↗</span></a>
+              <StarWidget repo={REPO} client:idle />
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class={ui.footer}>
+      <div class={ui.container}>
+        <div class={ui.footerGrid}>
+          <div>
+            <div class={ui.footerBrandTitle}><span>web-ai-sdk</span><span class={ui.caret}></span></div>
+            <p class={ui.footerBrandText}>Building blocks for the Web's Built-in AI APIs.</p>
+          </div>
+          <div>
+            <h3 class={ui.footerColTitle}>Project</h3>
+            <ul class={ui.footerColList}>
+              <li><a href={docsUrl}>Docs</a></li>
+              <li><a href={repoUrl} target="_blank" rel="noreferrer">GitHub</a></li>
+              <li><a href={npmOrgUrl} target="_blank" rel="noreferrer">npm</a></li>
+              <li><a href={changelogUrl} target="_blank" rel="noreferrer">Changelog</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class={ui.footerColTitle}>Community</h3>
+            <ul class={ui.footerColList}>
+              <li><a href={issuesUrl} target="_blank" rel="noreferrer">Issues</a></li>
+              <li><a href={discussionsUrl} target="_blank" rel="noreferrer">Discussions</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class={ui.footerColTitle}>About</h3>
+            <ul class={ui.footerColList}>
+              <li>Built by <a href={authorUrl} target="_blank" rel="noreferrer">@obetomuniz</a></li>
+              <li><a href={licenseUrl} target="_blank" rel="noreferrer">MIT licensed</a></li>
+              <li>100% on-device</li>
+            </ul>
+          </div>
+        </div>
+        <div class={ui.footerMeta}>
+          <span>web-ai-sdk v{SDK_VERSION}</span>
+          <span><a href="#top" data-footer-top-link>Back to top ↑</a></span>
+        </div>
+      </div>
+    </footer>
+
+    <ScrollSpy client:idle />
+    <BackToTop client:idle />
+    {import.meta.env.DEV && <ThemeSwitcher client:idle />}
+  </body>
+</html>
