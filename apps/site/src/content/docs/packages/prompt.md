@@ -11,7 +11,7 @@ Building block for the Web's Built-in [Prompt API](https://developer.chrome.com/
 
 ## Status
 
-Prompt API ships in Chrome 138+ (behind `chrome://flags/#prompt-api-for-gemini-nano`) and Edge 138+ (behind `edge://flags/#prompt-api-for-phi-mini`). On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `prompt()` throws `PromptUnavailableError` so callers can branch explicitly.
+Prompt API ships stable in Chrome 148+ — no flag required. Chrome 138–147 still works with `chrome://flags/#prompt-api-for-gemini-nano` enabled. On Edge it remains a developer preview in Canary/Dev 138+ behind `edge://flags/#prompt-api-for-phi-mini`, with Phi-4-mini's stricter safety pipeline often refusing output (see [Browser support](https://web-ai-sdk.dev/browser-support)). On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `ask()` throws `PromptUnavailableError` so callers can branch explicitly.
 
 ## Install
 
@@ -24,18 +24,22 @@ The React adapter ships as a subpath export, with no extra install. `react` is a
 
 ## Vanilla TypeScript / DOM
 
-```ts
-import { prompt } from "@web-ai-sdk/prompt";
+### One-shot — `ask()`
 
-const result = await prompt({
-  prompt: "Summarize this in one sentence: WebMCP lets web pages expose tools to agents.",
+```ts
+import { ask } from "@web-ai-sdk/prompt";
+
+const result = await ask({
+  input: "Summarize this in one sentence: WebMCP lets web pages expose tools to agents.",
   systemPrompt: "You are concise. Reply with a single sentence.",
   temperature: 0.2,
-  onChunk: (text) => console.log("partial", text),
+  onUpdate: (text) => console.log("partial", text), // cumulative buffer
 });
 
-console.log(result.response, result.cached);
+console.log(result.output, result.cached);
 ```
+
+`ask()` shares a warm `LanguageModel` instance across same-shape callers so the cold start is paid once per persona. That's right for embeds, widgets, ask-and-display flows. It's the wrong shape for chat: two callers with the same mode would share one instance, so conversation history cross-bleeds and `abort()` on one caller kills the other.
 
 ## React
 
@@ -43,7 +47,7 @@ console.log(result.response, result.cached);
 import { usePrompt } from "@web-ai-sdk/prompt/react";
 
 export function AskBox() {
-  const { status, response, error, ask, abort } = usePrompt({
+  const { status, output, error, ask, abort } = usePrompt({
     systemPrompt: "You are a helpful assistant. Be concise.",
     temperature: 0.7,
   });
@@ -62,22 +66,22 @@ export function AskBox() {
       <button type="submit" disabled={status === "loading" || status === "streaming"}>
         {status === "streaming" ? "Streaming…" : "Ask"}
       </button>
-      {response && <p>{response}</p>}
+      {output && <p>{output}</p>}
       {error && <small>{error.message}</small>}
     </form>
   );
 }
 ```
 
-State machine: `idle | loading | streaming | done | unavailable`. `ask(input)` triggers a request, cancels any in-flight one, and updates `response` as chunks stream. `abort()` cancels the current request; `reset()` clears state.
+State machine: `idle | loading | streaming | done | unavailable`. `ask(input)` triggers a request, cancels any in-flight one, and updates `output` as chunks stream. `abort()` cancels the current request; `reset()` clears state.
 
 ## API
 
-### `prompt(options): Promise<PromptResult>`
+### `ask(options): Promise<AskResult>`
 
 ```ts
-interface PromptOptions {
-  prompt: string;
+interface AskOptions {
+  input: string;
   systemPrompt?: string;
   temperature?: number;
   topK?: number;
@@ -85,31 +89,29 @@ interface PromptOptions {
   supportedLanguages?: readonly string[];   // default ["en"]
   expectedInputs?: LanguageModelExpectedInput[];   // advanced passthrough
   expectedOutputs?: LanguageModelExpectedOutput[]; // advanced passthrough
-  createOptions?: Partial<LanguageModelCreateOptions>;
+  tools?: LanguageModelTool[];              // experimental: native function-calling passthrough
+  monitor?: (m: CreateMonitor) => void;
   responseConstraint?: object;              // JSON Schema for structured output
+  omitResponseConstraintInput?: boolean;
   cache?: ResponseCache;
   cacheKey?: string;
-  onChunk?: (text: string) => void;
+  onUpdate?: (text: string) => void;        // CUMULATIVE buffer
   signal?: AbortSignal;
 }
 
-interface PromptResult {
-  response: string | null;
+interface AskResult {
+  output: string | null;
   cached: boolean;
 }
 ```
 
-### `isPromptAvailable(): boolean`
+### `isAvailable(): boolean`
 
 Feature-detect helper.
 
 ### `checkAvailability(opts?): Promise<LanguageModelAvailability | null>`
 
 Forwards to `LanguageModel.availability()`. Returns `null` if the global is missing or the call throws.
-
-### `createSessionStorageCache({ storage?, prefix? }): ResponseCache`
-
-Optional cache backend. Pass it to `prompt({ cache })` to enable response caching, with an optional custom `storage` (e.g. `localStorage`, an in-memory polyfill).
 
 ### Lower-level helpers (advanced)
 
@@ -124,18 +126,21 @@ Two layers, same as `@web-ai-sdk/summarizer`:
 
 ```ts
 // Off by default; every call hits the model.
-prompt({ prompt: "hi" });
+ask({ input: "hi" });
 
 // Opt in for sessionStorage-backed caching.
-prompt({ prompt: "hi", cache: createSessionStorageCache() });
+ask({ input: "hi", cache: "session" });
+
+// Or persistent localStorage-backed caching.
+ask({ input: "hi", cache: "local" });
 
 // Or roll your own.
-prompt({ prompt: "hi", cache: myMap, cacheKey: "greeting" });
+ask({ input: "hi", cache: myMap, cacheKey: "greeting" });
 ```
 
 ## Errors and unavailability
 
-The vanilla `prompt()` throws `PromptUnavailableError` when the API is missing or reports `availability: "unavailable"`. The React hook absorbs this and returns `status: "unavailable"` instead.
+The vanilla `ask()` throws `PromptUnavailableError` when the API is missing or reports `availability: "unavailable"`. The React hook absorbs this and returns `status: "unavailable"` instead.
 
 `AbortSignal` is supported on both surfaces. Aborting mid-stream resolves cleanly; the result cache is not written for aborted runs.
 

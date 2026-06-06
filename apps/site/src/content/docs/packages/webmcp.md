@@ -111,7 +111,7 @@ Register a single tool. Returns a cleanup function. No-op on unsupported browser
 
 Register many tools at once. Returns a single cleanup that unregisters all of them.
 
-### `isWebMCPAvailable(): boolean`
+### `isAvailable(): boolean`
 
 Feature-detect helper.
 

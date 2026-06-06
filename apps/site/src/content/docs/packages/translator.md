@@ -103,7 +103,7 @@ interface TranslateController {
 }
 ```
 
-### `isTranslatorAvailable(): boolean`
+### `isAvailable(): boolean`
 
 Feature-detect helper.
 

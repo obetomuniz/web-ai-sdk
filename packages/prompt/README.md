@@ -31,7 +31,7 @@ const result = await ask({
   onUpdate: (text) => console.log("partial", text), // cumulative buffer
 });
 
-console.log(result.response, result.cached);
+console.log(result.output, result.cached);
 ```
 
 `ask()` shares a warm `LanguageModel` instance across same-shape callers so the cold start is paid once per persona. That's right for embeds, widgets, ask-and-display flows. It's the wrong shape for chat: two callers with the same mode would share one instance, so conversation history cross-bleeds and `abort()` on one caller kills the other.
@@ -70,7 +70,7 @@ Every `createSession()` call returns an independent `LanguageModelInstance` with
 import { usePrompt } from "@web-ai-sdk/prompt/react";
 
 export function AskBox() {
-  const { status, response, error, ask, abort } = usePrompt({
+  const { status, output, error, ask, abort } = usePrompt({
     systemPrompt: "You are a helpful assistant. Be concise.",
     temperature: 0.7,
   });
@@ -89,14 +89,14 @@ export function AskBox() {
       <button type="submit" disabled={status === "loading" || status === "streaming"}>
         {status === "streaming" ? "Streaming…" : "Ask"}
       </button>
-      {response && <p>{response}</p>}
+      {output && <p>{output}</p>}
       {error && <small>{error.message}</small>}
     </form>
   );
 }
 ```
 
-State machine: `idle | loading | streaming | done | unavailable`. `ask(input)` triggers a request, cancels any in-flight one, and updates `response` as chunks stream.
+State machine: `idle | loading | streaming | done | unavailable`. `ask(input)` triggers a request, cancels any in-flight one, and updates `output` as chunks stream.
 
 ### Chat — `useSession`
 
@@ -146,8 +146,8 @@ interface AskOptions {
   expectedInputs?: LanguageModelExpectedInput[];   // advanced passthrough
   expectedOutputs?: LanguageModelExpectedOutput[]; // advanced passthrough
   tools?: LanguageModelTool[];              // experimental: native function-calling passthrough
-  createOptions?: Partial<LanguageModelCreateOptions>;
   responseConstraint?: object;              // JSON Schema for structured output
+  omitResponseConstraintInput?: boolean;
   cache?: ResponseCache;
   cacheKey?: string;
   onUpdate?: (text: string) => void;        // CUMULATIVE buffer
@@ -155,7 +155,7 @@ interface AskOptions {
 }
 
 interface AskResult {
-  response: string | null;
+  output: string | null;
   cached: boolean;
 }
 ```
@@ -297,17 +297,13 @@ interface UseSessionReturn {
 
 Lifecycle-only: feature detection + create + destroy on unmount + recreate when any primitive option (`systemPrompt`, `temperature`, `topK`, `language`) changes. Object options (`expectedInputs`, `createOptions`) participate by reference; memoize them or accept the recreate cost. UI state is your concern — iterate `session.sendStreaming()` and accumulate text into your own component state.
 
-### `isPromptAvailable(): boolean`
+### `isAvailable(): boolean`
 
 Feature-detect helper.
 
 ### `checkAvailability(opts?): Promise<LanguageModelAvailability | null>`
 
 Forwards to `LanguageModel.availability()`. Returns `null` if the global is missing or the call throws.
-
-### `createSessionStorageCache({ storage?, prefix? }): ResponseCache`
-
-Optional cache backend. Pass it to `ask({ cache })` to enable response caching, with an optional custom `storage` (e.g. `localStorage`, an in-memory polyfill).
 
 ### Cache controls
 
@@ -337,7 +333,10 @@ Two layers, same as `@web-ai-sdk/summarizer`:
 ask({ input: "hi" });
 
 // Opt in for sessionStorage-backed caching.
-ask({ input: "hi", cache: createSessionStorageCache() });
+ask({ input: "hi", cache: "session" });
+
+// Or persistent localStorage-backed caching.
+ask({ input: "hi", cache: "local" });
 
 // Or roll your own.
 ask({ input: "hi", cache: myMap, cacheKey: "greeting" });

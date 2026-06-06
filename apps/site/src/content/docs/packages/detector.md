@@ -11,7 +11,7 @@ Building block for [the Web's Built-in Language Detector API](https://developer.
 
 ## Status
 
-Language Detector ships in Chrome 138+ and Edge 138+. On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `detect()` throws `DetectorUnavailableError` so callers can branch explicitly.
+Language Detector ships stable in Chrome 138+ on desktop. On Edge it is a developer preview starting at Canary/Dev 147+ behind `edge://flags/#edge-language-detection-api` (per the [Edge Language Detector API docs](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/languagedetector-api)) — not yet in Edge stable. On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `detect()` throws `DetectorUnavailableError` so callers can branch explicitly.
 
 ## Install
 
@@ -27,10 +27,10 @@ The React adapter ships as a subpath export, with no extra install. `react` is a
 ```ts
 import { detect } from "@web-ai-sdk/detector";
 
-const result = await detect({ text: "Olá, mundo" });
-console.log(result.language);   // → "pt"
-console.log(result.confidence); // → 0.98
-console.log(result.all);        // → full sorted list of candidates
+const result = await detect({ input: "Olá, mundo" });
+console.log(result.output?.language);   // → "pt"
+console.log(result.output?.confidence); // → 0.98
+console.log(result.output?.all);        // → full sorted list of candidates
 ```
 
 ## React
@@ -39,18 +39,18 @@ console.log(result.all);        // → full sorted list of candidates
 import { useDetector } from "@web-ai-sdk/detector/react";
 
 export function LangBadge({ text }: { text: string }) {
-  const { status, language, confidence } = useDetector({ text });
+  const { status, output } = useDetector({ input: text });
 
-  if (status !== "done" || !language) return null;
+  if (status !== "done" || !output) return null;
   return (
     <span>
-      {language} · {Math.round(confidence * 100)}%
+      {output.language} · {Math.round(output.confidence * 100)}%
     </span>
   );
 }
 ```
 
-State machine: `pending | loading | done | unavailable`. The hook auto-runs on mount and re-runs whenever `text` changes. Stays in `"pending"` while the input is empty or whitespace-only.
+State machine: `idle | loading | done | unavailable`. The hook auto-runs on mount and re-runs whenever `input` changes. Stays in `"idle"` while the input is empty or whitespace-only.
 
 ## API
 
@@ -58,34 +58,32 @@ State machine: `pending | loading | done | unavailable`. The hook auto-runs on m
 
 ```ts
 interface DetectOptions {
-  text: string;
+  input: string;
   expectedInputLanguages?: readonly string[];  // bias hint
   minConfidence?: number;                      // default 0
-  createOptions?: Partial<LanguageDetectorCreateOptions>;
-  cache?: DetectionCache;
+  monitor?: (m: CreateMonitor) => void;
+  cache?: "session" | "local" | { get, set };
   cacheKey?: string;
   signal?: AbortSignal;
 }
 
 interface DetectResult {
-  language: string | null;          // top BCP-47 code, or null below minConfidence
-  confidence: number;               // 0..1 for the top result
-  all: DetectionResult[];           // [{ detectedLanguage, confidence }, ...]
+  output: {
+    language: string;
+    confidence: number;
+    all: DetectionResult[];
+  } | null;
   cached: boolean;
 }
 ```
 
-### `isDetectorAvailable(): boolean`
+### `isAvailable(): boolean`
 
 Feature-detect helper.
 
 ### `checkAvailability(opts?): Promise<LanguageDetectorAvailability | null>`
 
 Forwards to `LanguageDetector.availability()`. Returns `null` if the global is missing or the call throws.
-
-### `createSessionStorageCache({ storage?, prefix? }): DetectionCache`
-
-Optional cache backend. Pass it to `detect({ cache })` to enable result caching, with an optional custom `storage` (e.g. `localStorage`, an in-memory polyfill).
 
 ### Lower-level helpers (advanced)
 
@@ -100,10 +98,10 @@ Two layers, same as the other packages:
 
 ```ts
 // Off by default; every call hits the model.
-detect({ text: "hello" });
+detect({ input: "hello" });
 
 // Opt in for sessionStorage-backed caching.
-detect({ text: "hello", cache: createSessionStorageCache() });
+detect({ input: "hello", cache: "session" });
 ```
 
 ## Composing with the other packages
@@ -114,8 +112,8 @@ Pair detector with summarizer / translator / prompt to skip the manual `language
 import { detect } from "@web-ai-sdk/detector";
 import { summarize } from "@web-ai-sdk/summarizer";
 
-const { language } = await detect({ text: articleText });
-await summarize({ language: language ?? "en", text: articleText });
+const { output } = await detect({ input: articleText });
+await summarize({ language: output?.language ?? "en", input: articleText });
 ```
 
 A first-class `language: "auto"` shortcut may land in a future release.

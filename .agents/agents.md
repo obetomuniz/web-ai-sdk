@@ -168,6 +168,14 @@ These rules apply to the API-wrapper packages (`@web-ai-sdk/prompt`, `webmcp`, `
 - **READMEs are user-facing.** Show install, the smallest possible vanilla example, the smallest possible React example, then the API surface.
 - Don't write design docs unless the user asks. Conventions live here; package-specific decisions live in the package README.
 
+### Docs reliability
+
+- Treat docs examples as part of the public API. When editing or reviewing docs, verify option names, result shapes, hook return values, and helper export names against the actual exported TypeScript interfaces and runtime tests.
+- After API renames, audit stale docs terms across READMEs and docs pages. Common drift patterns in this repo include `prompt()` vs `ask()`, `prompt` vs `input`, `onChunk` vs `onUpdate`, `response` / `summary` vs `output`, top-level detector `language` vs `output.language`, `is*Available()` aliases vs `isAvailable()`, and removed cache factories vs `cache: "session" | "local"`.
+- Package READMEs are the source for generated package docs under `apps/site/src/content/docs/packages/*.md`, but those pages are checked in. If you fix a README drift, update the matching checked-in package docs page in the same change or regenerate it.
+- Changelog migration snippets are historical; don't "fix" old before/after examples unless they are inaccurate for the release they describe.
+- After docs changes, run `pnpm --filter @web-ai-sdk-apps/site typecheck`. Biome may intentionally ignore Markdown docs, so don't treat "no files processed" as validation.
+
 ### Home page styling (`apps/site`)
 
 The marketing site uses **Tailwind CSS v4**. Full guardrails: [`apps/site/README.md`](../apps/site/README.md).
