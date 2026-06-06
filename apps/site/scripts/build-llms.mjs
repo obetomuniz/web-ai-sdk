@@ -40,6 +40,9 @@ const PACKAGES = [
   { dir: "summarizer", npm: "@web-ai-sdk/summarizer" },
   { dir: "translator", npm: "@web-ai-sdk/translator" },
   { dir: "detector", npm: "@web-ai-sdk/detector" },
+  { dir: "writer", npm: "@web-ai-sdk/writer" },
+  { dir: "rewriter", npm: "@web-ai-sdk/rewriter" },
+  { dir: "proofreader", npm: "@web-ai-sdk/proofreader" },
 ];
 
 const readmeUrl = (dir) => `${REPO_URL}/tree/main/packages/${dir}#readme`;
@@ -109,7 +112,7 @@ function buildLlmsIndex() {
     "",
     "> Building blocks for the Web's built-in AI APIs. Composable. No runtime deps. Just lifecycle, streaming, AbortSignals. Vanilla TypeScript by default, with optional React hooks.",
     "",
-    "Each package wraps one Built-in AI surface (Prompt, Summarizer, Translator, Detector, WebMCP) plus an optional `/react` adapter. The per-package READMEs (linked below) are the source of truth for the API surface; the docs site hosts hand-curated conceptual guides. Full README content is also available concatenated at [llms-full.txt](" + SITE_URL + "/llms-full.txt).",
+    "Each package wraps one Built-in AI surface (Prompt, Summarizer, Translator, Detector, Writer, Rewriter, Proofreader, WebMCP) plus an optional `/react` adapter. The per-package READMEs (linked below) are the source of truth for the API surface; the docs site hosts hand-curated conceptual guides. Full README content is also available concatenated at [llms-full.txt](" + SITE_URL + "/llms-full.txt).",
     "",
     "## Packages",
     "",
@@ -124,6 +127,9 @@ function buildLlmsIndex() {
     "- [Summarizer](" + SITE_URL + "/docs/guides/summarizer/): TL;DR / key-points / headline with streaming.",
     "- [Translator](" + SITE_URL + "/docs/guides/translator/): block-level DOM translation with snapshot restore.",
     "- [Detector](" + SITE_URL + "/docs/guides/detector/): on-device language detection with confidence.",
+    "- [Writer](" + SITE_URL + "/docs/guides/writer/): draft new content with configurable tone, format, and length.",
+    "- [Rewriter](" + SITE_URL + "/docs/guides/rewriter/): reshape existing text by tone or length.",
+    "- [Proofreader](" + SITE_URL + "/docs/guides/proofreader/): grammar and punctuation corrections with issue offsets.",
     "",
     "## React adapters",
     "",
@@ -133,6 +139,9 @@ function buildLlmsIndex() {
     "- [useSummarizer](" + SITE_URL + "/docs/react/use-summarizer/)",
     "- [useTranslator](" + SITE_URL + "/docs/react/use-translator/)",
     "- [useDetector](" + SITE_URL + "/docs/react/use-detector/)",
+    "- [useWriter](" + SITE_URL + "/docs/react/use-writer/)",
+    "- [useRewriter](" + SITE_URL + "/docs/react/use-rewriter/)",
+    "- [useProofreader](" + SITE_URL + "/docs/react/use-proofreader/)",
     "",
     "## Optional",
     "",

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://webmcp.org/manifest.schema.json",
+  "name": "web-ai-sdk",
+  "description": "Documentation and package metadata for web-ai-sdk, a TypeScript SDK for the Web's built-in AI APIs.",
+  "url": "https://web-ai-sdk.dev/",
+  "tools": [
+    {
+      "name": "get_web_ai_sdk_resources",
+      "description": "List canonical web-ai-sdk packages, documentation, and agent-friendly resources.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    }
+  ]
+}
