@@ -57,7 +57,7 @@ await prompt.ask({ input: "Hello" });
 await summarizer.summarize({ language: "en", article: document.body });
 ```
 
-The root entry namespaces each scoped package because several exports (e.g. `checkAvailability`, `defaultCacheKey`, `createSessionStorageCache`) appear in more than one package and would collide on a flat re-export.
+The root entry namespaces each scoped package because several exports (e.g. `checkAvailability`, `isAvailable`, `defaultCacheKey`) appear in more than one package and would collide on a flat re-export.
 
 ## Why a meta-package?
 
