@@ -76,6 +76,62 @@ const structuredData = {
       },
       mainEntityOfPage: { "@id": "https://web-ai-sdk.dev/#website" },
     },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://web-ai-sdk.dev/#software",
+      name: "web-ai-sdk",
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web",
+      softwareVersion: SDK_VERSION,
+      description:
+        "A TypeScript SDK for the Web's built-in AI APIs, including Prompt, Summarizer, Translator, Language Detector, Writer, Rewriter, Proofreader, and WebMCP wrappers.",
+      url: CANONICAL_URL,
+      codeRepository: repoUrl,
+      programmingLanguage: ["TypeScript", "JavaScript"],
+      license: "https://opensource.org/licenses/MIT",
+      author: {
+        "@type": "Person",
+        name: "Beto Muniz",
+        url: "https://github.com/obetomuniz",
+      },
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+      },
+      mainEntityOfPage: { "@id": "https://web-ai-sdk.dev/#website" },
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://web-ai-sdk.dev/#faq",
+      mainEntity: [
+        {
+          "@type": "Question",
+          name: "What does web-ai-sdk wrap?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "web-ai-sdk wraps the Web's built-in AI APIs: Prompt, Summarizer, Translator, Language Detector, Writer, Rewriter, Proofreader, and WebMCP.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Does web-ai-sdk require React?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "No. Each package ships a vanilla TypeScript core by default and an optional React hook adapter under its /react subpath.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "What happens when a browser does not support a built-in AI API?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "The wrappers feature-detect the browser APIs and fall back to no-op cleanup functions, undefined availability, or typed unavailable errors so apps can ship without browser-specific branches.",
+          },
+        },
+      ],
+      mainEntityOfPage: { "@id": "https://web-ai-sdk.dev/#website" },
+    },
   ],
 };
 
@@ -191,6 +247,47 @@ const supportRows = [
     <link rel="alternate" type="text/plain" title="LLM-friendly docs (full text)" href={pathFromBase("llms-full.txt")} />
     <script is:inline defer src="https://cloud.umami.is/script.js" data-website-id="9e24f5c3-6b64-48fc-8679-610907092f1c"></script>
     <script is:inline type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+    <script>
+      import { registerTool } from "@web-ai-sdk/webmcp";
+
+      registerTool({
+        name: "get_web_ai_sdk_resources",
+        description:
+          "List canonical web-ai-sdk packages, documentation, and agent-friendly resources.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          additionalProperties: false,
+        },
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+        execute: () => ({
+          packages: [
+            "@web-ai-sdk/all",
+            "@web-ai-sdk/prompt",
+            "@web-ai-sdk/webmcp",
+            "@web-ai-sdk/summarizer",
+            "@web-ai-sdk/translator",
+            "@web-ai-sdk/detector",
+            "@web-ai-sdk/writer",
+            "@web-ai-sdk/rewriter",
+            "@web-ai-sdk/proofreader",
+          ],
+          docs: [
+            "https://web-ai-sdk.dev/docs/",
+            "https://web-ai-sdk.dev/docs/browser-support/",
+            "https://web-ai-sdk.dev/docs/architecture/",
+            "https://web-ai-sdk.dev/llms.txt",
+            "https://web-ai-sdk.dev/llms-full.txt",
+          ],
+          source: "https://github.com/obetomuniz/web-ai-sdk",
+        }),
+      });
+    </script>
     <meta property="og:type" content="website" />
     <meta property="og:url" content={CANONICAL_URL} />
     <meta property="og:site_name" content="web-ai-sdk" />
