@@ -32,7 +32,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm build
+      - run: pnpm build:packages
 
       # Opens a "Version Packages" PR while changesets are pending.
       # When that PR is merged, runs `pnpm release` to publish to npm.
