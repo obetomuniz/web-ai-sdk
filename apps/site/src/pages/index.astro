@@ -540,35 +540,31 @@ const supportVersionTone = (value: string) => {
             <a class={ui.permalink} href="#philosophy"><span aria-hidden="true">§</span><span class={ui.srOnly}>Link to Philosophy section</span></a>
           </div>
           <div class={`${ui.twoCol} ${ui.reveal}`} data-reveal>
-            <div class={ui.card}>
-              <div class={ui.philosophyCardBody}>
-                <h3 class={ui.philosophyTitle}><span class={ui.philosophyNum}>01</span> We handle the rough edges.</h3>
-                <p class={ui.philosophyText}>
-                  The built-in AI surface is young. Capability checks, model downloads, abortable streams, session lifetimes, and DOM-rebuild safety are all things you would otherwise re-implement in every component.
-                </p>
-                <ul class={ui.philosophyList}>
-                  <li>Feature detection per package</li>
-                  <li>Session cache keyed by config</li>
-                  <li>AsyncIterable streams plus AbortSignal cleanup</li>
-                  <li>Hot-reload and StrictMode safe</li>
-                  <li>Zero-runtime fallback when API missing</li>
-                </ul>
-              </div>
+            <div>
+              <h3 class={ui.philosophyTitle}><span class={ui.philosophyNum}>01</span> We handle the rough edges.</h3>
+              <p class={ui.philosophyText}>
+                The built-in AI surface is young. Capability checks, model downloads, abortable streams, session lifetimes, and DOM-rebuild safety are all things you would otherwise re-implement in every component.
+              </p>
+              <ul class={ui.philosophyList}>
+                <li>Feature detection per package</li>
+                <li>Session cache keyed by config</li>
+                <li>AsyncIterable streams plus AbortSignal cleanup</li>
+                <li>Hot-reload and StrictMode safe</li>
+                <li>Zero-runtime fallback when API missing</li>
+              </ul>
             </div>
-            <div class={ui.card}>
-              <div class={ui.philosophyCardBody}>
-                <h3 class={ui.philosophyTitle}><span class={ui.philosophyNum}>02</span> You compose the stack.</h3>
-                <p class={ui.philosophyText}>
-                  We ship the lifecycle layer: state machines, streams, abort signals. Framework adapters, polyfills, and UI primitives stay optional so they do not constrain your design system.
-                </p>
-                <ul class={ui.philosophyList}>
-                  <li>Framework-agnostic core</li>
-                  <li>Optional <code>/react</code> subpath</li>
-                  <li>No global state, no providers required</li>
-                  <li>Tree-shakable per package</li>
-                  <li>Pick the layers you need</li>
-                </ul>
-              </div>
+            <div>
+              <h3 class={ui.philosophyTitle}><span class={ui.philosophyNum}>02</span> You compose the stack.</h3>
+              <p class={ui.philosophyText}>
+                We ship the lifecycle layer: state machines, streams, abort signals. Framework adapters, polyfills, and UI primitives stay optional so they do not constrain your design system.
+              </p>
+              <ul class={ui.philosophyList}>
+                <li>Framework-agnostic core</li>
+                <li>Optional <code>/react</code> subpath</li>
+                <li>No global state, no providers required</li>
+                <li>Tree-shakable per package</li>
+                <li>Pick the layers you need</li>
+              </ul>
             </div>
           </div>
           <div class={`${ui.stackDiagram} ${ui.reveal}`} data-reveal>

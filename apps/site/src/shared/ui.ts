@@ -269,16 +269,16 @@ export const whyRawLead =
 export const whyRawText =
   "max-w-[580px] text-[16.5px] leading-[1.8] text-fg-2 max-[640px]:text-[15.5px]";
 
-export const philosophyCardBody = "p-5 max-[480px]:p-4";
-
-export const philosophyTitle = "mb-3 font-sans text-xl tracking-[-0.02em]";
+export const philosophyTitle =
+  "mb-3 font-sans text-[25px] leading-[1.3] tracking-[-0.03em] text-fg max-[640px]:text-[20px]";
 
 export const philosophyNum = "mr-2.5 font-mono text-sm text-accent";
 
-export const philosophyText = "text-[14.5px] text-fg-2";
+export const philosophyText =
+  "text-[16.5px] leading-[1.8] text-fg-2 max-[640px]:text-[15.5px]";
 
 export const philosophyList =
-  "mt-5 grid list-none gap-2 p-0 [&_li]:relative [&_li]:pl-[18px] [&_li]:font-mono [&_li]:text-[12.5px] [&_li]:text-fg-3 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-accent [&_li]:before:content-['✓']";
+  "mt-5 grid list-none gap-2 p-0 [&_li]:relative [&_li]:pl-[20px] [&_li]:font-mono [&_li]:text-[13.5px] [&_li]:text-fg-3 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-accent [&_li]:before:content-['✓']";
 
 export const stackDiagram =
   "relative mt-10 overflow-hidden rounded-lg bg-surface shadow-card";
