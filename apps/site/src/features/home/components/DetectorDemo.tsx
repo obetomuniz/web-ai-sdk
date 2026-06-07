@@ -138,7 +138,7 @@ export const DetectorDemo = () => {
           ) : (
             <span className="text-fg-4 italic">
               {available === false
-                ? "Open in Chrome 138+ or Edge Canary/Dev 147+ to detect."
+                ? "Open in Chrome 138+ or Edge 148+ to detect."
                 : status === "idle"
                   ? "Type or paste text above."
                   : status === "loading"

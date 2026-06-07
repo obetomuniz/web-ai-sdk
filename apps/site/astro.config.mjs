@@ -13,6 +13,30 @@ export default defineConfig({
   site: "https://web-ai-sdk.dev",
   vite: {
     plugins: [tailwindcss()],
+    // Keep a single React instance and optimize every SDK `/react` subpath up
+    // front. Without this, Vite discovers each `@web-ai-sdk/*/react` package
+    // lazily on first visit, re-runs optimizeDeps, and the brief window where
+    // two React copies coexist throws "Invalid hook call".
+    resolve: {
+      dedupe: ["react", "react-dom"],
+    },
+    optimizeDeps: {
+      include: [
+        "react",
+        "react-dom",
+        "react-dom/client",
+        "react/jsx-runtime",
+        "react/jsx-dev-runtime",
+        "@web-ai-sdk/prompt/react",
+        "@web-ai-sdk/summarizer/react",
+        "@web-ai-sdk/translator/react",
+        "@web-ai-sdk/detector/react",
+        "@web-ai-sdk/writer/react",
+        "@web-ai-sdk/rewriter/react",
+        "@web-ai-sdk/proofreader/react",
+        "@web-ai-sdk/webmcp/react",
+      ],
+    },
   },
   integrations: [
     starlight({

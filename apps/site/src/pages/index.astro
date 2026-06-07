@@ -62,7 +62,7 @@ const structuredData = {
       "@id": "https://web-ai-sdk.dev/#sourcecode",
       name: "web-ai-sdk",
       description:
-        "Headless wrappers for the Web's built-in AI APIs. Vanilla TypeScript by default, with optional React hooks.",
+        "Headless wrappers for the Web's built-in AI APIs.",
       url: CANONICAL_URL,
       codeRepository: repoUrl,
       programmingLanguage: ["TypeScript", "JavaScript"],
@@ -218,16 +218,83 @@ const packageRows = [
   },
 ];
 
-const supportRows = [
-  ["prompt", "148+ stable", "138+ Canary/Dev"],
-  ["summarizer", "138+ stable", "138+ stable"],
-  ["translator", "138+ stable", "143+ Canary/Dev"],
-  ["detector", "138+ stable", "147+ Canary/Dev"],
-  ["writer", "137+ flag, OT", "138+ Canary/Dev"],
-  ["rewriter", "137+ flag, OT", "138+ Canary/Dev"],
-  ["proofreader", "141+ flag, OT", "142+ Canary/Dev"],
-  ["webmcp", "146+ flag, OT 149+", "147+ flag"],
-];
+// One distinct icon per primitive (lucide line-art, inner markup only; the
+// shared <svg> wrapper sets size, stroke, and currentColor). Static, authored
+// content rendered via set:html, so no untrusted-HTML concern.
+const packageIcons: Record<string, string> = {
+  prompt: `<path pathLength="1" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>`,
+  webmcp: `<rect pathLength="1" width="7" height="7" x="3" y="3" rx="1"/><rect pathLength="1" width="7" height="7" x="14" y="3" rx="1"/><rect pathLength="1" width="7" height="7" x="14" y="14" rx="1"/><rect pathLength="1" width="7" height="7" x="3" y="14" rx="1"/>`,
+  summarizer: `<line pathLength="1" x1="21" x2="3" y1="6" y2="6"/><line pathLength="1" x1="15" x2="3" y1="12" y2="12"/><line pathLength="1" x1="17" x2="3" y1="18" y2="18"/>`,
+  translator: `<path pathLength="1" d="m5 8 6 6"/><path pathLength="1" d="m4 14 6-6 2-3"/><path pathLength="1" d="M2 5h12"/><path pathLength="1" d="M7 2h1"/><path pathLength="1" d="m22 22-5-10-5 10"/><path pathLength="1" d="M14 18h6"/>`,
+  detector: `<circle pathLength="1" cx="11" cy="11" r="8"/><path pathLength="1" d="m21 21-4.3-4.3"/>`,
+  writer: `<path pathLength="1" d="M12 20h9"/><path pathLength="1" d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/>`,
+  rewriter: `<path pathLength="1" d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path pathLength="1" d="m18 2 4 4-4 4"/><path pathLength="1" d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path pathLength="1" d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path pathLength="1" d="m18 14 4 4-4 4"/>`,
+  proofreader: `<circle pathLength="1" cx="12" cy="12" r="10"/><path pathLength="1" d="m9 12 2 2 4-4"/>`,
+};
+
+// Sources we cite for each availability claim, so readers can verify per cell.
+// Chrome → Chrome for Developers; Edge → Microsoft Learn. WebMCP on Edge has no
+// official Microsoft page yet, so that one cell links nowhere (see note below).
+const chromeDocs: Record<string, string> = {
+  prompt: "https://developer.chrome.com/docs/extensions/ai/prompt-api",
+  summarizer: "https://developer.chrome.com/docs/ai/summarizer-api",
+  translator: "https://developer.chrome.com/docs/ai/translator-api",
+  detector: "https://developer.chrome.com/docs/ai/language-detection",
+  writer: "https://developer.chrome.com/docs/ai/writer-api",
+  rewriter: "https://developer.chrome.com/docs/ai/rewriter-api",
+  proofreader: "https://developer.chrome.com/docs/ai/proofreader-api",
+  webmcp: "https://developer.chrome.com/docs/ai/webmcp",
+};
+
+const edgeDocs: Record<string, string | undefined> = {
+  prompt: "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api",
+  summarizer:
+    "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis",
+  translator:
+    "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/translator-api",
+  detector:
+    "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/languagedetector-api",
+  writer:
+    "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis",
+  rewriter:
+    "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis",
+  proofreader:
+    "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/proofreader-api",
+  webmcp: undefined,
+};
+
+interface SupportRow {
+  pkg: string;
+  chrome: string;
+  chromeHref?: string;
+  edge: string;
+  edgeHref?: string;
+}
+
+const supportRows: SupportRow[] = [
+  { pkg: "prompt", chrome: "148+ stable", edge: "138+ flag, Canary/Dev" },
+  { pkg: "summarizer", chrome: "138+ stable", edge: "138+ stable" },
+  { pkg: "translator", chrome: "138+ stable", edge: "148+ stable" },
+  { pkg: "detector", chrome: "138+ stable", edge: "148+ stable" },
+  { pkg: "writer", chrome: "137+ flag, OT", edge: "138+ flag, Canary/Dev" },
+  { pkg: "rewriter", chrome: "137+ flag, OT", edge: "138+ flag, Canary/Dev" },
+  { pkg: "proofreader", chrome: "141+ flag, OT", edge: "142+ flag, Canary/Dev" },
+  { pkg: "webmcp", chrome: "146+ flag, OT 149+", edge: "147+ flag" },
+].map((row) => ({
+  ...row,
+  chromeHref: chromeDocs[row.pkg],
+  edgeHref: edgeDocs[row.pkg],
+}));
+
+const supportVersionTone = (value: string) => {
+  if (value.includes("stable")) return ui.supportVersionOk;
+  // Canary/Dev previews are also flag-gated; keep the preview tone so the
+  // channel requirement reads as the primary signal, not the flag.
+  if (value.includes("Canary/Dev")) return ui.supportVersionPreview;
+  if (value.includes("flag") || value.includes("OT"))
+    return ui.supportVersionFlag;
+  return ui.supportVersionPreview;
+};
 ---
 
 <!doctype html>
@@ -235,10 +302,53 @@ const supportRows = [
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      // When the page loads with a #hash, jump to the section instantly instead
+      // of animating the global smooth scroll. Sections use content-visibility,
+      // so offscreen ones collapse and the native anchor jump lands short; we
+      // re-assert the jump across frames until the position stabilizes, then
+      // restore smooth scrolling so in-page nav clicks still animate.
+      (function () {
+        if (!location.hash) return;
+        var html = document.documentElement;
+        var previous = html.style.scrollBehavior;
+        html.style.scrollBehavior = "auto";
+        var target;
+        try {
+          target = document.getElementById(
+            decodeURIComponent(location.hash.slice(1)),
+          );
+        } catch (error) {}
+        function restore() {
+          html.style.scrollBehavior = previous;
+        }
+        if (!target) {
+          window.addEventListener("load", function () {
+            requestAnimationFrame(restore);
+          });
+          return;
+        }
+        window.addEventListener("load", function () {
+          var lastTop = NaN;
+          var tries = 0;
+          (function settle() {
+            target.scrollIntoView({ behavior: "auto", block: "start" });
+            var top = Math.round(target.getBoundingClientRect().top);
+            tries += 1;
+            if (top !== lastTop && tries < 30) {
+              lastTop = top;
+              requestAnimationFrame(settle);
+            } else {
+              restore();
+            }
+          })();
+        });
+      })();
+    </script>
     <title>web-ai-sdk · building blocks for the Web's built-in AI</title>
     <meta
       name="description"
-      content="Building blocks for the Web's Built-in AI APIs. Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals. Vanilla TypeScript by default, with optional React hooks."
+      content="Building blocks in TypeScript for the Web's Built-in AI APIs. Composable, no runtime deps, just lifecycle, streaming, and AbortSignals."
     />
     <link rel="icon" type="image/svg+xml" href={pathFromBase("favicon.svg")} />
     <link rel="canonical" href={CANONICAL_URL} />
@@ -292,7 +402,7 @@ const supportRows = [
     <meta property="og:url" content={CANONICAL_URL} />
     <meta property="og:site_name" content="web-ai-sdk" />
     <meta property="og:title" content="web-ai-sdk · Building blocks for the Web's built-in AI" />
-    <meta property="og:description" content="Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals. Vanilla TypeScript by default, with optional React hooks." />
+    <meta property="og:description" content="Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals." />
     <meta property="og:image" content={ogImageUrl} />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
@@ -346,8 +456,7 @@ const supportRows = [
             <span class={ui.caret}></span>
           </h1>
           <p class={`${ui.subhead} ${heroTextShadow}`}>
-            Building blocks for the Web's Built-in AI APIs. Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.
-            <span class={ui.subheadSub}>Vanilla TypeScript by default, with optional React hooks.</span>
+            Building blocks in TypeScript for the Web's Built-in AI APIs.<br />Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.
           </p>
           <a class={`${ui.pkgDocs} ${heroTextShadow} w-fit`} href="#how">
             See the same task: 15 lines with the SDK vs 37 with the raw APIs
@@ -379,22 +488,15 @@ const supportRows = [
             </div>
             <a class={ui.permalink} href="#why-raw"><span aria-hidden="true">§</span><span class={ui.srOnly}>Link to the why-not-the-raw-APIs section</span></a>
           </div>
-          <div class={`${ui.twoCol} ${ui.reveal}`} data-reveal>
-            <div class={ui.card}>
-              <div class={ui.philosophyCardBody}>
-                <h3 class={ui.philosophyTitle}>The browser APIs are powerful but young.</h3>
-                <p class={ui.philosophyText}>
-                  Capability checks, model downloads, abortable streams, session cleanup, and no-op fallbacks are the parts every app needs before it can show a useful interface.
-                </p>
-              </div>
-            </div>
-            <div class={ui.card}>
-              <div class={ui.philosophyCardBody}>
-                <h3 class={ui.philosophyTitle}>The SDK keeps that lifecycle small.</h3>
-                <p class={ui.philosophyText}>
-                  Each package wraps one platform surface and exposes the same feature-detected contract to vanilla TypeScript and React hooks.
-                </p>
-              </div>
+          <div class={`${ui.whyRawGrid} ${ui.reveal}`} data-reveal>
+            <p class={ui.whyRawLead}>
+              You can, and nothing here stops you. The browser's built-in AI APIs are the foundation.
+            </p>
+            <div>
+              <p class={ui.whyRawText}>
+                web-ai-sdk owns the thin, repetitive lifecycle layer you would otherwise rewrite in every app: capability checks, model downloads, session reuse, streaming with chunk smoothing, AbortSignal cleanup, opt-in result caching, and feature-detected fallbacks. Drop down to the raw APIs whenever you want.
+              </p>
+              <a class={`${ui.pkgDocs} mt-5`} href="#philosophy">See why it's composable <span class={ui.pkgDocsArrow}>→</span></a>
             </div>
           </div>
         </div>
@@ -414,7 +516,9 @@ const supportRows = [
             packageRows.map((pkg) => (
               <div class={`${ui.pkgRow} ${ui.reveal}`} data-reveal id={pkg.slug}>
                 <div class={ui.pkgLeft}>
-                  <div class={ui.pkgIcon} aria-hidden="true">{pkg.title.slice(0, 1)}</div>
+                  <div class={ui.pkgIcon} aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={packageIcons[pkg.slug] ?? ""} />
+                  </div>
                   <div class={ui.pkgName}><span class={ui.scope}>@web-ai-sdk/</span>{pkg.title}</div>
                   <div class={ui.pkgTag}>{pkg.tag}</div>
                   <ul class={ui.pkgBullets}>
@@ -455,35 +559,31 @@ const supportRows = [
             <a class={ui.permalink} href="#philosophy"><span aria-hidden="true">§</span><span class={ui.srOnly}>Link to Philosophy section</span></a>
           </div>
           <div class={`${ui.twoCol} ${ui.reveal}`} data-reveal>
-            <div class={ui.card}>
-              <div class={ui.philosophyCardBody}>
-                <h3 class={ui.philosophyTitle}><span class={ui.philosophyNum}>01</span> We handle the rough edges.</h3>
-                <p class={ui.philosophyText}>
-                  The built-in AI surface is young. Capability checks, model downloads, abortable streams, session lifetimes, and DOM-rebuild safety are all things you would otherwise re-implement in every component.
-                </p>
-                <ul class={ui.philosophyList}>
-                  <li>Feature detection per package</li>
-                  <li>Session cache keyed by config</li>
-                  <li>AsyncIterable streams plus AbortSignal cleanup</li>
-                  <li>Hot-reload and StrictMode safe</li>
-                  <li>Zero-runtime fallback when API missing</li>
-                </ul>
-              </div>
+            <div>
+              <h3 class={ui.philosophyTitle}><span class={ui.philosophyNum}>01</span> We handle the rough edges.</h3>
+              <p class={ui.philosophyText}>
+                The built-in AI surface is young. Capability checks, model downloads, abortable streams, session lifetimes, and DOM-rebuild safety are all things you would otherwise re-implement in every component.
+              </p>
+              <ul class={ui.philosophyList}>
+                <li>Feature detection per package</li>
+                <li>Session cache keyed by config</li>
+                <li>AsyncIterable streams plus AbortSignal cleanup</li>
+                <li>Hot-reload and StrictMode safe</li>
+                <li>Zero-runtime fallback when API missing</li>
+              </ul>
             </div>
-            <div class={ui.card}>
-              <div class={ui.philosophyCardBody}>
-                <h3 class={ui.philosophyTitle}><span class={ui.philosophyNum}>02</span> You compose the stack.</h3>
-                <p class={ui.philosophyText}>
-                  We ship the lifecycle layer: state machines, streams, abort signals. Framework adapters, polyfills, and UI primitives stay optional so they do not constrain your design system.
-                </p>
-                <ul class={ui.philosophyList}>
-                  <li>Framework-agnostic core</li>
-                  <li>Optional <code>/react</code> subpath</li>
-                  <li>No global state, no providers required</li>
-                  <li>Tree-shakable per package</li>
-                  <li>Pick the layers you need</li>
-                </ul>
-              </div>
+            <div>
+              <h3 class={ui.philosophyTitle}><span class={ui.philosophyNum}>02</span> You compose the stack.</h3>
+              <p class={ui.philosophyText}>
+                We ship the lifecycle layer: state machines, streams, abort signals. Framework adapters, polyfills, and UI primitives stay optional so they do not constrain your design system.
+              </p>
+              <ul class={ui.philosophyList}>
+                <li>Framework-agnostic core</li>
+                <li>Optional <code>/react</code> subpath</li>
+                <li>No global state, no providers required</li>
+                <li>Tree-shakable per package</li>
+                <li>Pick the layers you need</li>
+              </ul>
             </div>
           </div>
           <div class={`${ui.stackDiagram} ${ui.reveal}`} data-reveal>
@@ -563,11 +663,23 @@ const supportRows = [
                   </tr>
                 </thead>
                 <tbody>
-                  {supportRows.map(([pkg, chrome, edge]) => (
+                  {supportRows.map((row) => (
                     <tr>
-                      <th class={ui.supportRowHead}><span class={ui.scope}>@web-ai-sdk/</span>{pkg}</th>
-                      <td><span class={ui.supportVersion}>{chrome}</span></td>
-                      <td><span class={ui.supportVersion}>{edge}</span></td>
+                      <th class={ui.supportRowHead}><span class={ui.scope}>@web-ai-sdk/</span>{row.pkg}</th>
+                      <td>
+                        {row.chromeHref ? (
+                          <a class={`${ui.supportVersion} ${ui.supportVersionLink} ${supportVersionTone(row.chrome)}`} href={row.chromeHref} target="_blank" rel="noreferrer" title="View the source for this availability claim">{row.chrome}</a>
+                        ) : (
+                          <span class={`${ui.supportVersion} ${supportVersionTone(row.chrome)}`}>{row.chrome}</span>
+                        )}
+                      </td>
+                      <td>
+                        {row.edgeHref ? (
+                          <a class={`${ui.supportVersion} ${ui.supportVersionLink} ${supportVersionTone(row.edge)}`} href={row.edgeHref} target="_blank" rel="noreferrer" title="View the source for this availability claim">{row.edge}</a>
+                        ) : (
+                          <span class={`${ui.supportVersion} ${supportVersionTone(row.edge)}`}>{row.edge}</span>
+                        )}
+                      </td>
                       <td><span class={`${ui.supportPill} ${ui.supportPillWarn}`}>no-op fallback</span></td>
                       <td><span class={`${ui.supportPill} ${ui.supportPillWarn}`}>no-op fallback</span></td>
                     </tr>
@@ -576,15 +688,13 @@ const supportRows = [
               </table>
             </div>
             <div class={ui.supportNote}>
-              Versions reflect when the underlying platform API became available. Wrapper exports stay stable across all browsers. <strong>OT</strong> = origin trial.
-              <br />
-              On Edge, only the Summarizer ships in stable. Prompt, Translator, Language Detector, and WebMCP are Canary/Dev-only or flag-gated at the versions shown.
+              Each version links to its source. <strong>stable</strong> = on by default; <strong>Canary/Dev</strong> = preview channel, needs the matching flag; <strong>flag</strong> = normal channel, behind a flag; <strong>OT</strong> = <a class="underline underline-offset-2" href="https://developer.chrome.com/docs/web-platform/origin-trials" target="_blank" rel="noreferrer">origin trial</a>. WebMCP/Edge is empirical (no official page yet).
             </div>
           </div>
         </div>
       </section>
 
-      <section class={ui.section} data-section="start">
+      <section class={`${ui.section} pb-[calc(var(--section-py)*2)]`} data-section="start">
         <div class={ui.container}>
           <div class={`${ui.ctaBlock} ${ui.sectionAnchor} ${ui.reveal}`} data-reveal id="start">
             <div class={`${ui.sectionEyebrow} mb-5 justify-center`}>05 · ship it</div>

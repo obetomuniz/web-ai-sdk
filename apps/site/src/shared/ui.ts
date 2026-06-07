@@ -191,10 +191,7 @@ export const heroTitle =
   "flex flex-nowrap items-baseline gap-[0.1em] font-mono text-[clamp(54px,9vw,112px)] leading-[0.95] font-medium tracking-[-0.04em] max-[640px]:text-[56px] max-[480px]:text-[44px]";
 
 export const subhead =
-  "max-w-[640px] text-[clamp(17px,1.6vw,20px)] leading-[1.5] tracking-[-0.01em] text-fg-2 [&_strong]:font-medium [&_strong]:text-fg";
-
-export const subheadSub =
-  "mt-2 block text-[clamp(14px,1.2vw,15.5px)] leading-[1.55] text-fg-3";
+  "max-w-[820px] text-[clamp(17px,1.6vw,20px)] leading-[1.5] tracking-[-0.01em] text-fg-2 [&_strong]:font-medium [&_strong]:text-fg";
 
 export const ctaRow =
   "mt-2 flex flex-wrap items-center gap-3 max-[640px]:gap-2.5";
@@ -228,12 +225,12 @@ export const badgeValAccent = "text-accent-bright";
 export const pkgRow =
   "grid scroll-mt-[calc(var(--nav-height)+1.5rem)] grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-start gap-16 max-[880px]:grid-cols-1 max-[880px]:gap-8 [&+&]:mt-24 max-[880px]:[&+&]:mt-16";
 
-export const pkgLeft = "min-w-0 pt-2";
+export const pkgLeft = "group min-w-0 pt-2";
 
 export const pkgRight = "min-w-0";
 
 export const pkgIcon =
-  "mb-6 grid size-9 place-items-center rounded-sm border border-accent-line bg-accent-soft text-accent";
+  "mb-6 grid size-9 place-items-center rounded-sm border border-accent-line bg-accent-soft text-accent transition-[transform,background-color,border-color] duration-300 ease-out group-hover:-translate-y-0.5 group-hover:border-accent group-hover:bg-[color-mix(in_oklch,var(--color-accent)_16%,transparent)] [&_svg_*]:[stroke-dasharray:1] group-hover:[&_svg_*]:animate-icon-stream";
 
 export const pkgName =
   "mb-2.5 font-mono text-[22px] tracking-[-0.02em] text-fg";
@@ -244,7 +241,7 @@ export const pkgTag =
   "mb-6 max-w-[30ch] text-[17px] tracking-[-0.01em] text-fg-2";
 
 export const pkgBullets =
-  "mb-6 grid list-none gap-[9px] p-0 [&_li]:flex [&_li]:items-start [&_li]:gap-3 [&_li]:text-sm [&_li]:text-fg-2 [&_li]:before:mt-[11px] [&_li]:before:h-px [&_li]:before:w-1.5 [&_li]:before:shrink-0 [&_li]:before:bg-accent [&_li]:before:content-[''] [&_b]:font-medium [&_b]:text-fg";
+  "mb-6 grid list-none gap-[9px] p-0 [&_li]:flex [&_li]:items-start [&_li]:gap-3 [&_li]:text-sm [&_li]:text-fg-2 [&_li]:before:mt-[7px] [&_li]:before:size-1 [&_li]:before:shrink-0 [&_li]:before:rounded-full [&_li]:before:bg-accent [&_li]:before:content-[''] [&_b]:font-medium [&_b]:text-fg";
 
 export const pkgActions = "flex w-fit max-w-full flex-col items-start gap-4";
 
@@ -263,16 +260,25 @@ export const pkgDocsArrow =
 
 export const twoCol = "grid grid-cols-2 gap-8 max-[880px]:grid-cols-1";
 
-export const philosophyCardBody = "p-5 max-[480px]:p-4";
+export const whyRawGrid =
+  "grid max-w-[1100px] grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-x-14 gap-y-6 max-[880px]:grid-cols-1";
 
-export const philosophyTitle = "mb-3 font-sans text-xl tracking-[-0.02em]";
+export const whyRawLead =
+  "max-w-[520px] text-[25px] leading-[1.35] tracking-[-0.03em] text-fg max-[640px]:text-[20px]";
+
+export const whyRawText =
+  "max-w-[580px] text-[16.5px] leading-[1.8] text-fg-2 max-[640px]:text-[15.5px]";
+
+export const philosophyTitle =
+  "mb-3 font-sans text-[25px] leading-[1.3] tracking-[-0.03em] text-fg max-[640px]:text-[20px]";
 
 export const philosophyNum = "mr-2.5 font-mono text-sm text-accent";
 
-export const philosophyText = "text-[14.5px] text-fg-2";
+export const philosophyText =
+  "text-[16.5px] leading-[1.8] text-fg-2 max-[640px]:text-[15.5px]";
 
 export const philosophyList =
-  "mt-5 grid list-none gap-2 p-0 [&_li]:relative [&_li]:pl-[18px] [&_li]:font-mono [&_li]:text-[12.5px] [&_li]:text-fg-3 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-accent [&_li]:before:content-['✓']";
+  "mt-5 grid list-none gap-2 p-0 [&_li]:relative [&_li]:pl-[20px] [&_li]:font-mono [&_li]:text-[13.5px] [&_li]:text-fg-3 [&_li]:before:absolute [&_li]:before:left-0 [&_li]:before:text-accent [&_li]:before:content-['✓']";
 
 export const stackDiagram =
   "relative mt-10 overflow-hidden rounded-lg bg-surface shadow-card";
@@ -317,14 +323,27 @@ export const supportWrap =
   "overflow-x-auto overflow-y-hidden [-webkit-overflow-scrolling:touch]";
 
 export const supportTable =
-  "min-w-[560px] w-full border-separate border-spacing-0 overflow-hidden rounded-lg bg-surface shadow-card font-mono text-[13px] [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap [&_td]:border-r [&_td]:border-b [&_td]:border-hairline [&_td]:px-5 [&_td]:py-3.5 [&_td]:align-middle [&_td]:text-fg-2 [&_td:last-child]:border-r-0 [&_th]:border-r [&_th]:border-b [&_th]:border-hairline [&_th]:px-5 [&_th]:py-3.5 [&_th]:text-left [&_th:last-child]:border-r-0 [&_tr:last-child_td]:border-b-0 [&_tr:last-child_th]:border-b-0";
+  "min-w-[560px] w-full border-separate border-spacing-0 overflow-hidden rounded-lg bg-surface shadow-card font-mono text-[13px] [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap [&_td]:border-r [&_td]:border-b [&_td]:border-hairline [&_td]:px-5 [&_td]:py-3.5 [&_td]:align-middle [&_td]:text-fg-2 [&_td:last-child]:border-r-0 [&_th]:border-r [&_th]:border-b [&_th]:border-hairline [&_th]:px-5 [&_th]:py-3.5 [&_th]:text-left [&_th:last-child]:border-r-0 [&_tr:last-child_td]:border-b-0 [&_tr:last-child_th]:border-b-0 [&_td]:transition-colors [&_th]:transition-colors [&_tbody_tr:hover_td]:bg-surface-2 [&_tbody_tr:hover_th]:bg-surface-3";
 
 export const supportHead =
   "bg-surface-2 text-[11px] font-medium uppercase tracking-[0.1em] text-fg-4";
 
 export const supportRowHead = "bg-surface-2 text-[12.5px] font-normal text-fg";
 
-export const supportVersion = "text-accent";
+export const supportVersion =
+  "inline-block rounded-sm bg-surface-3 px-2 py-[3px] text-[11px] tracking-[0.04em]";
+
+export const supportVersionOk =
+  "bg-[color-mix(in_oklch,var(--color-ok)_15%,var(--color-surface-3))] text-ok";
+
+export const supportVersionPreview =
+  "bg-[color-mix(in_oklch,var(--color-warn)_18%,var(--color-surface-3))] text-warn";
+
+export const supportVersionFlag =
+  "bg-[color-mix(in_oklch,var(--color-fg-4)_18%,var(--color-surface-3))] text-fg-3";
+
+export const supportVersionLink =
+  "no-underline transition-colors hover:underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 export const supportPill =
   "inline-block rounded-sm bg-surface-3 px-2 py-[3px] text-[11px] tracking-[0.04em] text-fg-3";
@@ -336,7 +355,7 @@ export const supportPillWarn =
   "bg-[color-mix(in_oklch,var(--color-warn)_18%,var(--color-surface-3))] text-warn";
 
 export const supportNote =
-  "mt-3.5 font-mono text-[11.5px] leading-[1.6] tracking-[0.02em] text-fg-4";
+  "mt-3 font-mono text-[10.5px] leading-[1.5] tracking-[0.02em] text-fg-4";
 
 export const ctaBlock =
   "rounded-lg bg-surface shadow-card bg-[radial-gradient(600px_200px_at_50%_0%,var(--color-accent-soft),transparent_70%)] px-14 py-14 text-center max-[880px]:px-6 max-[880px]:py-9";

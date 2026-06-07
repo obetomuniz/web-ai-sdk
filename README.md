@@ -6,7 +6,7 @@ A small, focused monorepo of framework-agnostic packages that smooth over the gn
 
 ## What it is
 
-**`web-ai-sdk`** ships one package per browser capability. Zero runtime dependencies. Vanilla TypeScript by default, with optional React hooks. That's it. The SDK tracks a moving browser spec and intentionally stays out of the way of *how* you build an app.
+**`web-ai-sdk`** ships one package per browser capability. Zero runtime dependencies. Written in TypeScript. That's it. The SDK tracks a moving browser spec and intentionally stays out of the way of *how* you build an app.
 
 Compositions that bond multiple primitives (block-level DOM translation,
 article-aware summarization, detect-then-summarize chains) are
