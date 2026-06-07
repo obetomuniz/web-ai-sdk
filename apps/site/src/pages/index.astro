@@ -62,7 +62,7 @@ const structuredData = {
       "@id": "https://web-ai-sdk.dev/#sourcecode",
       name: "web-ai-sdk",
       description:
-        "Headless wrappers for the Web's built-in AI APIs. Vanilla TypeScript by default, with optional React hooks.",
+        "Headless wrappers for the Web's built-in AI APIs.",
       url: CANONICAL_URL,
       codeRepository: repoUrl,
       programmingLanguage: ["TypeScript", "JavaScript"],
@@ -218,16 +218,69 @@ const packageRows = [
   },
 ];
 
-const supportRows = [
-  ["prompt", "148+ stable", "138+ Canary/Dev"],
-  ["summarizer", "138+ stable", "138+ stable"],
-  ["translator", "138+ stable", "143+ Canary/Dev"],
-  ["detector", "138+ stable", "147+ Canary/Dev"],
-  ["writer", "137+ flag, OT", "138+ Canary/Dev"],
-  ["rewriter", "137+ flag, OT", "138+ Canary/Dev"],
-  ["proofreader", "141+ flag, OT", "142+ Canary/Dev"],
-  ["webmcp", "146+ flag, OT 149+", "147+ flag"],
-];
+// Sources we cite for each availability claim, so readers can verify per cell.
+// Chrome → Chrome for Developers; Edge → Microsoft Learn. WebMCP on Edge has no
+// official Microsoft page yet, so that one cell links nowhere (see note below).
+const chromeDocs: Record<string, string> = {
+  prompt: "https://developer.chrome.com/docs/extensions/ai/prompt-api",
+  summarizer: "https://developer.chrome.com/docs/ai/summarizer-api",
+  translator: "https://developer.chrome.com/docs/ai/translator-api",
+  detector: "https://developer.chrome.com/docs/ai/language-detection",
+  writer: "https://developer.chrome.com/docs/ai/writer-api",
+  rewriter: "https://developer.chrome.com/docs/ai/rewriter-api",
+  proofreader: "https://developer.chrome.com/docs/ai/proofreader-api",
+  webmcp: "https://developer.chrome.com/docs/ai/webmcp",
+};
+
+const edgeDocs: Record<string, string | undefined> = {
+  prompt: "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api",
+  summarizer:
+    "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis",
+  translator:
+    "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/translator-api",
+  detector:
+    "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/languagedetector-api",
+  writer:
+    "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis",
+  rewriter:
+    "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis",
+  proofreader:
+    "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/proofreader-api",
+  webmcp: undefined,
+};
+
+interface SupportRow {
+  pkg: string;
+  chrome: string;
+  chromeHref?: string;
+  edge: string;
+  edgeHref?: string;
+}
+
+const supportRows: SupportRow[] = [
+  { pkg: "prompt", chrome: "148+ stable", edge: "138+ flag, Canary/Dev" },
+  { pkg: "summarizer", chrome: "138+ stable", edge: "138+ stable" },
+  { pkg: "translator", chrome: "138+ stable", edge: "148+ stable" },
+  { pkg: "detector", chrome: "138+ stable", edge: "148+ stable" },
+  { pkg: "writer", chrome: "137+ flag, OT", edge: "138+ flag, Canary/Dev" },
+  { pkg: "rewriter", chrome: "137+ flag, OT", edge: "138+ flag, Canary/Dev" },
+  { pkg: "proofreader", chrome: "141+ flag, OT", edge: "142+ flag, Canary/Dev" },
+  { pkg: "webmcp", chrome: "146+ flag, OT 149+", edge: "147+ flag" },
+].map((row) => ({
+  ...row,
+  chromeHref: chromeDocs[row.pkg],
+  edgeHref: edgeDocs[row.pkg],
+}));
+
+const supportVersionTone = (value: string) => {
+  if (value.includes("stable")) return ui.supportVersionOk;
+  // Canary/Dev previews are also flag-gated; keep the preview tone so the
+  // channel requirement reads as the primary signal, not the flag.
+  if (value.includes("Canary/Dev")) return ui.supportVersionPreview;
+  if (value.includes("flag") || value.includes("OT"))
+    return ui.supportVersionFlag;
+  return ui.supportVersionPreview;
+};
 ---
 
 <!doctype html>
@@ -235,10 +288,53 @@ const supportRows = [
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      // When the page loads with a #hash, jump to the section instantly instead
+      // of animating the global smooth scroll. Sections use content-visibility,
+      // so offscreen ones collapse and the native anchor jump lands short; we
+      // re-assert the jump across frames until the position stabilizes, then
+      // restore smooth scrolling so in-page nav clicks still animate.
+      (function () {
+        if (!location.hash) return;
+        var html = document.documentElement;
+        var previous = html.style.scrollBehavior;
+        html.style.scrollBehavior = "auto";
+        var target;
+        try {
+          target = document.getElementById(
+            decodeURIComponent(location.hash.slice(1)),
+          );
+        } catch (error) {}
+        function restore() {
+          html.style.scrollBehavior = previous;
+        }
+        if (!target) {
+          window.addEventListener("load", function () {
+            requestAnimationFrame(restore);
+          });
+          return;
+        }
+        window.addEventListener("load", function () {
+          var lastTop = NaN;
+          var tries = 0;
+          (function settle() {
+            target.scrollIntoView({ behavior: "auto", block: "start" });
+            var top = Math.round(target.getBoundingClientRect().top);
+            tries += 1;
+            if (top !== lastTop && tries < 30) {
+              lastTop = top;
+              requestAnimationFrame(settle);
+            } else {
+              restore();
+            }
+          })();
+        });
+      })();
+    </script>
     <title>web-ai-sdk · building blocks for the Web's built-in AI</title>
     <meta
       name="description"
-      content="Building blocks for the Web's Built-in AI APIs. Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals. Vanilla TypeScript by default, with optional React hooks."
+      content="Building blocks in TypeScript for the Web's Built-in AI APIs. Composable, no runtime deps, just lifecycle, streaming, and AbortSignals."
     />
     <link rel="icon" type="image/svg+xml" href={pathFromBase("favicon.svg")} />
     <link rel="canonical" href={CANONICAL_URL} />
@@ -292,7 +388,7 @@ const supportRows = [
     <meta property="og:url" content={CANONICAL_URL} />
     <meta property="og:site_name" content="web-ai-sdk" />
     <meta property="og:title" content="web-ai-sdk · Building blocks for the Web's built-in AI" />
-    <meta property="og:description" content="Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals. Vanilla TypeScript by default, with optional React hooks." />
+    <meta property="og:description" content="Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals." />
     <meta property="og:image" content={ogImageUrl} />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
@@ -346,8 +442,7 @@ const supportRows = [
             <span class={ui.caret}></span>
           </h1>
           <p class={`${ui.subhead} ${heroTextShadow}`}>
-            Building blocks for the Web's Built-in AI APIs. Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.
-            <span class={ui.subheadSub}>Vanilla TypeScript by default, with optional React hooks.</span>
+            Building blocks in TypeScript for the Web's Built-in AI APIs.<br />Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.
           </p>
           <a class={`${ui.pkgDocs} ${heroTextShadow} w-fit`} href="#how">
             See the same task: 15 lines with the SDK vs 37 with the raw APIs
@@ -379,23 +474,13 @@ const supportRows = [
             </div>
             <a class={ui.permalink} href="#why-raw"><span aria-hidden="true">§</span><span class={ui.srOnly}>Link to the why-not-the-raw-APIs section</span></a>
           </div>
-          <div class={`${ui.twoCol} ${ui.reveal}`} data-reveal>
-            <div class={ui.card}>
-              <div class={ui.philosophyCardBody}>
-                <h3 class={ui.philosophyTitle}>The browser APIs are powerful but young.</h3>
-                <p class={ui.philosophyText}>
-                  Capability checks, model downloads, abortable streams, session cleanup, and no-op fallbacks are the parts every app needs before it can show a useful interface.
-                </p>
-              </div>
-            </div>
-            <div class={ui.card}>
-              <div class={ui.philosophyCardBody}>
-                <h3 class={ui.philosophyTitle}>The SDK keeps that lifecycle small.</h3>
-                <p class={ui.philosophyText}>
-                  Each package wraps one platform surface and exposes the same feature-detected contract to vanilla TypeScript and React hooks.
-                </p>
-              </div>
-            </div>
+          <div class={`${ui.whyRawGrid} ${ui.reveal}`} data-reveal>
+            <p class={ui.whyRawLead}>
+              You can, and nothing here stops you. The browser's built-in AI APIs are the foundation.
+            </p>
+            <p class={ui.whyRawText}>
+              web-ai-sdk owns the thin, repetitive lifecycle layer you would otherwise rewrite in every app: capability checks, model downloads, session reuse, streaming with chunk smoothing, AbortSignal cleanup, opt-in result caching, and feature-detected fallbacks. Drop down to the raw APIs whenever you want.
+            </p>
           </div>
         </div>
       </section>
@@ -563,11 +648,23 @@ const supportRows = [
                   </tr>
                 </thead>
                 <tbody>
-                  {supportRows.map(([pkg, chrome, edge]) => (
+                  {supportRows.map((row) => (
                     <tr>
-                      <th class={ui.supportRowHead}><span class={ui.scope}>@web-ai-sdk/</span>{pkg}</th>
-                      <td><span class={ui.supportVersion}>{chrome}</span></td>
-                      <td><span class={ui.supportVersion}>{edge}</span></td>
+                      <th class={ui.supportRowHead}><span class={ui.scope}>@web-ai-sdk/</span>{row.pkg}</th>
+                      <td>
+                        {row.chromeHref ? (
+                          <a class={`${ui.supportVersion} ${ui.supportVersionLink} ${supportVersionTone(row.chrome)}`} href={row.chromeHref} target="_blank" rel="noreferrer" title="View the source for this availability claim">{row.chrome}</a>
+                        ) : (
+                          <span class={`${ui.supportVersion} ${supportVersionTone(row.chrome)}`}>{row.chrome}</span>
+                        )}
+                      </td>
+                      <td>
+                        {row.edgeHref ? (
+                          <a class={`${ui.supportVersion} ${ui.supportVersionLink} ${supportVersionTone(row.edge)}`} href={row.edgeHref} target="_blank" rel="noreferrer" title="View the source for this availability claim">{row.edge}</a>
+                        ) : (
+                          <span class={`${ui.supportVersion} ${supportVersionTone(row.edge)}`}>{row.edge}</span>
+                        )}
+                      </td>
                       <td><span class={`${ui.supportPill} ${ui.supportPillWarn}`}>no-op fallback</span></td>
                       <td><span class={`${ui.supportPill} ${ui.supportPillWarn}`}>no-op fallback</span></td>
                     </tr>
@@ -576,15 +673,13 @@ const supportRows = [
               </table>
             </div>
             <div class={ui.supportNote}>
-              Versions reflect when the underlying platform API became available. Wrapper exports stay stable across all browsers. <strong>OT</strong> = origin trial.
-              <br />
-              On Edge, only the Summarizer ships in stable. Prompt, Translator, Language Detector, and WebMCP are Canary/Dev-only or flag-gated at the versions shown.
+              Each version links to its source. <strong>stable</strong> = on by default; <strong>Canary/Dev</strong> = preview channel, needs the matching flag; <strong>flag</strong> = normal channel, behind a flag; <strong>OT</strong> = <a class="underline underline-offset-2" href="https://developer.chrome.com/docs/web-platform/origin-trials" target="_blank" rel="noreferrer">origin trial</a>. WebMCP/Edge is empirical (no official page yet).
             </div>
           </div>
         </div>
       </section>
 
-      <section class={ui.section} data-section="start">
+      <section class={`${ui.section} pb-[calc(var(--section-py)*2)]`} data-section="start">
         <div class={ui.container}>
           <div class={`${ui.ctaBlock} ${ui.sectionAnchor} ${ui.reveal}`} data-reveal id="start">
             <div class={`${ui.sectionEyebrow} mb-5 justify-center`}>05 · ship it</div>

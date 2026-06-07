@@ -1,9 +1,9 @@
 ---
 title: web-ai-sdk
-description: Building blocks for the Web's built-in AI APIs. Lifecycle, streaming, AbortSignals. Vanilla TypeScript by default, with optional React hooks.
+description: Building blocks in TypeScript for the Web's built-in AI APIs. Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.
 template: splash
 hero:
-  tagline: Building blocks for the Web's built-in AI APIs. Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals.
+  tagline: Building blocks in TypeScript for the Web's built-in AI APIs. Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.
   actions:
     - text: Browser support
       link: /docs/browser-support/
@@ -21,7 +21,7 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 
 ## What it is
 
-**`web-ai-sdk`** ships building blocks for the Web's Built-in AI APIs. One package per browser capability (Prompt, WebMCP, Summarizer, Translator, Detector, Writer, Rewriter, Proofreader). Zero runtime dependencies. Vanilla TypeScript by default, with optional React hooks. See [Architecture](/docs/architecture/) for the model.
+**`web-ai-sdk`** ships building blocks for the Web's Built-in AI APIs. One package per browser capability (Prompt, WebMCP, Summarizer, Translator, Detector, Writer, Rewriter, Proofreader). Zero runtime dependencies. Written in TypeScript. See [Architecture](/docs/architecture/) for the model.
 
 You can always use the raw browser APIs directly; the SDK doesn't replace or hide them. It just owns the lifecycle layer around them (session reuse, streaming, AbortSignals, feature-detected fallbacks) and is built to get thinner as the platform matures.
 
