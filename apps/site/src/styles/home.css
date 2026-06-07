@@ -61,6 +61,25 @@
       opacity: 0;
     }
   }
+
+  /* Hover "stream then settle" loop for the package icons. Paths use
+     pathLength="1", so a normalized dash draws every shape consistently. */
+  --animate-icon-stream: icon-stream 1.6s ease-in-out;
+
+  @keyframes icon-stream {
+    0% {
+      stroke-dashoffset: 0;
+    }
+    12% {
+      stroke-dashoffset: 1;
+    }
+    65% {
+      stroke-dashoffset: 0;
+    }
+    100% {
+      stroke-dashoffset: 0;
+    }
+  }
 }
 
 @layer base {

@@ -54,6 +54,50 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
   <rect width="${W}" height="${H}" fill="url(#glow-top)"/>
   <rect width="${W}" height="${H}" fill="url(#glow-corner)"/>
 
+  <!-- Node-mesh motif, echoing the home page's animated mesh background.
+       Confined to the right column so it reads as texture behind the
+       left-aligned wordmark and tagline. -->
+  <g>
+    <g stroke="${PAPER}" stroke-opacity="0.10" stroke-width="1">
+      <line x1="965" y1="110" x2="1065" y2="95"/>
+      <line x1="1065" y1="95" x2="1135" y2="160"/>
+      <line x1="965" y1="110" x2="985" y2="205"/>
+      <line x1="1065" y1="95" x2="1085" y2="215"/>
+      <line x1="985" y1="205" x2="1085" y2="215"/>
+      <line x1="1135" y1="160" x2="1085" y2="215"/>
+      <line x1="985" y1="205" x2="940" y2="300"/>
+      <line x1="1085" y1="215" x2="1050" y2="300"/>
+      <line x1="1135" y1="160" x2="1140" y2="270"/>
+      <line x1="1050" y1="300" x2="1140" y2="270"/>
+      <line x1="940" y1="300" x2="1050" y2="300"/>
+      <line x1="940" y1="300" x2="985" y2="390"/>
+      <line x1="1050" y1="300" x2="1095" y2="380"/>
+      <line x1="985" y1="390" x2="1095" y2="380"/>
+      <line x1="1140" y1="270" x2="1095" y2="380"/>
+      <line x1="985" y1="390" x2="1040" y2="455"/>
+      <line x1="1095" y1="380" x2="1040" y2="455"/>
+      <line x1="1095" y1="380" x2="1140" y2="430"/>
+      <line x1="1140" y1="270" x2="1140" y2="430"/>
+      <line x1="1050" y1="300" x2="985" y2="390"/>
+    </g>
+    <g fill="${MUTED}" fill-opacity="0.55">
+      <rect x="963" y="108" width="4" height="4"/>
+      <rect x="1133" y="158" width="4" height="4"/>
+      <rect x="983" y="203" width="4" height="4"/>
+      <rect x="1083" y="213" width="4" height="4"/>
+      <rect x="938" y="298" width="4" height="4"/>
+      <rect x="1138" y="268" width="4" height="4"/>
+      <rect x="983" y="388" width="4" height="4"/>
+      <rect x="1038" y="453" width="4" height="4"/>
+      <rect x="1138" y="428" width="4" height="4"/>
+    </g>
+    <g fill="${ACCENT_HI}" fill-opacity="0.9">
+      <rect x="1062" y="92" width="6" height="6"/>
+      <rect x="1047" y="297" width="6" height="6"/>
+      <rect x="1092" y="377" width="6" height="6"/>
+    </g>
+  </g>
+
   <!-- Brand mark, top-left signature. Canonical 96×64 geometry scaled to
        ~144×96 (×1.5) so the brackets, ring, stem and spark dot all stay
        legible. Pulled tight into the top-left corner so the whole card
@@ -81,8 +125,8 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
   <rect x="828" y="349" width="66" height="11" rx="2" fill="${ACCENT}"/>
 
   <!-- Tagline -->
-  <text x="70" y="425" font-family="${SANS}" font-weight="600" font-size="32" fill="${PAPER}">Building blocks <tspan font-weight="400" fill="${PAPER_2}">for the Web's built-in AI APIs.</tspan></text>
-  <text x="70" y="462" font-family="${SANS}" font-weight="400" font-size="22" fill="${MUTED}">Composable. No runtime deps. Streaming and AbortSignals built in.</text>
+  <text x="70" y="425" font-family="${SANS}" font-weight="600" font-size="31" fill="${PAPER}">Building blocks in TypeScript <tspan font-weight="400" fill="${PAPER_2}">for the Web's Built-in AI APIs.</tspan></text>
+  <text x="70" y="462" font-family="${SANS}" font-weight="400" font-size="21" fill="${MUTED}">Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.</text>
 
   <!-- Install pill. One text element (not two) so the space between
        "install" and "@web-ai-sdk/all" is a literal character at the

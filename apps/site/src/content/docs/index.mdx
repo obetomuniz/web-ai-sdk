@@ -1,9 +1,9 @@
 ---
 title: web-ai-sdk
-description: Building blocks for the Web's built-in AI APIs. Lifecycle, streaming, AbortSignals. Vanilla TypeScript by default, with optional React hooks.
+description: Building blocks in TypeScript for the Web's built-in AI APIs. Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.
 template: splash
 hero:
-  tagline: Building blocks for the Web's built-in AI APIs. Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals.
+  tagline: Building blocks in TypeScript for the Web's built-in AI APIs. Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.
   actions:
     - text: Browser support
       link: /docs/browser-support/
@@ -21,7 +21,7 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 
 ## What it is
 
-**`web-ai-sdk`** ships building blocks for the Web's Built-in AI APIs. One package per browser capability (Prompt, WebMCP, Summarizer, Translator, Detector, Writer, Rewriter, Proofreader). Zero runtime dependencies. Vanilla TypeScript by default, with optional React hooks. See [Architecture](/docs/architecture/) for the model.
+**`web-ai-sdk`** ships building blocks for the Web's Built-in AI APIs. One package per browser capability (Prompt, WebMCP, Summarizer, Translator, Detector, Writer, Rewriter, Proofreader). Zero runtime dependencies. Written in TypeScript. See [Architecture](/docs/architecture/) for the model.
 
 You can always use the raw browser APIs directly; the SDK doesn't replace or hide them. It just owns the lifecycle layer around them (session reuse, streaming, AbortSignals, feature-detected fallbacks) and is built to get thinner as the platform matures.
 
@@ -47,7 +47,7 @@ You can, and nothing here stops you. The browser's built-in AI APIs are the foun
     Meta-package: install once, get all eight wrappers under a single
     dependency. [Read the guide →](/docs/guides/meta-package/)
   </Card>
-  <Card title="@web-ai-sdk/prompt" icon="seti:typescript">
+  <Card title="@web-ai-sdk/prompt" icon="comment">
     Talk to the on-device language model. Sessions, streaming, AbortSignals.
     [Read the guide →](/docs/guides/prompt/)
   </Card>
@@ -55,7 +55,7 @@ You can, and nothing here stops you. The browser's built-in AI APIs are the foun
     Register tools the browser's model context can call. Real agents, real
     cleanup, no boilerplate. [Read the guide →](/docs/guides/webmcp/)
   </Card>
-  <Card title="@web-ai-sdk/summarizer" icon="document">
+  <Card title="@web-ai-sdk/summarizer" icon="list-format">
     Key-points, TL;DR, headlines. Configurable type and length, streaming.
     [Read the guide →](/docs/guides/summarizer/)
   </Card>
@@ -67,7 +67,7 @@ You can, and nothing here stops you. The browser's built-in AI APIs are the foun
     Detect the language of any text on-device. Confidence scores plus a sorted
     list of alternates. [Read the guide →](/docs/guides/detector/)
   </Card>
-  <Card title="@web-ai-sdk/writer" icon="pencil">
+  <Card title="@web-ai-sdk/writer" icon="pen">
     Draft new content from a task description. Tone, format, length, streaming.
     [Read the guide →](/docs/guides/writer/)
   </Card>
@@ -75,7 +75,7 @@ You can, and nothing here stops you. The browser's built-in AI APIs are the foun
     Tone-shift and reshape text you already have. Shorter, longer, more formal.
     [Read the guide →](/docs/guides/rewriter/)
   </Card>
-  <Card title="@web-ai-sdk/proofreader" icon="approve-check">
+  <Card title="@web-ai-sdk/proofreader" icon="approve-check-circle">
     Grammar, spelling, and punctuation fixes with per-issue offsets you can
     highlight in place. [Read the guide →](/docs/guides/proofreader/)
   </Card>
