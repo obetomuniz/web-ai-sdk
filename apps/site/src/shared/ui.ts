@@ -225,12 +225,12 @@ export const badgeValAccent = "text-accent-bright";
 export const pkgRow =
   "grid scroll-mt-[calc(var(--nav-height)+1.5rem)] grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-start gap-16 max-[880px]:grid-cols-1 max-[880px]:gap-8 [&+&]:mt-24 max-[880px]:[&+&]:mt-16";
 
-export const pkgLeft = "min-w-0 pt-2";
+export const pkgLeft = "group min-w-0 pt-2";
 
 export const pkgRight = "min-w-0";
 
 export const pkgIcon =
-  "mb-6 grid size-9 place-items-center rounded-sm border border-accent-line bg-accent-soft text-accent";
+  "mb-6 grid size-9 place-items-center rounded-sm border border-accent-line bg-accent-soft text-accent transition-[transform,background-color,border-color] duration-300 ease-out group-hover:-translate-y-0.5 group-hover:border-accent group-hover:bg-[color-mix(in_oklch,var(--color-accent)_16%,transparent)] [&_svg_*]:[stroke-dasharray:1] group-hover:[&_svg_*]:animate-icon-stream";
 
 export const pkgName =
   "mb-2.5 font-mono text-[22px] tracking-[-0.02em] text-fg";
@@ -323,7 +323,7 @@ export const supportWrap =
   "overflow-x-auto overflow-y-hidden [-webkit-overflow-scrolling:touch]";
 
 export const supportTable =
-  "min-w-[560px] w-full border-separate border-spacing-0 overflow-hidden rounded-lg bg-surface shadow-card font-mono text-[13px] [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap [&_td]:border-r [&_td]:border-b [&_td]:border-hairline [&_td]:px-5 [&_td]:py-3.5 [&_td]:align-middle [&_td]:text-fg-2 [&_td:last-child]:border-r-0 [&_th]:border-r [&_th]:border-b [&_th]:border-hairline [&_th]:px-5 [&_th]:py-3.5 [&_th]:text-left [&_th:last-child]:border-r-0 [&_tr:last-child_td]:border-b-0 [&_tr:last-child_th]:border-b-0";
+  "min-w-[560px] w-full border-separate border-spacing-0 overflow-hidden rounded-lg bg-surface shadow-card font-mono text-[13px] [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap [&_td]:border-r [&_td]:border-b [&_td]:border-hairline [&_td]:px-5 [&_td]:py-3.5 [&_td]:align-middle [&_td]:text-fg-2 [&_td:last-child]:border-r-0 [&_th]:border-r [&_th]:border-b [&_th]:border-hairline [&_th]:px-5 [&_th]:py-3.5 [&_th]:text-left [&_th:last-child]:border-r-0 [&_tr:last-child_td]:border-b-0 [&_tr:last-child_th]:border-b-0 [&_td]:transition-colors [&_th]:transition-colors [&_tbody_tr:hover_td]:bg-surface-2 [&_tbody_tr:hover_th]:bg-surface-3";
 
 export const supportHead =
   "bg-surface-2 text-[11px] font-medium uppercase tracking-[0.1em] text-fg-4";
