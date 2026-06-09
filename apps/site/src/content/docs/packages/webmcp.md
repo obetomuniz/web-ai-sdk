@@ -1,13 +1,13 @@
 ---
 title: "@web-ai-sdk/webmcp"
-description: "web-ai-sdk building block for the W3C WebMCP API exposed at navigator.modelContext."
+description: "web-ai-sdk building block for the W3C WebMCP API exposed at document.modelContext."
 editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/webmcp/README.md
 ---
 
 :::note
 This page is generated from [`packages/webmcp/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/webmcp/README.md) on every build. Edits should go to the README.
 :::
-web-ai-sdk building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `navigator.modelContext`.
+web-ai-sdk building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `document.modelContext`.
 
 An ergonomic, framework-agnostic adapter over the native browser API, with safe register/unregister cleanup and a feature-detected no-op fallback for non-supporting browsers.
 
