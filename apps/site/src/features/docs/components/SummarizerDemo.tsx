@@ -1,5 +1,6 @@
 import { useSummarizer } from "@web-ai-sdk/summarizer/react";
 import { useEffect, useRef, useState } from "react";
+import { UnavailableHint } from "./UnavailableHint.js";
 
 export interface SummarizerDemoProps {
   language?: string;
@@ -32,10 +33,11 @@ export const SummarizerDemo = ({ language = "en" }: SummarizerDemoProps) => {
   return (
     <div className="demo-card">
       {status === "unavailable" && !error && (
-        <p className="demo-hint">
-          Summarizer API unavailable. Open in Chrome 138+ or Edge 138+ to
-          exercise.
-        </p>
+        <UnavailableHint
+          api="Summarizer API"
+          chrome="Summarizer API unavailable. Open in Chrome 138+ (stable) to exercise."
+          edge="Summarizer API unavailable. Open in Edge 138+ (stable) to exercise."
+        />
       )}
       {error && <p className="demo-error">{error.message}</p>}
       {output && (

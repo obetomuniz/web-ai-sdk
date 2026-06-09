@@ -1,8 +1,22 @@
 # web-ai-sdk
 
-Building blocks for the Web's Built-in AI APIs.
+**web-ai-sdk is a TypeScript SDK for the Web's Built-in AI APIs.**
+
+Use Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP with a stable, typed, composable interface, instead of wiring up each experimental browser API by hand.
+
+```ts
+import { ask } from "@web-ai-sdk/prompt";
+
+const { output } = await ask({ input: "Summarize this page in one sentence." });
+```
 
 A small, focused monorepo of framework-agnostic packages that smooth over the gnarly bits of the new `document.modelContext`, `Translator`, `Summarizer`, `LanguageModel`, `LanguageDetector`, `Writer`, `Rewriter`, and `Proofreader` browser APIs (feature detection, session caching, streaming, lifecycle, safe DOM rebuild) without bringing any UI along.
+
+> If you're exploring AI in the browser, a [star on GitHub](https://github.com/obetomuniz/web-ai-sdk) helps others find web-ai-sdk.
+
+## Why this exists
+
+The Web's Built-in AI APIs are promising but still early and shifting. Every app that touches them re-implements the same lifecycle: feature-detect, wait for model availability, create and reuse sessions, stream chunks, abort cleanly, and fall back when the capability is missing. web-ai-sdk owns that layer so you build against one stable, typed surface rather than coupling your whole app to today's experimental API shape. The wrappers feature-detect and no-op when a browser lacks the API, so the same code ships everywhere.
 
 ## What it is
 
@@ -118,6 +132,17 @@ For the AI APIs to actually run, open a supporting browser. On Chrome, Summarize
 | Preview combined Pages locally  | `pnpm pages:preview`  |
 
 Toolchain: Node 24 (pinned in `.nvmrc`) + pnpm 9.15.0 (pinned via `package.json#packageManager` and provisioned automatically by Corepack on Node 16.13+).
+
+## Roadmap
+
+Directional, not a commitment. The bias is toward owning only the lifecycle and ergonomics the raw APIs leave rough, and thinning out as the Built-in AI APIs stabilize.
+
+- Native tool calling for the Prompt API
+- Session resilience (auto-retry on session loss)
+- Session context introspection (token / quota usage)
+- IndexedDB cache backend for result caches
+- Cloud / custom-provider fallback for unsupported browsers
+- More browser compatibility helpers
 
 ## Contributing
 

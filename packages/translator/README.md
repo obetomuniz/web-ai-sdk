@@ -1,6 +1,6 @@
 # @web-ai-sdk/translator
 
-Building block for the Web's Built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api) (on-demand language packs). Block-level translation with inline placeholder serialization, casing restoration, and a snapshot-based restore.
+web-ai-sdk building block for the Web's Built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api) (on-demand language packs). Block-level translation with inline placeholder serialization, casing restoration, and a snapshot-based restore.
 
 **Docs:** <https://web-ai-sdk.dev/docs/guides/translator/> · **React:** [`useTranslator`](https://web-ai-sdk.dev/docs/react/use-translator/)
 

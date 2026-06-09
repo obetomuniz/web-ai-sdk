@@ -1,13 +1,13 @@
 ---
 title: "@web-ai-sdk/prompt"
-description: "Building block for the Web's Built-in Prompt API (LanguageModel). Single-shot prompts with system message, sampling controls, streaming, session reuse, and pluggable result caching."
+description: "web-ai-sdk building block for the Web's Built-in Prompt API (LanguageModel). Single-shot prompts with system message, sampling controls, streaming, session reuse, and pluggable result caching."
 editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/prompt/README.md
 ---
 
 :::note
 This page is generated from [`packages/prompt/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/prompt/README.md) on every build. Edits should go to the README.
 :::
-Building block for the Web's Built-in [Prompt API](https://developer.chrome.com/docs/extensions/ai/prompt-api) (`LanguageModel`). Single-shot prompts with system message, sampling controls, streaming, session reuse, and pluggable result caching.
+web-ai-sdk building block for the Web's Built-in [Prompt API](https://developer.chrome.com/docs/extensions/ai/prompt-api) (`LanguageModel`). Single-shot prompts with system message, sampling controls, streaming, session reuse, and pluggable result caching.
 
 ## Status
 

@@ -230,6 +230,43 @@
   white-space: normal;
 }
 
+/* Prev/Next pager: Starlight lays the links out with
+   `grid-template-columns: repeat(auto-fit, minmax(min(18rem,100%),1fr))`, and
+   `auto-fit` collapses the empty track when only one link exists, so a lone
+   Next/Previous link stretches to the full content width instead of matching
+   the half-width cards shown when both links exist. Make the footer a size
+   container and pin two columns once it is wide enough for the paired layout
+   (~37rem = 2 x 18rem + the 1rem gap), placing a single link in its natural
+   half (next on the right, previous on the left). Narrower content keeps the
+   default single-column stack, where full width is already correct. */
+footer:has(> .pagination-links) {
+  container-type: inline-size;
+}
+@container (min-width: 37rem) {
+  .pagination-links.pagination-links {
+    grid-template-columns: 1fr 1fr;
+  }
+  .pagination-links a[rel="prev"] {
+    grid-column: 1;
+  }
+  .pagination-links a[rel="next"] {
+    grid-column: 2;
+  }
+}
+
+/* Search modal: Starlight pins the desktop dialog to `min-height: 15rem`, so
+   on open (before typing) it shows a large empty void under the input that
+   reads as broken. Drop the floor so the modal hugs the search input when
+   empty and grows to `max-content` as Pagefind injects results (still capped
+   by Starlight's max-height, which keeps the results list scrollable). The
+   rule is unlayered, so it wins over Starlight's @layer starlight.core base.
+   Mobile keeps its full-height overlay. */
+@media (min-width: 50rem) {
+  site-search dialog {
+    min-height: 0;
+  }
+}
+
 /* Copy button on code blocks: ship a sensible size and don't dominate the
    block on mobile. Starlight's default is too large at narrow viewports. */
 .expressive-code .copy button {

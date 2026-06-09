@@ -1,5 +1,6 @@
 import { useTranslator } from "@web-ai-sdk/translator/react";
 import { useState } from "react";
+import { UnavailableHint } from "./UnavailableHint.js";
 
 export interface TranslatorDemoProps {
   sourceLanguage?: string;
@@ -22,10 +23,11 @@ export const TranslatorDemo = ({
   return (
     <div className="demo-card">
       {status === "unavailable" && (
-        <p className="demo-hint">
-          Translator API unavailable. Open in Chrome 138+ (stable) or Edge
-          Canary/Dev 143+ (with the translation API flag enabled) to exercise.
-        </p>
+        <UnavailableHint
+          api="Translator API"
+          chrome="Translator API unavailable. Open in Chrome 138+ (stable) to exercise."
+          edge="Translator API unavailable. Open in Edge 148+ (stable) to exercise."
+        />
       )}
       {error && <p className="demo-error">{error.message}</p>}
       <label className="demo-label">
