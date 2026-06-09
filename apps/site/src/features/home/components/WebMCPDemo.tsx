@@ -68,7 +68,12 @@ const TOOL_SPECS: readonly ToolSpec[] = [
       },
       required: ["sku"],
     },
-    execute: async (input) => ({ ok: true, ...(input as object) }),
+    execute: async (input) => ({
+      ok: true,
+      // Manual invocations (DevTools, testing surface) can pass primitives;
+      // only spread real objects so the payload stays well-formed.
+      ...(typeof input === "object" && input !== null ? input : {}),
+    }),
   },
   {
     id: "search_orders",
