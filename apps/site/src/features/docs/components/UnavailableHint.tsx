@@ -29,12 +29,16 @@ export const UnavailableHint = ({
   const browser = detectBrowser();
   if (browser === "other") {
     return (
-      <p className="demo-hint">
+      <p className="demo-hint demo-hint--warn">
         {api} isn't supported in this browser yet. The Web's Built-in AI APIs
         currently ship only in Chrome and Edge. Open this page in one of them to
         try the demo.
       </p>
     );
   }
-  return <p className="demo-hint">{browser === "edge" ? edge : chrome}</p>;
+  return (
+    <p className="demo-hint demo-hint--warn">
+      {browser === "edge" ? edge : chrome}
+    </p>
+  );
 };
