@@ -1,7 +1,7 @@
 {
   "name": "@web-ai-sdk/all",
   "version": "0.6.0",
-  "description": "Meta-package for the @web-ai-sdk/* building blocks: install @web-ai-sdk/all once, use the prompt, summarizer, translator, detector, writer, rewriter, proofreader, and webmcp wrappers under one roof.",
+  "description": "web-ai-sdk: the TypeScript SDK for the Web's Built-in AI APIs. One install for the prompt, summarizer, translator, detector, writer, rewriter, proofreader, and webmcp packages.",
   "license": "MIT",
   "author": "Beto Muniz",
   "homepage": "https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/sdk#readme",

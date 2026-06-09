@@ -1,0 +1,23 @@
+---
+title: Why web-ai-sdk
+description: How web-ai-sdk differs from provider SDKs like Vercel's AI SDK. web-ai-sdk is a typed layer for the browser's Built-in AI APIs, not a server-side model-provider SDK.
+---
+
+`web-ai-sdk` is a TypeScript SDK for the Web's Built-in AI APIs: the browser-native `LanguageModel` (Prompt), `Writer`, `Rewriter`, `Proofreader`, `Translator`, `Summarizer`, `LanguageDetector`, and `document.modelContext` (WebMCP) surfaces.
+
+## Not a provider SDK
+
+It is not a provider SDK for OpenAI, Anthropic, Google AI Studio, or other server-side models. Where a tool like Vercel's AI SDK focuses on building AI apps across model providers and frameworks (usually with a server in the loop), `web-ai-sdk` focuses on making the browser's own, on-device AI APIs easier to use directly from TypeScript.
+
+If your code calls a hosted model behind an API key, reach for a provider SDK. If your code wants to run on the model the browser ships, on-device, with no key and no server, that is what `web-ai-sdk` wraps.
+
+## What the SDK owns
+
+The Built-in AI APIs are young and shifting. Every app that touches them re-implements the same lifecycle, so `web-ai-sdk` owns it once:
+
+- Feature detection and availability checks, with a no-op fallback when an API is missing
+- Session creation, reuse, and cleanup
+- Streaming with chunk smoothing and `AbortSignal` wiring
+- Opt-in result caching
+
+You build against one stable, typed surface instead of coupling your whole app to today's experimental API shape. See [Architecture](/docs/architecture/) for how the packages are organized and [Browser support](/docs/browser-support/) for where each one runs today.

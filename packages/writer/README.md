@@ -1,6 +1,6 @@
 # @web-ai-sdk/writer
 
-Building block for the Web's Built-in [Writer API](https://developer.chrome.com/docs/ai/writer-api). Generates new content from a writing task with session reuse, streaming, and opt-in result caching.
+web-ai-sdk building block for the Web's Built-in [Writer API](https://developer.chrome.com/docs/ai/writer-api). Generates new content from a writing task with session reuse, streaming, and opt-in result caching.
 
 **Docs:** <https://web-ai-sdk.dev/docs/guides/writer/> · **React:** [`useWriter`](https://web-ai-sdk.dev/docs/react/use-writer/)
 

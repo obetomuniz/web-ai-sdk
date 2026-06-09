@@ -1,6 +1,6 @@
 # @web-ai-sdk/proofreader
 
-Building block for the Web's Built-in [Proofreader API](https://developer.chrome.com/docs/ai/proofreader-api). Corrects grammar, spelling, and punctuation and returns per-issue corrections with offsets, plus session reuse and opt-in result caching.
+web-ai-sdk building block for the Web's Built-in [Proofreader API](https://developer.chrome.com/docs/ai/proofreader-api). Corrects grammar, spelling, and punctuation and returns per-issue corrections with offsets, plus session reuse and opt-in result caching.
 
 **Docs:** <https://web-ai-sdk.dev/docs/guides/proofreader/> · **React:** [`useProofreader`](https://web-ai-sdk.dev/docs/react/use-proofreader/)
 

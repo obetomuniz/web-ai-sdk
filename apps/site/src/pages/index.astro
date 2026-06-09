@@ -54,7 +54,7 @@ const structuredData = {
       name: "web-ai-sdk",
       url: CANONICAL_URL,
       description:
-        "Building blocks for the Web's built-in AI APIs. Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals.",
+        "web-ai-sdk is a TypeScript SDK for the Web's Built-in AI APIs: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps.",
       inLanguage: "en",
     },
     {
@@ -62,7 +62,7 @@ const structuredData = {
       "@id": "https://web-ai-sdk.dev/#sourcecode",
       name: "web-ai-sdk",
       description:
-        "Headless wrappers for the Web's built-in AI APIs.",
+        "web-ai-sdk is a TypeScript SDK for the Web's Built-in AI APIs: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP.",
       url: CANONICAL_URL,
       codeRepository: repoUrl,
       programmingLanguage: ["TypeScript", "JavaScript"],
@@ -84,7 +84,7 @@ const structuredData = {
       operatingSystem: "Web",
       softwareVersion: SDK_VERSION,
       description:
-        "A TypeScript SDK for the Web's built-in AI APIs, including Prompt, Summarizer, Translator, Language Detector, Writer, Rewriter, Proofreader, and WebMCP wrappers.",
+        "web-ai-sdk is a TypeScript SDK for the Web's Built-in AI APIs: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps.",
       url: CANONICAL_URL,
       codeRepository: repoUrl,
       programmingLanguage: ["TypeScript", "JavaScript"],
@@ -218,6 +218,20 @@ const packageRows = [
   },
 ];
 
+// Descriptive docs anchor text per package. Lead with "web-ai-sdk" so the link
+// clearly points at our SDK guide (not the official browser API docs) and
+// reinforces the brand entity in internal anchor text.
+const packageDocsLabels: Record<string, string> = {
+  prompt: "web-ai-sdk Prompt API",
+  webmcp: "web-ai-sdk WebMCP",
+  summarizer: "web-ai-sdk Summarizer API",
+  translator: "web-ai-sdk Translator API",
+  detector: "web-ai-sdk Language Detector API",
+  writer: "web-ai-sdk Writer API",
+  rewriter: "web-ai-sdk Rewriter API",
+  proofreader: "web-ai-sdk Proofreader API",
+};
+
 // One distinct icon per primitive (lucide line-art, inner markup only; the
 // shared <svg> wrapper sets size, stroke, and currentColor). Static, authored
 // content rendered via set:html, so no untrusted-HTML concern.
@@ -345,10 +359,10 @@ const supportVersionTone = (value: string) => {
         });
       })();
     </script>
-    <title>web-ai-sdk · building blocks for the Web's built-in AI</title>
+    <title>web-ai-sdk · TypeScript SDK for the Web's Built-in AI APIs</title>
     <meta
       name="description"
-      content="Building blocks in TypeScript for the Web's Built-in AI APIs. Composable, no runtime deps, just lifecycle, streaming, and AbortSignals."
+      content="web-ai-sdk is a TypeScript SDK for the Web's Built-in AI APIs: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps."
     />
     <link rel="icon" type="image/svg+xml" href={pathFromBase("favicon.svg")} />
     <link rel="canonical" href={CANONICAL_URL} />
@@ -401,16 +415,16 @@ const supportVersionTone = (value: string) => {
     <meta property="og:type" content="website" />
     <meta property="og:url" content={CANONICAL_URL} />
     <meta property="og:site_name" content="web-ai-sdk" />
-    <meta property="og:title" content="web-ai-sdk · Building blocks for the Web's built-in AI" />
-    <meta property="og:description" content="Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals." />
+    <meta property="og:title" content="web-ai-sdk · TypeScript SDK for the Web's Built-in AI APIs" />
+    <meta property="og:description" content="web-ai-sdk is a TypeScript SDK for the Web's Built-in AI APIs: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps." />
     <meta property="og:image" content={ogImageUrl} />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="web-ai-sdk · npm install @web-ai-sdk/all" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="web-ai-sdk · Building blocks for the Web's built-in AI" />
-    <meta name="twitter:description" content="Composable. No runtime deps. Just lifecycle, streaming, and AbortSignals." />
+    <meta name="twitter:title" content="web-ai-sdk · TypeScript SDK for the Web's Built-in AI APIs" />
+    <meta name="twitter:description" content="web-ai-sdk is a TypeScript SDK for the Web's Built-in AI APIs: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps." />
     <meta name="twitter:image" content={ogImageUrl} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -434,7 +448,12 @@ const supportVersionTone = (value: string) => {
           <a href="#support">Support</a>
           <a href="#start">Get started</a>
         </div>
-        <a class={ui.navCta} href={repoUrl} target="_blank" rel="noreferrer">GitHub ↗</a>
+        <div class={ui.navActions}>
+          <a class={ui.navIcon} href={docsUrl} aria-label="Read the web-ai-sdk docs" title="Docs">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+          </a>
+          <a class={ui.navCta} href={repoUrl} target="_blank" rel="noreferrer">GitHub ↗</a>
+        </div>
       </div>
     </nav>
 
@@ -456,10 +475,10 @@ const supportVersionTone = (value: string) => {
             <span class={ui.caret}></span>
           </h1>
           <p class={`${ui.subhead} ${heroTextShadow}`}>
-            Building blocks in TypeScript for the Web's Built-in AI APIs.<br />Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.
+            The TypeScript SDK for the Web's Built-in AI APIs.<span class={ui.subheadSub}>Composable building blocks, no runtime deps, just lifecycle, streaming, and AbortSignals.</span>
           </p>
           <a class={`${ui.pkgDocs} ${heroTextShadow} w-fit`} href="#how">
-            See the same task: 15 lines with the SDK vs 37 with the raw APIs
+            See the same task: 15 lines with the SDK vs 37+ with the raw APIs
             <span class={ui.pkgDocsArrow}>→</span>
           </a>
           <div class={ui.ctaRow}>
@@ -530,7 +549,7 @@ const supportVersionTone = (value: string) => {
                     <code class={ui.pkgInstall}>
                       <span class={ui.pkgInstallPrompt}>$</span> npm install <span class={ui.pkgInstallPkg}>@web-ai-sdk/{pkg.title}</span>
                     </code>
-                    <a class={ui.pkgDocs} href={guideLink(pkg.slug)}>Read the docs <span class={ui.pkgDocsArrow}>→</span></a>
+                    <a class={ui.pkgDocs} href={guideLink(pkg.slug)}><span class={ui.silverText}>{packageDocsLabels[pkg.slug] ?? "Read the docs"}</span> <span class={ui.pkgDocsArrow}>→</span></a>
                   </div>
                 </div>
                 <div class={ui.pkgRight}>
@@ -718,7 +737,7 @@ const supportVersionTone = (value: string) => {
         <div class={ui.footerGrid}>
           <div>
             <div class={ui.footerBrandTitle}><span>web-ai-sdk</span><span class={ui.caret}></span></div>
-            <p class={ui.footerBrandText}>Building blocks for the Web's Built-in AI APIs.</p>
+            <p class={ui.footerBrandText}>The TypeScript SDK for the Web's Built-in AI APIs.</p>
           </div>
           <div>
             <h3 class={ui.footerColTitle}>Project</h3>

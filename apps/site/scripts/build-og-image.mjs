@@ -125,8 +125,8 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
   <rect x="828" y="349" width="66" height="11" rx="2" fill="${ACCENT}"/>
 
   <!-- Tagline -->
-  <text x="70" y="425" font-family="${SANS}" font-weight="600" font-size="31" fill="${PAPER}">Building blocks in TypeScript <tspan font-weight="400" fill="${PAPER_2}">for the Web's Built-in AI APIs.</tspan></text>
-  <text x="70" y="462" font-family="${SANS}" font-weight="400" font-size="21" fill="${MUTED}">Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.</text>
+  <text x="70" y="425" font-family="${SANS}" font-weight="600" font-size="31" fill="${PAPER}">The TypeScript SDK <tspan font-weight="400" fill="${PAPER_2}">for the Web's Built-in AI APIs.</tspan></text>
+  <text x="70" y="462" font-family="${SANS}" font-weight="400" font-size="21" fill="${MUTED}">Composable building blocks, no runtime deps, just lifecycle, streaming, and AbortSignals.</text>
 
   <!-- Install pill. One text element (not two) so the space between
        "install" and "@web-ai-sdk/all" is a literal character at the
