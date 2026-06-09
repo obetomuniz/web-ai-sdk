@@ -23,10 +23,11 @@ export const TranslatorDemo = ({
   return (
     <div className="demo-card">
       {status === "unavailable" && (
-        <UnavailableHint api="Translator API">
-          Translator API unavailable. Open in Chrome 138+ (stable) or Edge
-          Canary/Dev 143+ (with the translation API flag enabled) to exercise.
-        </UnavailableHint>
+        <UnavailableHint
+          api="Translator API"
+          chrome="Translator API unavailable. Open in Chrome 138+ (stable) to exercise."
+          edge="Translator API unavailable. Open in Edge 148+ (stable) to exercise."
+        />
       )}
       {error && <p className="demo-error">{error.message}</p>}
       <label className="demo-label">

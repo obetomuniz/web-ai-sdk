@@ -27,10 +27,22 @@ export const RewriterDemo = ({ language = "en" }: { language?: string }) => {
         />
       </label>
       {status === "unavailable" && !error && (
-        <UnavailableHint api="Rewriter API">
-          Rewriter API unavailable. Open in Chrome with the Rewriter API flag /
-          origin trial enabled to exercise.
-        </UnavailableHint>
+        <UnavailableHint
+          api="Rewriter API"
+          chrome={
+            <>
+              Rewriter API unavailable. Open in Chrome with the Rewriter API
+              flag / origin trial enabled to exercise.
+            </>
+          }
+          edge={
+            <>
+              Rewriter API unavailable. In Edge Canary/Dev 138+, open{" "}
+              <code>edge://flags/</code>, search for "Rewriter API for Phi
+              mini", enable it, and reload.
+            </>
+          }
+        />
       )}
       {error && <p className="demo-error">{error.message}</p>}
       {output && (

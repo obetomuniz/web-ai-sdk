@@ -23,10 +23,22 @@ export const ProofreaderDemo = () => {
         />
       </label>
       {status === "unavailable" && !error && (
-        <UnavailableHint api="Proofreader API">
-          Proofreader API unavailable. Open in Chrome with the Proofreader API
-          flag / origin trial enabled to exercise.
-        </UnavailableHint>
+        <UnavailableHint
+          api="Proofreader API"
+          chrome={
+            <>
+              Proofreader API unavailable. Open in Chrome with the Proofreader
+              API flag / origin trial enabled to exercise.
+            </>
+          }
+          edge={
+            <>
+              Proofreader API unavailable. In Edge Canary/Dev 142+, open{" "}
+              <code>edge://flags/</code>, search for "Proofreader API for Phi
+              mini", enable it, and reload.
+            </>
+          }
+        />
       )}
       {error && <p className="demo-error">{error.message}</p>}
       {output && (

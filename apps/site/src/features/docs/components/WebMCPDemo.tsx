@@ -111,10 +111,21 @@ export const WebMCPDemo = () => {
         WebMCP available: <strong>{available ? "yes" : "no"}</strong>
       </p>
       {!available && (
-        <UnavailableHint api="WebMCP">
-          Enable <code>chrome://flags/#enable-webmcp-testing</code> in Chrome
-          146+ and reload to exercise the tools.
-        </UnavailableHint>
+        <UnavailableHint
+          api="WebMCP"
+          chrome={
+            <>
+              Enable <code>chrome://flags/#enable-webmcp-testing</code> in
+              Chrome 146+ and reload to exercise the tools.
+            </>
+          }
+          edge={
+            <>
+              Enable <code>edge://flags/#enable-webmcp-testing</code> in Edge
+              147+ and reload to exercise the tools.
+            </>
+          }
+        />
       )}
       <div className="demo-panel">
         <strong className="demo-panel__title">Registered tools</strong>

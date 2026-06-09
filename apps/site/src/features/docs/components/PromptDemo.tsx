@@ -27,11 +27,23 @@ export const PromptDemo = ({
   return (
     <div className="demo-card">
       {status === "unavailable" && (
-        <UnavailableHint api="Prompt API">
-          Prompt API unavailable. Enable{" "}
-          <code>chrome://flags/#prompt-api-for-gemini-nano</code> in Chrome and
-          reload to exercise.
-        </UnavailableHint>
+        <UnavailableHint
+          api="Prompt API"
+          chrome={
+            <>
+              Prompt API unavailable. Stable in Chrome 148+; on Chrome 138–147
+              enable <code>chrome://flags/#prompt-api-for-gemini-nano</code> and
+              reload.
+            </>
+          }
+          edge={
+            <>
+              Prompt API unavailable. In Edge Canary/Dev 138+, open{" "}
+              <code>edge://flags/</code>, search for "Prompt API for Phi mini",
+              enable it, and reload.
+            </>
+          }
+        />
       )}
       <form onSubmit={onSubmit} className="demo-row">
         <input

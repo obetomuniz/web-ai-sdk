@@ -11,20 +11,23 @@ const detectBrowser = (): "chrome" | "edge" | "other" => {
 /**
  * Hint shown when a demo's underlying Built-in AI API is unavailable.
  *
- * On Chrome / Edge (the engines that implement these APIs) we surface the
- * browser-specific enable steps passed as `children`. On any other engine
- * (Safari, Firefox, ...) the APIs don't exist at all, so flag instructions
- * would be misleading; we say plainly that only Chrome and Edge support them
- * today instead of suggesting a Chrome-only workaround.
+ * Chrome and Edge implement these APIs but enable them differently (different
+ * flags, channels, and versions), so each gets its own instructions. Every
+ * other engine (Safari, Firefox, ...) lacks the APIs entirely, so flag steps
+ * would mislead; there we say plainly that only Chrome and Edge support them
+ * today.
  */
 export const UnavailableHint = ({
   api,
-  children,
+  chrome,
+  edge,
 }: {
   api: string;
-  children: ReactNode;
+  chrome: ReactNode;
+  edge: ReactNode;
 }) => {
-  if (detectBrowser() === "other") {
+  const browser = detectBrowser();
+  if (browser === "other") {
     return (
       <p className="demo-hint">
         {api} isn't supported in this browser yet. The Web's Built-in AI APIs
@@ -33,5 +36,5 @@ export const UnavailableHint = ({
       </p>
     );
   }
-  return <p className="demo-hint">{children}</p>;
+  return <p className="demo-hint">{browser === "edge" ? edge : chrome}</p>;
 };

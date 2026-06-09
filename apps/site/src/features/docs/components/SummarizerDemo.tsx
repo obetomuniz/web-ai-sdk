@@ -33,10 +33,11 @@ export const SummarizerDemo = ({ language = "en" }: SummarizerDemoProps) => {
   return (
     <div className="demo-card">
       {status === "unavailable" && !error && (
-        <UnavailableHint api="Summarizer API">
-          Summarizer API unavailable. Open in Chrome 138+ or Edge 138+ to
-          exercise.
-        </UnavailableHint>
+        <UnavailableHint
+          api="Summarizer API"
+          chrome="Summarizer API unavailable. Open in Chrome 138+ (stable) to exercise."
+          edge="Summarizer API unavailable. Open in Edge 138+ (stable) to exercise."
+        />
       )}
       {error && <p className="demo-error">{error.message}</p>}
       {output && (

@@ -28,10 +28,22 @@ export const WriterDemo = ({ language = "en" }: { language?: string }) => {
         />
       </label>
       {status === "unavailable" && !error && (
-        <UnavailableHint api="Writer API">
-          Writer API unavailable. Open in Chrome with the Writer API flag /
-          origin trial enabled to exercise.
-        </UnavailableHint>
+        <UnavailableHint
+          api="Writer API"
+          chrome={
+            <>
+              Writer API unavailable. Open in Chrome with the Writer API flag /
+              origin trial enabled to exercise.
+            </>
+          }
+          edge={
+            <>
+              Writer API unavailable. In Edge Canary/Dev 138+, open{" "}
+              <code>edge://flags/</code>, search for "Writer API for Phi mini",
+              enable it, and reload.
+            </>
+          }
+        />
       )}
       {error && <p className="demo-error">{error.message}</p>}
       {output && (
