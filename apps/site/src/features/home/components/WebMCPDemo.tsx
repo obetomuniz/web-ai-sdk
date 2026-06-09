@@ -47,6 +47,9 @@ interface ToolSpec {
   desc: string;
   on: boolean;
   match: RegExp;
+  readOnly?: boolean;
+  destructive?: boolean;
+  inputSchema?: object;
   execute: (input: unknown) => Promise<unknown>;
 }
 
@@ -57,6 +60,14 @@ const TOOL_SPECS: readonly ToolSpec[] = [
     desc: "Add a SKU to the user's cart",
     on: true,
     match: /\bcart\b|\badd\b|MX-\d+/i,
+    inputSchema: {
+      type: "object",
+      properties: {
+        sku: { type: "string", description: "The product SKU to add" },
+        qty: { type: "integer", minimum: 1, description: "Units to add" },
+      },
+      required: ["sku"],
+    },
     execute: async (input) => ({ ok: true, ...(input as object) }),
   },
   {
@@ -65,6 +76,7 @@ const TOOL_SPECS: readonly ToolSpec[] = [
     desc: "Search past orders by date or item",
     on: true,
     match: /\border|\btuesday|\bpurchase/i,
+    readOnly: true,
     execute: async () => ({ ok: true, results: 3 }),
   },
   {
@@ -73,6 +85,7 @@ const TOOL_SPECS: readonly ToolSpec[] = [
     desc: "List the agent's registered tools and their state",
     on: false,
     match: /\bsetting|\bnotification|\bpreference|\btool|\bregister/i,
+    readOnly: true,
     // Placeholder; overridden inside the component so it can read the
     // current registration state from React.
     execute: async () => ({ ok: true }),
@@ -83,6 +96,7 @@ const TOOL_SPECS: readonly ToolSpec[] = [
     desc: "Issue a refund (requires confirmation)",
     on: false,
     match: /\brefund|\breturn\b/i,
+    destructive: true,
     execute: async () => ({ ok: true, refundId: "rf_demo" }),
   },
 ];
@@ -149,6 +163,9 @@ export const WebMCPDemo = () => {
     return TOOL_SPECS.filter((t) => enabledIds.has(t.id)).map((spec) => ({
       name: spec.name,
       description: spec.desc,
+      ...(spec.inputSchema ? { inputSchema: spec.inputSchema } : {}),
+      ...(spec.readOnly ? { readOnly: true } : {}),
+      ...(spec.destructive ? { destructive: true } : {}),
       execute:
         spec.id === "open_settings"
           ? async () => ({
