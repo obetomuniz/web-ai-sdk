@@ -48,10 +48,10 @@ const INSTALL_PAD = 24;
 // the final card uses. resvg's getBBox reflects the resolved fallback font, so
 // the pill fits whatever actually paints. Falls back to a 0.6em monospace
 // estimate if the bbox is unavailable for any reason.
-function measureWidth(text) {
+function measureWidth(text, fontSize) {
   try {
     const probe = new Resvg(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="120"><text x="0" y="80" font-family="${MONO}" font-size="${INSTALL_FS}">${text}</text></svg>`,
+      `<svg xmlns="http://www.w3.org/2000/svg" width="4000" height="${fontSize * 2}"><text x="0" y="${fontSize}" font-family="${MONO}" font-size="${fontSize}">${text}</text></svg>`,
       { background: INK, font: { loadSystemFonts: true } },
     );
     const bbox = probe.getBBox();
@@ -59,11 +59,21 @@ function measureWidth(text) {
   } catch {
     // fall through to the estimate
   }
-  return Math.round(text.length * INSTALL_FS * 0.6);
+  return Math.round(text.length * fontSize * 0.6);
 }
 
-const INSTALL_TEXT_W = measureWidth(INSTALL_TEXT);
+const INSTALL_TEXT_W = measureWidth(INSTALL_TEXT, INSTALL_FS);
 const INSTALL_PILL_W = INSTALL_TEXT_W + INSTALL_PAD * 2;
+
+// Wordmark caret. The home page sits the "_" caret a hair after the wordmark
+// (a ~0.1em gap). Measure the rendered "web-ai-sdk" width so the caret tracks
+// the actual glyphs instead of a hardcoded x that floats when the fallback
+// font advances differently.
+const WORDMARK_TEXT = "web-ai-sdk";
+const WORDMARK_FS = 120;
+const WORDMARK_X = 70;
+const WORDMARK_W = measureWidth(WORDMARK_TEXT, WORDMARK_FS);
+const CARET_X = WORDMARK_X + WORDMARK_W + Math.round(WORDMARK_FS * 0.1);
 
 const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
@@ -151,8 +161,8 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
   <!-- Wordmark, the hero. "web-ai-sdk" with the "ai" in bright accent, plus an
        underscore caret right after "sdk" (matching the home page's "_" caret). The
        x-coordinate is hand-tuned to sit just after the wordmark at 120px. -->
-  <text x="70" y="355" font-family="${MONO}" font-weight="500" font-size="120" fill="${PAPER}">web-<tspan fill="${ACCENT_HI}">ai</tspan>-sdk</text>
-  <rect x="828" y="349" width="66" height="11" rx="2" fill="${ACCENT}"/>
+  <text x="${WORDMARK_X}" y="355" font-family="${MONO}" font-weight="500" font-size="${WORDMARK_FS}" fill="${PAPER}">web-<tspan fill="${ACCENT_HI}">ai</tspan>-sdk</text>
+  <rect x="${CARET_X}" y="349" width="66" height="11" rx="2" fill="${ACCENT}"/>
 
   <!-- Tagline -->
   <text x="70" y="425" font-family="${SANS}" font-weight="600" font-size="31" fill="${PAPER}">The TypeScript SDK <tspan font-weight="400" fill="${PAPER_2}">for the Web's Built-in AI APIs.</tspan></text>
