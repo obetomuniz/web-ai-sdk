@@ -1,5 +1,6 @@
 import { useRewriter } from "@web-ai-sdk/rewriter/react";
 import { useState } from "react";
+import { UnavailableHint } from "./UnavailableHint.js";
 
 const SAMPLE = "hey, can u send me that doc when u get a sec? thx a bunch";
 
@@ -26,10 +27,10 @@ export const RewriterDemo = ({ language = "en" }: { language?: string }) => {
         />
       </label>
       {status === "unavailable" && !error && (
-        <p className="demo-hint">
+        <UnavailableHint api="Rewriter API">
           Rewriter API unavailable. Open in Chrome with the Rewriter API flag /
           origin trial enabled to exercise.
-        </p>
+        </UnavailableHint>
       )}
       {error && <p className="demo-error">{error.message}</p>}
       {output && (

@@ -258,6 +258,22 @@ export const UnavailableNotice = ({
   flagSearch?: string;
 }) => {
   const browser = detectBrowser();
+
+  // Safari, Firefox, and every other engine don't implement the Web's Built-in
+  // AI APIs at all, so Chrome/Edge flag instructions would be misleading. Say
+  // plainly that only Chrome and Edge support these APIs today.
+  if (browser === "other") {
+    return (
+      <div className="block rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_40%,var(--color-hairline))] bg-surface px-3 py-[9px] font-mono text-[11.5px] text-warn">
+        <span>
+          {api} isn't supported in this browser yet. The Web's Built-in AI APIs
+          currently ship only in Chrome and Edge. Open this page in one of them
+          to try the demo.
+        </span>
+      </div>
+    );
+  }
+
   const scheme = browser === "edge" ? "edge://" : "chrome://";
   const browserName =
     browser === "edge" ? "Edge Canary/Dev 138+" : "Chrome 138+";
