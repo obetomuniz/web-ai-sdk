@@ -148,7 +148,7 @@ export const sectionHead =
   "mb-8 grid grid-cols-[1fr_auto] items-baseline gap-6 max-[880px]:mb-6";
 
 export const sectionEyebrow =
-  "inline-flex items-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-4 before:h-px before:w-[18px] before:bg-fg-4 before:content-['']";
+  "inline-flex items-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-4";
 
 export const permalink =
   "inline-flex size-7 items-center justify-center rounded-sm border border-hairline font-mono text-[13px] leading-none text-fg-4 no-underline transition-[color,border-color] hover:border-[color-mix(in_oklch,var(--color-accent)_40%,var(--color-hairline))] hover:text-accent max-[880px]:size-auto max-[880px]:rounded-none max-[880px]:border-0 max-[880px]:p-1.5 max-[880px]:hover:border-transparent [&>span[aria-hidden=true]]:translate-y-[-0.9px] [&>span[aria-hidden=true]]:opacity-75";
