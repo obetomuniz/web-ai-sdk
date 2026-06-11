@@ -1,6 +1,6 @@
 # @web-ai-sdk/summarizer
 
-Building block for the Web's Built-in [Summarizer API](https://developer.chrome.com/docs/ai/summarizer-api). String-mode summarization with session reuse, output cleaning, streaming, and opt-in result caching.
+web-ai-sdk building block for the Web's Built-in [Summarizer API](https://developer.chrome.com/docs/ai/summarizer-api). String-mode summarization with session reuse, output cleaning, streaming, and opt-in result caching.
 
 **Docs:** <https://web-ai-sdk.dev/docs/guides/summarizer/> · **React:** [`useSummarizer`](https://web-ai-sdk.dev/docs/react/use-summarizer/)
 

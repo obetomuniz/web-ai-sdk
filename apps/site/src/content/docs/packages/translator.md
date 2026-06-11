@@ -1,13 +1,13 @@
 ---
 title: "@web-ai-sdk/translator"
-description: "Building block for the Web's Built-in Translator API (on-demand language packs). Block-level translation with inline placeholder serialization, casing restoration, and a snapshot-based restore."
+description: "web-ai-sdk building block for the Web's Built-in Translator API (on-demand language packs). Block-level translation with inline placeholder serialization, casing restoration, and a snapshot-based restore."
 editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/translator/README.md
 ---
 
 :::note
 This page is generated from [`packages/translator/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/translator/README.md) on every build. Edits should go to the README.
 :::
-Building block for the Web's Built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api) (on-demand language packs). Block-level translation with inline placeholder serialization, casing restoration, and a snapshot-based restore.
+web-ai-sdk building block for the Web's Built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api) (on-demand language packs). Block-level translation with inline placeholder serialization, casing restoration, and a snapshot-based restore.
 
 ## Status
 

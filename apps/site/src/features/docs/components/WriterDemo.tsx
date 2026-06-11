@@ -1,5 +1,6 @@
 import { useWriter } from "@web-ai-sdk/writer/react";
 import { useState } from "react";
+import { UnavailableHint } from "./UnavailableHint.js";
 
 const SAMPLE =
   "A short, friendly announcement that our docs site now has live demos.";
@@ -27,10 +28,22 @@ export const WriterDemo = ({ language = "en" }: { language?: string }) => {
         />
       </label>
       {status === "unavailable" && !error && (
-        <p className="demo-hint">
-          Writer API unavailable. Open in Chrome with the Writer API flag /
-          origin trial enabled to exercise.
-        </p>
+        <UnavailableHint
+          api="Writer API"
+          chrome={
+            <>
+              Writer API unavailable. Open in Chrome with the Writer API flag /
+              origin trial enabled to exercise.
+            </>
+          }
+          edge={
+            <>
+              Writer API unavailable. In Edge Canary/Dev 138+, open{" "}
+              <code>edge://flags/</code>, search for "Writer API for Phi mini",
+              enable it, and reload.
+            </>
+          }
+        />
       )}
       {error && <p className="demo-error">{error.message}</p>}
       {output && (

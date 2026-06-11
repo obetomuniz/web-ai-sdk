@@ -1,5 +1,6 @@
 import { useProofreader } from "@web-ai-sdk/proofreader/react";
 import { useState } from "react";
+import { UnavailableHint } from "./UnavailableHint.js";
 
 const SAMPLE =
   "I seen him yesterday at the store, and he bought two loafs of bread.";
@@ -22,10 +23,22 @@ export const ProofreaderDemo = () => {
         />
       </label>
       {status === "unavailable" && !error && (
-        <p className="demo-hint">
-          Proofreader API unavailable. Open in Chrome with the Proofreader API
-          flag / origin trial enabled to exercise.
-        </p>
+        <UnavailableHint
+          api="Proofreader API"
+          chrome={
+            <>
+              Proofreader API unavailable. Open in Chrome with the Proofreader
+              API flag / origin trial enabled to exercise.
+            </>
+          }
+          edge={
+            <>
+              Proofreader API unavailable. In Edge Canary/Dev 142+, open{" "}
+              <code>edge://flags/</code>, search for "Proofreader API for Phi
+              mini", enable it, and reload.
+            </>
+          }
+        />
       )}
       {error && <p className="demo-error">{error.message}</p>}
       {output && (

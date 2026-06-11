@@ -170,6 +170,14 @@ export const navLinks =
 export const navCta =
   "rounded-sm border border-hairline-2 px-3 py-2 font-mono text-[12.5px] text-fg-2 transition-all hover:border-accent-line hover:text-fg";
 
+// Right-aligned nav action group: the icon-only Docs link plus the GitHub CTA.
+export const navActions = "flex items-center gap-2";
+
+// Borderless, icon-only nav button. Sits next to the GitHub CTA; a micro
+// scale + color lift on hover gives it a tactile affordance without a box.
+export const navIcon =
+  "inline-flex items-center justify-center rounded-sm p-2 text-fg-3 transition-all duration-200 ease-out hover:scale-110 hover:text-fg";
+
 export const hero =
   "py-[calc(120px*var(--density))] pb-[calc(72px*var(--density))] max-[880px]:py-20 max-[880px]:pb-14";
 
@@ -192,6 +200,10 @@ export const heroTitle =
 
 export const subhead =
   "max-w-[820px] text-[clamp(17px,1.6vw,20px)] leading-[1.5] tracking-[-0.01em] text-fg-2 [&_strong]:font-medium [&_strong]:text-fg";
+
+// Secondary line under the subhead: smaller (relative em so it tracks the
+// subhead clamp) and dimmer, so the positioning line stays primary.
+export const subheadSub = "mt-1 block text-[0.85em] text-fg-3";
 
 export const ctaRow =
   "mt-2 flex flex-wrap items-center gap-3 max-[640px]:gap-2.5";
@@ -254,6 +266,12 @@ export const pkgInstallPkg = "text-accent";
 
 export const pkgDocs =
   "group inline-flex items-center gap-2 font-mono text-[12.5px] text-fg-3 hover:text-accent";
+
+// Silver shimmer for link labels: clips the metallic --gradient-silver ramp to
+// the text and loops a traveling highlight (see home.css keyframes). Disabled
+// under prefers-reduced-motion, where it settles to the resting silver tone.
+export const silverText =
+  "bg-[image:var(--gradient-silver)] bg-[length:200%_100%] bg-clip-text text-transparent animate-silver motion-reduce:animate-none";
 
 export const pkgDocsArrow =
   "transition-transform group-hover:translate-x-[3px]";

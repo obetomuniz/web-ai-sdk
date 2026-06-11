@@ -1,7 +1,7 @@
 {
   "name": "@web-ai-sdk/writer",
   "version": "0.6.0",
-  "description": "Building block for the Web's Built-in Writer API (Chrome)",
+  "description": "Writer API support for web-ai-sdk, the TypeScript SDK for the Web's Built-in AI APIs.",
   "license": "MIT",
   "author": "Beto Muniz",
   "homepage": "https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/writer#readme",

@@ -1,13 +1,13 @@
 ---
 title: "@web-ai-sdk/detector"
-description: "Building block for the Web's Built-in Language Detector API. Detect the language of any text on-device, with confidence scores and a sorted list of alternates. Session reuse, pluggable result caching, AbortSignal-driven cleanup."
+description: "web-ai-sdk building block for the Web's Built-in Language Detector API. Detect the language of any text on-device, with confidence scores and a sorted list of alternates. Session reuse, pluggable result caching, AbortSignal-driven cleanup."
 editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/detector/README.md
 ---
 
 :::note
 This page is generated from [`packages/detector/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/detector/README.md) on every build. Edits should go to the README.
 :::
-Building block for [the Web's Built-in Language Detector API](https://developer.chrome.com/docs/ai/language-detection). Detect the language of any text on-device, with confidence scores and a sorted list of alternates. Session reuse, pluggable result caching, AbortSignal-driven cleanup.
+web-ai-sdk building block for [the Web's Built-in Language Detector API](https://developer.chrome.com/docs/ai/language-detection). Detect the language of any text on-device, with confidence scores and a sorted list of alternates. Session reuse, pluggable result caching, AbortSignal-driven cleanup.
 
 ## Status
 

@@ -1,6 +1,6 @@
 # @web-ai-sdk/detector
 
-Building block for [the Web's Built-in Language Detector API](https://developer.chrome.com/docs/ai/language-detection). Detect the language of any text on-device, with confidence scores and a sorted list of alternates. Session reuse, pluggable result caching, AbortSignal-driven cleanup.
+web-ai-sdk building block for [the Web's Built-in Language Detector API](https://developer.chrome.com/docs/ai/language-detection). Detect the language of any text on-device, with confidence scores and a sorted list of alternates. Session reuse, pluggable result caching, AbortSignal-driven cleanup.
 
 **Docs:** <https://web-ai-sdk.dev/docs/guides/detector/> · **React:** [`useDetector`](https://web-ai-sdk.dev/docs/react/use-detector/)
 

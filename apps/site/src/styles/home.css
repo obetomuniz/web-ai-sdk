@@ -80,6 +80,29 @@
       stroke-dashoffset: 0;
     }
   }
+
+  /* Silver shimmer: a metallic ramp (resting tone -> bright highlight band ->
+     resting tone) that sweeps across clipped text on a slow loop, like light
+     catching brushed metal. Used via the `silverText` utility on link labels;
+     bg-size is 200% so the highlight travels off-screen between passes. */
+  --gradient-silver: linear-gradient(
+    100deg,
+    var(--color-fg-3) 0%,
+    var(--color-fg-3) 40%,
+    var(--color-accent-bright) 50%,
+    var(--color-fg-3) 60%,
+    var(--color-fg-3) 100%
+  );
+  --animate-silver: silver-sweep 5s linear infinite;
+
+  @keyframes silver-sweep {
+    from {
+      background-position: 200% center;
+    }
+    to {
+      background-position: -200% center;
+    }
+  }
 }
 
 @layer base {

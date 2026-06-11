@@ -1,13 +1,13 @@
 ---
 title: "@web-ai-sdk/all"
-description: "One-install meta-package for every @web-ai-sdk/* building block: prompt, summarizer, translator, detector, and webmcp. Pulls each scoped package in as a regular dependency so consumers don't have to track them individually."
+description: "One-install meta-package for web-ai-sdk, the TypeScript SDK for the Web's Built-in AI APIs. Pulls in every @web-ai-sdk/* building block: prompt, summarizer, translator, detector, writer, rewriter, proofreader, and webmcp, each as a regular dependency so consumers don't have to track them individually."
 editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/sdk/README.md
 ---
 
 :::note
 This page is generated from [`packages/sdk/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/sdk/README.md) on every build. Edits should go to the README.
 :::
-One-install meta-package for every `@web-ai-sdk/*` building block: `prompt`, `summarizer`, `translator`, `detector`, `writer`, `rewriter`, `proofreader`, and `webmcp`. Pulls each scoped package in as a regular dependency so consumers don't have to track them individually.
+One-install meta-package for web-ai-sdk, the TypeScript SDK for the Web's Built-in AI APIs. Pulls in every `@web-ai-sdk/*` building block: `prompt`, `summarizer`, `translator`, `detector`, `writer`, `rewriter`, `proofreader`, and `webmcp`, each as a regular dependency so consumers don't have to track them individually.
 
 ## Status
 

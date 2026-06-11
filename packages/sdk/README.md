@@ -1,6 +1,6 @@
 # @web-ai-sdk/all
 
-One-install meta-package for every `@web-ai-sdk/*` building block: `prompt`, `summarizer`, `translator`, `detector`, `writer`, `rewriter`, `proofreader`, and `webmcp`. Pulls each scoped package in as a regular dependency so consumers don't have to track them individually.
+One-install meta-package for web-ai-sdk, the TypeScript SDK for the Web's Built-in AI APIs. Pulls in every `@web-ai-sdk/*` building block: `prompt`, `summarizer`, `translator`, `detector`, `writer`, `rewriter`, `proofreader`, and `webmcp`, each as a regular dependency so consumers don't have to track them individually.
 
 **Docs:** <https://web-ai-sdk.dev/docs/guides/meta-package/>
 
