@@ -62,6 +62,24 @@ export const ErrorNotice = ({ error }: { error: string | null }) => {
   );
 };
 
+export const InfoNotice = ({ message }: { message: string | null }) => {
+  if (!message) return null;
+  return (
+    <div className="block rounded-sm border border-[color-mix(in_oklch,var(--color-info)_40%,var(--color-hairline))] bg-surface px-3 py-[9px] font-mono text-[11.5px] text-info">
+      <span className="text-[11px]">{message}</span>
+    </div>
+  );
+};
+
+export const WarnNotice = ({ message }: { message: string | null }) => {
+  if (!message) return null;
+  return (
+    <div className="block rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_40%,var(--color-hairline))] bg-surface px-3 py-[9px] font-mono text-[11.5px] text-warn">
+      <span className="text-[11px]">{message}</span>
+    </div>
+  );
+};
+
 export const DownloadNotice = ({ progress }: { progress: number | null }) => {
   if (progress === null) return null;
   const pct = Math.round(progress * 100);

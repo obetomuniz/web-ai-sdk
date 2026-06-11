@@ -24,7 +24,9 @@ import {
 } from "../../../shared/ui.js";
 import {
   DownloadNotice,
+  detectBrowser,
   ErrorNotice,
+  InfoNotice,
   MarkdownOutput,
   StatusBar,
   UnavailableNotice,
@@ -36,11 +38,18 @@ const SAMPLE_ARTICLE = `The Summarizer API ships as part of the browser's built-
 
 type SummaryType = "key-points" | "tldr" | "headline";
 type SummaryLength = "short" | "medium" | "long";
+type SummaryPreference = "auto" | "speed" | "capability";
+
+const preferenceInfo = (preference: SummaryPreference): string | null => {
+  if (detectBrowser() === "other") return null;
+  return `preference: ${preference} is experimental. Enable the Summarizer API performance preference flag, restart your browser, and reload for model tiering.`;
+};
 
 export const SummarizerDemo = () => {
   const [text, setText] = useState(SAMPLE_ARTICLE);
   const [type, setType] = useState<SummaryType>("key-points");
   const [length, setLength] = useState<SummaryLength>("short");
+  const [preference, setPreference] = useState<SummaryPreference>("auto");
   const [output, setOutput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [available, setAvailable] = useState<boolean | null>(null);
@@ -52,6 +61,12 @@ export const SummarizerDemo = () => {
   useEffect(() => {
     setAvailable(isSummarizerAvailable());
   }, []);
+
+  const selectPreference = (next: SummaryPreference) => {
+    setPreference(next);
+  };
+
+  const info = preference !== "auto" ? preferenceInfo(preference) : null;
 
   const run = async () => {
     if (streaming) return;
@@ -67,6 +82,7 @@ export const SummarizerDemo = () => {
         input: text,
         type,
         length,
+        preference,
         monitor,
         signal: ac.signal,
         onUpdate: (chunk) => {
@@ -109,6 +125,7 @@ export const SummarizerDemo = () => {
       </div>
       <div className={cardBody}>
         {available === false && <UnavailableNotice api="Summarizer API" />}
+        <InfoNotice message={info} />
         <DownloadNotice progress={progress} />
         <ErrorNotice error={error} />
         <div className={fieldSpaced}>
@@ -155,6 +172,21 @@ export const SummarizerDemo = () => {
               </button>
             ))}
           </div>
+          <fieldset
+            className={`${chipRow} m-0 min-w-0 basis-full justify-end gap-2 border-0 p-0 max-[640px]:justify-start`}
+          >
+            <legend className={label}>preference</legend>
+            {(["auto", "speed", "capability"] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                className={preference === p ? chipActive : chip}
+                onClick={() => selectPreference(p)}
+              >
+                {p}
+              </button>
+            ))}
+          </fieldset>
         </div>
         <MarkdownOutput
           text={output}
@@ -165,7 +197,10 @@ export const SummarizerDemo = () => {
               : "Run to summarize the article above."
           }
         />
-        <StatusBar stats={stats} label={`type: ${type}`} />
+        <StatusBar
+          stats={stats}
+          label={`type: ${type} · preference: ${preference}`}
+        />
       </div>
     </div>
   );
