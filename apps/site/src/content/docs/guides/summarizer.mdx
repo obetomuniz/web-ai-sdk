@@ -122,8 +122,6 @@ summarize({ language: "en", input: text, preference: "capability" });
 
 The default is `"auto"` to match the platform default; `"speed"` and `"capability"` are explicit opt-ins.
 
-Model tiering for `"speed"` and `"capability"` is experimental: enable the Summarizer API performance preference flag, restart your browser, and reload — otherwise the browser may accept the hint without switching models.
-
 ### `"speed"` is narrower than `"auto"`
 
 The faster model behind `"speed"` does not serve every configuration. Some combinations of `language`, `type`, `length`, and `format` are not available on the speed path, and there is no promise that the browser silently upgrades you to a more capable model when they aren't — the configuration can instead be reported as **unavailable**. When that happens, `summarize()` throws `SummarizerUnavailableError`, the same way it does for any unavailable configuration.

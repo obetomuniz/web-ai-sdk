@@ -150,7 +150,6 @@ const MANAGED_TOKENS = [
   "--color-accent-line",
   "--color-brand-dark",
   "--color-ok",
-  "--color-info",
   "--color-warn",
   "--color-err",
 ] as const;
@@ -225,7 +224,6 @@ export function applyTheme(theme: Theme, mode: Mode): void {
 
   // Status lights stay semantic; only success may be retinted per theme.
   set("--color-ok", theme.ok ?? (light ? "#1f9d6b" : "#57d9a3"));
-  set("--color-info", light ? "#0066b8" : "#6eb5ff");
   set("--color-warn", light ? "#9a6b00" : "#ffc861");
   set("--color-err", light ? "#c2354a" : "#ff6b7a");
 
