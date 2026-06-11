@@ -45,6 +45,10 @@ Each package ships:
 - **Vanilla** entry (`@web-ai-sdk/<pkg>`): TypeScript / DOM only, zero framework deps.
 - **React** entry (`@web-ai-sdk/<pkg>/react`): small hook adapter wrapping the vanilla core. `react` is an optional peer dep.
 
+## Build for the agentic web
+
+The browser is becoming both an AI runtime and an agent surface. The Built-in AI wrappers (Prompt, Summarizer, Translator, and friends) cover the runtime half: local model capabilities behind one typed interface. [`@web-ai-sdk/webmcp`](./packages/webmcp) covers the agent half: structured, agent-callable tools your page exposes to visiting agents. Feature detection and no-op fallbacks keep the same code shipping everywhere, so neither half is a hard requirement — see [Browser support](./apps/site/src/content/docs/browser-support.mdx) for what's available where.
+
 ## Why composable
 
 Browsers are shipping built-in AI APIs behind flags. The shape changes; the lifecycle is similar across them: feature-detect, lazily create a session, stream chunks, cache results, clean up. Those concerns are framework-agnostic and worth sharing.
