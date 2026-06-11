@@ -62,6 +62,24 @@ export const ErrorNotice = ({ error }: { error: string | null }) => {
   );
 };
 
+export const InfoNotice = ({ message }: { message: string | null }) => {
+  if (!message) return null;
+  return (
+    <div className="block rounded-sm border border-[color-mix(in_oklch,var(--color-info)_40%,var(--color-hairline))] bg-surface px-3 py-[9px] font-mono text-[11.5px] text-info">
+      <span className="text-[11px]">{message}</span>
+    </div>
+  );
+};
+
+export const WarnNotice = ({ message }: { message: string | null }) => {
+  if (!message) return null;
+  return (
+    <div className="block rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_40%,var(--color-hairline))] bg-surface px-3 py-[9px] font-mono text-[11.5px] text-warn">
+      <span className="text-[11px]">{message}</span>
+    </div>
+  );
+};
+
 export const DownloadNotice = ({ progress }: { progress: number | null }) => {
   if (progress === null) return null;
   const pct = Math.round(progress * 100);
@@ -230,12 +248,34 @@ export const MarkdownOutput = ({
   );
 };
 
+type NavigatorWithUserAgentData = Navigator & {
+  userAgentData?: { brands?: Array<{ brand: string; version: string }> };
+};
+
 export const detectBrowser = (): "chrome" | "edge" | "other" => {
   if (typeof navigator === "undefined") return "other";
   const ua = navigator.userAgent;
   if (/\bEdg\//.test(ua)) return "edge";
   if (/\bChrome\//.test(ua)) return "chrome";
   return "other";
+};
+
+/** Desktop Chrome or Edge — excludes mobile UAs and other Chromium forks. */
+export const isDesktopChromium = (): boolean => {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  if (/Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(ua)) return false;
+
+  const brands = (navigator as NavigatorWithUserAgentData).userAgentData
+    ?.brands;
+  if (brands) {
+    return brands.some(
+      (b) => b.brand === "Google Chrome" || b.brand === "Microsoft Edge",
+    );
+  }
+
+  const browser = detectBrowser();
+  return browser === "edge" || browser === "chrome";
 };
 
 export const detectModelName = (): string => {
