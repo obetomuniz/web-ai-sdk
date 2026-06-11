@@ -28,9 +28,6 @@ export const demoControls =
 
 export const chipRow = "flex flex-wrap items-center gap-1.5";
 
-export const chipRowInline =
-  "flex shrink-0 flex-nowrap items-center gap-1.5 max-[640px]:flex-wrap";
-
 export const chipRowEnd = "ml-auto max-[640px]:ml-0 max-[640px]:w-full";
 
 const chipBase =
@@ -65,14 +62,6 @@ const selectChevron =
   "bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%228%22%20viewBox%3D%220%200%2012%208%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M1%201.5L6%206.5L11%201.5%22%20stroke%3D%22%238a8175%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px_8px] bg-[position:right_12px_center] bg-no-repeat";
 
 export const select = `h-[38px] w-full cursor-pointer appearance-none rounded-sm border border-hairline bg-bg px-3 pr-9 font-mono text-[13px] leading-[38px] text-fg transition-[border-color,background] focus:border-accent-line focus:bg-surface-2 focus:outline-none ${selectChevron}`;
-
-/** Pill select — matches selected `chipActive` styling (current value always shown). */
-export const chipSelect = `${chipActive} appearance-none pr-7 max-[640px]:pr-8 focus:outline-none`;
-
-export const chipSelectWrap = "relative inline-flex shrink-0 items-center";
-
-export const chipSelectCaret =
-  "pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 font-mono text-[9px] leading-none text-accent-bright";
 
 export const caret =
   "inline-block h-[0.08em] w-[0.5em] shrink-0 animate-blink rounded-[1px] bg-accent align-baseline ml-[0.06em]";
