@@ -67,7 +67,7 @@ const selectChevron =
 export const select = `h-[38px] w-full cursor-pointer appearance-none rounded-sm border border-hairline bg-bg px-3 pr-9 font-mono text-[13px] leading-[38px] text-fg transition-[border-color,background] focus:border-accent-line focus:bg-surface-2 focus:outline-none ${selectChevron}`;
 
 /** Pill select — matches selected `chipActive` styling (current value always shown). */
-export const chipSelect = `${chipActive} appearance-none pr-7 max-[640px]:pr-8 focus:outline-none`;
+export const chipSelect = `${chipActive} appearance-none pr-7 max-[640px]:pr-8 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent`;
 
 export const chipSelectWrap = "relative inline-flex shrink-0 items-center";
 

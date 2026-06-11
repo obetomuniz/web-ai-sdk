@@ -248,6 +248,10 @@ export const MarkdownOutput = ({
   );
 };
 
+type NavigatorWithUserAgentData = Navigator & {
+  userAgentData?: { brands?: Array<{ brand: string; version: string }> };
+};
+
 export const detectBrowser = (): "chrome" | "edge" | "other" => {
   if (typeof navigator === "undefined") return "other";
   const ua = navigator.userAgent;
@@ -256,11 +260,22 @@ export const detectBrowser = (): "chrome" | "edge" | "other" => {
   return "other";
 };
 
-/** Desktop Chrome or Edge — excludes mobile Chromium UAs that still match `detectBrowser()`. */
+/** Desktop Chrome or Edge — excludes mobile UAs and other Chromium forks. */
 export const isDesktopChromium = (): boolean => {
-  if (detectBrowser() === "other") return false;
   if (typeof navigator === "undefined") return false;
-  return !/Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent);
+  const ua = navigator.userAgent;
+  if (/Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(ua)) return false;
+
+  const brands = (navigator as NavigatorWithUserAgentData).userAgentData
+    ?.brands;
+  if (brands) {
+    return brands.some(
+      (b) => b.brand === "Google Chrome" || b.brand === "Microsoft Edge",
+    );
+  }
+
+  const browser = detectBrowser();
+  return browser === "edge" || browser === "chrome";
 };
 
 export const detectModelName = (): string => {
