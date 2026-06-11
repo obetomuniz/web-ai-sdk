@@ -1,6 +1,7 @@
 import { isAvailable, type Tool } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { UnavailableHint } from "./UnavailableHint.js";
 
 interface ListedTool {
   name: string;
@@ -110,10 +111,21 @@ export const WebMCPDemo = () => {
         WebMCP available: <strong>{available ? "yes" : "no"}</strong>
       </p>
       {!available && (
-        <p className="demo-hint">
-          Enable <code>chrome://flags/#enable-webmcp-testing</code> in Chrome
-          146+ and reload to exercise the tools.
-        </p>
+        <UnavailableHint
+          api="WebMCP"
+          chrome={
+            <>
+              Enable <code>chrome://flags/#enable-webmcp-testing</code> in
+              Chrome 146+ and reload to exercise the tools.
+            </>
+          }
+          edge={
+            <>
+              Enable <code>edge://flags/#enable-webmcp-testing</code> in Edge
+              147+ and reload to exercise the tools.
+            </>
+          }
+        />
       )}
       <div className="demo-panel">
         <strong className="demo-panel__title">Registered tools</strong>

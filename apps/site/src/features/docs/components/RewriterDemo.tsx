@@ -1,5 +1,6 @@
 import { useRewriter } from "@web-ai-sdk/rewriter/react";
 import { useState } from "react";
+import { UnavailableHint } from "./UnavailableHint.js";
 
 const SAMPLE = "hey, can u send me that doc when u get a sec? thx a bunch";
 
@@ -26,10 +27,22 @@ export const RewriterDemo = ({ language = "en" }: { language?: string }) => {
         />
       </label>
       {status === "unavailable" && !error && (
-        <p className="demo-hint">
-          Rewriter API unavailable. Open in Chrome with the Rewriter API flag /
-          origin trial enabled to exercise.
-        </p>
+        <UnavailableHint
+          api="Rewriter API"
+          chrome={
+            <>
+              Rewriter API unavailable. Open in Chrome with the Rewriter API
+              flag / origin trial enabled to exercise.
+            </>
+          }
+          edge={
+            <>
+              Rewriter API unavailable. In Edge Canary/Dev 138+, open{" "}
+              <code>edge://flags/</code>, search for "Rewriter API for Phi
+              mini", enable it, and reload.
+            </>
+          }
+        />
       )}
       {error && <p className="demo-error">{error.message}</p>}
       {output && (

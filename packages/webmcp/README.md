@@ -1,6 +1,6 @@
 # @web-ai-sdk/webmcp
 
-Building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `document.modelContext`. (For backward compatibility with the previous shape of the API, this package also reads from `navigator.modelContext`.)
+web-ai-sdk building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `document.modelContext`. (For backward compatibility with the previous shape of the API, this package also reads from `navigator.modelContext`.)
 
 An ergonomic, framework-agnostic adapter over the native browser API, with safe register/unregister cleanup and a feature-detected no-op fallback for non-supporting browsers.
 

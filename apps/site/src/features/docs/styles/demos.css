@@ -29,6 +29,16 @@
   --demo-muted-fg: var(--sl-color-gray-3);
   --demo-hint-bg: var(--sl-color-gray-7);
 
+  /* Warn hint (unavailable APIs): amber tint matching the home page's
+     UnavailableNotice. fg darkens in light mode for contrast (see dark block). */
+  --demo-warn-bg: color-mix(in oklch, var(--color-warn) 14%, var(--sl-color-bg));
+  --demo-warn-border: color-mix(
+    in oklch,
+    var(--color-warn) 45%,
+    var(--sl-color-hairline)
+  );
+  --demo-warn-fg: #9a6b00;
+
   /* Response / "success" panel: soft accent tint. */
   --demo-accent-bg: color-mix(
     in oklch,
@@ -64,6 +74,7 @@
 
   --demo-panel-bg: color-mix(in oklch, var(--sl-color-gray-6) 50%, var(--sl-color-bg));
   --demo-error-fg: oklch(0.72 0.18 25);
+  --demo-warn-fg: var(--color-warn);
 }
 
 /* ---------- shared building blocks ---------- */
@@ -166,6 +177,13 @@
   font-size: 12px;
   color: var(--demo-muted-fg);
   margin: 0;
+}
+
+/* Unavailable-API hints reuse the home page's amber warn treatment. */
+.demo-hint--warn {
+  background: var(--demo-warn-bg);
+  border: 1px solid var(--demo-warn-border);
+  color: var(--demo-warn-fg);
 }
 
 .demo-error {

@@ -35,6 +35,46 @@ const ACCENT_HI = "#FFFFFF";
 const MONO = "'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace";
 const SANS = "'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif";
 
+// Install pill geometry. The pill width is derived from the *actually rendered*
+// text width (measured below) rather than hardcoded, so the left/right padding
+// stays symmetric no matter which monospace font the host renderer falls back
+// to. Hardcoding the width left a lopsided right gap whenever the fallback font
+// advanced differently from the design assumption.
+const INSTALL_TEXT = "$ npm install @web-ai-sdk/all";
+const INSTALL_FS = 24;
+const INSTALL_PAD = 24;
+
+// Measure the natural rendered width of the install string in the same font
+// the final card uses. resvg's getBBox reflects the resolved fallback font, so
+// the pill fits whatever actually paints. Falls back to a 0.6em monospace
+// estimate if the bbox is unavailable for any reason.
+function measureWidth(text, fontSize) {
+  try {
+    const probe = new Resvg(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="4000" height="${fontSize * 2}"><text x="0" y="${fontSize}" font-family="${MONO}" font-size="${fontSize}">${text}</text></svg>`,
+      { background: INK, font: { loadSystemFonts: true } },
+    );
+    const bbox = probe.getBBox();
+    if (bbox && bbox.width > 0) return Math.ceil(bbox.width);
+  } catch {
+    // fall through to the estimate
+  }
+  return Math.round(text.length * fontSize * 0.6);
+}
+
+const INSTALL_TEXT_W = measureWidth(INSTALL_TEXT, INSTALL_FS);
+const INSTALL_PILL_W = INSTALL_TEXT_W + INSTALL_PAD * 2;
+
+// Wordmark caret. The home page sits the "_" caret a hair after the wordmark
+// (a ~0.1em gap). Measure the rendered "web-ai-sdk" width so the caret tracks
+// the actual glyphs instead of a hardcoded x that floats when the fallback
+// font advances differently.
+const WORDMARK_TEXT = "web-ai-sdk";
+const WORDMARK_FS = 120;
+const WORDMARK_X = 70;
+const WORDMARK_W = measureWidth(WORDMARK_TEXT, WORDMARK_FS);
+const CARET_X = WORDMARK_X + WORDMARK_W + Math.round(WORDMARK_FS * 0.1);
+
 const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <defs>
@@ -121,19 +161,19 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
   <!-- Wordmark, the hero. "web-ai-sdk" with the "ai" in bright accent, plus an
        underscore caret right after "sdk" (matching the home page's "_" caret). The
        x-coordinate is hand-tuned to sit just after the wordmark at 120px. -->
-  <text x="70" y="355" font-family="${MONO}" font-weight="500" font-size="120" fill="${PAPER}">web-<tspan fill="${ACCENT_HI}">ai</tspan>-sdk</text>
-  <rect x="828" y="349" width="66" height="11" rx="2" fill="${ACCENT}"/>
+  <text x="${WORDMARK_X}" y="355" font-family="${MONO}" font-weight="500" font-size="${WORDMARK_FS}" fill="${PAPER}">web-<tspan fill="${ACCENT_HI}">ai</tspan>-sdk</text>
+  <rect x="${CARET_X}" y="349" width="66" height="11" rx="2" fill="${ACCENT}"/>
 
   <!-- Tagline -->
-  <text x="70" y="425" font-family="${SANS}" font-weight="600" font-size="31" fill="${PAPER}">Building blocks in TypeScript <tspan font-weight="400" fill="${PAPER_2}">for the Web's Built-in AI APIs.</tspan></text>
-  <text x="70" y="462" font-family="${SANS}" font-weight="400" font-size="21" fill="${MUTED}">Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.</text>
+  <text x="70" y="425" font-family="${SANS}" font-weight="600" font-size="31" fill="${PAPER}">The TypeScript SDK <tspan font-weight="400" fill="${PAPER_2}">for the Web's Built-in AI APIs.</tspan></text>
+  <text x="70" y="462" font-family="${SANS}" font-weight="400" font-size="21" fill="${MUTED}">Composable building blocks, no runtime deps, just lifecycle, streaming, and AbortSignals.</text>
 
   <!-- Install pill. One text element (not two) so the space between
        "install" and "@web-ai-sdk/all" is a literal character at the
        monospace advance — no manual x-positioning, no accidental gap. -->
   <g transform="translate(70, 504)">
-    <rect x="0" y="0" width="448" height="56" rx="10" fill="${INK_2}" stroke="${RULE_2}" stroke-width="1"/>
-    <text x="22" y="38" font-family="${MONO}" font-size="24" fill="${PAPER}"><tspan fill="${ACCENT}">$ npm install</tspan> @web-ai-sdk/all</text>
+    <rect x="0" y="0" width="${INSTALL_PILL_W}" height="56" rx="10" fill="${INK_2}" stroke="${RULE_2}" stroke-width="1"/>
+    <text x="${INSTALL_PAD}" y="38" font-family="${MONO}" font-size="${INSTALL_FS}" fill="${PAPER}"><tspan fill="${ACCENT}">$ npm install</tspan> @web-ai-sdk/all</text>
   </g>
 
   <!-- Domain stamp, bottom-right -->

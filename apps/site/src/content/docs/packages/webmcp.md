@@ -1,19 +1,19 @@
 ---
 title: "@web-ai-sdk/webmcp"
-description: "Building block for the W3C WebMCP API exposed at navigator.modelContext."
+description: "web-ai-sdk building block for the W3C WebMCP API exposed at document.modelContext."
 editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/webmcp/README.md
 ---
 
 :::note
 This page is generated from [`packages/webmcp/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/webmcp/README.md) on every build. Edits should go to the README.
 :::
-Building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `navigator.modelContext`.
+web-ai-sdk building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `document.modelContext`.
 
 An ergonomic, framework-agnostic adapter over the native browser API, with safe register/unregister cleanup and a feature-detected no-op fallback for non-supporting browsers.
 
 ## Status
 
-WebMCP ships in Chrome 146+ and Edge 146+ behind a flag (`chrome://flags/#enable-webmcp-testing`; the Edge flag has the same name). On any browser that doesn't expose `navigator.modelContext`, this library is a no-op. Your app stays callable, and no tools get registered.
+WebMCP ships in Chrome 146+ and Edge 146+ behind a flag (`chrome://flags/#enable-webmcp-testing`; the Edge flag has the same name). On any browser that doesn't expose `document.modelContext` (or the legacy `navigator.modelContext`), this library is a no-op. Your app stays callable, and no tools get registered.
 
 ## Install
 
@@ -117,7 +117,7 @@ Feature-detect helper.
 
 ### `getModelContext(): ModelContext | undefined`
 
-Escape hatch: the raw `navigator.modelContext` if present, for cases the wrapper doesn't cover (e.g. `requestUserInteraction`).
+Escape hatch: the raw `document.modelContext` (or the legacy `navigator.modelContext`) if present, for cases the wrapper doesn't cover (e.g. `requestUserInteraction`).
 
 ### `Tool<TInput, TOutput>`
 
@@ -141,7 +141,7 @@ Mark mutating tools `destructive: true`. The host (browser, agent) is responsibl
 
 ## Troubleshooting
 
-- **Inspector / agent doesn't see the tools.** `navigator.modelContext` is per-Window. Tools registered inside an `<iframe>` are scoped to that frame and invisible to extensions hooked into the top page. Register from the top-level document, not from an embedded frame.
+- **Inspector / agent doesn't see the tools.** The WebMCP entry point is per-document; each frame, including iframes, has its own `document.modelContext`. Tools registered inside an `<iframe>` are scoped to that frame and invisible to extensions hooked into the top page. Register from the top-level document, not from an embedded frame.
 
 ## License
 

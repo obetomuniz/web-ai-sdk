@@ -1,13 +1,13 @@
 ---
 title: "@web-ai-sdk/summarizer"
-description: "Building block for the Web's Built-in Summarizer API. Skeleton extraction, sentence-boundary trimming, streaming, and sessionStorage caching."
+description: "web-ai-sdk building block for the Web's Built-in Summarizer API. Skeleton extraction, sentence-boundary trimming, streaming, and sessionStorage caching."
 editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/summarizer/README.md
 ---
 
 :::note
 This page is generated from [`packages/summarizer/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/summarizer/README.md) on every build. Edits should go to the README.
 :::
-Building block for the Web's Built-in [Summarizer API](https://developer.chrome.com/docs/ai/summarizer-api). String-mode summarization with session reuse, output cleaning, streaming, and opt-in result caching.
+web-ai-sdk building block for the Web's Built-in [Summarizer API](https://developer.chrome.com/docs/ai/summarizer-api). String-mode summarization with session reuse, output cleaning, streaming, and opt-in result caching.
 
 ## Status
 

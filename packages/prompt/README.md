@@ -1,6 +1,6 @@
 # @web-ai-sdk/prompt
 
-Building block for the Web's Built-in [Prompt API](https://developer.chrome.com/docs/extensions/ai/prompt-api) (`LanguageModel`). One-shot `ask()` for embeds and widgets, plus a thin `createSession()` primitive (and React `useSession`) for chat-shaped apps that need independent per-conversation sessions and delta-shaped streaming. The wrapper smooths cross-browser quirks (delta-vs-cumulative chunks, output sanitization, abort wiring); UI state and conversation history are the consumer's concern.
+web-ai-sdk building block for the Web's Built-in [Prompt API](https://developer.chrome.com/docs/extensions/ai/prompt-api) (`LanguageModel`). One-shot `ask()` for embeds and widgets, plus a thin `createSession()` primitive (and React `useSession`) for chat-shaped apps that need independent per-conversation sessions and delta-shaped streaming. The wrapper smooths cross-browser quirks (delta-vs-cumulative chunks, output sanitization, abort wiring); UI state and conversation history are the consumer's concern.
 
 **Docs:** <https://web-ai-sdk.dev/docs/guides/prompt/> · **React:** [`usePrompt`](https://web-ai-sdk.dev/docs/react/use-prompt/) · [`useSession`](https://web-ai-sdk.dev/docs/react/use-session/)
 

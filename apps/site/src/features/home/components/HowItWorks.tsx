@@ -32,6 +32,9 @@ interface Tab {
   id: string;
   label: string;
   code: CodeLine[];
+  // When true, render the line count as a lower bound (e.g. "37L+"): the raw
+  // browser-API example is a representative minimum, not the full ceremony.
+  linesApprox?: boolean;
 }
 
 const TABS: Tab[] = [
@@ -225,6 +228,7 @@ const TABS: Tab[] = [
   {
     id: "raw",
     label: "raw browser API",
+    linesApprox: true,
     code: [
       { t: [["com", "// what the wrappers do for you"]] },
       { t: [] },
@@ -517,7 +521,7 @@ export const HowItWorks = () => {
             <span
               className={`${tabLines} ${t.id === tabId ? tabLinesActive : ""}`}
             >
-              {t.code.length}L
+              {t.code.length}L{t.linesApprox ? "+" : ""}
             </span>
           </button>
         ))}

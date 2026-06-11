@@ -1,5 +1,6 @@
 import { usePrompt } from "@web-ai-sdk/prompt/react";
 import { type ComponentProps, useState } from "react";
+import { UnavailableHint } from "./UnavailableHint.js";
 
 export interface PromptDemoProps {
   systemPrompt?: string;
@@ -26,11 +27,23 @@ export const PromptDemo = ({
   return (
     <div className="demo-card">
       {status === "unavailable" && (
-        <p className="demo-hint">
-          Prompt API unavailable. Enable{" "}
-          <code>chrome://flags/#prompt-api-for-gemini-nano</code> in Chrome and
-          reload to exercise.
-        </p>
+        <UnavailableHint
+          api="Prompt API"
+          chrome={
+            <>
+              Prompt API unavailable. Stable in Chrome 148+; on Chrome 138–147
+              enable <code>chrome://flags/#prompt-api-for-gemini-nano</code> and
+              reload.
+            </>
+          }
+          edge={
+            <>
+              Prompt API unavailable. In Edge Canary/Dev 138+, open{" "}
+              <code>edge://flags/</code>, search for "Prompt API for Phi mini",
+              enable it, and reload.
+            </>
+          }
+        />
       )}
       <form onSubmit={onSubmit} className="demo-row">
         <input
