@@ -12,10 +12,11 @@ import {
   cardDotOk,
   cardHead,
   cardHeadTitle,
-  chip,
-  chipActive,
-  chipRow,
   chipRowEnd,
+  chipRowInline,
+  chipSelect,
+  chipSelectCaret,
+  chipSelectWrap,
   chipSep,
   demoControls,
   fieldSpaced,
@@ -24,9 +25,9 @@ import {
 } from "../../../shared/ui.js";
 import {
   DownloadNotice,
-  detectBrowser,
   ErrorNotice,
   InfoNotice,
+  isDesktopChromium,
   MarkdownOutput,
   StatusBar,
   UnavailableNotice,
@@ -41,9 +42,39 @@ type SummaryLength = "short" | "medium" | "long";
 type SummaryPreference = "auto" | "speed" | "capability";
 
 const preferenceInfo = (preference: SummaryPreference): string | null => {
-  if (detectBrowser() === "other") return null;
+  if (!isDesktopChromium()) return null;
   return `preference: ${preference} is experimental. Enable the Summarizer API performance preference flag, restart your browser, and reload for model tiering.`;
 };
+
+const ChipSelect = <T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: readonly T[];
+  onChange: (value: T) => void;
+}) => (
+  <span className={chipSelectWrap}>
+    <select
+      className={chipSelect}
+      value={value}
+      aria-label={label}
+      onChange={(e) => onChange(e.target.value as T)}
+    >
+      {options.map((option) => (
+        <option key={option} value={option}>
+          {option}
+        </option>
+      ))}
+    </select>
+    <span className={chipSelectCaret} aria-hidden="true">
+      ▾
+    </span>
+  </span>
+);
 
 export const SummarizerDemo = () => {
   const [text, setText] = useState(SAMPLE_ARTICLE);
@@ -61,10 +92,6 @@ export const SummarizerDemo = () => {
   useEffect(() => {
     setAvailable(isSummarizerAvailable());
   }, []);
-
-  const selectPreference = (next: SummaryPreference) => {
-    setPreference(next);
-  };
 
   const info = preference !== "auto" ? preferenceInfo(preference) : null;
 
@@ -149,44 +176,28 @@ export const SummarizerDemo = () => {
           >
             <span>{streaming ? "…" : "▶"}</span> Summarize
           </button>
-          <div className={`${chipRow} ${chipRowEnd}`}>
-            {(["key-points", "tldr", "headline"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                className={type === t ? chipActive : chip}
-                onClick={() => setType(t)}
-              >
-                {t}
-              </button>
-            ))}
+          <div className={`${chipRowInline} ${chipRowEnd}`}>
+            <ChipSelect
+              label="Summary type"
+              value={type}
+              options={["key-points", "tldr", "headline"]}
+              onChange={setType}
+            />
             <span className={chipSep} aria-hidden="true" />
-            {(["short", "medium", "long"] as const).map((l) => (
-              <button
-                key={l}
-                type="button"
-                className={length === l ? chipActive : chip}
-                onClick={() => setLength(l)}
-              >
-                {l}
-              </button>
-            ))}
+            <ChipSelect
+              label="Summary length"
+              value={length}
+              options={["short", "medium", "long"]}
+              onChange={setLength}
+            />
+            <span className={chipSep} aria-hidden="true" />
+            <ChipSelect
+              label="Performance preference"
+              value={preference}
+              options={["auto", "speed", "capability"]}
+              onChange={setPreference}
+            />
           </div>
-          <fieldset
-            className={`${chipRow} m-0 min-w-0 basis-full justify-end gap-2 border-0 p-0 max-[640px]:justify-start`}
-          >
-            <legend className={label}>preference</legend>
-            {(["auto", "speed", "capability"] as const).map((p) => (
-              <button
-                key={p}
-                type="button"
-                className={preference === p ? chipActive : chip}
-                onClick={() => selectPreference(p)}
-              >
-                {p}
-              </button>
-            ))}
-          </fieldset>
         </div>
         <MarkdownOutput
           text={output}

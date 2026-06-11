@@ -256,6 +256,13 @@ export const detectBrowser = (): "chrome" | "edge" | "other" => {
   return "other";
 };
 
+/** Desktop Chrome or Edge — excludes mobile Chromium UAs that still match `detectBrowser()`. */
+export const isDesktopChromium = (): boolean => {
+  if (detectBrowser() === "other") return false;
+  if (typeof navigator === "undefined") return false;
+  return !/Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent);
+};
+
 export const detectModelName = (): string => {
   if (typeof globalThis === "undefined") return "on-device LM";
   const g = globalThis as Record<string, unknown>;
