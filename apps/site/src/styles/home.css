@@ -21,6 +21,7 @@
   --color-accent-line: rgba(255, 255, 255, 0.3);
   /* Status lights: fixed semantic meaning; a theme may retint --color-ok. */
   --color-ok: #57d9a3;
+  --color-info: #6eb5ff;
   --color-warn: #ffc861;
   --color-err: #ff6b7a;
   --color-brand-dark: #0a0a0a;
@@ -129,6 +130,7 @@
     --accent-soft: var(--color-accent-soft);
     --accent-line: var(--color-accent-line);
     --ok: var(--color-ok);
+    --info: var(--color-info);
     --warn: var(--color-warn);
     --err: var(--color-err);
     --sans: var(--font-sans);
