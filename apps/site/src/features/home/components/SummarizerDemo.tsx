@@ -12,10 +12,11 @@ import {
   cardDotOk,
   cardHead,
   cardHeadTitle,
-  chip,
-  chipActive,
-  chipRow,
   chipRowEnd,
+  chipRowInline,
+  chipSelect,
+  chipSelectCaret,
+  chipSelectWrap,
   chipSep,
   demoControls,
   fieldSpaced,
@@ -25,6 +26,8 @@ import {
 import {
   DownloadNotice,
   ErrorNotice,
+  InfoNotice,
+  isDesktopChromium,
   MarkdownOutput,
   StatusBar,
   UnavailableNotice,
@@ -36,11 +39,48 @@ const SAMPLE_ARTICLE = `The Summarizer API ships as part of the browser's built-
 
 type SummaryType = "key-points" | "tldr" | "headline";
 type SummaryLength = "short" | "medium" | "long";
+type SummaryPreference = "auto" | "speed" | "capability";
+
+const preferenceInfo = (preference: SummaryPreference): string | null => {
+  if (!isDesktopChromium()) return null;
+  return `preference: ${preference} is experimental. Enable the Summarizer API performance preference flag, restart your browser, and reload for model tiering.`;
+};
+
+const ChipSelect = <T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: readonly T[];
+  onChange: (value: T) => void;
+}) => (
+  <span className={chipSelectWrap}>
+    <select
+      className={chipSelect}
+      value={value}
+      aria-label={label}
+      onChange={(e) => onChange(e.target.value as T)}
+    >
+      {options.map((option) => (
+        <option key={option} value={option}>
+          {option}
+        </option>
+      ))}
+    </select>
+    <span className={chipSelectCaret} aria-hidden="true">
+      ▾
+    </span>
+  </span>
+);
 
 export const SummarizerDemo = () => {
   const [text, setText] = useState(SAMPLE_ARTICLE);
   const [type, setType] = useState<SummaryType>("key-points");
   const [length, setLength] = useState<SummaryLength>("short");
+  const [preference, setPreference] = useState<SummaryPreference>("auto");
   const [output, setOutput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [available, setAvailable] = useState<boolean | null>(null);
@@ -52,6 +92,8 @@ export const SummarizerDemo = () => {
   useEffect(() => {
     setAvailable(isSummarizerAvailable());
   }, []);
+
+  const info = preference !== "auto" ? preferenceInfo(preference) : null;
 
   const run = async () => {
     if (streaming) return;
@@ -67,6 +109,7 @@ export const SummarizerDemo = () => {
         input: text,
         type,
         length,
+        preference,
         monitor,
         signal: ac.signal,
         onUpdate: (chunk) => {
@@ -109,6 +152,7 @@ export const SummarizerDemo = () => {
       </div>
       <div className={cardBody}>
         {available === false && <UnavailableNotice api="Summarizer API" />}
+        <InfoNotice message={info} />
         <DownloadNotice progress={progress} />
         <ErrorNotice error={error} />
         <div className={fieldSpaced}>
@@ -132,28 +176,27 @@ export const SummarizerDemo = () => {
           >
             <span>{streaming ? "…" : "▶"}</span> Summarize
           </button>
-          <div className={`${chipRow} ${chipRowEnd}`}>
-            {(["key-points", "tldr", "headline"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                className={type === t ? chipActive : chip}
-                onClick={() => setType(t)}
-              >
-                {t}
-              </button>
-            ))}
+          <div className={`${chipRowInline} ${chipRowEnd}`}>
+            <ChipSelect
+              label="Summary type"
+              value={type}
+              options={["key-points", "tldr", "headline"]}
+              onChange={setType}
+            />
             <span className={chipSep} aria-hidden="true" />
-            {(["short", "medium", "long"] as const).map((l) => (
-              <button
-                key={l}
-                type="button"
-                className={length === l ? chipActive : chip}
-                onClick={() => setLength(l)}
-              >
-                {l}
-              </button>
-            ))}
+            <ChipSelect
+              label="Summary length"
+              value={length}
+              options={["short", "medium", "long"]}
+              onChange={setLength}
+            />
+            <span className={chipSep} aria-hidden="true" />
+            <ChipSelect
+              label="Performance preference"
+              value={preference}
+              options={["auto", "speed", "capability"]}
+              onChange={setPreference}
+            />
           </div>
         </div>
         <MarkdownOutput
@@ -165,7 +208,10 @@ export const SummarizerDemo = () => {
               : "Run to summarize the article above."
           }
         />
-        <StatusBar stats={stats} label={`type: ${type}`} />
+        <StatusBar
+          stats={stats}
+          label={`type: ${type} · preference: ${preference}`}
+        />
       </div>
     </div>
   );

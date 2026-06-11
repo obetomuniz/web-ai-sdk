@@ -62,6 +62,24 @@ export const ErrorNotice = ({ error }: { error: string | null }) => {
   );
 };
 
+export const InfoNotice = ({ message }: { message: string | null }) => {
+  if (!message) return null;
+  return (
+    <div className="block rounded-sm border border-[color-mix(in_oklch,var(--color-info)_40%,var(--color-hairline))] bg-surface px-3 py-[9px] font-mono text-[11.5px] text-info">
+      <span className="text-[11px]">{message}</span>
+    </div>
+  );
+};
+
+export const WarnNotice = ({ message }: { message: string | null }) => {
+  if (!message) return null;
+  return (
+    <div className="block rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_40%,var(--color-hairline))] bg-surface px-3 py-[9px] font-mono text-[11.5px] text-warn">
+      <span className="text-[11px]">{message}</span>
+    </div>
+  );
+};
+
 export const DownloadNotice = ({ progress }: { progress: number | null }) => {
   if (progress === null) return null;
   const pct = Math.round(progress * 100);
@@ -236,6 +254,13 @@ export const detectBrowser = (): "chrome" | "edge" | "other" => {
   if (/\bEdg\//.test(ua)) return "edge";
   if (/\bChrome\//.test(ua)) return "chrome";
   return "other";
+};
+
+/** Desktop Chrome or Edge — excludes mobile Chromium UAs that still match `detectBrowser()`. */
+export const isDesktopChromium = (): boolean => {
+  if (detectBrowser() === "other") return false;
+  if (typeof navigator === "undefined") return false;
+  return !/Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent);
 };
 
 export const detectModelName = (): string => {
