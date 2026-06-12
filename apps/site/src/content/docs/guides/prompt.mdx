@@ -15,7 +15,7 @@ import { ask } from "@web-ai-sdk/prompt";
 const result = await ask({
   input: "Summarize this in one sentence: WebMCP lets pages expose tools to agents.",
   systemPrompt: "You are concise. Reply with a single sentence.",
-  temperature: 0.2,
+  samplingMode: "predictable",
   onUpdate: (text) => render(text),
 });
 
@@ -32,6 +32,7 @@ Pass `onUpdate` to render partial text as it streams. `result.output` is the fin
 interface AskOptions {
   input: string;
   systemPrompt?: string;
+  samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
   temperature?: number;
   topK?: number;
   language?: string;
@@ -54,8 +55,9 @@ interface AskOptions {
 | --- | --- | --- |
 | `input` <sup>required</sup> | `string` | The user-facing prompt / question. Empty / whitespace resolves to `{ output: null }`. |
 | `systemPrompt` | `string` | Optional system prompt (folded into `initialPrompts` as a `system` role). |
-| `temperature` | `number` | Sampling temperature (0..1). Defaults to the model's default. |
-| `topK` | `number` | Sampling top-k. Defaults to the model's default. |
+| `samplingMode` | `"most-predictable" \| "predictable" \| "balanced" \| "creative" \| "most-creative"` | Semantic sampling preset. Mutually exclusive with `temperature` / `topK`. |
+| `temperature` | `number` | Legacy raw sampling temperature. Web page contexts are moving to `samplingMode`. |
+| `topK` | `number` | Legacy raw sampling top-k. Web page contexts are moving to `samplingMode`. |
 | `language` | `string` | BCP-47 language hint. Folded into `expectedInputs` / `expectedOutputs` when supported. |
 | `supportedLanguages` | `readonly string[]` | Languages the model supports for the language hint. Defaults to `["en"]`. |
 | `expectedInputs` | `LanguageModelExpectedInput[]` | Advanced: full passthrough. Overrides the `language` hint. |
@@ -64,7 +66,7 @@ interface AskOptions {
 | `monitor` | `(m) => void` | Observe the first-call model download. |
 | `responseConstraint` | `object` | JSON Schema for structured output. |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
-| `cacheKey` | `string` | Override the default cache key (hash of `{ input, systemPrompt, temperature, topK }`). |
+| `cacheKey` | `string` | Override the default cache key (hash of `{ input, systemPrompt, samplingMode, temperature, topK }`). |
 | `onUpdate` | `(text: string) => void` | Streaming update callback. Cumulative buffer, not deltas. |
 | `signal` | `AbortSignal` | Abort signal. |
 
@@ -88,7 +90,7 @@ import { createSession } from "@web-ai-sdk/prompt";
 
 const session = createSession({
   systemPrompt: "You are a helpful assistant.",
-  temperature: 0.7,
+  samplingMode: "balanced",
 });
 
 // Streaming yields DELTA chunks (not cumulative buffers):
@@ -165,21 +167,20 @@ Chrome's `LanguageModel` exposes `LanguageModel.create({...})` to spin up a sess
 
 - **Feature detection.** `isAvailable()` / `checkAvailability()` return `false` / `null` on browsers without the API. The vanilla `ask()` throws `PromptUnavailableError`; the React hook surfaces `status: "unavailable"`.
 - **Session reuse for `ask()`** (ergonomic default, scoped to `ask`). A bounded LRU caches `LanguageModel.create()` by stringified create options. Cold start is roughly 1 to 3 seconds; warm calls are sub-second. `createSession()` never touches this cache.
-- **Optional result cache for `ask()` (off by default).** Every call hits the model unless you opt in. Pass `cache: "session"` for `sessionStorage`, `cache: "local"` for `localStorage`, or any `{ get, set }`-shaped object to memoize responses by `(input, systemPrompt, temperature, topK)`.
+- **Optional result cache for `ask()` (off by default).** Every call hits the model unless you opt in. Pass `cache: "session"` for `sessionStorage`, `cache: "local"` for `localStorage`, or any `{ get, set }`-shaped object to memoize responses by `(input, systemPrompt, samplingMode / temperature / topK)`.
 - **Delta-vs-cumulative chunk detection.** Chrome ships delta chunks; some Edge backends ship cumulative. The wrapper normalizes per-chunk so `onUpdate` (cumulative) and `sendStreaming()` (deltas) work the same across browsers.
 
 The two cache-shaped items above are *ergonomic defaults scoped to `ask()`*, not opinions about how to use a language model. Multi-package compositions (agent loops, conversation history, tool dispatch) are not part of this package; see [Architecture](/docs/architecture/) for the split.
 
 ## System prompt + sampling
 
-`systemPrompt` is folded into the session's `initialPrompts` as a `system` role. `temperature` and `topK` are passed through verbatim; when omitted, the model's defaults apply.
+`systemPrompt` is folded into the session's `initialPrompts` as a `system` role. Prefer `samplingMode` for output variety: the browser maps the semantic mode to model-appropriate sampling parameters. Legacy `temperature` and `topK` are still passed through where browsers expose them, but they are mutually exclusive with `samplingMode`.
 
 ```ts
 ask({
   input: "Tell me a joke about web standards.",
   systemPrompt: "You are a stand-up comedian. Be punchy.",
-  temperature: 1.0,
-  topK: 8,
+  samplingMode: "creative",
 });
 ```
 

@@ -263,7 +263,7 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
             "You are a tool-routing agent. Reply with valid JSON only. " +
             "Set tool to null when no registered tool fits the user intent; " +
             "don't force a call.",
-          temperature: 0.1,
+          samplingMode: "most-predictable",
           monitor,
         });
         const raw = result.output ?? "";

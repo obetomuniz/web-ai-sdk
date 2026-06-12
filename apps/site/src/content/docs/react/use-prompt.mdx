@@ -21,7 +21,7 @@ import { usePrompt } from "@web-ai-sdk/prompt/react";
 export function AskBox() {
   const { status, output, error, ask, abort } = usePrompt({
     systemPrompt: "You are a helpful assistant. Be concise.",
-    temperature: 0.7,
+    samplingMode: "balanced",
   });
 
   if (status === "unavailable") return null;
@@ -87,6 +87,7 @@ type PromptStatus = "idle" | "loading" | "streaming" | "done" | "unavailable";
 interface UsePromptOptions extends Omit<AskOptions, "input" | "onUpdate" | "signal"> {
   // Inherited from AskOptions (subset shown — see Prompt guide):
   systemPrompt?: string;
+  samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
   temperature?: number;
   topK?: number;
   language?: string;

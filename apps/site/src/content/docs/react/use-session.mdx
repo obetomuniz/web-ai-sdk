@@ -16,7 +16,7 @@ import { useState } from "react";
 export function Chat({ persona }: { persona: string }) {
   const { status, session } = useSession({
     systemPrompt: persona,
-    temperature: 0.7,
+    samplingMode: "balanced",
   });
 
   const [response, setResponse] = useState("");
@@ -63,10 +63,10 @@ function ChatList({ agents }: { agents: Agent[] }) {
 
 function ChatPane({ agent }: { agent: Agent }) {
   // Each ChatPane owns its own session. Streams don't queue against
-  // each other even when systemPrompt / temperature are identical.
+  // each other even when systemPrompt / samplingMode are identical.
   const { session } = useSession({
     systemPrompt: agent.systemPrompt,
-    temperature: agent.temperature,
+    samplingMode: agent.samplingMode,
   });
   // …
 }
@@ -110,7 +110,7 @@ The hook does not pre-detect creation errors that surface async. If `LanguageMod
 
 ## Recreating the session
 
-The hook recreates the underlying instance whenever a primitive option changes (`systemPrompt`, `temperature`, `topK`, `language`, `enabled`). Object options (`expectedInputs`, `expectedOutputs`, `createOptions`) participate in the dependency check by reference; memoize them or accept the recreate cost.
+The hook recreates the underlying instance whenever a primitive option changes (`systemPrompt`, `samplingMode`, `temperature`, `topK`, `language`, `enabled`). Object options (`expectedInputs`, `expectedOutputs`, `createOptions`) participate in the dependency check by reference; memoize them or accept the recreate cost.
 
 ```tsx
 const expected = useMemo<LanguageModelExpectedInput[]>(
@@ -154,6 +154,7 @@ interface UseSessionOptions extends CreateSessionOptions {
   enabled?: boolean;       // default: true; skip session creation when false
   // Inherited from CreateSessionOptions:
   systemPrompt?: string;
+  samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
   temperature?: number;
   topK?: number;
   language?: string;
