@@ -205,6 +205,7 @@ const cacheConfig: CacheConfig = { max: DEFAULT_MAX_CACHED_SESSIONS };
 // on hit we re-insert to bump recency, and on overflow we evict the
 // oldest (first) entry.
 const sessionCache = new Map<string, Promise<LanguageModelInstance>>();
+const cloneUnavailableCacheKeys = new Set<string>();
 
 /**
  * Test-only escape hatch; reconfigure the session LRU cap. Not part of the
@@ -277,8 +278,19 @@ export const dropCachedLanguageModel = (
   sessionCache.delete(JSON.stringify(options));
 };
 
+export const markLanguageModelCloneUnavailable = (
+  options: LanguageModelCreateOptions,
+): void => {
+  cloneUnavailableCacheKeys.add(JSON.stringify(options));
+};
+
+export const isLanguageModelCloneUnavailable = (
+  options: LanguageModelCreateOptions,
+): boolean => cloneUnavailableCacheKeys.has(JSON.stringify(options));
+
 /** Test-only escape hatch; drop every cached session. */
 export const __clearSessionCacheForTests = (): void => {
   sessionCache.clear();
+  cloneUnavailableCacheKeys.clear();
   cacheConfig.max = DEFAULT_MAX_CACHED_SESSIONS;
 };

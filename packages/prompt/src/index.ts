@@ -15,6 +15,7 @@ import {
   getLanguageModelApi,
   getOrCreateLanguageModel,
   isAvailable,
+  isLanguageModelCloneUnavailable,
   type LanguageModelApi,
   type LanguageModelAvailability,
   type LanguageModelCreateOptions,
@@ -26,6 +27,7 @@ import {
   type LanguageModelPromptOptions,
   type LanguageModelSamplingMode,
   type LanguageModelTool,
+  markLanguageModelCloneUnavailable,
 } from "./api.js";
 import {
   type CacheOption,
@@ -142,6 +144,37 @@ export interface AskResult {
   cached: boolean;
 }
 
+const destroyedFallbackBases = new WeakSet<LanguageModelInstance>();
+
+const wrapCreateError = (err: unknown): PromptUnavailableError => {
+  const message = (err as Error)?.message ?? String(err);
+  return new PromptUnavailableError(
+    `LanguageModel.create() failed: ${message}`,
+  );
+};
+
+const createOneShotLanguageModel = async (
+  api: LanguageModelApi,
+  options: LanguageModelCreateOptions,
+): Promise<LanguageModelInstance> => {
+  try {
+    return await api.create(options);
+  } catch (err) {
+    if (err instanceof PromptAbortError) throw err;
+    throw wrapCreateError(err);
+  }
+};
+
+const destroyFallbackBaseOnce = (session: LanguageModelInstance): void => {
+  if (destroyedFallbackBases.has(session)) return;
+  destroyedFallbackBases.add(session);
+  try {
+    session.destroy?.();
+  } catch {
+    // best-effort; unused no-clone probes should never mask prompt results.
+  }
+};
+
 /**
  * Run a one-shot prompt. Uses streaming when the underlying instance supports
  * it, falling back to one-shot otherwise. Returns `{ output: null }` when the
@@ -235,22 +268,6 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
   }
   if (options.signal?.aborted) throw new PromptAbortError();
 
-  const baseSessionPromise = getOrCreateLanguageModel(api, baseCreateOptions);
-
-  // Wrap session-create failures with context so consumers can branch on
-  // a single typed error instead of parsing browser-specific messages.
-  let baseSession: LanguageModelInstance;
-  try {
-    baseSession = await baseSessionPromise;
-  } catch (err) {
-    if (err instanceof PromptAbortError) throw err;
-    const message = (err as Error)?.message ?? String(err);
-    throw new PromptUnavailableError(
-      `LanguageModel.create() failed: ${message}`,
-    );
-  }
-  if (options.signal?.aborted) throw new PromptAbortError();
-
   const promptOpts: LanguageModelPromptOptions = {};
   if (options.signal) promptOpts.signal = options.signal;
   if (options.responseConstraint) {
@@ -263,13 +280,35 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
 
   let session: LanguageModelInstance | null = null;
   try {
-    if (typeof baseSession.clone === "function") {
-      session = await baseSession.clone(
-        options.signal ? { signal: options.signal } : undefined,
-      );
+    if (isLanguageModelCloneUnavailable(baseCreateOptions)) {
+      session = await createOneShotLanguageModel(api, baseCreateOptions);
     } else {
-      dropCachedLanguageModel(baseCreateOptions);
-      session = baseSession;
+      const baseSessionPromise = getOrCreateLanguageModel(
+        api,
+        baseCreateOptions,
+      );
+
+      // Wrap session-create failures with context so consumers can branch on
+      // a single typed error instead of parsing browser-specific messages.
+      let baseSession: LanguageModelInstance;
+      try {
+        baseSession = await baseSessionPromise;
+      } catch (err) {
+        if (err instanceof PromptAbortError) throw err;
+        throw wrapCreateError(err);
+      }
+      if (options.signal?.aborted) throw new PromptAbortError();
+
+      if (typeof baseSession.clone !== "function") {
+        markLanguageModelCloneUnavailable(baseCreateOptions);
+        dropCachedLanguageModel(baseCreateOptions);
+        destroyFallbackBaseOnce(baseSession);
+        session = await createOneShotLanguageModel(api, baseCreateOptions);
+      } else {
+        session = await baseSession.clone(
+          options.signal ? { signal: options.signal } : undefined,
+        );
+      }
     }
     if (options.signal?.aborted) throw new PromptAbortError();
 
