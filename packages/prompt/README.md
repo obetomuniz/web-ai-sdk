@@ -27,7 +27,7 @@ import { ask } from "@web-ai-sdk/prompt";
 const result = await ask({
   input: "Summarize this in one sentence: WebMCP lets web pages expose tools to agents.",
   systemPrompt: "You are concise. Reply with a single sentence.",
-  temperature: 0.2,
+  samplingMode: "predictable",
   onUpdate: (text) => console.log("partial", text), // cumulative buffer
 });
 
@@ -43,7 +43,7 @@ import { createSession } from "@web-ai-sdk/prompt";
 
 const session = createSession({
   systemPrompt: "You are a helpful assistant.",
-  temperature: 0.7,
+  samplingMode: "balanced",
 });
 
 // Streaming, yields DELTA chunks (not cumulative buffers):
@@ -72,7 +72,7 @@ import { usePrompt } from "@web-ai-sdk/prompt/react";
 export function AskBox() {
   const { status, output, error, ask, abort } = usePrompt({
     systemPrompt: "You are a helpful assistant. Be concise.",
-    temperature: 0.7,
+    samplingMode: "balanced",
   });
 
   if (status === "unavailable") return null;
@@ -139,7 +139,10 @@ export function Chat({ persona }: { persona: string }) {
 interface AskOptions {
   input: string;
   systemPrompt?: string;
+  samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
+  /** @deprecated Web page contexts are moving to samplingMode. */
   temperature?: number;
+  /** @deprecated Web page contexts are moving to samplingMode. */
   topK?: number;
   language?: string;                        // BCP-47 hint, folded into expectedInputs/Outputs
   supportedLanguages?: readonly string[];   // default ["en"]
@@ -169,7 +172,10 @@ If `systemPrompt` is passed alongside `createOptions.initialPrompts`, the SDK em
 ```ts
 interface CreateSessionOptions {
   systemPrompt?: string;
+  samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
+  /** @deprecated Web page contexts are moving to samplingMode. */
   temperature?: number;
+  /** @deprecated Web page contexts are moving to samplingMode. */
   topK?: number;
   language?: string;
   supportedLanguages?: readonly string[];
@@ -295,7 +301,7 @@ interface UseSessionReturn {
 }
 ```
 
-Lifecycle-only: feature detection + create + destroy on unmount + recreate when any primitive option (`systemPrompt`, `temperature`, `topK`, `language`) changes. Object options (`expectedInputs`, `createOptions`) participate by reference; memoize them or accept the recreate cost. UI state is your concern — iterate `session.sendStreaming()` and accumulate text into your own component state.
+Lifecycle-only: feature detection + create + destroy on unmount + recreate when any primitive option (`systemPrompt`, `samplingMode`, `temperature`, `topK`, `language`) changes. Object options (`expectedInputs`, `createOptions`) participate by reference; memoize them or accept the recreate cost. UI state is your concern — iterate `session.sendStreaming()` and accumulate text into your own component state.
 
 ### `isAvailable(): boolean`
 
@@ -326,7 +332,7 @@ The internal session cache is LRU-bounded (default 8) and only memoizes sessions
 Two layers, same as `@web-ai-sdk/summarizer`:
 
 - **Session cache** (internal, in-memory, on by default for `ask()` only): a bounded LRU of `LanguageModel` instances keyed by stringified create-options. Cold-start ≈ 1-3s; warm calls are sub-second. `createSession()` bypasses this cache entirely.
-- **Result cache** (opt-in): pass a `cache` (anything matching `{ get, set }`) to memoize final responses by `(input, systemPrompt, temperature, topK)`. Omit it for a fresh model call every time.
+- **Result cache** (opt-in): pass a `cache` (anything matching `{ get, set }`) to memoize final responses by `(input, systemPrompt, samplingMode / temperature / topK)`. Omit it for a fresh model call every time.
 
 ```ts
 // Off by default; every call hits the model.

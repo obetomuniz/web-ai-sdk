@@ -5,8 +5,9 @@
  * renders.
  *
  * Prompt cache keys hash the inputs that affect the model output
- * (prompt + systemPrompt + temperature + topK). Pass an explicit `cacheKey`
- * to `ask()` if you want a more stable key (e.g. per-feature shorthand).
+ * (prompt + systemPrompt + samplingMode / temperature / topK). Pass an
+ * explicit `cacheKey` to `ask()` if you want a more stable key (e.g.
+ * per-feature shorthand).
  */
 
 export interface ResponseCache {
@@ -78,6 +79,7 @@ export const resolveCache = (
 export interface DefaultCacheKeyInput {
   prompt: string;
   systemPrompt?: string;
+  samplingMode?: string;
   temperature?: number;
   topK?: number;
 }
@@ -87,10 +89,13 @@ export interface DefaultCacheKeyInput {
  * stringification keeps it collision-free without pulling in a hashing
  * dependency. Pass a custom `cacheKey` to `ask()` for shorter / sticky keys.
  */
-export const defaultCacheKey = (input: DefaultCacheKeyInput): string =>
-  JSON.stringify([
+export const defaultCacheKey = (input: DefaultCacheKeyInput): string => {
+  const parts: unknown[] = [
     input.prompt,
     input.systemPrompt ?? "",
     input.temperature ?? null,
     input.topK ?? null,
-  ]);
+  ];
+  if (input.samplingMode !== undefined) parts.push(input.samplingMode);
+  return JSON.stringify(parts);
+};
