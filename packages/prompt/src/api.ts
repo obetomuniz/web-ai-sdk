@@ -270,6 +270,13 @@ export const getOrCreateLanguageModel = (
   return session;
 };
 
+/** Internal: remove one create-options entry from the warm-session cache. */
+export const dropCachedLanguageModel = (
+  options: LanguageModelCreateOptions,
+): void => {
+  sessionCache.delete(JSON.stringify(options));
+};
+
 /** Test-only escape hatch; drop every cached session. */
 export const __clearSessionCacheForTests = (): void => {
   sessionCache.clear();

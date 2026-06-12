@@ -34,7 +34,7 @@ const result = await ask({
 console.log(result.output, result.cached);
 ```
 
-`ask()` shares a warm `LanguageModel` instance across same-shape callers so the cold start is paid once per persona. That's right for embeds, widgets, ask-and-display flows. It's the wrong shape for chat: two callers with the same mode would share one instance, so conversation history cross-bleeds and `abort()` on one caller kills the other.
+`ask()` is isolated per call: it may keep a warm base `LanguageModel` for same-shape calls, but each prompt runs on a fresh clone when the browser supports `clone()`, or on a fresh one-shot instance otherwise. That's right for embeds, widgets, and ask-and-display flows. For chat-shaped apps where turns need to remember each other, use `createSession()`.
 
 ### Chat — `createSession()`
 
@@ -129,7 +129,7 @@ export function Chat({ persona }: { persona: string }) {
 }
 ```
 
-`useSession` is lifecycle-only: it creates the session on mount, destroys it on unmount, and recreates it when any primitive option changes. It deliberately does **not** track `response` / `history` / streaming status — that's your UI state, you own it. Each `useSession()` call owns its own underlying `LanguageModelInstance`, so component state and `abort()` / `destroy()` stay scoped to the owning component. Token-level interleaving across sessions is browser-defined (see the Concurrency note above) — N mounted components in Chrome 148 / Edge 138 still drain through one underlying model FIFO.
+`useSession` is lifecycle-only: it starts in `"loading"` while the native `LanguageModel.create()` call is in flight, moves to `"ready"` when `session` is usable, destroys the session on unmount, and recreates it when any primitive option changes. It deliberately does **not** track `response` / `history` / streaming status — that's your UI state, you own it. Each `useSession()` call owns its own underlying `LanguageModelInstance`, so component state and `abort()` / `destroy()` stay scoped to the owning component. Token-level interleaving across sessions is browser-defined (see the Concurrency note above) — Chrome 148 / Edge 138 currently drain through one underlying model FIFO.
 
 ## API
 
@@ -237,7 +237,7 @@ const session = createSession({ systemPrompt, tools });
 
 This is **pass-through only**: the SDK forwards `tools` and never calls `execute` itself. Whether the model actually invokes a tool depends on the browser. Native execution is **not** wired on current stable Chrome — the option is accepted but is a silent no-op, and the model may surface its tool call as plain text (a `tool_code` block) that your code must parse. The passthrough begins working automatically on browsers that ship native execution; until then, `responseConstraint` remains the robust default. The heuristic `tool_code` parser and the tool-execution loop are deliberately left in the consumer layer.
 
-`tools` works on `ask()` too (`ask({ input, tools })`), with one caveat: `ask()` shares warm sessions through an LRU keyed by `JSON.stringify(createOptions)`, and `JSON.stringify` drops functions — so a tool's `execute` doesn't contribute to the key, only its `name` / `description` / `inputSchema` do. Two `ask()` calls with identical tool metadata but different `execute` closures would share one cached session. It's harmless today (the SDK never runs `execute`), but it matters once native execution lands, so prefer `createSession()` for tool-bearing sessions — it bypasses the cache and matches the base-session + per-run-`clone()` pattern.
+`tools` works on `ask()` too (`ask({ input, tools })`), with one caveat: `ask()` may keep warm base sessions through an LRU keyed by `JSON.stringify(createOptions)`, and `JSON.stringify` drops functions — so a tool's `execute` doesn't contribute to the key, only its `name` / `description` / `inputSchema` do. Each `ask()` prompt still runs on a clone or fresh one-shot instance. It's harmless today (the SDK never runs `execute`), but it matters once native execution lands, so prefer `createSession()` for tool-bearing sessions — it bypasses the cache and matches the base-session + per-run-`clone()` pattern.
 
 To declare the native tool modalities, pass them through the advanced `expectedInputs` / `expectedOutputs` fields (`{ type: "tool-response" }` / `{ type: "tool-call" }`).
 
@@ -321,7 +321,7 @@ import {
 } from "@web-ai-sdk/prompt";
 ```
 
-The internal session cache is LRU-bounded (default 8) and only memoizes sessions created by `ask()`; `createSession()` is never cached.
+The internal session cache is LRU-bounded (default 8) and only memoizes warm base sessions used by `ask()`; each `ask()` prompt still runs on a clone or fresh one-shot instance. `createSession()` is never cached.
 
 ### Lower-level helpers (advanced)
 
@@ -331,7 +331,7 @@ The internal session cache is LRU-bounded (default 8) and only memoizes sessions
 
 Two layers, same as `@web-ai-sdk/summarizer`:
 
-- **Session cache** (internal, in-memory, on by default for `ask()` only): a bounded LRU of `LanguageModel` instances keyed by stringified create-options. Cold-start ≈ 1-3s; warm calls are sub-second. `createSession()` bypasses this cache entirely.
+- **Session cache** (internal, in-memory, on by default for `ask()` only): a bounded LRU of warm base `LanguageModel` instances keyed by stringified create-options. Cold-start ≈ 1-3s; when `clone()` is supported, warm calls can skip re-parsing the same base instructions while still prompting on an isolated clone. `createSession()` bypasses this cache entirely.
 - **Result cache** (opt-in): pass a `cache` (anything matching `{ get, set }`) to memoize final responses by `(input, systemPrompt, samplingMode / temperature / topK)`. Omit it for a fresh model call every time.
 
 ```ts
@@ -352,7 +352,7 @@ ask({ input: "hi", cache: myMap, cacheKey: "greeting" });
 
 The vanilla `ask()` throws `PromptUnavailableError` when the API is missing or reports `availability: "unavailable"`. The React hook absorbs this and returns `status: "unavailable"` instead.
 
-`createSession()` returns a `Session` synchronously even if the underlying `create()` rejects; the error surfaces on the first `send` / `sendStreaming`.
+`createSession()` returns a `Session` synchronously even if the underlying `create()` rejects; the error surfaces on the first `send` / `sendStreaming`. In React, `useSession()` waits for native creation before reporting `"ready"` and reports `"unavailable"` with `error` if creation fails.
 
 `AbortSignal` is supported on every surface. Aborting mid-stream resolves cleanly; the result cache is not written for aborted runs. Aborts reject with `PromptAbortError` (exported; `instanceof PromptAbortError` works, and its `name` is `"AbortError"`), thrown by both `ask()` and sessions.
 

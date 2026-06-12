@@ -11,6 +11,7 @@
 import {
   type CreateMonitor,
   checkAvailability,
+  dropCachedLanguageModel,
   getLanguageModelApi,
   getOrCreateLanguageModel,
   isAvailable,
@@ -147,9 +148,10 @@ export interface AskResult {
  * input is empty. Throws `PromptUnavailableError` when the API isn't present.
  *
  * For chat-shaped apps where turns need to remember each other, prefer
- * `createSession()` (or `useSession()` in React); `ask()` shares warm sessions
- * across same-shape callers, so two chats with the same persona would share
- * one instance — with cross-bleeding history and `abort()` killing both.
+ * `createSession()` (or `useSession()` in React). `ask()` may keep a warm
+ * base session for same-shape calls, but each prompt runs on a fresh clone
+ * when the browser supports `clone()`, or on a fresh one-shot instance
+ * otherwise.
  */
 export const ask = async (options: AskOptions): Promise<AskResult> => {
   const api = getLanguageModelApi();
@@ -233,13 +235,13 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
   }
   if (options.signal?.aborted) throw new PromptAbortError();
 
-  const sessionPromise = getOrCreateLanguageModel(api, baseCreateOptions);
+  const baseSessionPromise = getOrCreateLanguageModel(api, baseCreateOptions);
 
   // Wrap session-create failures with context so consumers can branch on
   // a single typed error instead of parsing browser-specific messages.
-  let session: LanguageModelInstance;
+  let baseSession: LanguageModelInstance;
   try {
-    session = await sessionPromise;
+    baseSession = await baseSessionPromise;
   } catch (err) {
     if (err instanceof PromptAbortError) throw err;
     const message = (err as Error)?.message ?? String(err);
@@ -259,27 +261,51 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
       promptOpts.omitResponseConstraintInput = true;
   }
 
-  let finalText: string;
-  if (typeof session.promptStreaming === "function") {
-    let buffer = "";
-    for await (const chunk of session.promptStreaming(
-      options.input,
-      promptOpts,
-    )) {
-      if (options.signal?.aborted) throw new PromptAbortError();
-      const merged = mergeStreamChunk(buffer, chunk);
-      buffer = merged.buffer;
-      options.onUpdate?.(buffer);
+  let session: LanguageModelInstance | null = null;
+  try {
+    if (typeof baseSession.clone === "function") {
+      session = await baseSession.clone(
+        options.signal ? { signal: options.signal } : undefined,
+      );
+    } else {
+      dropCachedLanguageModel(baseCreateOptions);
+      session = baseSession;
     }
-    finalText = buffer;
-  } else {
-    const raw = await session.prompt(options.input, promptOpts);
     if (options.signal?.aborted) throw new PromptAbortError();
-    finalText = raw;
-    options.onUpdate?.(finalText);
-  }
 
-  const cleaned = sanitizeResponse(finalText);
-  if (cleaned && cache) cache.set(cacheKey, cleaned);
-  return { output: cleaned || null, cached: false };
+    let finalText: string;
+    if (typeof session.promptStreaming === "function") {
+      let buffer = "";
+      for await (const chunk of session.promptStreaming(
+        options.input,
+        promptOpts,
+      )) {
+        if (options.signal?.aborted) throw new PromptAbortError();
+        const merged = mergeStreamChunk(buffer, chunk);
+        buffer = merged.buffer;
+        options.onUpdate?.(buffer);
+      }
+      finalText = buffer;
+    } else {
+      const raw = await session.prompt(options.input, promptOpts);
+      if (options.signal?.aborted) throw new PromptAbortError();
+      finalText = raw;
+      options.onUpdate?.(finalText);
+    }
+
+    const cleaned = sanitizeResponse(finalText);
+    if (cleaned && cache) cache.set(cacheKey, cleaned);
+    return { output: cleaned || null, cached: false };
+  } catch (err) {
+    if ((err as { name?: string })?.name === "AbortError") {
+      throw new PromptAbortError();
+    }
+    throw err;
+  } finally {
+    try {
+      session?.destroy?.();
+    } catch {
+      // best-effort; native destroy is optional and should not mask prompt result.
+    }
+  }
 };

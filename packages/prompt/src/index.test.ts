@@ -396,12 +396,74 @@ describe("ask", () => {
     expect(createOpts).not.toHaveProperty("tools");
   });
 
-  it("reuses sessions across same-shape calls", async () => {
-    const fake = installFakeLanguageModel();
+  it("clones a warm base session for same-shape one-shot calls", async () => {
+    const basePrompt = vi.fn(async () => "base should not be prompted");
+    const baseDestroy = vi.fn();
+    const clones: Array<FakeSession & { inputs: string[] }> = [];
+    const cloneSpy = vi.fn(async () => {
+      const inputs: string[] = [];
+      const clone: FakeSession & { inputs: string[] } = {
+        inputs,
+        prompt: vi.fn(async (input: string) => {
+          inputs.push(input);
+          return `reply:${input}`;
+        }),
+        destroy: vi.fn(),
+      };
+      clones.push(clone);
+      return clone;
+    });
+    const fake = installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: basePrompt,
+        clone: cloneSpy,
+        destroy: baseDestroy,
+      }),
+    });
     const cache = inMemoryCache();
+
     await ask({ input: "first", systemPrompt: "S", cache });
     await ask({ input: "second", systemPrompt: "S", cache });
+
     expect(fake.create).toHaveBeenCalledTimes(1);
+    expect(cloneSpy).toHaveBeenCalledTimes(2);
+    expect(basePrompt).not.toHaveBeenCalled();
+    expect(baseDestroy).not.toHaveBeenCalled();
+    expect(clones).toHaveLength(2);
+    expect(clones[0]?.inputs).toEqual(["first"]);
+    expect(clones[1]?.inputs).toEqual(["second"]);
+    expect(clones[0]?.destroy).toHaveBeenCalledTimes(1);
+    expect(clones[1]?.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates a fresh one-shot session per call when clone is unavailable", async () => {
+    const sessions: Array<FakeSession & { inputs: string[] }> = [];
+    const fake = installFakeLanguageModel({
+      sessionFactory: () => {
+        const inputs: string[] = [];
+        const session: FakeSession & { inputs: string[] } = {
+          inputs,
+          prompt: vi.fn(async (input: string) => {
+            inputs.push(input);
+            return `reply:${input}`;
+          }),
+          destroy: vi.fn(),
+        };
+        sessions.push(session);
+        return session;
+      },
+    });
+    const cache = inMemoryCache();
+
+    await ask({ input: "first", systemPrompt: "S", cache });
+    await ask({ input: "second", systemPrompt: "S", cache });
+
+    expect(fake.create).toHaveBeenCalledTimes(2);
+    expect(sessions).toHaveLength(2);
+    expect(sessions[0]?.inputs).toEqual(["first"]);
+    expect(sessions[1]?.inputs).toEqual(["second"]);
+    expect(sessions[0]?.destroy).toHaveBeenCalledTimes(1);
+    expect(sessions[1]?.destroy).toHaveBeenCalledTimes(1);
   });
 
   it("creates a new session when create options differ", async () => {

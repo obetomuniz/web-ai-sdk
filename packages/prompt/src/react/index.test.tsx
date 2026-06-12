@@ -133,11 +133,53 @@ describe("useSession", () => {
     expect(result.current.session).toBeNull();
   });
 
-  it("becomes 'ready' with a session when the API is present", () => {
+  it("starts 'loading' while native create is pending", () => {
+    let resolveCreate:
+      | ((session: { prompt: ReturnType<typeof vi.fn> }) => void)
+      | undefined;
+    const api = {
+      availability: vi.fn(async () => "available"),
+      create: vi.fn(
+        () =>
+          new Promise<{ prompt: ReturnType<typeof vi.fn> }>((resolve) => {
+            resolveCreate = resolve;
+          }),
+      ),
+    };
+    (globalThis as { LanguageModel?: typeof api }).LanguageModel = api;
+
+    const { result } = renderHook(() => useSession());
+    expect(result.current.status).toBe("loading");
+    expect(result.current.session).toBeNull();
+
+    if (!resolveCreate) throw new Error("create was not called");
+    resolveCreate({ prompt: vi.fn(async () => "ok") });
+  });
+
+  it("transitions to 'ready' when native create resolves", async () => {
     installFakeLanguageModel();
     const { result } = renderHook(() => useSession());
-    expect(result.current.status).toBe("ready");
+
+    await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current.session).not.toBeNull();
+    expect(result.current.error).toBeNull();
+  });
+
+  it("transitions to 'unavailable' with an error when native create rejects", async () => {
+    const api = {
+      availability: vi.fn(async () => "available"),
+      create: vi.fn(async () => {
+        throw new Error("native create failed");
+      }),
+    };
+    (globalThis as { LanguageModel?: typeof api }).LanguageModel = api;
+
+    const { result } = renderHook(() => useSession());
+
+    await waitFor(() => expect(result.current.status).toBe("unavailable"));
+    expect(result.current.session).toBeNull();
+    expect(result.current.error).toBeInstanceOf(Error);
+    expect(result.current.error?.message).toContain("native create failed");
   });
 
   it("two hook calls create two independent underlying sessions", () => {
@@ -150,6 +192,7 @@ describe("useSession", () => {
   it("consumers iterate session.sendStreaming() themselves", async () => {
     installFakeLanguageModel({ chunks: ["He", "llo"] });
     const { result } = renderHook(() => useSession());
+    await waitFor(() => expect(result.current.status).toBe("ready"));
     const session = result.current.session;
     expect(session).not.toBeNull();
 
@@ -175,11 +218,8 @@ describe("useSession", () => {
     };
     (globalThis as { LanguageModel?: typeof api }).LanguageModel = api;
     const { result, unmount } = renderHook(() => useSession());
-    // Wait for the underlying create() to settle before unmount so destroy
-    // has an instance to tear down.
-    if (result.current.session) {
-      await result.current.session.send("warm").catch(() => {});
-    }
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.session).not.toBeNull();
     unmount();
     await Promise.resolve();
     expect(destroyed).toBe(true);
