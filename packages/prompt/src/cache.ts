@@ -4,8 +4,8 @@
  * disabled / quota exceeded falls through silently; the response still
  * renders.
  *
- * Prompt cache keys hash the inputs that affect the model output. Pass an
- * explicit `cacheKey` to `ask()` if you want a more stable key (e.g.
+ * Prompt cache keys are JSON strings of the inputs that affect model output.
+ * Pass an explicit `cacheKey` to `ask()` if you want a more stable key (e.g.
  * per-feature shorthand).
  */
 

@@ -4,9 +4,9 @@
  * best-effort: storage disabled / quota exceeded falls through silently;
  * the response still resolves.
  *
- * Detection cache keys hash the trimmed input text. Pass an explicit
- * `cacheKey` to `detect()` if you want a more stable key (e.g. a
- * per-feature shorthand).
+ * Detection cache keys are JSON strings of the trimmed input text and language
+ * hints. Pass an explicit `cacheKey` to `detect()` if you want a more stable
+ * key (e.g. a per-feature shorthand).
  */
 
 export interface DetectionCache {
