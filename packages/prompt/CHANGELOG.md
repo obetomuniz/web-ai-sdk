@@ -1,5 +1,13 @@
 # @web-ai-sdk/prompt
 
+## 0.7.0
+
+### Minor Changes
+
+- 1ef1db3: Add `samplingMode` support for the Prompt API while keeping raw `temperature` and `topK` as deprecated legacy passthroughs.
+
+  `samplingMode` is forwarded to `LanguageModel.create()` and rejected when mixed with raw sampling parameters.
+
 ## 0.6.0
 
 ## 0.5.2
