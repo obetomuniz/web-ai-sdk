@@ -13,8 +13,8 @@
     "llms:build": "node scripts/build-llms.mjs"
   },
   "dependencies": {
-    "@astrojs/react": "5.0.6",
-    "@astrojs/starlight": "0.39.2",
+    "@astrojs/react": "5.0.7",
+    "@astrojs/starlight": "0.39.3",
     "@web-ai-sdk/detector": "workspace:*",
     "@web-ai-sdk/prompt": "workspace:*",
     "@web-ai-sdk/proofreader": "workspace:*",
@@ -24,7 +24,7 @@
     "@web-ai-sdk/webmcp": "workspace:*",
     "@web-ai-sdk/writer": "workspace:*",
     "astro": "6.3.8",
-    "marked": "^18.0.4",
+    "marked": "^18.0.5",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "sharp": "^0.34.5"
