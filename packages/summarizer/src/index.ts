@@ -70,7 +70,7 @@ export interface SummarizeOptions {
    * `{ get, set }`-shaped object for a custom backend.
    */
   cache?: CacheOption;
-  /** Cache key. Default: hash of route, input, and summary options. */
+  /** Cache key. Default: JSON string of route, input, and summary options. */
   cacheKey?: string;
   /**
    * Streaming update callback (cleaned text, monotonically growing).

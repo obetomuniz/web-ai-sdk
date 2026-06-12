@@ -99,6 +99,9 @@ const cacheConfig: CacheConfig = { max: DEFAULT_MAX_CACHED_SESSIONS };
 // oldest (first) entry.
 const sessionCache = new Map<string, Promise<LanguageDetectorInstance>>();
 
+const normalizeCacheMax = (max: number): number =>
+  Number.isFinite(max) ? Math.max(0, Math.floor(max)) : 0;
+
 export interface ConfigureLanguageDetectorCacheOptions {
   /** Soft cap on cached language detector sessions. Default: `8`. */
   max?: number;
@@ -113,7 +116,7 @@ export const configureLanguageDetectorCache = (
   options: ConfigureLanguageDetectorCacheOptions = {},
 ): void => {
   if (options.max !== undefined) {
-    cacheConfig.max = Math.max(0, Math.floor(options.max));
+    cacheConfig.max = normalizeCacheMax(options.max);
   }
   trim();
 };

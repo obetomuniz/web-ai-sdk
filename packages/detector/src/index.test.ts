@@ -212,6 +212,15 @@ describe("detect", () => {
     expect(api.sessions[1]?.destroy).toHaveBeenCalled();
   });
 
+  it("treats non-finite max values as zero", async () => {
+    const api = installFakeDetector();
+    await detect({ input: "a", expectedInputLanguages: ["en"] });
+
+    configureLanguageDetectorCache({ max: Number.NaN });
+
+    await vi.waitFor(() => expect(api.sessions[0]?.destroy).toHaveBeenCalled());
+  });
+
   it("clears one matching detector session", async () => {
     const api = installFakeDetector();
     await detect({ input: "a", expectedInputLanguages: ["en"] });

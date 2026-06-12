@@ -202,6 +202,29 @@ describe("ask", () => {
     expect(second).toEqual({ output: "answer 2", cached: false });
   });
 
+  it("does not fragment cache entries for omitResponseConstraintInput without a constraint", async () => {
+    let calls = 0;
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => `answer ${++calls}`),
+      }),
+    });
+    const cache = inMemoryCache();
+
+    const first = await ask({
+      input: "hello",
+      cache,
+    });
+    const second = await ask({
+      input: "hello",
+      omitResponseConstraintInput: true,
+      cache,
+    });
+
+    expect(first).toEqual({ output: "answer 1", cached: false });
+    expect(second).toEqual({ output: "answer 1", cached: true });
+  });
+
   it("does not collide cache entries when tool descriptors differ", async () => {
     let calls = 0;
     installFakeLanguageModel({

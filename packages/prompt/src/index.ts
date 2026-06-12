@@ -125,7 +125,7 @@ export interface AskOptions {
    * `{ get, set }`-shaped object for a custom backend.
    */
   cache?: CacheOption;
-  /** Cache key. Default: hash of the prompt and output-shaping options. */
+  /** Cache key. Default: JSON string of the prompt and output-shaping options. */
   cacheKey?: string;
   /**
    * Streaming update callback. Receives the **cumulative** buffer (full text so

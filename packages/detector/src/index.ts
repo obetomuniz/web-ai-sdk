@@ -70,7 +70,7 @@ export interface DetectOptions {
    * `{ get, set }`-shaped object for a custom backend.
    */
   cache?: CacheOption;
-  /** Cache key. Default: hash of `{ input, expectedInputLanguages }`. */
+  /** Cache key. Default: JSON string of `{ input, expectedInputLanguages }`. */
   cacheKey?: string;
   /** Abort signal. */
   signal?: AbortSignal;

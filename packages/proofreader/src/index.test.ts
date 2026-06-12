@@ -188,6 +188,15 @@ describe("proofread", () => {
     expect(api.sessions[1]?.destroy).toHaveBeenCalled();
   });
 
+  it("treats non-finite max values as zero", async () => {
+    const api = installFakeProofreader();
+    await proofread({ input: "a", expectedInputLanguages: ["en"] });
+
+    configureProofreaderCache({ max: Number.NaN });
+
+    await vi.waitFor(() => expect(api.sessions[0]?.destroy).toHaveBeenCalled());
+  });
+
   it("clears one matching proofreader session", async () => {
     const api = installFakeProofreader();
     await proofread({ input: "a", expectedInputLanguages: ["en"] });

@@ -109,8 +109,7 @@ const hasExpandedKeyFields = (input: DefaultCacheKeyInput): boolean =>
   input.expectedInputs !== undefined ||
   input.expectedOutputs !== undefined ||
   input.tools !== undefined ||
-  input.responseConstraint !== undefined ||
-  input.omitResponseConstraintInput === true;
+  input.responseConstraint !== undefined;
 
 /**
  * Build a default cache key from the inputs that affect the response. JSON
@@ -136,7 +135,8 @@ export const defaultCacheKey = (input: DefaultCacheKeyInput): string => {
     input.expectedOutputs ?? null,
     input.tools?.map(toolDescriptorKey) ?? null,
     input.responseConstraint ?? null,
-    input.omitResponseConstraintInput === true,
+    input.responseConstraint !== undefined &&
+      input.omitResponseConstraintInput === true,
   );
   return JSON.stringify(parts);
 };

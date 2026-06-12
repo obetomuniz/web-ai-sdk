@@ -66,7 +66,7 @@ interface AskOptions {
 | `monitor` | `(m) => void` | Observe the first-call model download. |
 | `responseConstraint` | `object` | JSON Schema for structured output. |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
-| `cacheKey` | `string` | Override the default cache key (hash of `{ input, systemPrompt, samplingMode, temperature, topK }`). |
+| `cacheKey` | `string` | Override the default cache key (JSON string of the prompt and output-shaping options). |
 | `onUpdate` | `(text: string) => void` | Streaming update callback. Cumulative buffer, not deltas. |
 | `signal` | `AbortSignal` | Abort signal. |
 

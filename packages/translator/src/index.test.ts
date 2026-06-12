@@ -262,6 +262,19 @@ describe("translate", () => {
     expect(sessions[1]?.destroy).not.toHaveBeenCalled();
   });
 
+  it("treats non-finite max values as zero", async () => {
+    const { sessions } = installFakeTranslator();
+    await translate({
+      input: "a",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+
+    configureTranslatorCache({ max: Number.NaN });
+
+    await vi.waitFor(() => expect(sessions[0]?.destroy).toHaveBeenCalled());
+  });
+
   it("clears all translator sessions", async () => {
     const { sessions } = installFakeTranslator();
     await translate({

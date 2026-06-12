@@ -72,7 +72,7 @@ export interface RewriteOptions {
    * `{ get, set }`-shaped object for a custom backend.
    */
   cache?: CacheOption;
-  /** Cache key. Default: hash of input, context, shared context, and output shape. */
+  /** Cache key. Default: JSON string of input, context, shared context, and output shape. */
   cacheKey?: string;
   /**
    * Streaming update callback (cumulative buffer, monotonically growing).
