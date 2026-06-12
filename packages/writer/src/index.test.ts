@@ -142,6 +142,29 @@ describe("write", () => {
     expect(api.create).not.toHaveBeenCalled();
   });
 
+  it("does not collide cache entries when sharedContext differs", async () => {
+    let calls = 0;
+    const api = installFakeWriter();
+    api.create.mockImplementation(async () => ({
+      write: vi.fn(async () => `Draft ${++calls}.`),
+    }));
+    const cache = inMemoryCache();
+
+    const first = await write({
+      input: "Draft an email.",
+      sharedContext: "For customers.",
+      cache,
+    });
+    const second = await write({
+      input: "Draft an email.",
+      sharedContext: "For investors.",
+      cache,
+    });
+
+    expect(first).toEqual({ output: "Draft 1.", cached: false });
+    expect(second).toEqual({ output: "Draft 2.", cached: false });
+  });
+
   it("forwards per-call context to the underlying write()", async () => {
     const api = installFakeWriter({ output: "ok" });
     await write({
@@ -160,6 +183,16 @@ describe("write", () => {
     await expect(
       write({ input: "task", cache: inMemoryCache() }),
     ).rejects.toBeInstanceOf(WriterUnavailableError);
+  });
+
+  it("does not create a session when availability is 'unavailable'", async () => {
+    const api = installFakeWriter({ availability: "unavailable" });
+    api.create.mockRejectedValue(new Error("create should not be called"));
+
+    await expect(
+      write({ input: "task", cache: inMemoryCache() }),
+    ).rejects.toBeInstanceOf(WriterUnavailableError);
+    expect(api.create).not.toHaveBeenCalled();
   });
 
   it("omits language hints for unsupported languages", async () => {

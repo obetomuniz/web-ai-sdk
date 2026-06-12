@@ -132,6 +132,16 @@ describe("proofread", () => {
     ).rejects.toBeInstanceOf(ProofreaderUnavailableError);
   });
 
+  it("does not create a session when availability is 'unavailable'", async () => {
+    const api = installFakeProofreader({ availability: "unavailable" });
+    api.create.mockRejectedValue(new Error("create should not be called"));
+
+    await expect(
+      proofread({ input: "text", cache: inMemoryCache() }),
+    ).rejects.toBeInstanceOf(ProofreaderUnavailableError);
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
   it("passes expectedInputLanguages through to create()", async () => {
     const api = installFakeProofreader();
     await proofread({

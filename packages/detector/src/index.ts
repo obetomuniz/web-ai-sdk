@@ -148,11 +148,8 @@ export const detect = async (options: DetectOptions): Promise<DetectResult> => {
     ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
-  // Kick off session and availability in parallel; first call pays the
-  // cold start, later calls reuse the cached session. We pass the same
-  // shape to availability() as we do to create() so engines that warn on
-  // mismatch (Edge) stay quiet.
-  const sessionPromise = getOrCreateLanguageDetector(api, baseCreateOptions);
+  // Pass the same shape to availability() as we do to create() so engines
+  // that warn on mismatch (Edge) stay quiet.
   const availability = await api
     .availability(
       expectedInputLanguages ? { expectedInputLanguages } : undefined,
@@ -162,6 +159,8 @@ export const detect = async (options: DetectOptions): Promise<DetectResult> => {
     throw new DetectorUnavailableError("LanguageDetector reports unavailable.");
   }
   if (options.signal?.aborted) throw new DetectorAbortError();
+
+  const sessionPromise = getOrCreateLanguageDetector(api, baseCreateOptions);
 
   // Wrap session-create failures with context so consumers can branch on
   // a single typed error instead of parsing browser-specific messages.

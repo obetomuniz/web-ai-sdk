@@ -122,7 +122,7 @@ export interface AskOptions {
    * `{ get, set }`-shaped object for a custom backend.
    */
   cache?: CacheOption;
-  /** Cache key. Default: hash of `{ input, systemPrompt, samplingMode, temperature, topK }`. */
+  /** Cache key. Default: hash of the prompt and output-shaping options. */
   cacheKey?: string;
   /**
    * Streaming update callback. Receives the **cumulative** buffer (full text so
@@ -174,6 +174,13 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
       samplingMode: options.samplingMode,
       temperature: options.temperature,
       topK: options.topK,
+      language: options.language,
+      supportedLanguages: options.supportedLanguages,
+      expectedInputs: options.expectedInputs,
+      expectedOutputs: options.expectedOutputs,
+      tools: options.tools,
+      responseConstraint: options.responseConstraint,
+      omitResponseConstraintInput: options.omitResponseConstraintInput,
     });
   if (cache) {
     const cached = cache.get(cacheKey);
@@ -211,7 +218,6 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
     ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
-  const sessionPromise = getOrCreateLanguageModel(api, baseCreateOptions);
   const availability = await api
     .availability({
       ...(baseCreateOptions.expectedInputs
@@ -226,6 +232,8 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
     throw new PromptUnavailableError("LanguageModel reports unavailable.");
   }
   if (options.signal?.aborted) throw new PromptAbortError();
+
+  const sessionPromise = getOrCreateLanguageModel(api, baseCreateOptions);
 
   // Wrap session-create failures with context so consumers can branch on
   // a single typed error instead of parsing browser-specific messages.

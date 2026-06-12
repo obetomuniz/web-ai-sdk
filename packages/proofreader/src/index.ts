@@ -134,9 +134,6 @@ export const proofread = async (
     ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
-  // Kick off session and availability in parallel; first call pays the cold
-  // start, later calls reuse the cached session.
-  const sessionPromise = getOrCreateProofreader(api, baseCreateOptions);
   const availability = await api
     .availability(
       expectedInputLanguages ? { expectedInputLanguages } : undefined,
@@ -146,6 +143,8 @@ export const proofread = async (
     throw new ProofreaderUnavailableError("Proofreader reports unavailable.");
   }
   if (options.signal?.aborted) throw new ProofreaderAbortError();
+
+  const sessionPromise = getOrCreateProofreader(api, baseCreateOptions);
 
   // Wrap session-create failures with context so consumers can branch on a
   // single typed error instead of parsing browser-specific messages.

@@ -121,6 +121,130 @@ describe("ask", () => {
     expect(fake.create).not.toHaveBeenCalled();
   });
 
+  it("does not collide cache entries when language hints differ", async () => {
+    let calls = 0;
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => `answer ${++calls}`),
+      }),
+    });
+    const cache = inMemoryCache();
+
+    const first = await ask({
+      input: "hello",
+      language: "en",
+      supportedLanguages: ["en", "es"],
+      cache,
+    });
+    const second = await ask({
+      input: "hello",
+      language: "es",
+      supportedLanguages: ["en", "es"],
+      cache,
+    });
+
+    expect(first).toEqual({ output: "answer 1", cached: false });
+    expect(second).toEqual({ output: "answer 2", cached: false });
+  });
+
+  it("does not collide cache entries when expected input or output hints differ", async () => {
+    let calls = 0;
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => `answer ${++calls}`),
+      }),
+    });
+    const cache = inMemoryCache();
+
+    const first = await ask({
+      input: "hello",
+      expectedInputs: [{ type: "text", languages: ["en"] }],
+      cache,
+    });
+    const second = await ask({
+      input: "hello",
+      expectedOutputs: [{ type: "text", languages: ["es"] }],
+      cache,
+    });
+
+    expect(first).toEqual({ output: "answer 1", cached: false });
+    expect(second).toEqual({ output: "answer 2", cached: false });
+  });
+
+  it("does not collide cache entries when response constraints differ", async () => {
+    let calls = 0;
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => `answer ${++calls}`),
+      }),
+    });
+    const cache = inMemoryCache();
+
+    const first = await ask({
+      input: "hello",
+      responseConstraint: {
+        type: "object",
+        properties: { value: { type: "string" } },
+      },
+      cache,
+    });
+    const second = await ask({
+      input: "hello",
+      responseConstraint: {
+        type: "object",
+        properties: { value: { type: "number" } },
+      },
+      omitResponseConstraintInput: true,
+      cache,
+    });
+
+    expect(first).toEqual({ output: "answer 1", cached: false });
+    expect(second).toEqual({ output: "answer 2", cached: false });
+  });
+
+  it("does not collide cache entries when tool descriptors differ", async () => {
+    let calls = 0;
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => `answer ${++calls}`),
+      }),
+    });
+    const cache = inMemoryCache();
+    const execute = vi.fn(async () => "tool result");
+
+    const first = await ask({
+      input: "what can you do?",
+      tools: [
+        {
+          name: "get_time",
+          description: "Return the current time.",
+          inputSchema: { type: "object", properties: {} },
+          execute,
+        },
+      ],
+      cache,
+    });
+    const second = await ask({
+      input: "what can you do?",
+      tools: [
+        {
+          name: "get_weather",
+          description: "Return the weather.",
+          inputSchema: {
+            type: "object",
+            properties: { city: { type: "string" } },
+          },
+          execute,
+        },
+      ],
+      cache,
+    });
+
+    expect(first).toEqual({ output: "answer 1", cached: false });
+    expect(second).toEqual({ output: "answer 2", cached: false });
+    expect(execute).not.toHaveBeenCalled();
+  });
+
   it("one-shots when the session has no promptStreaming", async () => {
     installFakeLanguageModel({ response: "one-shot answer" });
     const cache = inMemoryCache();
@@ -293,6 +417,16 @@ describe("ask", () => {
     await expect(
       ask({ input: "hi", cache: inMemoryCache() }),
     ).rejects.toBeInstanceOf(PromptUnavailableError);
+  });
+
+  it("does not create a session when availability is 'unavailable'", async () => {
+    const fake = installFakeLanguageModel({ availability: "unavailable" });
+    fake.create.mockRejectedValue(new Error("create should not be called"));
+
+    await expect(
+      ask({ input: "hi", cache: inMemoryCache() }),
+    ).rejects.toBeInstanceOf(PromptUnavailableError);
+    expect(fake.create).not.toHaveBeenCalled();
   });
 
   it("aborts via AbortSignal", async () => {

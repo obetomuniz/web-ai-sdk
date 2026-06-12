@@ -72,7 +72,7 @@ export interface RewriteOptions {
    * `{ get, set }`-shaped object for a custom backend.
    */
   cache?: CacheOption;
-  /** Cache key. Default: hash of `{ input, context, tone, format, length, language }`. */
+  /** Cache key. Default: hash of input, context, shared context, and output shape. */
   cacheKey?: string;
   /**
    * Streaming update callback (cumulative buffer, monotonically growing).
@@ -135,6 +135,7 @@ export const rewrite = async (
     defaultCacheKey({
       text,
       context: options.context,
+      sharedContext: options.sharedContext,
       tone: options.tone,
       format: options.format,
       length: options.length,
@@ -169,11 +170,8 @@ export const rewrite = async (
     ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
-  // Kick off session and availability in parallel; first call pays the cold
-  // start, later calls reuse the cached session. We pass the same shape to
-  // availability() as we do to create() so engines that warn on mismatch
-  // stay quiet.
-  const sessionPromise = getOrCreateRewriter(api, baseCreateOptions);
+  // Pass the same shape to availability() as we do to create() so engines
+  // that warn on mismatch stay quiet.
   const availability = await api
     .availability({
       ...(baseCreateOptions.tone ? { tone: baseCreateOptions.tone } : {}),
@@ -197,6 +195,8 @@ export const rewrite = async (
     throw new RewriterUnavailableError("Rewriter reports unavailable.");
   }
   if (options.signal?.aborted) throw new RewriterAbortError();
+
+  const sessionPromise = getOrCreateRewriter(api, baseCreateOptions);
 
   // Wrap session-create failures with context so consumers can branch on a
   // single typed error instead of parsing browser-specific messages.

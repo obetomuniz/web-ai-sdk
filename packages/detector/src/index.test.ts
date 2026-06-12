@@ -181,6 +181,16 @@ describe("detect", () => {
     );
   });
 
+  it("does not create a session when availability is 'unavailable'", async () => {
+    const api = installFakeDetector({ availability: "unavailable" });
+    api.create.mockRejectedValue(new Error("create should not be called"));
+
+    await expect(detect({ input: "hi" })).rejects.toBeInstanceOf(
+      DetectorUnavailableError,
+    );
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
   it("respects an aborted signal", async () => {
     installFakeDetector();
     const controller = new AbortController();

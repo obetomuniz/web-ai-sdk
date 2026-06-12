@@ -207,6 +207,18 @@ describe("translate", () => {
     ).rejects.toBeInstanceOf(TranslatorUnavailableError);
   });
 
+  it("does not create a session when availability is 'unavailable'", async () => {
+    const { api } = installFakeTranslator(undefined, {
+      availability: "unavailable",
+    });
+    api.create.mockRejectedValue(new Error("create should not be called"));
+
+    await expect(
+      translate({ input: "Olá", sourceLanguage: "pt", targetLanguage: "en" }),
+    ).rejects.toBeInstanceOf(TranslatorUnavailableError);
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
   it("respects an aborted signal", async () => {
     installFakeTranslator();
     const controller = new AbortController();

@@ -123,9 +123,6 @@ export const translate = async (
     ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
-  // Kick off session and availability in parallel; first call pays the cold
-  // start, later calls reuse the cached session.
-  const sessionPromise = getOrCreateTranslator(api, createOptions);
   const availability = await api
     .availability({ sourceLanguage, targetLanguage })
     .catch(() => "unavailable" as const);
@@ -133,6 +130,8 @@ export const translate = async (
     throw new TranslatorUnavailableError("Translator reports unavailable.");
   }
   if (options.signal?.aborted) throw new TranslateAbortError();
+
+  const sessionPromise = getOrCreateTranslator(api, createOptions);
 
   let session: TranslatorInstance;
   try {
