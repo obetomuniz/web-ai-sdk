@@ -106,6 +106,10 @@ Feature-detect helper.
 
 Forwards to the spec's `availability()` call. Returns `null` if the global is missing or the call throws.
 
+### Session cache controls
+
+`configureTranslatorCache({ max })` bounds the internal warm `Translator` session cache (default `8`). `clearTranslatorSessions()` drops every warm session, and `clearTranslatorSession({ sourceLanguage, targetLanguage })` drops one matching language pair.
+
 ### Lower-level helpers (advanced)
 
 `serializeBlock`, `rebuildBlock`, `buildCasingMap`, `restoreOriginalCasing`, `isUntranslatableToken`, `stripTokens`, `getTranslatorApi`. Exported so you can compose the pieces (e.g. translate one block at a time, or apply only the casing restoration to a string).

@@ -91,6 +91,8 @@ Two layers, same as the other packages:
 - **Session cache** (internal, in-memory, always on): a `Map<stringifiedOptions, LanguageDetector>` so consecutive calls with the same `expectedInputLanguages` shape reuse the warm session. Cold-start is fast on this model (~100-300ms) but warm is still sub-50ms.
 - **Result cache** (opt-in): pass a `cache` (anything matching `{ get, set }`) to memoize the full sorted list by trimmed text. Omit it for a fresh model call every time.
 
+Use `configureLanguageDetectorCache({ max })` to bound the warm session cache (default `8`). `clearLanguageDetectorSessions()` drops every warm session, and `clearLanguageDetectorSession({ expectedInputLanguages })` drops one matching detector configuration.
+
 ```ts
 // Off by default; every call hits the model.
 detect({ input: "hello" });

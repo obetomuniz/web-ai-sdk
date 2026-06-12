@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __clearSessionCacheForTests } from "./api.js";
 import {
+  clearLanguageDetectorSession,
+  clearLanguageDetectorSessions,
+  configureLanguageDetectorCache,
   type DetectionCache,
   DetectorUnavailableError,
   detect,
@@ -11,6 +14,10 @@ interface FakeApi {
   availability: ReturnType<typeof vi.fn>;
   create: ReturnType<typeof vi.fn>;
   detectSpy: ReturnType<typeof vi.fn>;
+  sessions: Array<{
+    detect: ReturnType<typeof vi.fn>;
+    destroy: ReturnType<typeof vi.fn>;
+  }>;
 }
 
 const installFakeDetector = (
@@ -26,12 +33,17 @@ const installFakeDetector = (
   const availability = opts.availability ?? "available";
 
   const detectSpy = vi.fn(async () => results);
-  const session = { detect: detectSpy };
+  const sessions: FakeApi["sessions"] = [];
 
   const api = {
     availability: vi.fn(async () => availability),
-    create: vi.fn(async () => session),
+    create: vi.fn(async () => {
+      const session = { detect: detectSpy, destroy: vi.fn() };
+      sessions.push(session);
+      return session;
+    }),
     detectSpy,
+    sessions,
   };
   (globalThis as { LanguageDetector?: unknown }).LanguageDetector = api;
   return api as FakeApi;
@@ -167,6 +179,60 @@ describe("detect", () => {
     expect(api.create).toHaveBeenCalledTimes(1);
   });
 
+  it("caps sessions and evicts the oldest detector", async () => {
+    const api = installFakeDetector();
+    configureLanguageDetectorCache({ max: 1 });
+    await detect({ input: "a", expectedInputLanguages: ["en"] });
+    await detect({ input: "b", expectedInputLanguages: ["es"] });
+
+    expect(api.create).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(api.sessions[0]?.destroy).toHaveBeenCalled());
+  });
+
+  it("bumps detector cache hit recency before evicting", async () => {
+    const api = installFakeDetector();
+    configureLanguageDetectorCache({ max: 2 });
+    await detect({ input: "a", expectedInputLanguages: ["en"] });
+    await detect({ input: "b", expectedInputLanguages: ["es"] });
+    await detect({ input: "c", expectedInputLanguages: ["en"] });
+    await detect({ input: "d", expectedInputLanguages: ["fr"] });
+
+    await vi.waitFor(() => expect(api.sessions[1]?.destroy).toHaveBeenCalled());
+    expect(api.sessions[0]?.destroy).not.toHaveBeenCalled();
+  });
+
+  it("clears all detector sessions", async () => {
+    const api = installFakeDetector();
+    await detect({ input: "a", expectedInputLanguages: ["en"] });
+    await detect({ input: "b", expectedInputLanguages: ["es"] });
+
+    clearLanguageDetectorSessions();
+
+    await vi.waitFor(() => expect(api.sessions[0]?.destroy).toHaveBeenCalled());
+    expect(api.sessions[1]?.destroy).toHaveBeenCalled();
+  });
+
+  it("clears one matching detector session", async () => {
+    const api = installFakeDetector();
+    await detect({ input: "a", expectedInputLanguages: ["en"] });
+    await detect({ input: "b", expectedInputLanguages: ["es"] });
+
+    clearLanguageDetectorSession({ expectedInputLanguages: ["en"] });
+
+    await vi.waitFor(() => expect(api.sessions[0]?.destroy).toHaveBeenCalled());
+    expect(api.sessions[1]?.destroy).not.toHaveBeenCalled();
+  });
+
+  it("test cache reset restores the detector default max", async () => {
+    const api = installFakeDetector();
+    configureLanguageDetectorCache({ max: 1 });
+    __clearSessionCacheForTests();
+    await detect({ input: "a", expectedInputLanguages: ["en"] });
+    await detect({ input: "b", expectedInputLanguages: ["es"] });
+
+    expect(api.sessions[0]?.destroy).not.toHaveBeenCalled();
+  });
+
   it("creates a new session when expectedInputLanguages differs", async () => {
     const api = installFakeDetector();
     await detect({ input: "a", expectedInputLanguages: ["en"] });
@@ -189,6 +255,25 @@ describe("detect", () => {
       DetectorUnavailableError,
     );
     expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it("purges rejected session creates so the next call retries", async () => {
+    const api = installFakeDetector();
+    api.create
+      .mockRejectedValueOnce(new Error("create failed"))
+      .mockResolvedValueOnce({
+        detect: vi.fn(async () => [
+          { detectedLanguage: "en", confidence: 0.95 },
+        ]),
+        destroy: vi.fn(),
+      });
+
+    await expect(detect({ input: "hi" })).rejects.toBeInstanceOf(
+      DetectorUnavailableError,
+    );
+    await detect({ input: "hi" });
+
+    expect(api.create).toHaveBeenCalledTimes(2);
   });
 
   it("respects an aborted signal", async () => {

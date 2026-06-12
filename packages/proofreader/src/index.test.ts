@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __clearSessionCacheForTests } from "./api.js";
 import {
+  clearProofreaderSession,
+  clearProofreaderSessions,
+  configureProofreaderCache,
   isAvailable,
   type ProofreadCache,
   ProofreaderUnavailableError,
@@ -11,6 +14,10 @@ interface FakeApi {
   availability: ReturnType<typeof vi.fn>;
   create: ReturnType<typeof vi.fn>;
   proofreadSpy: ReturnType<typeof vi.fn>;
+  sessions: Array<{
+    proofread: ReturnType<typeof vi.fn>;
+    destroy: ReturnType<typeof vi.fn>;
+  }>;
 }
 
 const installFakeProofreader = (
@@ -29,11 +36,16 @@ const installFakeProofreader = (
     corrections: opts.corrections ?? [],
   };
   const proofreadSpy = vi.fn(async () => result);
-  const session = { proofread: proofreadSpy };
+  const sessions: FakeApi["sessions"] = [];
   const api: FakeApi = {
     availability: vi.fn(async () => opts.availability ?? "available"),
-    create: vi.fn(async () => session),
+    create: vi.fn(async () => {
+      const session = { proofread: proofreadSpy, destroy: vi.fn() };
+      sessions.push(session);
+      return session;
+    }),
     proofreadSpy,
+    sessions,
   };
   (globalThis as { Proofreader?: unknown }).Proofreader = api;
   return api;
@@ -125,6 +137,78 @@ describe("proofread", () => {
     expect(JSON.parse(cached as string).correctedInput).toBe("Fixed.");
   });
 
+  it("reuses sessions across same-shape calls", async () => {
+    const api = installFakeProofreader();
+    await proofread({ input: "a", expectedInputLanguages: ["en"] });
+    await proofread({ input: "b", expectedInputLanguages: ["en"] });
+    expect(api.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("caps sessions and evicts the oldest proofreader", async () => {
+    const api = installFakeProofreader();
+    configureProofreaderCache({ max: 1 });
+    await proofread({ input: "a", expectedInputLanguages: ["en"] });
+    await proofread({ input: "b", expectedInputLanguages: ["es"] });
+
+    expect(api.create).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(api.sessions[0]?.destroy).toHaveBeenCalled());
+  });
+
+  it("bumps proofreader cache hit recency before evicting", async () => {
+    const api = installFakeProofreader();
+    configureProofreaderCache({ max: 2 });
+    await proofread({ input: "a", expectedInputLanguages: ["en"] });
+    await proofread({ input: "b", expectedInputLanguages: ["es"] });
+    await proofread({ input: "c", expectedInputLanguages: ["en"] });
+    await proofread({ input: "d", expectedInputLanguages: ["fr"] });
+
+    await vi.waitFor(() => expect(api.sessions[1]?.destroy).toHaveBeenCalled());
+    expect(api.sessions[0]?.destroy).not.toHaveBeenCalled();
+  });
+
+  it("lowering max trims proofreader sessions immediately", async () => {
+    const api = installFakeProofreader();
+    await proofread({ input: "a", expectedInputLanguages: ["en"] });
+    await proofread({ input: "b", expectedInputLanguages: ["es"] });
+
+    configureProofreaderCache({ max: 1 });
+
+    await vi.waitFor(() => expect(api.sessions[0]?.destroy).toHaveBeenCalled());
+    expect(api.sessions[1]?.destroy).not.toHaveBeenCalled();
+  });
+
+  it("clears all proofreader sessions", async () => {
+    const api = installFakeProofreader();
+    await proofread({ input: "a", expectedInputLanguages: ["en"] });
+    await proofread({ input: "b", expectedInputLanguages: ["es"] });
+
+    clearProofreaderSessions();
+
+    await vi.waitFor(() => expect(api.sessions[0]?.destroy).toHaveBeenCalled());
+    expect(api.sessions[1]?.destroy).toHaveBeenCalled();
+  });
+
+  it("clears one matching proofreader session", async () => {
+    const api = installFakeProofreader();
+    await proofread({ input: "a", expectedInputLanguages: ["en"] });
+    await proofread({ input: "b", expectedInputLanguages: ["es"] });
+
+    clearProofreaderSession({ expectedInputLanguages: ["en"] });
+
+    await vi.waitFor(() => expect(api.sessions[0]?.destroy).toHaveBeenCalled());
+    expect(api.sessions[1]?.destroy).not.toHaveBeenCalled();
+  });
+
+  it("test cache reset restores the proofreader default max", async () => {
+    const api = installFakeProofreader();
+    configureProofreaderCache({ max: 1 });
+    __clearSessionCacheForTests();
+    await proofread({ input: "a", expectedInputLanguages: ["en"] });
+    await proofread({ input: "b", expectedInputLanguages: ["es"] });
+
+    expect(api.sessions[0]?.destroy).not.toHaveBeenCalled();
+  });
+
   it("throws ProofreaderUnavailableError when availability is 'unavailable'", async () => {
     installFakeProofreader({ availability: "unavailable" });
     await expect(
@@ -140,6 +224,26 @@ describe("proofread", () => {
       proofread({ input: "text", cache: inMemoryCache() }),
     ).rejects.toBeInstanceOf(ProofreaderUnavailableError);
     expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it("purges rejected session creates so the next call retries", async () => {
+    const api = installFakeProofreader();
+    api.create
+      .mockRejectedValueOnce(new Error("create failed"))
+      .mockResolvedValueOnce({
+        proofread: vi.fn(async () => ({
+          correctedInput: "Retried.",
+          corrections: [],
+        })),
+        destroy: vi.fn(),
+      });
+
+    await expect(proofread({ input: "text" })).rejects.toBeInstanceOf(
+      ProofreaderUnavailableError,
+    );
+    await proofread({ input: "text" });
+
+    expect(api.create).toHaveBeenCalledTimes(2);
   });
 
   it("passes expectedInputLanguages through to create()", async () => {

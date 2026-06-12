@@ -9,8 +9,12 @@
  */
 
 import {
+  type ConfigureLanguageDetectorCacheOptions,
   type CreateMonitor,
   checkAvailability,
+  clearLanguageDetectorSession,
+  clearLanguageDetectorSessions,
+  configureLanguageDetectorCache,
   type DetectionResult,
   getLanguageDetectorApi,
   getOrCreateLanguageDetector,
@@ -30,6 +34,7 @@ import {
 
 export type {
   CacheOption,
+  ConfigureLanguageDetectorCacheOptions,
   CreateMonitor,
   DetectionCache,
   DetectionResult,
@@ -39,7 +44,13 @@ export type {
   LanguageDetectorCreateOptions,
   LanguageDetectorInstance,
 };
-export { checkAvailability, isAvailable };
+export {
+  checkAvailability,
+  clearLanguageDetectorSession,
+  clearLanguageDetectorSessions,
+  configureLanguageDetectorCache,
+  isAvailable,
+};
 
 export interface DetectOptions {
   /** Text to detect. Empty / whitespace-only input resolves to `{ output: null }`. */

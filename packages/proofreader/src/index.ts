@@ -9,6 +9,7 @@
  */
 
 import {
+  type ConfigureProofreaderCacheOptions,
   type CreateMonitor,
   getOrCreateProofreader,
   getProofreaderApi,
@@ -29,7 +30,9 @@ import {
 
 export {
   checkAvailability,
+  clearProofreaderSession,
   clearProofreaderSessions,
+  configureProofreaderCache,
   getOrCreateProofreader,
   getProofreaderApi,
   isAvailable,
@@ -39,6 +42,7 @@ export { defaultCacheKey, resolveCache } from "./cache.js";
 
 export type {
   CacheOption,
+  ConfigureProofreaderCacheOptions,
   CreateMonitor,
   ProofreadCache,
   ProofreadCorrection,

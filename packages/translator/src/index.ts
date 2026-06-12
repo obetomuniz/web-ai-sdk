@@ -8,7 +8,11 @@
  */
 
 import {
+  type ConfigureTranslatorCacheOptions,
   checkAvailability,
+  clearTranslatorSession,
+  clearTranslatorSessions,
+  configureTranslatorCache,
   getOrCreateTranslator,
   getTranslatorApi,
   isAvailable,
@@ -28,6 +32,7 @@ import {
 
 export type {
   CacheOption,
+  ConfigureTranslatorCacheOptions,
   TranslationCache,
   TranslatorApi,
   TranslatorAvailability,
@@ -36,7 +41,13 @@ export type {
   TranslatorInstance,
   TranslatorMonitor,
 };
-export { checkAvailability, isAvailable };
+export {
+  checkAvailability,
+  clearTranslatorSession,
+  clearTranslatorSessions,
+  configureTranslatorCache,
+  isAvailable,
+};
 
 const NORMALIZE_LANG = (lang: string): string =>
   lang.split("-")[0]?.toLowerCase() ?? lang.toLowerCase();

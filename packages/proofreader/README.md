@@ -98,6 +98,10 @@ Forwards to the spec's `availability()` call. Returns `null` if the global is mi
 
 Drop every cached proofreader session. Sessions live for the tab lifetime by default.
 
+### Session cache controls
+
+`configureProofreaderCache({ max })` bounds the internal warm `Proofreader` session cache (default `8`). `clearProofreaderSessions()` drops every warm session, and `clearProofreaderSession({ expectedInputLanguages })` drops one matching proofreader configuration.
+
 ## Rendering corrections
 
 The `corrections` offsets index into the **original** input, so you can highlight each error in place by slicing between offsets:
