@@ -84,6 +84,7 @@ export const defaultCacheKey = (input: {
   format?: string;
   length?: string;
   language?: string;
+  supportedLanguages?: readonly string[];
 }): string =>
   JSON.stringify([
     input.text.trim(),
@@ -93,4 +94,5 @@ export const defaultCacheKey = (input: {
     input.format ?? "",
     input.length ?? "",
     input.language ?? "",
+    input.supportedLanguages ?? null,
   ]);

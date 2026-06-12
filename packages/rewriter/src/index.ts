@@ -72,7 +72,7 @@ export interface RewriteOptions {
    * `{ get, set }`-shaped object for a custom backend.
    */
   cache?: CacheOption;
-  /** Cache key. Default: JSON string of input, context, shared context, and output shape. */
+  /** Cache key. Default: JSON string of input, context, language hints, shared context, and output shape. */
   cacheKey?: string;
   /**
    * Streaming update callback (cumulative buffer, monotonically growing).
@@ -129,6 +129,11 @@ export const rewrite = async (
   if (!text) return { output: null, cached: false };
 
   const lang = options.language ? NORMALIZE_LANG(options.language) : undefined;
+  const supportedLanguages = (
+    options.supportedLanguages ?? DEFAULT_SUPPORTED_LANGUAGES
+  ).map(NORMALIZE_LANG);
+  const supported = new Set(supportedLanguages);
+  const effectiveSupportedLanguages = lang ? supportedLanguages : undefined;
   const cache = resolveCache(options.cache);
   const cacheKey =
     options.cacheKey ??
@@ -140,15 +145,13 @@ export const rewrite = async (
       format: options.format,
       length: options.length,
       language: lang,
+      supportedLanguages: effectiveSupportedLanguages,
     });
   if (cache) {
     const cached = cache.get(cacheKey);
     if (cached) return { output: cached, cached: true };
   }
 
-  const supported = new Set(
-    options.supportedLanguages ?? DEFAULT_SUPPORTED_LANGUAGES,
-  );
   const langOptions: Pick<
     RewriterCreateOptions,
     "expectedInputLanguages" | "expectedContextLanguages" | "outputLanguage"

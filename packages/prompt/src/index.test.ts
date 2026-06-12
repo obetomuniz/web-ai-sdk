@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { __clearSessionCacheForTests } from "./api.js";
+import {
+  __clearSessionCacheForTests,
+  __configureCacheForTests,
+} from "./api.js";
 import {
   ask,
   createSession,
@@ -522,6 +525,26 @@ describe("ask", () => {
       ["second"],
     ]);
     expect(fake.create).toHaveBeenCalledTimes(3);
+  });
+
+  it("bounds remembered no-clone create-option shapes", async () => {
+    __configureCacheForTests(1);
+    const fake = installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => "reply"),
+        destroy: vi.fn(),
+      }),
+    });
+    const cache = inMemoryCache();
+
+    await ask({ input: "first", systemPrompt: "one", cache });
+    await ask({ input: "second", systemPrompt: "two", cache });
+    await ask({ input: "third", systemPrompt: "one", cache });
+
+    // Each unseen no-clone shape probes once, then falls back to a fresh
+    // one-shot instance. Reusing an evicted shape probes again instead of
+    // letting the no-clone tracker grow without bound.
+    expect(fake.create).toHaveBeenCalledTimes(6);
   });
 
   it("creates a new session when create options differ", async () => {

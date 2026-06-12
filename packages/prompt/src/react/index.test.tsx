@@ -133,7 +133,7 @@ describe("useSession", () => {
     expect(result.current.session).toBeNull();
   });
 
-  it("starts 'loading' while native create is pending", () => {
+  it("starts 'loading' while native create is pending", async () => {
     let resolveCreate:
       | ((session: { prompt: ReturnType<typeof vi.fn> }) => void)
       | undefined;
@@ -152,8 +152,10 @@ describe("useSession", () => {
     expect(result.current.status).toBe("loading");
     expect(result.current.session).toBeNull();
 
-    if (!resolveCreate) throw new Error("create was not called");
-    resolveCreate({ prompt: vi.fn(async () => "ok") });
+    await act(async () => {
+      if (!resolveCreate) throw new Error("create was not called");
+      resolveCreate({ prompt: vi.fn(async () => "ok") });
+    });
   });
 
   it("transitions to 'ready' when native create resolves", async () => {
