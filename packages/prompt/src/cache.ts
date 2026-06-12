@@ -10,6 +10,8 @@
  * per-feature shorthand).
  */
 
+import type { LanguageModelSamplingMode } from "./api.js";
+
 export interface ResponseCache {
   get(key: string): string | null;
   set(key: string, value: string): void;
@@ -79,7 +81,7 @@ export const resolveCache = (
 export interface DefaultCacheKeyInput {
   prompt: string;
   systemPrompt?: string;
-  samplingMode?: string;
+  samplingMode?: LanguageModelSamplingMode;
   temperature?: number;
   topK?: number;
 }
