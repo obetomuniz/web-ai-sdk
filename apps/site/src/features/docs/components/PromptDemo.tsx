@@ -1,20 +1,23 @@
-import { usePrompt } from "@web-ai-sdk/prompt/react";
+import {
+  type LanguageModelSamplingMode,
+  usePrompt,
+} from "@web-ai-sdk/prompt/react";
 import { type ComponentProps, useState } from "react";
 import { UnavailableHint } from "./UnavailableHint.js";
 
 export interface PromptDemoProps {
   systemPrompt?: string;
-  temperature?: number;
+  samplingMode?: LanguageModelSamplingMode;
 }
 
 export const PromptDemo = ({
   systemPrompt = "You are a concise assistant. Reply with a single short paragraph.",
-  temperature = 0.7,
+  samplingMode = "balanced",
 }: PromptDemoProps) => {
   const [input, setInput] = useState("What is React.js, in one sentence?");
   const { status, output, error, fromCache, ask, abort, reset } = usePrompt({
     systemPrompt,
-    temperature,
+    samplingMode,
   });
 
   const onSubmit: ComponentProps<"form">["onSubmit"] = (e) => {

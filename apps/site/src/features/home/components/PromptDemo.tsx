@@ -42,7 +42,7 @@ export const PromptDemo = () => {
   const { progress, monitor } = useDownloadMonitor();
   const { status, output, ask, abort, reset } = usePrompt({
     systemPrompt: "You are concise. Reply briefly and avoid preamble.",
-    temperature: 0.7,
+    samplingMode: "balanced",
     monitor,
   });
 
@@ -77,7 +77,7 @@ export const PromptDemo = () => {
           <span className={streaming ? cardDotLive : cardDotOk} />
           ask() · streaming
         </span>
-        <span>session: cached · temp 0.7</span>
+        <span>session: cached · balanced</span>
       </div>
       <div className={cardBody}>
         {available === false && (

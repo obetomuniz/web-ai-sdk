@@ -213,6 +213,37 @@ describe("ask", () => {
     expect(createOpts).toMatchObject({ temperature: 0.2, topK: 5 });
   });
 
+  it("forwards samplingMode when provided", async () => {
+    const fake = installFakeLanguageModel();
+    await ask({
+      input: "ping",
+      samplingMode: "creative",
+      cache: inMemoryCache(),
+    });
+    const createOpts = fake.create.mock.calls[0]?.[0];
+    expect(createOpts).toMatchObject({ samplingMode: "creative" });
+  });
+
+  it("rejects mixed samplingMode and raw sampling parameters", async () => {
+    installFakeLanguageModel();
+    await expect(
+      ask({
+        input: "ping",
+        samplingMode: "balanced",
+        temperature: 0.2,
+        cache: inMemoryCache(),
+      }),
+    ).rejects.toThrow(TypeError);
+    await expect(
+      ask({
+        input: "ping",
+        samplingMode: "balanced",
+        topK: 5,
+        cache: inMemoryCache(),
+      }),
+    ).rejects.toThrow(TypeError);
+  });
+
   it("forwards tools to LanguageModel.create() without executing them", async () => {
     const fake = installFakeLanguageModel({ response: "ok" });
     const execute = vi.fn(async () => "tool result");
@@ -397,6 +428,42 @@ describe("createSession", () => {
     expect(createOpts).toMatchObject({ tools });
     expect(execute).not.toHaveBeenCalled();
     session.destroy();
+  });
+
+  it("forwards samplingMode to the underlying LanguageModel.create()", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const session = createSession({
+      systemPrompt: "S",
+      samplingMode: "most-predictable",
+    });
+    await session.send("warm");
+    const createOpts = fake.create.mock.calls[0]?.[0];
+    expect(createOpts).toMatchObject({
+      samplingMode: "most-predictable",
+    });
+    session.destroy();
+  });
+
+  it("rejects createSession options that mix semantic and raw sampling", () => {
+    installFakeLanguageModel({ response: "ok" });
+    expect(() =>
+      createSession({
+        samplingMode: "creative",
+        temperature: 0.8,
+      }),
+    ).toThrow(TypeError);
+    expect(() =>
+      createSession({
+        samplingMode: "creative",
+        createOptions: { topK: 8 },
+      }),
+    ).toThrow(TypeError);
+    expect(() =>
+      createSession({
+        topK: 8,
+        createOptions: { samplingMode: "creative" },
+      }),
+    ).toThrow(TypeError);
   });
 
   it("does not set a tools key when none are passed", async () => {

@@ -27,6 +27,7 @@ import {
   type LanguageModelExpectedOutput,
   type LanguageModelInstance,
   type LanguageModelPromptOptions,
+  type LanguageModelSamplingMode,
   type LanguageModelTool,
 } from "./api.js";
 
@@ -133,12 +134,35 @@ export const mergeStreamChunk = (
   return { buffer: buffer + chunk, delta: chunk };
 };
 
+export const assertValidSamplingOptions = (options: {
+  samplingMode?: LanguageModelSamplingMode;
+  temperature?: number;
+  topK?: number;
+  createOptions?: Partial<LanguageModelCreateOptions>;
+}): void => {
+  const samplingMode =
+    options.samplingMode ?? options.createOptions?.samplingMode;
+  const hasTemperature =
+    options.temperature !== undefined ||
+    options.createOptions?.temperature !== undefined;
+  const hasTopK =
+    options.topK !== undefined || options.createOptions?.topK !== undefined;
+
+  if (samplingMode !== undefined && (hasTemperature || hasTopK)) {
+    throw new TypeError(
+      "`samplingMode` is mutually exclusive with `temperature` and `topK`.",
+    );
+  }
+};
+
 export interface CreateSessionOptions {
   /** Optional system prompt (folded into `initialPrompts` as a `system` role). */
   systemPrompt?: string;
-  /** Sampling temperature (0..1). Defaults to the model's default. */
+  /** Semantic sampling preset. Defaults to the model's default. */
+  samplingMode?: LanguageModelSamplingMode;
+  /** @deprecated Web page contexts are moving to `samplingMode`. */
   temperature?: number;
-  /** Sampling top-k. Defaults to the model's default. */
+  /** @deprecated Web page contexts are moving to `samplingMode`. */
   topK?: number;
   /** BCP-47 language hint. Folded into `expectedInputs` / `expectedOutputs` when supported. */
   language?: string;
@@ -240,6 +264,7 @@ export interface Session {
 const buildCreateOptions = (
   options: CreateSessionOptions,
 ): LanguageModelCreateOptions => {
+  assertValidSamplingOptions(options);
   const initialPrompts = options.systemPrompt
     ? [{ role: "system" as const, content: options.systemPrompt }]
     : [];
@@ -249,6 +274,9 @@ const buildCreateOptions = (
   );
   return {
     ...(initialPrompts.length > 0 ? { initialPrompts } : {}),
+    ...(options.samplingMode !== undefined
+      ? { samplingMode: options.samplingMode }
+      : {}),
     ...(options.temperature !== undefined
       ? { temperature: options.temperature }
       : {}),
