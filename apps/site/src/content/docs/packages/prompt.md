@@ -32,7 +32,7 @@ import { ask } from "@web-ai-sdk/prompt";
 const result = await ask({
   input: "Summarize this in one sentence: WebMCP lets web pages expose tools to agents.",
   systemPrompt: "You are concise. Reply with a single sentence.",
-  temperature: 0.2,
+  samplingMode: "predictable",
   onUpdate: (text) => console.log("partial", text), // cumulative buffer
 });
 
@@ -49,7 +49,7 @@ import { usePrompt } from "@web-ai-sdk/prompt/react";
 export function AskBox() {
   const { status, output, error, ask, abort } = usePrompt({
     systemPrompt: "You are a helpful assistant. Be concise.",
-    temperature: 0.7,
+    samplingMode: "balanced",
   });
 
   if (status === "unavailable") return null;
@@ -83,6 +83,7 @@ State machine: `idle | loading | streaming | done | unavailable`. `ask(input)` t
 interface AskOptions {
   input: string;
   systemPrompt?: string;
+  samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
   temperature?: number;
   topK?: number;
   language?: string;                        // BCP-47 hint, folded into expectedInputs/Outputs
@@ -121,8 +122,8 @@ Forwards to `LanguageModel.availability()`. Returns `null` if the global is miss
 
 Two layers, same as `@web-ai-sdk/summarizer`:
 
-- **Session cache** (internal, in-memory, always on): a `Map<stringifiedCreateOptions, LanguageModel>` so consecutive calls with the same shape (system prompt, temperature, topK, language hints) reuse the warm session. Cold-start ≈ 1-3s; warm calls are sub-second.
-- **Result cache** (opt-in): pass a `cache` (anything matching `{ get, set }`) to memoize final responses by `(prompt, systemPrompt, temperature, topK)`. Omit it for a fresh model call every time.
+- **Session cache** (internal, in-memory, always on): a `Map<stringifiedCreateOptions, LanguageModel>` so consecutive calls with the same shape (system prompt, sampling mode or raw sampling params, language hints) reuse the warm session. Cold-start ≈ 1-3s; warm calls are sub-second.
+- **Result cache** (opt-in): pass a `cache` (anything matching `{ get, set }`) to memoize final responses by `(prompt, systemPrompt, samplingMode / temperature / topK)`. Omit it for a fresh model call every time.
 
 ```ts
 // Off by default; every call hits the model.

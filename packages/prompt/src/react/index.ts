@@ -151,8 +151,8 @@ export interface UseSessionReturn {
  * underlying `LanguageModel` session with its own history, system prompt,
  * sampling, and lifecycle — `abort()` / `destroy()` on one component's
  * session never touch another's — and the session is destroyed on unmount
- * or when any primitive option (`systemPrompt`, `temperature`, `topK`,
- * `language`, `enabled`) changes.
+ * or when any primitive option (`systemPrompt`, `samplingMode`,
+ * `temperature`, `topK`, `language`, `enabled`) changes.
  *
  * Token-level interleaving across sessions is browser-defined: the
  * underlying on-device model is single-instance, so Chrome 148 / Edge 138
@@ -175,6 +175,7 @@ export const useSession = (
   const {
     enabled = true,
     systemPrompt,
+    samplingMode,
     temperature,
     topK,
     language,
@@ -205,6 +206,7 @@ export const useSession = (
     try {
       session = createSession({
         systemPrompt,
+        samplingMode,
         temperature,
         topK,
         language,
@@ -234,6 +236,7 @@ export const useSession = (
   }, [
     enabled,
     systemPrompt,
+    samplingMode,
     temperature,
     topK,
     language,
@@ -252,6 +255,7 @@ export type {
   AskResult,
   CacheOption,
   CreateSessionOptions,
+  LanguageModelSamplingMode,
   LanguageModelTool,
   ResponseCache,
   Session,

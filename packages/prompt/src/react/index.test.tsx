@@ -195,4 +195,17 @@ describe("useSession", () => {
     rerender({ p: "B" });
     expect(api.create).toHaveBeenCalledTimes(2);
   });
+
+  it("recreates the session when samplingMode changes", () => {
+    const api = installFakeLanguageModel();
+    type SamplingModeProps = { samplingMode: "predictable" | "creative" };
+    const initialProps: SamplingModeProps = { samplingMode: "predictable" };
+    const { rerender } = renderHook(
+      ({ samplingMode }: SamplingModeProps) => useSession({ samplingMode }),
+      { initialProps },
+    );
+    expect(api.create).toHaveBeenCalledTimes(1);
+    rerender({ samplingMode: "creative" });
+    expect(api.create).toHaveBeenCalledTimes(2);
+  });
 });

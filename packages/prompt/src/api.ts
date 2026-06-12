@@ -51,9 +51,23 @@ export interface CreateMonitor {
   ): void;
 }
 
+export type LanguageModelSamplingMode =
+  | "most-predictable"
+  | "predictable"
+  | "balanced"
+  | "creative"
+  | "most-creative";
+
 export interface LanguageModelCreateOptions {
   initialPrompts?: LanguageModelMessage[];
+  /**
+   * Semantic sampling preset. Mutually exclusive with `temperature` / `topK`
+   * where browsers still expose those legacy raw parameters.
+   */
+  samplingMode?: LanguageModelSamplingMode;
+  /** @deprecated Web page contexts are moving to `samplingMode`. */
   temperature?: number;
+  /** @deprecated Web page contexts are moving to `samplingMode`. */
   topK?: number;
   expectedInputs?: LanguageModelExpectedInput[];
   expectedOutputs?: LanguageModelExpectedOutput[];
@@ -135,9 +149,13 @@ export type LanguageModelAvailability =
   | "available";
 
 export interface LanguageModelParams {
+  /** @deprecated Web page contexts are moving to `samplingMode`. */
   defaultTemperature: number;
+  /** @deprecated Web page contexts are moving to `samplingMode`. */
   maxTemperature: number;
+  /** @deprecated Web page contexts are moving to `samplingMode`. */
   defaultTopK: number;
+  /** @deprecated Web page contexts are moving to `samplingMode`. */
   maxTopK: number;
 }
 

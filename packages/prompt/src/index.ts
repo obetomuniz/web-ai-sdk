@@ -23,6 +23,7 @@ import {
   type LanguageModelMessage,
   type LanguageModelParams,
   type LanguageModelPromptOptions,
+  type LanguageModelSamplingMode,
   type LanguageModelTool,
 } from "./api.js";
 import {
@@ -33,6 +34,7 @@ import {
   resolveCache,
 } from "./cache.js";
 import {
+  assertValidSamplingOptions,
   buildLangHints,
   type CreateSessionOptions,
   createSession,
@@ -58,6 +60,7 @@ export type {
   LanguageModelInstance,
   LanguageModelMessage,
   LanguageModelParams,
+  LanguageModelSamplingMode,
   LanguageModelTool,
   ResponseCache,
   Session,
@@ -77,9 +80,11 @@ export interface AskOptions {
   input: string;
   /** Optional system prompt (folded into `initialPrompts` as a `system` role). */
   systemPrompt?: string;
-  /** Sampling temperature (0..1). Defaults to the model's default. */
+  /** Semantic sampling preset. Defaults to the model's default. */
+  samplingMode?: LanguageModelSamplingMode;
+  /** @deprecated Web page contexts are moving to `samplingMode`. */
   temperature?: number;
-  /** Sampling top-k. Defaults to the model's default. */
+  /** @deprecated Web page contexts are moving to `samplingMode`. */
   topK?: number;
   /** BCP-47 language hint. Folded into `expectedInputs` / `expectedOutputs` when supported. */
   language?: string;
@@ -117,7 +122,7 @@ export interface AskOptions {
    * `{ get, set }`-shaped object for a custom backend.
    */
   cache?: CacheOption;
-  /** Cache key. Default: hash of `{ input, systemPrompt, temperature, topK }`. */
+  /** Cache key. Default: hash of `{ input, systemPrompt, samplingMode, temperature, topK }`. */
   cacheKey?: string;
   /**
    * Streaming update callback. Receives the **cumulative** buffer (full text so
@@ -158,12 +163,15 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
     return { output: null, cached: false };
   }
 
+  assertValidSamplingOptions(options);
+
   const cache = resolveCache(options.cache);
   const cacheKey =
     options.cacheKey ??
     defaultCacheKey({
       prompt: options.input,
       systemPrompt: options.systemPrompt,
+      samplingMode: options.samplingMode,
       temperature: options.temperature,
       topK: options.topK,
     });
@@ -182,6 +190,9 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
 
   const baseCreateOptions: LanguageModelCreateOptions = {
     ...(initialPrompts.length > 0 ? { initialPrompts } : {}),
+    ...(options.samplingMode !== undefined
+      ? { samplingMode: options.samplingMode }
+      : {}),
     ...(options.temperature !== undefined
       ? { temperature: options.temperature }
       : {}),
