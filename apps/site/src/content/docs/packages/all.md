@@ -70,7 +70,7 @@ The scoped packages are deliberately small lifecycle wrappers; a meta-package ju
 
 ## Versioning
 
-The aggregator and the eight scoped packages release together via a Changesets `fixed` group: every release ships all nine at the same version. Pin a single number, get the whole suite.
+The scoped packages are independently versioned, so a Prompt-only API change can ship without bumping Translator, WebMCP, or the other wrappers. The `@web-ai-sdk/all` version is the suite anchor: it is bumped whenever one of the packages it re-exports changes, so `@web-ai-sdk/all@latest` always pulls the current bundle.
 
 ## License
 
