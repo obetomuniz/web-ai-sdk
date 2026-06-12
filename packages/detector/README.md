@@ -113,7 +113,7 @@ const { output } = await detect({ input: articleText });
 await summarize({ language: output?.language ?? "en", input: articleText });
 ```
 
-A first-class `language: "auto"` shortcut may land in a future release.
+A first-class `language: "auto"` shortcut isn't planned for this package. Multi-package compositions like detect-then-summarize, detect-then-translate, or detect-then-prompt are written in consumer code.
 
 ## Errors and unavailability
 

@@ -5,9 +5,11 @@ editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/detector/RE
 ---
 
 :::note
-This page is generated from [`packages/detector/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/detector/README.md) on every build. Edits should go to the README.
+This page is synced from [`packages/detector/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/detector/README.md) by `pnpm --filter @web-ai-sdk-apps/site docs:sync`. Edits should go to the README.
 :::
+
 web-ai-sdk building block for [the Web's Built-in Language Detector API](https://developer.chrome.com/docs/ai/language-detection). Detect the language of any text on-device, with confidence scores and a sorted list of alternates. Session reuse, pluggable result caching, AbortSignal-driven cleanup.
+
 
 ## Status
 
@@ -96,6 +98,8 @@ Two layers, same as the other packages:
 - **Session cache** (internal, in-memory, always on): a `Map<stringifiedOptions, LanguageDetector>` so consecutive calls with the same `expectedInputLanguages` shape reuse the warm session. Cold-start is fast on this model (~100-300ms) but warm is still sub-50ms.
 - **Result cache** (opt-in): pass a `cache` (anything matching `{ get, set }`) to memoize the full sorted list by trimmed text. Omit it for a fresh model call every time.
 
+Use `configureLanguageDetectorCache({ max })` to bound the warm session cache (default `8`). `clearLanguageDetectorSessions()` drops every warm session, and `clearLanguageDetectorSession({ expectedInputLanguages })` drops one matching detector configuration.
+
 ```ts
 // Off by default; every call hits the model.
 detect({ input: "hello" });
@@ -116,7 +120,7 @@ const { output } = await detect({ input: articleText });
 await summarize({ language: output?.language ?? "en", input: articleText });
 ```
 
-A first-class `language: "auto"` shortcut may land in a future release.
+A first-class `language: "auto"` shortcut isn't planned for this package. Multi-package compositions like detect-then-summarize, detect-then-translate, or detect-then-prompt are written in consumer code.
 
 ## Errors and unavailability
 

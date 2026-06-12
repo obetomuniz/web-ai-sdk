@@ -129,7 +129,7 @@ Pass `enabled: false` to skip session creation entirely (status stays `"unavaila
 Pass `createOptions.initialPrompts` to restore a prior conversation:
 
 ```tsx
-const session = useSession({
+const { status, session } = useSession({
   systemPrompt: "You are a helpful assistant.",
   createOptions: {
     initialPrompts: [
@@ -139,6 +139,8 @@ const session = useSession({
     ],
   },
 });
+
+if (status !== "ready" || !session) return null;
 ```
 
 The seeded turns become real context for the model. UI history lives in your own component state.
@@ -171,10 +173,14 @@ interface UseSessionReturn {
 }
 
 interface Session {
-  send(input: string): Promise<string>;
-  sendStreaming(input: string): AsyncIterable<string>; // yields deltas, not cumulative
+  readonly destroyed: boolean;
+  readonly contextWindow?: number;
+  readonly contextUsage?: number;
+  send(input: string, options?: SessionSendOptions): Promise<string | null>;
+  sendStreaming(input: string, options?: SessionSendOptions): AsyncIterable<string>; // yields deltas, not cumulative
   abort(): void;
   clone(options?: { signal?: AbortSignal }): Promise<Session>;
+  onContextOverflow(listener: () => void): () => void;
   destroy(): void;
 }
 
