@@ -190,6 +190,31 @@ describe("write", () => {
     expect(second).toEqual({ output: "Draft 2.", cached: false });
   });
 
+  it("does not fragment cache entries for unsupported language hint lists", async () => {
+    let calls = 0;
+    const api = installFakeWriter();
+    api.create.mockImplementation(async () => ({
+      write: vi.fn(async () => `Draft ${++calls}.`),
+    }));
+    const cache = inMemoryCache();
+
+    const first = await write({
+      input: "Draft an email.",
+      language: "pt-BR",
+      supportedLanguages: ["en"],
+      cache,
+    });
+    const second = await write({
+      input: "Draft an email.",
+      language: "pt-BR",
+      supportedLanguages: ["ja"],
+      cache,
+    });
+
+    expect(first).toEqual({ output: "Draft 1.", cached: false });
+    expect(second).toEqual({ output: "Draft 1.", cached: true });
+  });
+
   it("forwards per-call context to the underlying write()", async () => {
     const api = installFakeWriter({ output: "ok" });
     await write({

@@ -133,7 +133,7 @@ export const rewrite = async (
     options.supportedLanguages ?? DEFAULT_SUPPORTED_LANGUAGES
   ).map(NORMALIZE_LANG);
   const supported = new Set(supportedLanguages);
-  const effectiveSupportedLanguages = lang ? supportedLanguages : undefined;
+  const languageHints = lang ? supported.has(lang) : false;
   const cache = resolveCache(options.cache);
   const cacheKey =
     options.cacheKey ??
@@ -145,7 +145,7 @@ export const rewrite = async (
       format: options.format,
       length: options.length,
       language: lang,
-      supportedLanguages: effectiveSupportedLanguages,
+      languageHints,
     });
   if (cache) {
     const cached = cache.get(cacheKey);
@@ -156,7 +156,7 @@ export const rewrite = async (
     RewriterCreateOptions,
     "expectedInputLanguages" | "expectedContextLanguages" | "outputLanguage"
   > =
-    lang && supported.has(lang)
+    lang && languageHints
       ? {
           expectedInputLanguages: [lang],
           expectedContextLanguages: [lang],

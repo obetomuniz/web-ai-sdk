@@ -83,7 +83,7 @@ export const resolveCache = (
 interface DefaultCacheKeyInput {
   text: string;
   language: string;
-  supportedLanguages?: readonly string[];
+  languageHints?: boolean;
   type?: string;
   length?: string;
   format?: string;
@@ -112,7 +112,7 @@ export const defaultCacheKey = (
     pathname,
     input.text.trim(),
     input.language,
-    input.supportedLanguages ?? null,
+    input.languageHints === true,
     input.type ?? "",
     input.length ?? "",
     input.format ?? "",

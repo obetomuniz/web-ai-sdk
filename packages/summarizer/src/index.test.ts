@@ -201,6 +201,81 @@ describe("summarize", () => {
     expect(second).toEqual({ output: "Summary 2.", cached: false });
   });
 
+  it("does not collide cache entries when supportedLanguages changes language hints", async () => {
+    let calls = 0;
+    const api = installFakeSummarizer();
+    api.create.mockImplementation(async () => ({
+      summarize: vi.fn(async () => `Summary ${++calls}.`),
+    }));
+    const cache = inMemoryCache();
+
+    const first = await summarize({
+      language: "pt-BR",
+      supportedLanguages: ["pt"],
+      input: "Article body.",
+      cache,
+    });
+    const second = await summarize({
+      language: "pt-BR",
+      supportedLanguages: ["en"],
+      input: "Article body.",
+      cache,
+    });
+
+    expect(first).toEqual({ output: "Summary 1.", cached: false });
+    expect(second).toEqual({ output: "Summary 2.", cached: false });
+  });
+
+  it("does not fragment cache entries for normalized supported language lists", async () => {
+    let calls = 0;
+    const api = installFakeSummarizer();
+    api.create.mockImplementation(async () => ({
+      summarize: vi.fn(async () => `Summary ${++calls}.`),
+    }));
+    const cache = inMemoryCache();
+
+    const first = await summarize({
+      language: "pt-BR",
+      supportedLanguages: ["pt-BR"],
+      input: "Article body.",
+      cache,
+    });
+    const second = await summarize({
+      language: "pt-BR",
+      supportedLanguages: ["pt"],
+      input: "Article body.",
+      cache,
+    });
+
+    expect(first).toEqual({ output: "Summary 1.", cached: false });
+    expect(second).toEqual({ output: "Summary 1.", cached: true });
+  });
+
+  it("does not fragment cache entries for unsupported language hint lists", async () => {
+    let calls = 0;
+    const api = installFakeSummarizer();
+    api.create.mockImplementation(async () => ({
+      summarize: vi.fn(async () => `Summary ${++calls}.`),
+    }));
+    const cache = inMemoryCache();
+
+    const first = await summarize({
+      language: "pt-BR",
+      supportedLanguages: ["en"],
+      input: "Article body.",
+      cache,
+    });
+    const second = await summarize({
+      language: "pt-BR",
+      supportedLanguages: ["ja"],
+      input: "Article body.",
+      cache,
+    });
+
+    expect(first).toEqual({ output: "Summary 1.", cached: false });
+    expect(second).toEqual({ output: "Summary 1.", cached: true });
+  });
+
   it("writes successful summaries to the cache", async () => {
     installFakeSummarizer({ summary: "Fresh." });
     const cache = inMemoryCache();

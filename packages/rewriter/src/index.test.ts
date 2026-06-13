@@ -182,6 +182,31 @@ describe("rewrite", () => {
     expect(second).toEqual({ output: "Rewrite 2.", cached: false });
   });
 
+  it("does not fragment cache entries for unsupported language hint lists", async () => {
+    let calls = 0;
+    const api = installFakeRewriter();
+    api.create.mockImplementation(async () => ({
+      rewrite: vi.fn(async () => `Rewrite ${++calls}.`),
+    }));
+    const cache = inMemoryCache();
+
+    const first = await rewrite({
+      input: "Make this clearer.",
+      language: "pt-BR",
+      supportedLanguages: ["en"],
+      cache,
+    });
+    const second = await rewrite({
+      input: "Make this clearer.",
+      language: "pt-BR",
+      supportedLanguages: ["ja"],
+      cache,
+    });
+
+    expect(first).toEqual({ output: "Rewrite 1.", cached: false });
+    expect(second).toEqual({ output: "Rewrite 1.", cached: true });
+  });
+
   it("forwards per-call context to the underlying rewrite()", async () => {
     const api = installFakeRewriter({ output: "ok" });
     await rewrite({

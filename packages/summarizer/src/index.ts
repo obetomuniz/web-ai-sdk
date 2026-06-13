@@ -122,13 +122,18 @@ export const summarize = async (
   if (!text) return { output: null, cached: false };
 
   const lang = NORMALIZE_LANG(options.language);
+  const supportedLanguages = (
+    options.supportedLanguages ?? DEFAULT_SUPPORTED_LANGUAGES
+  ).map(NORMALIZE_LANG);
+  const supported = new Set(supportedLanguages);
+  const languageHints = supported.has(lang);
   const cache = resolveCache(options.cache);
   const cacheKey =
     options.cacheKey ??
     defaultCacheKey({
       text,
       language: lang,
-      supportedLanguages: options.supportedLanguages,
+      languageHints,
       type: options.type,
       length: options.length,
       format: options.format,
@@ -140,13 +145,10 @@ export const summarize = async (
     if (cached) return { output: cached, cached: true };
   }
 
-  const supported = new Set(
-    options.supportedLanguages ?? DEFAULT_SUPPORTED_LANGUAGES,
-  );
   const langOptions: Pick<
     SummarizerCreateOptions,
     "expectedInputLanguages" | "expectedContextLanguages" | "outputLanguage"
-  > = supported.has(lang)
+  > = languageHints
     ? {
         expectedInputLanguages: [lang],
         expectedContextLanguages: [lang],
