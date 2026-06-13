@@ -313,6 +313,22 @@ describe("translate", () => {
     expect(sessions[1]?.destroy).not.toHaveBeenCalled();
   });
 
+  it("clears translator sessions when passed regional language tags", async () => {
+    const { sessions } = installFakeTranslator();
+    await translate({
+      input: "a",
+      sourceLanguage: "pt-BR",
+      targetLanguage: "en-US",
+    });
+
+    clearTranslatorSession({
+      sourceLanguage: "pt-BR",
+      targetLanguage: "en-US",
+    });
+
+    await vi.waitFor(() => expect(sessions[0]?.destroy).toHaveBeenCalled());
+  });
+
   it("test cache reset restores the default max", async () => {
     const { sessions } = installFakeTranslator();
     configureTranslatorCache({ max: 1 });

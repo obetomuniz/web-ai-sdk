@@ -85,6 +85,9 @@ const sessionCache = new Map<string, Promise<TranslatorInstance>>();
 const normalizeCacheMax = (max: number): number =>
   Number.isFinite(max) ? Math.max(0, Math.floor(max)) : 0;
 
+const normalizeLanguage = (lang: string): string =>
+  lang.split("-")[0]?.toLowerCase() ?? lang.toLowerCase();
+
 export interface ConfigureTranslatorCacheOptions {
   /** Soft cap on cached translator sessions. Default: `8`. */
   max?: number;
@@ -137,7 +140,9 @@ export const clearTranslatorSessions = (): void => {
 };
 
 const cacheKeyFor = (options: TranslatorAvailabilityOptions): string =>
-  `${options.sourceLanguage}->${options.targetLanguage}`;
+  `${normalizeLanguage(options.sourceLanguage)}->${normalizeLanguage(
+    options.targetLanguage,
+  )}`;
 
 /** Drop the cached translator session whose language pair matches `options`. */
 export const clearTranslatorSession = (
