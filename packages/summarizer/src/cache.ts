@@ -77,8 +77,9 @@ export const resolveCache = (
 
 /**
  * Build a default cache key from the route, input, and summary options that
- * affect the output. Pass a custom string to `summarize()`'s `cacheKey` option
- * for finer-grained invalidation.
+ * affect the output. A legacy string input still returns the compact
+ * `pathname:lang` key. Pass a custom string to `summarize()`'s `cacheKey`
+ * option for finer-grained invalidation.
  */
 interface DefaultCacheKeyInput {
   text: string;
