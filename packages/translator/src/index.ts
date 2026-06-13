@@ -67,7 +67,7 @@ export interface TranslateOptions {
    * `{ get, set }`-shaped object for a custom backend.
    */
   cache?: CacheOption;
-  /** Cache key. Default: JSON string of `{ sourceLanguage, targetLanguage, input }`. */
+  /** Cache key. Default: JSON array string of `[sourceLanguage, targetLanguage, input]`. */
   cacheKey?: string;
   /** Abort signal. */
   signal?: AbortSignal;

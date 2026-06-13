@@ -45,7 +45,7 @@ interface TranslateOptions {
 | `targetLanguage` | `string` | BCP-47 target language. Defaults to `"en"`. |
 | `monitor` | `(m) => void` | Observe the first-call model download. |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
-| `cacheKey` | `string` | Override the default cache key (JSON string of `{ sourceLanguage, targetLanguage, input }`). |
+| `cacheKey` | `string` | Override the default cache key (JSON array string of normalized `[sourceLanguage, targetLanguage, input]`). |
 | `signal` | `AbortSignal` | Abort signal. |
 
 </div>

@@ -127,7 +127,7 @@ translate({
 });
 ```
 
-The default result cache key is a JSON string of `{ sourceLanguage, targetLanguage, input }`. Pass `cacheKey` explicitly for finer-grained invalidation.
+The default result cache key is a JSON array string of normalized `[sourceLanguage, targetLanguage, input]`. Pass `cacheKey` explicitly for finer-grained invalidation.
 
 ## DOM composition
 
