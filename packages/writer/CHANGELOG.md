@@ -1,5 +1,11 @@
 # @web-ai-sdk/writer
 
+## 0.6.1
+
+### Patch Changes
+
+- 280d4b8: Align public docs with safer result cache keys and availability ordering, isolated prompt one-shot/session readiness semantics, bounded warm session cache controls, and synced package reference pages.
+
 ## 0.6.0
 
 ## 0.5.2
