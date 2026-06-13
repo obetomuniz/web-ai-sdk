@@ -1,19 +1,21 @@
 ---
 title: "@web-ai-sdk/webmcp"
-description: "web-ai-sdk building block for the W3C WebMCP API exposed at document.modelContext."
+description: "web-ai-sdk building block for the W3C WebMCP API exposed at document.modelContext. (For backward compatibility with the previous shape of the API, this package also reads from navigator.modelContext.)"
 editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/webmcp/README.md
 ---
 
 :::note
-This page is generated from [`packages/webmcp/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/webmcp/README.md) on every build. Edits should go to the README.
+This page is synced from [`packages/webmcp/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/webmcp/README.md) by `pnpm --filter @web-ai-sdk-apps/site docs:sync`. Edits should go to the README.
 :::
-web-ai-sdk building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `document.modelContext`.
+
+web-ai-sdk building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `document.modelContext`. (For backward compatibility with the previous shape of the API, this package also reads from `navigator.modelContext`.)
 
 An ergonomic, framework-agnostic adapter over the native browser API, with safe register/unregister cleanup and a feature-detected no-op fallback for non-supporting browsers.
 
+
 ## Status
 
-WebMCP ships in Chrome 146+ and Edge 146+ behind a flag (`chrome://flags/#enable-webmcp-testing`; the Edge flag has the same name). On any browser that doesn't expose `document.modelContext` (or the legacy `navigator.modelContext`), this library is a no-op. Your app stays callable, and no tools get registered.
+WebMCP shipped as an early preview in Chrome 146+ behind `chrome://flags/#enable-webmcp-testing`; a public [origin trial](https://developer.chrome.com/docs/ai/webmcp) opens in Chrome 149. Edge added support in 147+ behind the matching `edge://flags/` toggle. On any browser that doesn't expose `document.modelContext` (or the legacy `navigator.modelContext`), this library is a no-op. Your app stays callable, and no tools get registered.
 
 ## Install
 
@@ -27,9 +29,9 @@ React adapter is shipped as a subpath export, with no extra install. `react` is 
 ## Vanilla TypeScript / DOM
 
 ```ts
-import { registerTools } from "@web-ai-sdk/webmcp";
+import { registerTool } from "@web-ai-sdk/webmcp";
 
-const cleanup = registerTools([
+const tools = [
   {
     name: "list_blog_posts",
     description: "List published blog posts.",
@@ -64,13 +66,16 @@ const cleanup = registerTools([
       return { ok: true };
     },
   },
-]);
+];
+
+const cleanups = tools.map(registerTool);
+const cleanup = () => cleanups.forEach((c) => c());
 
 // later, e.g. on page teardown
 cleanup();
 ```
 
-`registerTool(tool)` registers a single tool and returns the cleanup. `registerTools([...])` registers many and returns one cleanup that disposes all of them. Re-registering a tool with the same name is safe; the previous registration is dropped first.
+`registerTool(tool)` registers a single tool and returns the cleanup. Re-registering a tool with the same name is safe; the previous registration is dropped first.
 
 ## React
 
@@ -107,17 +112,16 @@ The hook registers on mount, unregisters on unmount, and re-registers when the a
 
 Register a single tool. Returns a cleanup function. No-op on unsupported browsers.
 
-### `registerTools(tools): () => void`
+To register many at once, map and combine:
 
-Register many tools at once. Returns a single cleanup that unregisters all of them.
+```ts
+const cleanups = tools.map(registerTool);
+const cleanup = () => cleanups.forEach((c) => c());
+```
 
 ### `isAvailable(): boolean`
 
 Feature-detect helper.
-
-### `getModelContext(): ModelContext | undefined`
-
-Escape hatch: the raw `document.modelContext` (or the legacy `navigator.modelContext`) if present, for cases the wrapper doesn't cover (e.g. `requestUserInteraction`).
 
 ### `Tool<TInput, TOutput>`
 
@@ -134,6 +138,56 @@ interface Tool<TInput = unknown, TOutput = unknown> {
 ```
 
 `description` is consumed by the agent host (Cursor / Claude / Chrome agent / etc.). Write it as an instruction to an LLM about when to call the tool.
+
+### `defineTool({...}): Tool` — typed schema adapter (Standard Schema)
+
+```ts
+import { defineTool } from "@web-ai-sdk/webmcp";
+import { z } from "zod"; // or valibot, arktype, effect, …
+
+const sendEmail = defineTool({
+  name: "send_contact_email",
+  description: "Send a contact email on behalf of the visitor.",
+  destructive: true,
+  // Standard Schema (https://standardschema.dev): used to narrow execute's
+  // input type. Validation at runtime is opt-in via `validate: true`.
+  input: z.object({
+    name: z.string().min(1),
+    email: z.string().email(),
+    subject: z.string().min(1),
+    message: z.string().min(1),
+  }),
+  // The host still wants raw JSON Schema for tool dispatch; pass it explicitly.
+  // Standard Schema does not emit JSON Schema, so we don't bridge between
+  // them — keeping both lets you choose your validator without coupling.
+  inputSchema: {
+    type: "object",
+    properties: {
+      name: { type: "string", minLength: 1 },
+      email: { type: "string", format: "email" },
+      subject: { type: "string", minLength: 1 },
+      message: { type: "string", minLength: 1 },
+    },
+    required: ["name", "email", "subject", "message"],
+  },
+  async execute({ name, email, subject, message }) {
+    // `name`, `email`, etc. are typed from the Zod schema.
+    const res = await fetch("/api/send-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, subject, message }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return { ok: true };
+  },
+});
+
+// `sendEmail` is a plain Tool and can be passed to registerTool or useWebMCP.
+```
+
+`defineTool` accepts any [Standard Schema](https://standardschema.dev) V1 validator (Zod 3.24+, Valibot, ArkType, Effect, …) — no SDK dependency on any specific library. The returned object is a plain `Tool`, so it composes with the rest of the API unchanged.
+
+**Validation:** off by default (`validate: false`). Most WebMCP hosts validate against `inputSchema` themselves; running the Standard Schema validator on top is opt-in via `validate: true`, which throws `ToolValidationError` on bad input. With `validate: false` the schema is type-only.
 
 ## Safety
 

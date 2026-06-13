@@ -8,7 +8,11 @@
  */
 
 import {
+  type ConfigureTranslatorCacheOptions,
   checkAvailability,
+  clearTranslatorSession,
+  clearTranslatorSessions,
+  configureTranslatorCache,
   getOrCreateTranslator,
   getTranslatorApi,
   isAvailable,
@@ -28,6 +32,7 @@ import {
 
 export type {
   CacheOption,
+  ConfigureTranslatorCacheOptions,
   TranslationCache,
   TranslatorApi,
   TranslatorAvailability,
@@ -36,7 +41,13 @@ export type {
   TranslatorInstance,
   TranslatorMonitor,
 };
-export { checkAvailability, isAvailable };
+export {
+  checkAvailability,
+  clearTranslatorSession,
+  clearTranslatorSessions,
+  configureTranslatorCache,
+  isAvailable,
+};
 
 const NORMALIZE_LANG = (lang: string): string =>
   lang.split("-")[0]?.toLowerCase() ?? lang.toLowerCase();
@@ -56,7 +67,7 @@ export interface TranslateOptions {
    * `{ get, set }`-shaped object for a custom backend.
    */
   cache?: CacheOption;
-  /** Cache key. Default: hash of `{ sourceLanguage, targetLanguage, input }`. */
+  /** Cache key. Default: JSON array string of `[sourceLanguage, targetLanguage, input]`. */
   cacheKey?: string;
   /** Abort signal. */
   signal?: AbortSignal;
@@ -123,9 +134,6 @@ export const translate = async (
     ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
-  // Kick off session and availability in parallel; first call pays the cold
-  // start, later calls reuse the cached session.
-  const sessionPromise = getOrCreateTranslator(api, createOptions);
   const availability = await api
     .availability({ sourceLanguage, targetLanguage })
     .catch(() => "unavailable" as const);
@@ -133,6 +141,8 @@ export const translate = async (
     throw new TranslatorUnavailableError("Translator reports unavailable.");
   }
   if (options.signal?.aborted) throw new TranslateAbortError();
+
+  const sessionPromise = getOrCreateTranslator(api, createOptions);
 
   let session: TranslatorInstance;
   try {

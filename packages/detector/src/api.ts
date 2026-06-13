@@ -86,7 +86,94 @@ export const checkAvailability = async (
   }
 };
 
+const DEFAULT_MAX_CACHED_SESSIONS = 8;
+
+interface CacheConfig {
+  max: number;
+}
+
+const cacheConfig: CacheConfig = { max: DEFAULT_MAX_CACHED_SESSIONS };
+
+// Map iteration order is insertion order, which lets us use it as an LRU:
+// on hit we re-insert to bump recency, and on overflow we evict the
+// oldest (first) entry.
 const sessionCache = new Map<string, Promise<LanguageDetectorInstance>>();
+
+const normalizeCacheMax = (max: number): number =>
+  Number.isFinite(max) ? Math.max(0, Math.floor(max)) : 0;
+
+export interface ConfigureLanguageDetectorCacheOptions {
+  /** Soft cap on cached language detector sessions. Default: `8`. */
+  max?: number;
+}
+
+/**
+ * Bound the internal language detector session cache. Excess entries are
+ * evicted in LRU order (their `destroy?()` is invoked when present).
+ * Lowering `max` immediately evicts down to the new ceiling.
+ */
+export const configureLanguageDetectorCache = (
+  options: ConfigureLanguageDetectorCacheOptions = {},
+): void => {
+  if (options.max !== undefined) {
+    cacheConfig.max = normalizeCacheMax(options.max);
+  }
+  trim();
+};
+
+const destroySession = (entry: Promise<LanguageDetectorInstance>): void => {
+  entry
+    .then((session) => {
+      try {
+        session.destroy?.();
+      } catch {
+        // best-effort; the spec doesn't require destroy to be infallible.
+      }
+    })
+    .catch(() => {
+      // session never resolved (e.g. create() rejected); nothing to destroy.
+    });
+};
+
+const trim = (): void => {
+  while (sessionCache.size > cacheConfig.max) {
+    const oldestKey = sessionCache.keys().next().value;
+    if (oldestKey === undefined) return;
+    const evicted = sessionCache.get(oldestKey);
+    sessionCache.delete(oldestKey);
+    if (evicted) destroySession(evicted);
+  }
+};
+
+/** Drop every cached language detector session. */
+export const clearLanguageDetectorSessions = (): void => {
+  for (const entry of sessionCache.values()) {
+    destroySession(entry);
+  }
+  sessionCache.clear();
+};
+
+const canonicalExpectedInputLanguages = (
+  languages: string[] | undefined,
+): string[] | undefined => (languages ? [...languages].sort() : undefined);
+
+const cacheKeyFor = (options: LanguageDetectorAvailabilityOptions): string =>
+  JSON.stringify({
+    expectedInputLanguages: canonicalExpectedInputLanguages(
+      options.expectedInputLanguages,
+    ),
+  });
+
+/** Drop the cached detector session whose create-options match `options`. */
+export const clearLanguageDetectorSession = (
+  options: LanguageDetectorAvailabilityOptions,
+): void => {
+  const key = cacheKeyFor(options);
+  const entry = sessionCache.get(key);
+  if (!entry) return;
+  sessionCache.delete(key);
+  destroySession(entry);
+};
 
 /**
  * Get or create a `LanguageDetector` session for the given options.
@@ -100,22 +187,24 @@ export const getOrCreateLanguageDetector = (
 ): Promise<LanguageDetectorInstance> => {
   // Drop `signal` and `monitor` from the cache key; they're per-call
   // ephemera that shouldn't fragment session reuse.
-  const keyOptions = {
-    expectedInputLanguages: options.expectedInputLanguages,
-  };
-  const key = JSON.stringify(keyOptions);
+  const key = cacheKeyFor(options);
   let session = sessionCache.get(key);
-  if (!session) {
-    session = api.create(options).catch((err) => {
-      sessionCache.delete(key);
-      throw err;
-    });
+  if (session) {
+    sessionCache.delete(key);
     sessionCache.set(key, session);
+    return session;
   }
+  session = api.create(options).catch((err) => {
+    sessionCache.delete(key);
+    throw err;
+  });
+  sessionCache.set(key, session);
+  trim();
   return session;
 };
 
 /** Test-only escape hatch; drop every cached session. */
 export const __clearSessionCacheForTests = (): void => {
   sessionCache.clear();
+  cacheConfig.max = DEFAULT_MAX_CACHED_SESSIONS;
 };

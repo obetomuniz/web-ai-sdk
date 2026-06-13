@@ -70,7 +70,7 @@ export interface SummarizeOptions {
    * `{ get, set }`-shaped object for a custom backend.
    */
   cache?: CacheOption;
-  /** Cache key. Default: `pathname:lang`. */
+  /** Cache key. Default: JSON string of route, input, and summary options. */
   cacheKey?: string;
   /**
    * Streaming update callback (cleaned text, monotonically growing).
@@ -122,20 +122,33 @@ export const summarize = async (
   if (!text) return { output: null, cached: false };
 
   const lang = NORMALIZE_LANG(options.language);
+  const supportedLanguages = (
+    options.supportedLanguages ?? DEFAULT_SUPPORTED_LANGUAGES
+  ).map(NORMALIZE_LANG);
+  const supported = new Set(supportedLanguages);
+  const languageHints = supported.has(lang);
   const cache = resolveCache(options.cache);
-  const cacheKey = options.cacheKey ?? defaultCacheKey(lang);
+  const cacheKey =
+    options.cacheKey ??
+    defaultCacheKey({
+      text,
+      language: lang,
+      languageHints,
+      type: options.type,
+      length: options.length,
+      format: options.format,
+      preference: options.preference,
+      sharedContext: options.sharedContext,
+    });
   if (cache) {
     const cached = cache.get(cacheKey);
     if (cached) return { output: cached, cached: true };
   }
 
-  const supported = new Set(
-    options.supportedLanguages ?? DEFAULT_SUPPORTED_LANGUAGES,
-  );
   const langOptions: Pick<
     SummarizerCreateOptions,
     "expectedInputLanguages" | "expectedContextLanguages" | "outputLanguage"
-  > = supported.has(lang)
+  > = languageHints
     ? {
         expectedInputLanguages: [lang],
         expectedContextLanguages: [lang],
@@ -153,9 +166,6 @@ export const summarize = async (
     ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
-  // Kick off session and availability in parallel; first call pays the cold
-  // start, later calls reuse the cached session.
-  //
   // We pass the same options shape to availability() as we do to create().
   // Edge requires this for accurate results and warns when fields like
   // outputLanguage are missing; Chrome is more lenient but accepts the same
@@ -163,7 +173,6 @@ export const summarize = async (
   // too; forwarding it keeps the probe honest about the configuration we're
   // actually about to create. The narrower SummarizerAvailabilityOptions shape
   // still filters out create-only fields like `sharedContext`.
-  const sessionPromise = getOrCreateSummarizer(api, baseCreateOptions);
   const availability = await api
     .availability({
       ...(baseCreateOptions.type ? { type: baseCreateOptions.type } : {}),
@@ -190,6 +199,8 @@ export const summarize = async (
     throw new SummarizerUnavailableError("Summarizer reports unavailable.");
   }
   if (options.signal?.aborted) throw new AbortError();
+
+  const sessionPromise = getOrCreateSummarizer(api, baseCreateOptions);
 
   // Wrap session-create failures with context so consumers can branch on
   // a single typed error instead of parsing browser-specific messages.

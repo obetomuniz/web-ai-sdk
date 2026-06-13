@@ -3,9 +3,9 @@ title: useSession
 description: Lifecycle-only React adapter for createSession. Each call owns one never-shared LanguageModel session; UI state is the consumer's concern.
 ---
 
-Lifecycle-only React adapter for the chat-shaped [`createSession()`](/docs/guides/prompt/#chat-createsession) primitive in `@web-ai-sdk/prompt`. Each `useSession` call owns one underlying `LanguageModelInstance` — so N components produce N concurrent streams. The hook handles feature detection, create, destroy-on-unmount, and recreate-on-options-change. It does **not** track `response`, `history`, or streaming status; iterate `session.sendStreaming()` yourself and keep UI state in your own component.
+Lifecycle-only React adapter for the chat-shaped [`createSession()`](/docs/guides/prompt/#chat-createsession) primitive in `@web-ai-sdk/prompt`. Each `useSession` call owns one underlying `LanguageModelInstance`, with independent history, system prompt, sampling, and lifecycle. The hook handles feature detection, async create readiness, destroy-on-unmount, and recreate-on-options-change. It does **not** track `response`, `history`, or streaming status; iterate `session.sendStreaming()` yourself and keep UI state in your own component.
 
-For ask-and-display flows (embeds, widgets, single-question UIs) prefer [`usePrompt`](/docs/react/use-prompt/); it shares a warm session across same-shape callers.
+For ask-and-display flows (embeds, widgets, single-question UIs) prefer [`usePrompt`](/docs/react/use-prompt/); it uses isolated one-shot prompts and may keep a warm base session for same-shape calls.
 
 ## Usage
 
@@ -52,9 +52,9 @@ export function Chat({ persona }: { persona: string }) {
 
 `session.sendStreaming(text)` yields **deltas** (each chunk is the new text since the last yield). Accumulate into your own `response` state for a typewriter effect. The hook stays out of the streaming loop entirely.
 
-## Parallel chats
+## Independent chats
 
-Two `useSession` calls with identical options get two independent underlying instances. In a chat app with N agents in the same mode, every one streams concurrently.
+Two `useSession` calls with identical options get two independent underlying instances. In a chat app with N agents in the same mode, each pane owns its own history, abort, and destroy lifecycle. Current Chrome / Edge builds may still serialize token generation FIFO across sessions because the underlying on-device model is single-instance.
 
 ```tsx
 function ChatList({ agents }: { agents: Agent[] }) {
@@ -62,8 +62,8 @@ function ChatList({ agents }: { agents: Agent[] }) {
 }
 
 function ChatPane({ agent }: { agent: Agent }) {
-  // Each ChatPane owns its own session. Streams don't queue against
-  // each other even when systemPrompt / samplingMode are identical.
+  // Each ChatPane owns its own session even when systemPrompt /
+  // samplingMode are identical.
   const { session } = useSession({
     systemPrompt: agent.systemPrompt,
     samplingMode: agent.samplingMode,
@@ -102,11 +102,11 @@ interface UseSessionReturn {
 }
 ```
 
-- **`loading`**: brief; the underlying `LanguageModel.create()` is in flight. Sends issued during this state await creation internally.
+- **`loading`**: the underlying `LanguageModel.create()` is in flight. `session` is `null` until creation succeeds.
 - **`ready`**: `session` is non-null. Iterate `session.sendStreaming(...)`, call `session.send(...)`, `session.abort()`, or `session.destroy()` (the hook also destroys on unmount).
-- **`unavailable`**: API missing or `enabled: false`. Render a fallback.
+- **`unavailable`**: API missing, `enabled: false`, or native creation failed. Render a fallback; creation failures are exposed on `error`.
 
-The hook does not pre-detect creation errors that surface async. If `LanguageModel.create()` rejects after `status` flips to `ready`, the rejection bubbles up the next time you call `session.send` / `session.sendStreaming` as `PromptUnavailableError`. Wrap your send in `try { … } catch (err) { … }` to handle that path.
+The hook waits for native creation before reporting `"ready"`. If `LanguageModel.create()` rejects, the hook destroys the wrapper, reports `"unavailable"`, and stores the creation error in `error`.
 
 ## Recreating the session
 
@@ -129,7 +129,7 @@ Pass `enabled: false` to skip session creation entirely (status stays `"unavaila
 Pass `createOptions.initialPrompts` to restore a prior conversation:
 
 ```tsx
-const session = useSession({
+const { status, session } = useSession({
   systemPrompt: "You are a helpful assistant.",
   createOptions: {
     initialPrompts: [
@@ -139,6 +139,8 @@ const session = useSession({
     ],
   },
 });
+
+if (status !== "ready" || !session) return null;
 ```
 
 The seeded turns become real context for the model. UI history lives in your own component state.
@@ -171,10 +173,14 @@ interface UseSessionReturn {
 }
 
 interface Session {
-  send(input: string): Promise<string>;
-  sendStreaming(input: string): AsyncIterable<string>; // yields deltas, not cumulative
+  readonly destroyed: boolean;
+  readonly contextWindow?: number;
+  readonly contextUsage?: number;
+  send(input: string, options?: SessionSendOptions): Promise<string | null>;
+  sendStreaming(input: string, options?: SessionSendOptions): AsyncIterable<string>; // yields deltas, not cumulative
   abort(): void;
   clone(options?: { signal?: AbortSignal }): Promise<Session>;
+  onContextOverflow(listener: () => void): () => void;
   destroy(): void;
 }
 

@@ -1,12 +1,9 @@
 /**
  * Independent, never-shared `LanguageModel` sessions for chat-shaped apps.
  *
- * `ask()` shares warm sessions through `getOrCreateLanguageModel`, which is
- * right for embeds and widgets — the cold start is paid once per persona.
- * It's the wrong shape for chat: two callers with the same mode would share
- * one instance, so conversation history cross-bleeds, `abort()` on one
- * caller kills the other, and `destroy()` releases memory the other still
- * needs. `createSession()` bypasses that cache so every caller gets its own
+ * `ask()` may share a warm base session through `getOrCreateLanguageModel`,
+ * but every one-shot prompt runs on a clone or fresh instance. `createSession()`
+ * bypasses that cache entirely so every caller owns its own chat-shaped
  * instance with its own history, system prompt, sampling, and lifecycle.
  *
  * The wrapper is intentionally thin. It handles cross-browser smoothing that
@@ -259,6 +256,12 @@ export interface Session {
   onContextOverflow(listener: () => void): () => void;
   /** Tear down the underlying instance and refuse further sends. Idempotent. */
   destroy(): void;
+}
+
+export interface SessionWithReady {
+  session: Session;
+  /** Resolves when the underlying native session is created. */
+  ready: Promise<void>;
 }
 
 const buildCreateOptions = (
@@ -570,6 +573,17 @@ const wrapInstance = (
  * and surfaces creation errors as `PromptUnavailableError`.
  */
 export const createSession = (options: CreateSessionOptions = {}): Session => {
+  return createSessionWithReady(options).session;
+};
+
+/**
+ * Internal React adapter helper: create the public synchronous Session wrapper
+ * and separately expose native create readiness without adding public Session
+ * API surface.
+ */
+export const createSessionWithReady = (
+  options: CreateSessionOptions = {},
+): SessionWithReady => {
   const api = getLanguageModelApi();
   if (!api?.create) {
     throw new PromptUnavailableError(
@@ -580,5 +594,15 @@ export const createSession = (options: CreateSessionOptions = {}): Session => {
   const internal: Promise<SessionInternal> = api
     .create(createOpts)
     .then((instance) => ({ instance, api }));
-  return wrapInstance(internal);
+  const ready = internal
+    .then(() => {})
+    .catch((err) => {
+      if (err instanceof PromptAbortError) throw err;
+      const message = (err as Error)?.message ?? String(err);
+      throw new PromptUnavailableError(
+        `LanguageModel.create() failed: ${message}`,
+      );
+    });
+  ready.catch(() => {});
+  return { session: wrapInstance(internal), ready };
 };

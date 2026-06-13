@@ -5,9 +5,11 @@ editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/sdk/README.
 ---
 
 :::note
-This page is generated from [`packages/sdk/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/sdk/README.md) on every build. Edits should go to the README.
+This page is synced from [`packages/sdk/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/sdk/README.md) by `pnpm --filter @web-ai-sdk-apps/site docs:sync`. Edits should go to the README.
 :::
+
 One-install meta-package for web-ai-sdk, the TypeScript SDK for the Web's Built-in AI APIs. Pulls in every `@web-ai-sdk/*` building block: `prompt`, `summarizer`, `translator`, `detector`, `writer`, `rewriter`, `proofreader`, and `webmcp`, each as a regular dependency so consumers don't have to track them individually.
+
 
 ## Status
 

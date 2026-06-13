@@ -72,22 +72,27 @@ export const resolveCache = (
 
 /**
  * Build a default cache key from the inputs that affect the output: the
- * trimmed task prompt, optional context, and the create-time shape. JSON
- * stringification keeps it collision-free without pulling in a hashing dep.
+ * trimmed task prompt, optional context, shared context, and the create-time
+ * shape. JSON stringification keeps it collision-free without pulling in a
+ * hashing dep.
  */
 export const defaultCacheKey = (input: {
   text: string;
   context?: string;
+  sharedContext?: string;
   tone?: string;
   format?: string;
   length?: string;
   language?: string;
+  languageHints?: boolean;
 }): string =>
   JSON.stringify([
     input.text.trim(),
     input.context ?? "",
+    input.sharedContext ?? "",
     input.tone ?? "",
     input.format ?? "",
     input.length ?? "",
     input.language ?? "",
+    input.languageHints === true,
   ]);

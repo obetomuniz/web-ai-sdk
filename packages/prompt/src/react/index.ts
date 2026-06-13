@@ -4,11 +4,11 @@ import {
   type AskResult,
   ask,
   type CreateSessionOptions,
-  createSession,
   isAvailable,
   PromptUnavailableError,
   type Session,
 } from "../index.js";
+import { createSessionWithReady } from "../session.js";
 
 export type PromptStatus =
   | "idle"
@@ -202,9 +202,11 @@ export const useSession = (
       return;
     }
 
-    let session: Session;
+    setState({ status: "loading", session: null, error: null });
+    let cancelled = false;
+    let session: Session | null = null;
     try {
-      session = createSession({
+      const created = createSessionWithReady({
         systemPrompt,
         samplingMode,
         temperature,
@@ -216,6 +218,21 @@ export const useSession = (
         tools,
         createOptions,
       });
+      session = created.session;
+      created.ready
+        .then(() => {
+          if (cancelled) return;
+          setState({ status: "ready", session, error: null });
+        })
+        .catch((err) => {
+          session?.destroy();
+          if (cancelled) return;
+          setState({
+            status: "unavailable",
+            session: null,
+            error: err instanceof Error ? err : new Error(String(err)),
+          });
+        });
     } catch (err) {
       if (err instanceof PromptUnavailableError) {
         setState({ status: "unavailable", session: null, error: null });
@@ -228,10 +245,10 @@ export const useSession = (
       });
       return;
     }
-    setState({ status: "ready", session, error: null });
 
     return () => {
-      session.destroy();
+      cancelled = true;
+      session?.destroy();
     };
   }, [
     enabled,

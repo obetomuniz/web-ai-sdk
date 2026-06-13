@@ -4,13 +4,17 @@
  * disabled / quota exceeded falls through silently; the response still
  * renders.
  *
- * Prompt cache keys hash the inputs that affect the model output
- * (prompt + systemPrompt + samplingMode / temperature / topK). Pass an
- * explicit `cacheKey` to `ask()` if you want a more stable key (e.g.
+ * Prompt cache keys are JSON strings of the inputs that affect model output.
+ * Pass an explicit `cacheKey` to `ask()` if you want a more stable key (e.g.
  * per-feature shorthand).
  */
 
-import type { LanguageModelSamplingMode } from "./api.js";
+import type {
+  LanguageModelExpectedInput,
+  LanguageModelExpectedOutput,
+  LanguageModelSamplingMode,
+  LanguageModelTool,
+} from "./api.js";
 
 export interface ResponseCache {
   get(key: string): string | null;
@@ -84,7 +88,28 @@ export interface DefaultCacheKeyInput {
   samplingMode?: LanguageModelSamplingMode;
   temperature?: number;
   topK?: number;
+  language?: string;
+  languageHints?: boolean;
+  expectedInputs?: LanguageModelExpectedInput[];
+  expectedOutputs?: LanguageModelExpectedOutput[];
+  tools?: LanguageModelTool[];
+  responseConstraint?: object;
+  omitResponseConstraintInput?: boolean;
 }
+
+const toolDescriptorKey = (tool: LanguageModelTool): object => ({
+  name: tool.name,
+  description: tool.description,
+  inputSchema: tool.inputSchema,
+});
+
+const hasExpandedKeyFields = (input: DefaultCacheKeyInput): boolean =>
+  input.language !== undefined ||
+  input.languageHints !== undefined ||
+  input.expectedInputs !== undefined ||
+  input.expectedOutputs !== undefined ||
+  input.tools !== undefined ||
+  input.responseConstraint !== undefined;
 
 /**
  * Build a default cache key from the inputs that affect the response. JSON
@@ -98,6 +123,20 @@ export const defaultCacheKey = (input: DefaultCacheKeyInput): string => {
     input.temperature ?? null,
     input.topK ?? null,
   ];
+  if (!hasExpandedKeyFields(input)) {
+    if (input.samplingMode !== undefined) parts.push(input.samplingMode);
+    return JSON.stringify(parts);
+  }
   if (input.samplingMode !== undefined) parts.push(input.samplingMode);
+  parts.push(
+    input.language ?? "",
+    input.languageHints ?? false,
+    input.expectedInputs ?? null,
+    input.expectedOutputs ?? null,
+    input.tools?.map(toolDescriptorKey) ?? null,
+    input.responseConstraint ?? null,
+    input.responseConstraint !== undefined &&
+      input.omitResponseConstraintInput === true,
+  );
   return JSON.stringify(parts);
 };
