@@ -149,6 +149,7 @@ interface AskOptions {
   expectedInputs?: LanguageModelExpectedInput[];   // advanced passthrough
   expectedOutputs?: LanguageModelExpectedOutput[]; // advanced passthrough
   tools?: LanguageModelTool[];              // experimental: native function-calling passthrough
+  monitor?: (m: CreateMonitor) => void;     // observe first-call model download
   responseConstraint?: object;              // JSON Schema for structured output
   omitResponseConstraintInput?: boolean;
   cache?: ResponseCache;
