@@ -150,6 +150,58 @@ describe("ask", () => {
     expect(second).toEqual({ output: "answer 2", cached: false });
   });
 
+  it("does not collide cache entries for supported and unsupported language hints", async () => {
+    let calls = 0;
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => `answer ${++calls}`),
+      }),
+    });
+    const cache = inMemoryCache();
+
+    const first = await ask({
+      input: "hello",
+      language: "pt-BR",
+      supportedLanguages: ["pt"],
+      cache,
+    });
+    const second = await ask({
+      input: "hello",
+      language: "pt-BR",
+      supportedLanguages: ["en"],
+      cache,
+    });
+
+    expect(first).toEqual({ output: "answer 1", cached: false });
+    expect(second).toEqual({ output: "answer 2", cached: false });
+  });
+
+  it("does not fragment cache entries for unsupported language hint lists", async () => {
+    let calls = 0;
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => `answer ${++calls}`),
+      }),
+    });
+    const cache = inMemoryCache();
+
+    const first = await ask({
+      input: "hello",
+      language: "pt-BR",
+      supportedLanguages: ["en"],
+      cache,
+    });
+    const second = await ask({
+      input: "hello",
+      language: "pt-BR",
+      supportedLanguages: ["ja"],
+      cache,
+    });
+
+    expect(first).toEqual({ output: "answer 1", cached: false });
+    expect(second).toEqual({ output: "answer 1", cached: true });
+  });
+
   it("does not collide cache entries when expected input or output hints differ", async () => {
     let calls = 0;
     installFakeLanguageModel({

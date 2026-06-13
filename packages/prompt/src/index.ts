@@ -200,6 +200,19 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
 
   assertValidSamplingOptions(options);
 
+  const langHints = buildLangHints(
+    options.language,
+    options.supportedLanguages,
+  );
+  const [languageHintedInput] = options.expectedInputs
+    ? []
+    : (langHints.expectedInputs?.[0]?.languages ?? []);
+  const [languageHintedOutput] = options.expectedOutputs
+    ? []
+    : (langHints.expectedOutputs?.[0]?.languages ?? []);
+  // Mirror buildLangHints() exactly: supportedLanguages are intentionally not
+  // normalized in the cache key unless they produce runtime language hints.
+  const effectiveLanguageHint = languageHintedInput ?? languageHintedOutput;
   const cache = resolveCache(options.cache);
   const cacheKey =
     options.cacheKey ??
@@ -209,8 +222,8 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
       samplingMode: options.samplingMode,
       temperature: options.temperature,
       topK: options.topK,
-      language: options.language,
-      supportedLanguages: options.supportedLanguages,
+      language: effectiveLanguageHint,
+      languageHints: effectiveLanguageHint ? true : undefined,
       expectedInputs: options.expectedInputs,
       expectedOutputs: options.expectedOutputs,
       tools: options.tools,
@@ -222,10 +235,6 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
     if (cached) return { output: cached, cached: true };
   }
 
-  const langHints = buildLangHints(
-    options.language,
-    options.supportedLanguages,
-  );
   const initialPrompts: LanguageModelMessage[] = options.systemPrompt
     ? [{ role: "system", content: options.systemPrompt }]
     : [];

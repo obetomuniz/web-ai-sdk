@@ -89,7 +89,7 @@ export interface DefaultCacheKeyInput {
   temperature?: number;
   topK?: number;
   language?: string;
-  supportedLanguages?: readonly string[];
+  languageHints?: boolean;
   expectedInputs?: LanguageModelExpectedInput[];
   expectedOutputs?: LanguageModelExpectedOutput[];
   tools?: LanguageModelTool[];
@@ -105,7 +105,7 @@ const toolDescriptorKey = (tool: LanguageModelTool): object => ({
 
 const hasExpandedKeyFields = (input: DefaultCacheKeyInput): boolean =>
   input.language !== undefined ||
-  input.supportedLanguages !== undefined ||
+  input.languageHints !== undefined ||
   input.expectedInputs !== undefined ||
   input.expectedOutputs !== undefined ||
   input.tools !== undefined ||
@@ -130,7 +130,7 @@ export const defaultCacheKey = (input: DefaultCacheKeyInput): string => {
   if (input.samplingMode !== undefined) parts.push(input.samplingMode);
   parts.push(
     input.language ?? "",
-    input.supportedLanguages ?? null,
+    input.languageHints ?? false,
     input.expectedInputs ?? null,
     input.expectedOutputs ?? null,
     input.tools?.map(toolDescriptorKey) ?? null,
