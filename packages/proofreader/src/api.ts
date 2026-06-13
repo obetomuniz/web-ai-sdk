@@ -156,9 +156,15 @@ const trim = (): void => {
   }
 };
 
+const canonicalExpectedInputLanguages = (
+  languages: string[] | undefined,
+): string[] | undefined => (languages ? [...languages].sort() : undefined);
+
 const cacheKeyFor = (options: ProofreaderAvailabilityOptions): string =>
   JSON.stringify({
-    expectedInputLanguages: options.expectedInputLanguages,
+    expectedInputLanguages: canonicalExpectedInputLanguages(
+      options.expectedInputLanguages,
+    ),
   });
 
 /**

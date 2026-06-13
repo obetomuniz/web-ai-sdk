@@ -144,6 +144,13 @@ describe("proofread", () => {
     expect(api.create).toHaveBeenCalledTimes(1);
   });
 
+  it("reuses sessions for equivalent expected language order", async () => {
+    const api = installFakeProofreader();
+    await proofread({ input: "a", expectedInputLanguages: ["en", "es"] });
+    await proofread({ input: "b", expectedInputLanguages: ["es", "en"] });
+    expect(api.create).toHaveBeenCalledTimes(1);
+  });
+
   it("caps sessions and evicts the oldest proofreader", async () => {
     const api = installFakeProofreader();
     configureProofreaderCache({ max: 1 });
@@ -206,6 +213,15 @@ describe("proofread", () => {
 
     await vi.waitFor(() => expect(api.sessions[0]?.destroy).toHaveBeenCalled());
     expect(api.sessions[1]?.destroy).not.toHaveBeenCalled();
+  });
+
+  it("clears a proofreader session with equivalent expected language order", async () => {
+    const api = installFakeProofreader();
+    await proofread({ input: "a", expectedInputLanguages: ["en", "es"] });
+
+    clearProofreaderSession({ expectedInputLanguages: ["es", "en"] });
+
+    await vi.waitFor(() => expect(api.sessions[0]?.destroy).toHaveBeenCalled());
   });
 
   it("test cache reset restores the proofreader default max", async () => {

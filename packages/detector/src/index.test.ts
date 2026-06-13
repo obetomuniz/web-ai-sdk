@@ -179,6 +179,13 @@ describe("detect", () => {
     expect(api.create).toHaveBeenCalledTimes(1);
   });
 
+  it("reuses sessions for equivalent expected language order", async () => {
+    const api = installFakeDetector();
+    await detect({ input: "a", expectedInputLanguages: ["en", "es"] });
+    await detect({ input: "b", expectedInputLanguages: ["es", "en"] });
+    expect(api.create).toHaveBeenCalledTimes(1);
+  });
+
   it("caps sessions and evicts the oldest detector", async () => {
     const api = installFakeDetector();
     configureLanguageDetectorCache({ max: 1 });
@@ -230,6 +237,15 @@ describe("detect", () => {
 
     await vi.waitFor(() => expect(api.sessions[0]?.destroy).toHaveBeenCalled());
     expect(api.sessions[1]?.destroy).not.toHaveBeenCalled();
+  });
+
+  it("clears a detector session with equivalent expected language order", async () => {
+    const api = installFakeDetector();
+    await detect({ input: "a", expectedInputLanguages: ["en", "es"] });
+
+    clearLanguageDetectorSession({ expectedInputLanguages: ["es", "en"] });
+
+    await vi.waitFor(() => expect(api.sessions[0]?.destroy).toHaveBeenCalled());
   });
 
   it("test cache reset restores the detector default max", async () => {
