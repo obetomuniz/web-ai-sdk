@@ -75,7 +75,7 @@ Pass `cache`, `expectedInputs`, etc. as stable references. The hook keeps the la
 
 ## Multi-turn
 
-`usePrompt` is single-shot per `ask()`. For multi-turn conversation where each chat needs independent context and streams should run concurrently, use [`useSession`](/docs/react/use-session/) — it returns a per-component, never-shared `LanguageModel` session with `history`, `send`, `abort`, and `clear`.
+`usePrompt` is single-shot per `ask()`. For multi-turn conversation where each chat needs independent context, use [`useSession`](/docs/react/use-session/) — it returns a per-component, never-shared `LanguageModel` session with `send`, `sendStreaming`, `abort`, `clone`, `destroy`, `contextWindow`, `contextUsage`, and `onContextOverflow`. Keep message history and clearing behavior in your own component state.
 
 ## Reference
 

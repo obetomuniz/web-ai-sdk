@@ -76,12 +76,48 @@ export const resolveCache = (
 };
 
 /**
- * Build a default cache key from `pathname:lang`. Pass a custom string to
- * `summarize()`'s `cacheKey` option for finer-grained invalidation.
+ * Build a default cache key from the route, input, and summary options that
+ * affect the output. A legacy string input still returns the compact
+ * `pathname:lang` key. Pass a custom string to `summarize()`'s `cacheKey`
+ * option for finer-grained invalidation.
  */
-export const defaultCacheKey = (lang: string): string => {
-  if (typeof globalThis === "undefined") return lang;
-  const loc = (globalThis as { location?: Location }).location;
-  if (!loc) return lang;
-  return `${loc.pathname}:${lang}`;
+interface DefaultCacheKeyInput {
+  text: string;
+  language: string;
+  languageHints?: boolean;
+  type?: string;
+  length?: string;
+  format?: string;
+  preference?: string;
+  sharedContext?: string;
+}
+
+const currentPathname = (): string => {
+  let pathname = "";
+  if (typeof globalThis === "undefined") {
+    pathname = "";
+  } else {
+    const loc = (globalThis as { location?: Location }).location;
+    pathname = loc?.pathname ?? "";
+  }
+  return pathname;
+};
+
+export const defaultCacheKey = (
+  input: string | DefaultCacheKeyInput,
+): string => {
+  const pathname = currentPathname();
+  if (typeof input === "string")
+    return pathname ? `${pathname}:${input}` : input;
+  return JSON.stringify([
+    pathname,
+    input.text.trim(),
+    input.language,
+    input.languageHints === true,
+    input.type ?? "",
+    input.length ?? "",
+    input.format ?? "",
+    input.preference ?? "",
+    input.sharedContext ?? "",
+  ]);
 };

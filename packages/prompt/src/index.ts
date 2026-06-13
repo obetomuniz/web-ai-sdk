@@ -11,9 +11,11 @@
 import {
   type CreateMonitor,
   checkAvailability,
+  dropCachedLanguageModel,
   getLanguageModelApi,
   getOrCreateLanguageModel,
   isAvailable,
+  isLanguageModelCloneUnavailable,
   type LanguageModelApi,
   type LanguageModelAvailability,
   type LanguageModelCreateOptions,
@@ -25,6 +27,7 @@ import {
   type LanguageModelPromptOptions,
   type LanguageModelSamplingMode,
   type LanguageModelTool,
+  markLanguageModelCloneUnavailable,
 } from "./api.js";
 import {
   type CacheOption,
@@ -122,7 +125,7 @@ export interface AskOptions {
    * `{ get, set }`-shaped object for a custom backend.
    */
   cache?: CacheOption;
-  /** Cache key. Default: hash of `{ input, systemPrompt, samplingMode, temperature, topK }`. */
+  /** Cache key. Default: JSON string of the prompt and output-shaping options. */
   cacheKey?: string;
   /**
    * Streaming update callback. Receives the **cumulative** buffer (full text so
@@ -141,15 +144,47 @@ export interface AskResult {
   cached: boolean;
 }
 
+const destroyedFallbackBases = new WeakSet<LanguageModelInstance>();
+
+const wrapCreateError = (err: unknown): PromptUnavailableError => {
+  const message = (err as Error)?.message ?? String(err);
+  return new PromptUnavailableError(
+    `LanguageModel.create() failed: ${message}`,
+  );
+};
+
+const createOneShotLanguageModel = async (
+  api: LanguageModelApi,
+  options: LanguageModelCreateOptions,
+): Promise<LanguageModelInstance> => {
+  try {
+    return await api.create(options);
+  } catch (err) {
+    if (err instanceof PromptAbortError) throw err;
+    throw wrapCreateError(err);
+  }
+};
+
+const destroyFallbackBaseOnce = (session: LanguageModelInstance): void => {
+  if (destroyedFallbackBases.has(session)) return;
+  destroyedFallbackBases.add(session);
+  try {
+    session.destroy?.();
+  } catch {
+    // best-effort; unused no-clone probes should never mask prompt results.
+  }
+};
+
 /**
  * Run a one-shot prompt. Uses streaming when the underlying instance supports
  * it, falling back to one-shot otherwise. Returns `{ output: null }` when the
  * input is empty. Throws `PromptUnavailableError` when the API isn't present.
  *
  * For chat-shaped apps where turns need to remember each other, prefer
- * `createSession()` (or `useSession()` in React); `ask()` shares warm sessions
- * across same-shape callers, so two chats with the same persona would share
- * one instance — with cross-bleeding history and `abort()` killing both.
+ * `createSession()` (or `useSession()` in React). `ask()` may keep a warm
+ * base session for same-shape calls, but each prompt runs on a fresh clone
+ * when the browser supports `clone()`, or on a fresh one-shot instance
+ * otherwise.
  */
 export const ask = async (options: AskOptions): Promise<AskResult> => {
   const api = getLanguageModelApi();
@@ -165,6 +200,19 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
 
   assertValidSamplingOptions(options);
 
+  const langHints = buildLangHints(
+    options.language,
+    options.supportedLanguages,
+  );
+  const [languageHintedInput] = options.expectedInputs
+    ? []
+    : (langHints.expectedInputs?.[0]?.languages ?? []);
+  const [languageHintedOutput] = options.expectedOutputs
+    ? []
+    : (langHints.expectedOutputs?.[0]?.languages ?? []);
+  // Mirror buildLangHints() exactly: supportedLanguages are intentionally not
+  // normalized in the cache key unless they produce runtime language hints.
+  const effectiveLanguageHint = languageHintedInput ?? languageHintedOutput;
   const cache = resolveCache(options.cache);
   const cacheKey =
     options.cacheKey ??
@@ -174,16 +222,19 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
       samplingMode: options.samplingMode,
       temperature: options.temperature,
       topK: options.topK,
+      language: effectiveLanguageHint,
+      languageHints: effectiveLanguageHint ? true : undefined,
+      expectedInputs: options.expectedInputs,
+      expectedOutputs: options.expectedOutputs,
+      tools: options.tools,
+      responseConstraint: options.responseConstraint,
+      omitResponseConstraintInput: options.omitResponseConstraintInput,
     });
   if (cache) {
     const cached = cache.get(cacheKey);
     if (cached) return { output: cached, cached: true };
   }
 
-  const langHints = buildLangHints(
-    options.language,
-    options.supportedLanguages,
-  );
   const initialPrompts: LanguageModelMessage[] = options.systemPrompt
     ? [{ role: "system", content: options.systemPrompt }]
     : [];
@@ -211,7 +262,6 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
     ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
-  const sessionPromise = getOrCreateLanguageModel(api, baseCreateOptions);
   const availability = await api
     .availability({
       ...(baseCreateOptions.expectedInputs
@@ -227,20 +277,6 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
   }
   if (options.signal?.aborted) throw new PromptAbortError();
 
-  // Wrap session-create failures with context so consumers can branch on
-  // a single typed error instead of parsing browser-specific messages.
-  let session: LanguageModelInstance;
-  try {
-    session = await sessionPromise;
-  } catch (err) {
-    if (err instanceof PromptAbortError) throw err;
-    const message = (err as Error)?.message ?? String(err);
-    throw new PromptUnavailableError(
-      `LanguageModel.create() failed: ${message}`,
-    );
-  }
-  if (options.signal?.aborted) throw new PromptAbortError();
-
   const promptOpts: LanguageModelPromptOptions = {};
   if (options.signal) promptOpts.signal = options.signal;
   if (options.responseConstraint) {
@@ -251,27 +287,73 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
       promptOpts.omitResponseConstraintInput = true;
   }
 
-  let finalText: string;
-  if (typeof session.promptStreaming === "function") {
-    let buffer = "";
-    for await (const chunk of session.promptStreaming(
-      options.input,
-      promptOpts,
-    )) {
-      if (options.signal?.aborted) throw new PromptAbortError();
-      const merged = mergeStreamChunk(buffer, chunk);
-      buffer = merged.buffer;
-      options.onUpdate?.(buffer);
-    }
-    finalText = buffer;
-  } else {
-    const raw = await session.prompt(options.input, promptOpts);
-    if (options.signal?.aborted) throw new PromptAbortError();
-    finalText = raw;
-    options.onUpdate?.(finalText);
-  }
+  let session: LanguageModelInstance | null = null;
+  try {
+    if (isLanguageModelCloneUnavailable(baseCreateOptions)) {
+      session = await createOneShotLanguageModel(api, baseCreateOptions);
+    } else {
+      const baseSessionPromise = getOrCreateLanguageModel(
+        api,
+        baseCreateOptions,
+      );
 
-  const cleaned = sanitizeResponse(finalText);
-  if (cleaned && cache) cache.set(cacheKey, cleaned);
-  return { output: cleaned || null, cached: false };
+      // Wrap session-create failures with context so consumers can branch on
+      // a single typed error instead of parsing browser-specific messages.
+      let baseSession: LanguageModelInstance;
+      try {
+        baseSession = await baseSessionPromise;
+      } catch (err) {
+        if (err instanceof PromptAbortError) throw err;
+        throw wrapCreateError(err);
+      }
+      if (options.signal?.aborted) throw new PromptAbortError();
+
+      if (typeof baseSession.clone !== "function") {
+        markLanguageModelCloneUnavailable(baseCreateOptions);
+        dropCachedLanguageModel(baseCreateOptions);
+        destroyFallbackBaseOnce(baseSession);
+        session = await createOneShotLanguageModel(api, baseCreateOptions);
+      } else {
+        session = await baseSession.clone(
+          options.signal ? { signal: options.signal } : undefined,
+        );
+      }
+    }
+    if (options.signal?.aborted) throw new PromptAbortError();
+
+    let finalText: string;
+    if (typeof session.promptStreaming === "function") {
+      let buffer = "";
+      for await (const chunk of session.promptStreaming(
+        options.input,
+        promptOpts,
+      )) {
+        if (options.signal?.aborted) throw new PromptAbortError();
+        const merged = mergeStreamChunk(buffer, chunk);
+        buffer = merged.buffer;
+        options.onUpdate?.(buffer);
+      }
+      finalText = buffer;
+    } else {
+      const raw = await session.prompt(options.input, promptOpts);
+      if (options.signal?.aborted) throw new PromptAbortError();
+      finalText = raw;
+      options.onUpdate?.(finalText);
+    }
+
+    const cleaned = sanitizeResponse(finalText);
+    if (cleaned && cache) cache.set(cacheKey, cleaned);
+    return { output: cleaned || null, cached: false };
+  } catch (err) {
+    if ((err as { name?: string })?.name === "AbortError") {
+      throw new PromptAbortError();
+    }
+    throw err;
+  } finally {
+    try {
+      session?.destroy?.();
+    } catch {
+      // best-effort; native destroy is optional and should not mask prompt result.
+    }
+  }
 };

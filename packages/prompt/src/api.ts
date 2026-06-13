@@ -205,13 +205,17 @@ const cacheConfig: CacheConfig = { max: DEFAULT_MAX_CACHED_SESSIONS };
 // on hit we re-insert to bump recency, and on overflow we evict the
 // oldest (first) entry.
 const sessionCache = new Map<string, Promise<LanguageModelInstance>>();
+const cloneUnavailableCacheKeys = new Map<string, true>();
+
+const normalizeCacheMax = (max: number): number =>
+  Number.isFinite(max) ? Math.max(0, Math.floor(max)) : 0;
 
 /**
  * Test-only escape hatch; reconfigure the session LRU cap. Not part of the
  * public API.
  */
 export const __configureCacheForTests = (max: number): void => {
-  cacheConfig.max = Math.max(0, Math.floor(max));
+  cacheConfig.max = normalizeCacheMax(max);
   trim();
 };
 
@@ -236,6 +240,11 @@ const trim = (): void => {
     const evicted = sessionCache.get(oldestKey);
     sessionCache.delete(oldestKey);
     if (evicted) destroySession(evicted);
+  }
+  while (cloneUnavailableCacheKeys.size > cacheConfig.max) {
+    const oldestKey = cloneUnavailableCacheKeys.keys().next().value;
+    if (oldestKey === undefined) return;
+    cloneUnavailableCacheKeys.delete(oldestKey);
   }
 };
 
@@ -270,8 +279,35 @@ export const getOrCreateLanguageModel = (
   return session;
 };
 
+/** Internal: remove one create-options entry from the warm-session cache. */
+export const dropCachedLanguageModel = (
+  options: LanguageModelCreateOptions,
+): void => {
+  sessionCache.delete(JSON.stringify(options));
+};
+
+export const markLanguageModelCloneUnavailable = (
+  options: LanguageModelCreateOptions,
+): void => {
+  const key = JSON.stringify(options);
+  cloneUnavailableCacheKeys.delete(key);
+  cloneUnavailableCacheKeys.set(key, true);
+  trim();
+};
+
+export const isLanguageModelCloneUnavailable = (
+  options: LanguageModelCreateOptions,
+): boolean => {
+  const key = JSON.stringify(options);
+  if (!cloneUnavailableCacheKeys.has(key)) return false;
+  cloneUnavailableCacheKeys.delete(key);
+  cloneUnavailableCacheKeys.set(key, true);
+  return true;
+};
+
 /** Test-only escape hatch; drop every cached session. */
 export const __clearSessionCacheForTests = (): void => {
   sessionCache.clear();
+  cloneUnavailableCacheKeys.clear();
   cacheConfig.max = DEFAULT_MAX_CACHED_SESSIONS;
 };

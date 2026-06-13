@@ -72,7 +72,7 @@ export interface RewriteOptions {
    * `{ get, set }`-shaped object for a custom backend.
    */
   cache?: CacheOption;
-  /** Cache key. Default: hash of `{ input, context, tone, format, length, language }`. */
+  /** Cache key. Default: JSON string of input, context, language hints, shared context, and output shape. */
   cacheKey?: string;
   /**
    * Streaming update callback (cumulative buffer, monotonically growing).
@@ -129,30 +129,34 @@ export const rewrite = async (
   if (!text) return { output: null, cached: false };
 
   const lang = options.language ? NORMALIZE_LANG(options.language) : undefined;
+  const supportedLanguages = (
+    options.supportedLanguages ?? DEFAULT_SUPPORTED_LANGUAGES
+  ).map(NORMALIZE_LANG);
+  const supported = new Set(supportedLanguages);
+  const languageHints = lang ? supported.has(lang) : false;
   const cache = resolveCache(options.cache);
   const cacheKey =
     options.cacheKey ??
     defaultCacheKey({
       text,
       context: options.context,
+      sharedContext: options.sharedContext,
       tone: options.tone,
       format: options.format,
       length: options.length,
       language: lang,
+      languageHints,
     });
   if (cache) {
     const cached = cache.get(cacheKey);
     if (cached) return { output: cached, cached: true };
   }
 
-  const supported = new Set(
-    options.supportedLanguages ?? DEFAULT_SUPPORTED_LANGUAGES,
-  );
   const langOptions: Pick<
     RewriterCreateOptions,
     "expectedInputLanguages" | "expectedContextLanguages" | "outputLanguage"
   > =
-    lang && supported.has(lang)
+    lang && languageHints
       ? {
           expectedInputLanguages: [lang],
           expectedContextLanguages: [lang],
@@ -169,11 +173,8 @@ export const rewrite = async (
     ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
-  // Kick off session and availability in parallel; first call pays the cold
-  // start, later calls reuse the cached session. We pass the same shape to
-  // availability() as we do to create() so engines that warn on mismatch
-  // stay quiet.
-  const sessionPromise = getOrCreateRewriter(api, baseCreateOptions);
+  // Pass the same shape to availability() as we do to create() so engines
+  // that warn on mismatch stay quiet.
   const availability = await api
     .availability({
       ...(baseCreateOptions.tone ? { tone: baseCreateOptions.tone } : {}),
@@ -197,6 +198,8 @@ export const rewrite = async (
     throw new RewriterUnavailableError("Rewriter reports unavailable.");
   }
   if (options.signal?.aborted) throw new RewriterAbortError();
+
+  const sessionPromise = getOrCreateRewriter(api, baseCreateOptions);
 
   // Wrap session-create failures with context so consumers can branch on a
   // single typed error instead of parsing browser-specific messages.

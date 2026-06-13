@@ -91,6 +91,8 @@ Two layers, same as the other packages:
 - **Session cache** (internal, in-memory, always on): a `Map<stringifiedOptions, LanguageDetector>` so consecutive calls with the same `expectedInputLanguages` shape reuse the warm session. Cold-start is fast on this model (~100-300ms) but warm is still sub-50ms.
 - **Result cache** (opt-in): pass a `cache` (anything matching `{ get, set }`) to memoize the full sorted list by trimmed text. Omit it for a fresh model call every time.
 
+Use `configureLanguageDetectorCache({ max })` to bound the warm session cache (default `8`). `clearLanguageDetectorSessions()` drops every warm session, and `clearLanguageDetectorSession({ expectedInputLanguages })` drops one matching detector configuration.
+
 ```ts
 // Off by default; every call hits the model.
 detect({ input: "hello" });
@@ -111,7 +113,7 @@ const { output } = await detect({ input: articleText });
 await summarize({ language: output?.language ?? "en", input: articleText });
 ```
 
-A first-class `language: "auto"` shortcut may land in a future release.
+A first-class `language: "auto"` shortcut isn't planned for this package. Multi-package compositions like detect-then-summarize, detect-then-translate, or detect-then-prompt are written in consumer code.
 
 ## Errors and unavailability
 

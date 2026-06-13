@@ -9,6 +9,7 @@
  */
 
 import {
+  type ConfigureProofreaderCacheOptions,
   type CreateMonitor,
   getOrCreateProofreader,
   getProofreaderApi,
@@ -29,7 +30,9 @@ import {
 
 export {
   checkAvailability,
+  clearProofreaderSession,
   clearProofreaderSessions,
+  configureProofreaderCache,
   getOrCreateProofreader,
   getProofreaderApi,
   isAvailable,
@@ -39,6 +42,7 @@ export { defaultCacheKey, resolveCache } from "./cache.js";
 
 export type {
   CacheOption,
+  ConfigureProofreaderCacheOptions,
   CreateMonitor,
   ProofreadCache,
   ProofreadCorrection,
@@ -63,7 +67,7 @@ export interface ProofreadOptions {
    * `{ get, set }`-shaped object for a custom backend.
    */
   cache?: CacheOption;
-  /** Cache key. Default: hash of `{ input, expectedInputLanguages }`. */
+  /** Cache key. Default: JSON array string of `[input, sortedExpectedInputLanguages]`. */
   cacheKey?: string;
   /** Abort signal. */
   signal?: AbortSignal;
@@ -134,9 +138,6 @@ export const proofread = async (
     ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
-  // Kick off session and availability in parallel; first call pays the cold
-  // start, later calls reuse the cached session.
-  const sessionPromise = getOrCreateProofreader(api, baseCreateOptions);
   const availability = await api
     .availability(
       expectedInputLanguages ? { expectedInputLanguages } : undefined,
@@ -146,6 +147,8 @@ export const proofread = async (
     throw new ProofreaderUnavailableError("Proofreader reports unavailable.");
   }
   if (options.signal?.aborted) throw new ProofreaderAbortError();
+
+  const sessionPromise = getOrCreateProofreader(api, baseCreateOptions);
 
   // Wrap session-create failures with context so consumers can branch on a
   // single typed error instead of parsing browser-specific messages.

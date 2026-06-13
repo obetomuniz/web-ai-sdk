@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __clearSessionCacheForTests } from "./api.js";
 import {
+  clearTranslatorSession,
+  clearTranslatorSessions,
+  configureTranslatorCache,
   isAvailable,
   type TranslationCache,
   TranslatorUnavailableError,
@@ -23,20 +26,29 @@ const installFakeTranslator = (
   opts: { availability?: "available" | "unavailable" } = {},
 ) => {
   const calls: string[] = [];
+  const sessions: Array<{
+    translate: ReturnType<typeof vi.fn>;
+    destroy: ReturnType<typeof vi.fn>;
+  }> = [];
   const impl = translateImpl ?? (async (text: string) => `[t]${text}`);
   const availability = opts.availability ?? "available";
 
   const api = {
     availability: vi.fn(async () => availability),
-    create: vi.fn(async (_options: CreateOptions) => ({
-      translate: vi.fn(async (text: string) => {
-        calls.push(text);
-        return impl(text);
-      }),
-    })),
+    create: vi.fn(async (_options: CreateOptions) => {
+      const session = {
+        translate: vi.fn(async (text: string) => {
+          calls.push(text);
+          return impl(text);
+        }),
+        destroy: vi.fn(),
+      };
+      sessions.push(session);
+      return session;
+    }),
   };
   (globalThis as { Translator?: typeof api }).Translator = api;
-  return { api, calls };
+  return { api, calls, sessions };
 };
 
 const removeFakeTranslator = () => {
@@ -185,6 +197,156 @@ describe("translate", () => {
     expect(api.create).toHaveBeenCalledTimes(1);
   });
 
+  it("caps different language pairs and evicts the oldest session", async () => {
+    const { api, sessions } = installFakeTranslator();
+    configureTranslatorCache({ max: 1 });
+    await translate({
+      input: "a",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+    await translate({
+      input: "b",
+      sourceLanguage: "es",
+      targetLanguage: "en",
+    });
+
+    expect(api.create).toHaveBeenCalledTimes(2);
+    await vi.waitFor(() => expect(sessions[0]?.destroy).toHaveBeenCalled());
+  });
+
+  it("bumps cache hit recency before evicting", async () => {
+    const { sessions } = installFakeTranslator();
+    configureTranslatorCache({ max: 2 });
+    await translate({
+      input: "a",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+    await translate({
+      input: "b",
+      sourceLanguage: "es",
+      targetLanguage: "en",
+    });
+    await translate({
+      input: "c",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+    await translate({
+      input: "d",
+      sourceLanguage: "fr",
+      targetLanguage: "en",
+    });
+
+    await vi.waitFor(() => expect(sessions[1]?.destroy).toHaveBeenCalled());
+    expect(sessions[0]?.destroy).not.toHaveBeenCalled();
+  });
+
+  it("lowering max evicts the oldest session", async () => {
+    const { sessions } = installFakeTranslator();
+    await translate({
+      input: "a",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+    await translate({
+      input: "b",
+      sourceLanguage: "es",
+      targetLanguage: "en",
+    });
+
+    configureTranslatorCache({ max: 1 });
+
+    await vi.waitFor(() => expect(sessions[0]?.destroy).toHaveBeenCalled());
+    expect(sessions[1]?.destroy).not.toHaveBeenCalled();
+  });
+
+  it("treats non-finite max values as zero", async () => {
+    const { sessions } = installFakeTranslator();
+    await translate({
+      input: "a",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+
+    configureTranslatorCache({ max: Number.NaN });
+
+    await vi.waitFor(() => expect(sessions[0]?.destroy).toHaveBeenCalled());
+  });
+
+  it("clears all translator sessions", async () => {
+    const { sessions } = installFakeTranslator();
+    await translate({
+      input: "a",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+    await translate({
+      input: "b",
+      sourceLanguage: "es",
+      targetLanguage: "en",
+    });
+
+    clearTranslatorSessions();
+
+    await vi.waitFor(() => expect(sessions[0]?.destroy).toHaveBeenCalled());
+    expect(sessions[1]?.destroy).toHaveBeenCalled();
+  });
+
+  it("clears one matching translator session", async () => {
+    const { sessions } = installFakeTranslator();
+    await translate({
+      input: "a",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+    await translate({
+      input: "b",
+      sourceLanguage: "es",
+      targetLanguage: "en",
+    });
+
+    clearTranslatorSession({ sourceLanguage: "pt", targetLanguage: "en" });
+
+    await vi.waitFor(() => expect(sessions[0]?.destroy).toHaveBeenCalled());
+    expect(sessions[1]?.destroy).not.toHaveBeenCalled();
+  });
+
+  it("clears translator sessions when passed regional language tags", async () => {
+    const { sessions } = installFakeTranslator();
+    await translate({
+      input: "a",
+      sourceLanguage: "pt-BR",
+      targetLanguage: "en-US",
+    });
+
+    clearTranslatorSession({
+      sourceLanguage: "pt-BR",
+      targetLanguage: "en-US",
+    });
+
+    await vi.waitFor(() => expect(sessions[0]?.destroy).toHaveBeenCalled());
+  });
+
+  it("test cache reset restores the default max", async () => {
+    const { sessions } = installFakeTranslator();
+    configureTranslatorCache({ max: 1 });
+    __clearSessionCacheForTests();
+    await translate({
+      input: "a",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+    await translate({
+      input: "b",
+      sourceLanguage: "es",
+      targetLanguage: "en",
+    });
+
+    expect(sessions[0]?.destroy).not.toHaveBeenCalled();
+  });
+
   it("creates a new session when the language pair differs", async () => {
     const { api } = installFakeTranslator();
     await translate({
@@ -205,6 +367,39 @@ describe("translate", () => {
     await expect(
       translate({ input: "Olá", sourceLanguage: "pt", targetLanguage: "en" }),
     ).rejects.toBeInstanceOf(TranslatorUnavailableError);
+  });
+
+  it("does not create a session when availability is 'unavailable'", async () => {
+    const { api } = installFakeTranslator(undefined, {
+      availability: "unavailable",
+    });
+    api.create.mockRejectedValue(new Error("create should not be called"));
+
+    await expect(
+      translate({ input: "Olá", sourceLanguage: "pt", targetLanguage: "en" }),
+    ).rejects.toBeInstanceOf(TranslatorUnavailableError);
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it("purges rejected session creates so the next call retries", async () => {
+    const { api } = installFakeTranslator();
+    api.create
+      .mockRejectedValueOnce(new Error("create failed"))
+      .mockResolvedValueOnce({
+        translate: vi.fn(async (text: string) => `[retry]${text}`),
+        destroy: vi.fn(),
+      });
+
+    await expect(
+      translate({ input: "Olá", sourceLanguage: "pt", targetLanguage: "en" }),
+    ).rejects.toBeInstanceOf(TranslatorUnavailableError);
+    await translate({
+      input: "Olá",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+
+    expect(api.create).toHaveBeenCalledTimes(2);
   });
 
   it("respects an aborted signal", async () => {

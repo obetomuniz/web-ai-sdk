@@ -66,7 +66,7 @@ interface AskOptions {
 | `monitor` | `(m) => void` | Observe the first-call model download. |
 | `responseConstraint` | `object` | JSON Schema for structured output. |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
-| `cacheKey` | `string` | Override the default cache key (hash of `{ input, systemPrompt, samplingMode, temperature, topK }`). |
+| `cacheKey` | `string` | Override the default cache key (JSON string of the prompt and output-shaping options). |
 | `onUpdate` | `(text: string) => void` | Streaming update callback. Cumulative buffer, not deltas. |
 | `signal` | `AbortSignal` | Abort signal. |
 
@@ -83,7 +83,7 @@ interface AskResult {
 
 ## Chat: `createSession()`
 
-`ask()` shares a warm `LanguageModel` instance across same-shape callers — perfect for embeds, but the wrong shape for chat. Two chats with the same persona would queue instead of streaming concurrently. `createSession()` gives every conversation its own underlying instance:
+`ask()` is isolated per call: it may keep a warm base `LanguageModel` for same-shape calls, but each prompt runs on a fresh clone when the browser supports `clone()`, or on a fresh one-shot instance otherwise. That's a good fit for embeds and ask-and-display flows. `createSession()` gives every conversation its own underlying instance for multi-turn chat:
 
 ```ts
 import { createSession } from "@web-ai-sdk/prompt";
@@ -166,7 +166,7 @@ stop();
 Chrome's `LanguageModel` exposes `LanguageModel.create({...})` to spin up a session and `session.prompt(input)` / `session.promptStreaming(input)` to run it. The wrapper does the following on top:
 
 - **Feature detection.** `isAvailable()` / `checkAvailability()` return `false` / `null` on browsers without the API. The vanilla `ask()` throws `PromptUnavailableError`; the React hook surfaces `status: "unavailable"`.
-- **Session reuse for `ask()`** (ergonomic default, scoped to `ask`). A bounded LRU caches `LanguageModel.create()` by stringified create options. Cold start is roughly 1 to 3 seconds; warm calls are sub-second. `createSession()` never touches this cache.
+- **Warm base reuse for `ask()`** (ergonomic default, scoped to `ask`). A bounded LRU caches base `LanguageModel.create()` calls by stringified create options. Each prompt still runs on an isolated clone, or on a fresh one-shot instance when `clone()` is unavailable. `createSession()` never touches this cache.
 - **Optional result cache for `ask()` (off by default).** Every call hits the model unless you opt in. Pass `cache: "session"` for `sessionStorage`, `cache: "local"` for `localStorage`, or any `{ get, set }`-shaped object to memoize responses by `(input, systemPrompt, samplingMode / temperature / topK)`.
 - **Delta-vs-cumulative chunk detection.** Chrome ships delta chunks; some Edge backends ship cumulative. The wrapper normalizes per-chunk so `onUpdate` (cumulative) and `sendStreaming()` (deltas) work the same across browsers.
 
@@ -251,7 +251,7 @@ This is **pass-through only** — the SDK forwards `tools` and never calls `exec
 
 The heuristic `tool_code` parser and the tool-execution loop are deliberately left to the consumer layer — parsing is model-dependent (it drifts on names and formats for less-trained tools), so it doesn't belong in a lifecycle wrapper. To declare the native tool modalities, pass `{ type: "tool-response" }` / `{ type: "tool-call" }` through the advanced `expectedInputs` / `expectedOutputs` fields.
 
-`tools` works on `ask()` too (`ask({ input, tools })`). One caveat: `ask()` shares warm sessions through an LRU keyed by `JSON.stringify(createOptions)`, and `JSON.stringify` drops functions — so a tool's `execute` doesn't contribute to the key, only its `name` / `description` / `inputSchema` do. Two `ask()` calls with identical tool metadata but different `execute` closures would share one cached session. That's harmless today (the SDK never runs `execute`), but it matters once native execution lands — so prefer `createSession()` for tool-bearing sessions. It bypasses the cache entirely and matches the base-session + per-run-`clone()` pattern.
+`tools` works on `ask()` too (`ask({ input, tools })`). One caveat: `ask()` may keep warm base sessions through an LRU keyed by `JSON.stringify(createOptions)`, and `JSON.stringify` drops functions — so a tool's `execute` doesn't contribute to the key, only its `name` / `description` / `inputSchema` do. Each `ask()` prompt still runs on a clone or fresh one-shot instance. That's harmless today (the SDK never runs `execute`), but it matters once native execution lands — so prefer `createSession()` for tool-bearing sessions. It bypasses the cache entirely and matches the base-session + per-run-`clone()` pattern.
 
 ## Aborting
 

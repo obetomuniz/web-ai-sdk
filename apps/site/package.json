@@ -10,7 +10,9 @@
     "preview": "astro preview --port 4173",
     "typecheck": "astro check",
     "og:build": "node scripts/build-og-image.mjs",
-    "llms:build": "node scripts/build-llms.mjs"
+    "llms:build": "node scripts/build-llms.mjs",
+    "docs:sync": "node scripts/sync-package-docs.mjs",
+    "docs:check": "node scripts/sync-package-docs.mjs --check"
   },
   "dependencies": {
     "@astrojs/react": "5.0.7",

@@ -54,7 +54,7 @@ import { useSummarizer } from "@web-ai-sdk/all/summarizer/react";
 import { prompt, summarizer, translator, detector, writer, rewriter, proofreader, webmcp } from "@web-ai-sdk/all";
 
 await prompt.ask({ input: "Hello" });
-await summarizer.summarize({ language: "en", article: document.body });
+await summarizer.summarize({ language: "en", input: document.body.innerText });
 ```
 
 The root entry namespaces each scoped package because several exports (e.g. `checkAvailability`, `isAvailable`, `defaultCacheKey`) appear in more than one package and would collide on a flat re-export.

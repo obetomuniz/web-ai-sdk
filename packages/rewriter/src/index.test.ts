@@ -134,6 +134,79 @@ describe("rewrite", () => {
     expect(api.create).not.toHaveBeenCalled();
   });
 
+  it("does not collide cache entries when sharedContext differs", async () => {
+    let calls = 0;
+    const api = installFakeRewriter();
+    api.create.mockImplementation(async () => ({
+      rewrite: vi.fn(async () => `Rewrite ${++calls}.`),
+    }));
+    const cache = inMemoryCache();
+
+    const first = await rewrite({
+      input: "Make this clearer.",
+      sharedContext: "For customers.",
+      cache,
+    });
+    const second = await rewrite({
+      input: "Make this clearer.",
+      sharedContext: "For investors.",
+      cache,
+    });
+
+    expect(first).toEqual({ output: "Rewrite 1.", cached: false });
+    expect(second).toEqual({ output: "Rewrite 2.", cached: false });
+  });
+
+  it("does not collide cache entries when supportedLanguages changes language hints", async () => {
+    let calls = 0;
+    const api = installFakeRewriter();
+    api.create.mockImplementation(async () => ({
+      rewrite: vi.fn(async () => `Rewrite ${++calls}.`),
+    }));
+    const cache = inMemoryCache();
+
+    const first = await rewrite({
+      input: "Make this clearer.",
+      language: "pt-BR",
+      supportedLanguages: ["pt"],
+      cache,
+    });
+    const second = await rewrite({
+      input: "Make this clearer.",
+      language: "pt-BR",
+      supportedLanguages: ["en"],
+      cache,
+    });
+
+    expect(first).toEqual({ output: "Rewrite 1.", cached: false });
+    expect(second).toEqual({ output: "Rewrite 2.", cached: false });
+  });
+
+  it("does not fragment cache entries for unsupported language hint lists", async () => {
+    let calls = 0;
+    const api = installFakeRewriter();
+    api.create.mockImplementation(async () => ({
+      rewrite: vi.fn(async () => `Rewrite ${++calls}.`),
+    }));
+    const cache = inMemoryCache();
+
+    const first = await rewrite({
+      input: "Make this clearer.",
+      language: "pt-BR",
+      supportedLanguages: ["en"],
+      cache,
+    });
+    const second = await rewrite({
+      input: "Make this clearer.",
+      language: "pt-BR",
+      supportedLanguages: ["ja"],
+      cache,
+    });
+
+    expect(first).toEqual({ output: "Rewrite 1.", cached: false });
+    expect(second).toEqual({ output: "Rewrite 1.", cached: true });
+  });
+
   it("forwards per-call context to the underlying rewrite()", async () => {
     const api = installFakeRewriter({ output: "ok" });
     await rewrite({
@@ -152,6 +225,16 @@ describe("rewrite", () => {
     await expect(
       rewrite({ input: "text", cache: inMemoryCache() }),
     ).rejects.toBeInstanceOf(RewriterUnavailableError);
+  });
+
+  it("does not create a session when availability is 'unavailable'", async () => {
+    const api = installFakeRewriter({ availability: "unavailable" });
+    api.create.mockRejectedValue(new Error("create should not be called"));
+
+    await expect(
+      rewrite({ input: "text", cache: inMemoryCache() }),
+    ).rejects.toBeInstanceOf(RewriterUnavailableError);
+    expect(api.create).not.toHaveBeenCalled();
   });
 
   it("forwards tone/format/length to create()", async () => {

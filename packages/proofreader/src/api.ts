@@ -97,7 +97,75 @@ export const checkAvailability = async (
   }
 };
 
+const DEFAULT_MAX_CACHED_SESSIONS = 8;
+
+interface CacheConfig {
+  max: number;
+}
+
+const cacheConfig: CacheConfig = { max: DEFAULT_MAX_CACHED_SESSIONS };
+
+// Map iteration order is insertion order, which lets us use it as an LRU:
+// on hit we re-insert to bump recency, and on overflow we evict the
+// oldest (first) entry.
 const sessionCache = new Map<string, Promise<ProofreaderInstance>>();
+
+const normalizeCacheMax = (max: number): number =>
+  Number.isFinite(max) ? Math.max(0, Math.floor(max)) : 0;
+
+export interface ConfigureProofreaderCacheOptions {
+  /** Soft cap on cached proofreader sessions. Default: `8`. */
+  max?: number;
+}
+
+/**
+ * Bound the internal proofreader session cache. Excess entries are evicted in
+ * LRU order (their `destroy?()` is invoked when present). Lowering `max`
+ * immediately evicts down to the new ceiling.
+ */
+export const configureProofreaderCache = (
+  options: ConfigureProofreaderCacheOptions = {},
+): void => {
+  if (options.max !== undefined) {
+    cacheConfig.max = normalizeCacheMax(options.max);
+  }
+  trim();
+};
+
+const destroySession = (entry: Promise<ProofreaderInstance>): void => {
+  entry
+    .then((session) => {
+      try {
+        session.destroy?.();
+      } catch {
+        // best-effort; the spec doesn't require destroy to be infallible.
+      }
+    })
+    .catch(() => {
+      // session never resolved; nothing to destroy.
+    });
+};
+
+const trim = (): void => {
+  while (sessionCache.size > cacheConfig.max) {
+    const oldestKey = sessionCache.keys().next().value;
+    if (oldestKey === undefined) return;
+    const evicted = sessionCache.get(oldestKey);
+    sessionCache.delete(oldestKey);
+    if (evicted) destroySession(evicted);
+  }
+};
+
+const canonicalExpectedInputLanguages = (
+  languages: string[] | undefined,
+): string[] | undefined => (languages ? [...languages].sort() : undefined);
+
+const cacheKeyFor = (options: ProofreaderAvailabilityOptions): string =>
+  JSON.stringify({
+    expectedInputLanguages: canonicalExpectedInputLanguages(
+      options.expectedInputLanguages,
+    ),
+  });
 
 /**
  * Get or create a `Proofreader` session for the given options. Sessions live
@@ -111,39 +179,43 @@ export const getOrCreateProofreader = (
 ): Promise<ProofreaderInstance> => {
   // Drop `signal` and `monitor` from the cache key; they're per-call
   // ephemera that shouldn't fragment session reuse.
-  const key = JSON.stringify({
-    expectedInputLanguages: options.expectedInputLanguages,
-  });
+  const key = cacheKeyFor(options);
   let session = sessionCache.get(key);
-  if (!session) {
-    session = api.create(options).catch((err) => {
-      sessionCache.delete(key);
-      throw err;
-    });
+  if (session) {
+    sessionCache.delete(key);
     sessionCache.set(key, session);
+    return session;
   }
+  session = api.create(options).catch((err) => {
+    sessionCache.delete(key);
+    throw err;
+  });
+  sessionCache.set(key, session);
+  trim();
   return session;
 };
 
 /** Drop every cached proofreader session. */
 export const clearProofreaderSessions = (): void => {
   for (const entry of sessionCache.values()) {
-    entry
-      .then((session) => {
-        try {
-          session.destroy?.();
-        } catch {
-          // best-effort; the spec doesn't require destroy to be infallible.
-        }
-      })
-      .catch(() => {
-        // session never resolved; nothing to destroy.
-      });
+    destroySession(entry);
   }
   sessionCache.clear();
+};
+
+/** Drop the cached proofreader session whose create-options match `options`. */
+export const clearProofreaderSession = (
+  options: ProofreaderAvailabilityOptions,
+): void => {
+  const key = cacheKeyFor(options);
+  const entry = sessionCache.get(key);
+  if (!entry) return;
+  sessionCache.delete(key);
+  destroySession(entry);
 };
 
 /** Test-only escape hatch; drop every cached session. */
 export const __clearSessionCacheForTests = (): void => {
   sessionCache.clear();
+  cacheConfig.max = DEFAULT_MAX_CACHED_SESSIONS;
 };

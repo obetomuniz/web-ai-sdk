@@ -41,7 +41,7 @@ interface DetectOptions {
 | `minConfidence` | `number` | Suppress the result when the top confidence is below this. `output` becomes `null`. Defaults to `0`. |
 | `monitor` | `(m) => void` | Observe the first-call model download. |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. `"session"` / `"local"` wrap the matching web-storage; pass an object for a custom backend. |
-| `cacheKey` | `string` | Override the default cache key (hash of `{ input, expectedInputLanguages }`). |
+| `cacheKey` | `string` | Override the default cache key (JSON array string of `[input, sortedExpectedInputLanguages]`). |
 | `signal` | `AbortSignal` | Abort signal. |
 
 </div>

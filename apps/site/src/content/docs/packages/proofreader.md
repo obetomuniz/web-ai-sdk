@@ -1,8 +1,15 @@
-# @web-ai-sdk/proofreader
+---
+title: "@web-ai-sdk/proofreader"
+description: "web-ai-sdk building block for the Web's Built-in Proofreader API. Corrects grammar, spelling, and punctuation and returns per-issue corrections with offsets, plus session reuse and opt-in result caching."
+editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/proofreader/README.md
+---
+
+:::note
+This page is synced from [`packages/proofreader/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/proofreader/README.md) by `pnpm --filter @web-ai-sdk-apps/site docs:sync`. Edits should go to the README.
+:::
 
 web-ai-sdk building block for the Web's Built-in [Proofreader API](https://developer.chrome.com/docs/ai/proofreader-api). Corrects grammar, spelling, and punctuation and returns per-issue corrections with offsets, plus session reuse and opt-in result caching.
 
-**Docs:** <https://web-ai-sdk.dev/docs/guides/proofreader/> · **React:** [`useProofreader`](https://web-ai-sdk.dev/docs/react/use-proofreader/)
 
 ## Status
 

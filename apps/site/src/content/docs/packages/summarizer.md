@@ -1,13 +1,15 @@
 ---
 title: "@web-ai-sdk/summarizer"
-description: "web-ai-sdk building block for the Web's Built-in Summarizer API. Skeleton extraction, sentence-boundary trimming, streaming, and sessionStorage caching."
+description: "web-ai-sdk building block for the Web's Built-in Summarizer API. String-mode summarization with session reuse, output cleaning, streaming, and opt-in result caching."
 editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/summarizer/README.md
 ---
 
 :::note
-This page is generated from [`packages/summarizer/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/summarizer/README.md) on every build. Edits should go to the README.
+This page is synced from [`packages/summarizer/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/summarizer/README.md) by `pnpm --filter @web-ai-sdk-apps/site docs:sync`. Edits should go to the README.
 :::
+
 web-ai-sdk building block for the Web's Built-in [Summarizer API](https://developer.chrome.com/docs/ai/summarizer-api). String-mode summarization with session reuse, output cleaning, streaming, and opt-in result caching.
+
 
 ## Status
 
@@ -71,8 +73,6 @@ State machine: `idle | loading | streaming | done | unavailable`. `output` is th
 
 ### `summarize(options): Promise<SummarizeResult>`
 
-Run a one-shot summarization.
-
 ```ts
 interface SummarizeOptions {
   input: string;
@@ -134,6 +134,10 @@ The internal session cache (warm `Summarizer` instances) is separate and always 
 ## Output normalization
 
 The wrapper strips wrapping quotes / whitespace and collapses internal whitespace on every result regardless of `type`. Anything beyond that — e.g. trimming the trailing period from a `type: "headline"` result — is the consumer's concern; apply your own post-process after the call returns.
+
+## Language support
+
+The Web's Built-in Summarizer (Chrome 138+ and Edge 138+) accepts `expectedInputLanguages` / `outputLanguage` only for `["en", "es", "ja"]`. For other languages this library omits those hints and you steer output via `sharedContext` instead. Pass your own `supportedLanguages` if Chrome adds more.
 
 ## License
 
