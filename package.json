@@ -16,7 +16,7 @@
   "type": "module",
   "packageManager": "pnpm@9.15.0",
   "engines": {
-    "node": ">=20.19.1"
+    "node": ">=22.12.0"
   },
   "scripts": {
     "dev": "pnpm --filter @web-ai-sdk-apps/site run dev",
@@ -64,7 +64,9 @@
   },
   "pnpm": {
     "overrides": {
-      "yaml@<2.8.3": ">=2.8.3 <3.0.0"
+      "yaml@<2.8.3": ">=2.8.3 <3.0.0",
+      "js-yaml@<=4.1.1": "4.2.0",
+      "esbuild": "0.28.1"
     }
   }
 }

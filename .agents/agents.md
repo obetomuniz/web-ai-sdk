@@ -51,7 +51,7 @@ Full rules in [`CONTRIBUTING.md` § Governance](../CONTRIBUTING.md#governance); 
 - **Vitest + happy-dom** for tests.
 - **Biome** for lint + format (one tool, scoped to `packages/**` and `apps/**` `.ts`/`.tsx`). No ESLint, no Prettier.
 - **Changesets** for versioning + publishing.
-- **Node** `>= 20.19.1` (declared in `engines`; `.nvmrc` pins Node 24 for local dev).
+- **Node** `>= 22.12.0` (declared in `engines`; `.nvmrc` pins Node 24 for local dev).
 - **Corepack** provisions the right pnpm version automatically from `package.json#packageManager`. No extra tooling required.
 
 ---
