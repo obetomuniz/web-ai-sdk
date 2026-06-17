@@ -1,6 +1,6 @@
 {
   "name": "@web-ai-sdk/writer",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Writer API support for web-ai-sdk, the TypeScript SDK for the Web's Built-in AI APIs.",
   "license": "MIT",
   "author": "Beto Muniz",
