@@ -272,8 +272,8 @@ Or in one shot: `pnpm gate`.
 - Never run git push without explicit approval in the same message.
 - Never create or merge PRs unless I explicitly ask in that turn.
 - Never run git commit until you have shown me the exact commit message and I approve it. Show it first for approval before any non-read-only actions are taken, including branch creation.
-  - Force-push is only allowed with explicit approval to update a PR already on main (e.g., `git push --force-with-lease origin <branch>`).
-  - Never rebase or delete branches without explicit approval.
+- Force-push is only allowed with explicit approval to update a PR already on main (e.g., `git push --force-with-lease origin <branch>`).
+- Never rebase or delete branches without explicit approval.
 - Do not add `Co-authored-by:` trailers or agent attribution in commits.
 - Always confirm PR title and description before opening a PR; show them to me for approval first.
 - Never run `git commit --amend` without explicit approval.
