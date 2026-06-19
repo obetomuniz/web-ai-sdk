@@ -265,3 +265,13 @@ Or in one shot: `pnpm gate`.
 - **Core package / lifecycle layer**; A package that ships logic, types, and session lifecycle but no DOM / no styles / no rendering primitives. The eight API-wrapper packages are all core packages. Future packages with a different role (UI primitives, polyfills) sit at different layers.
 - **Subpath export**; A package entry exposed under a path like `@web-ai-sdk/webmcp/react`. Configured via `package.json#exports`. Lets one install ship multiple framework adapters that tree-shake independently.
 - **Feature-detected no-op**; The pattern this monorepo uses everywhere: if the underlying browser API is absent, the wrapper returns a no-op cleanup / `undefined` / similar, so consumer code can ship without polyfills or branching.
+
+---
+
+## 10. Boundaries
+- Never run git push without explicit approval in the same message.
+- Never create or merge PRs unless I explicitly ask in that turn.
+- Never run git commit until you have shown me the exact commit message and I approve it. Show it first for approval before any non-read-only actions are taken, including branch creation.
+- Force-push is only allowed with explicit approval to update a PR already on main (e.g., `git push --force-with-lease origin <branch>`). Never rebase or delete branches without explicit approval.
+- No Co-authored-by or agent attribution in commits.
+- Always confirm PR title and description before opening a PR; show them to me for approval first.
