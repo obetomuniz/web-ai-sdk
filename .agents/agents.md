@@ -4,7 +4,7 @@ This file is the single source of truth for **any AI agent** (Cursor, Claude Cod
 
 The root `AGENTS.md` is a compatibility symlink to this file for tools that still discover only the older AGENTS.md convention.
 
-For human-facing context see the root [`README.md`](../README.md) and [`CONTRIBUTING.md`](../CONTRIBUTING.md), plus one README per package under `packages/<name>/README.md`.
+For human-facing context see the root [`README.md`](../README.md) and [`CONTRIBUTING.md`](../CONTRIBUTING.md), plus one README per package under `packages/<name>/README.md`. For the visual identity (colour, type, surfaces) that any UI change must follow, see [`DESIGN.md`](../DESIGN.md).
 
 ---
 
@@ -92,6 +92,7 @@ Full rules in [`CONTRIBUTING.md` § Governance](../CONTRIBUTING.md#governance); 
 ├── tsconfig.base.json            # shared compiler options
 ├── README.md                     # human onboarding entry point
 ├── CONTRIBUTING.md               # contribution flow
+├── DESIGN.md                     # visual identity source of truth (Noir / Dark)
 ├── .agents/
 │   └── agents.md                 # ← you are here
 └── AGENTS.md                     # compatibility symlink
@@ -178,7 +179,7 @@ These rules apply to the API-wrapper packages (`@web-ai-sdk/prompt`, `webmcp`, `
 
 ### Home page styling (`apps/site`)
 
-The marketing site uses **Tailwind CSS v4**. Full guardrails: [`apps/site/README.md`](../apps/site/README.md).
+The marketing site uses **Tailwind CSS v4**. Full guardrails: [`apps/site/README.md`](../apps/site/README.md). Visual identity (colour semantics, typography, surfaces, motion) is governed by [`DESIGN.md`](../DESIGN.md); follow it for any UI change.
 
 - **Tailwind first.** New UI goes through `src/shared/ui.ts` (composed utilities), not new `.css` files or raw CSS in components.
 - **`src/styles/home.css` is bootstrap only** — `@theme` tokens, layout CSS variables, keyframes, and minimal `@layer base` resets. No component-level rules.
@@ -265,3 +266,15 @@ Or in one shot: `pnpm gate`.
 - **Core package / lifecycle layer**; A package that ships logic, types, and session lifecycle but no DOM / no styles / no rendering primitives. The eight API-wrapper packages are all core packages. Future packages with a different role (UI primitives, polyfills) sit at different layers.
 - **Subpath export**; A package entry exposed under a path like `@web-ai-sdk/webmcp/react`. Configured via `package.json#exports`. Lets one install ship multiple framework adapters that tree-shake independently.
 - **Feature-detected no-op**; The pattern this monorepo uses everywhere: if the underlying browser API is absent, the wrapper returns a no-op cleanup / `undefined` / similar, so consumer code can ship without polyfills or branching.
+
+---
+
+## 10. Boundaries
+- Never run git push without explicit approval in the same message.
+- Never create or merge PRs unless I explicitly ask in that turn.
+- Never run git commit until you have shown me the exact commit message and I approve it. Show it first for approval before any non-read-only actions are taken, including branch creation.
+- Force-push is only allowed with explicit approval to update a PR already on main (e.g., `git push --force-with-lease origin <branch>`).
+- Never rebase or delete branches without explicit approval.
+- Do not add `Co-authored-by:` trailers or agent attribution in commits.
+- Always confirm PR title and description before opening a PR; show them to me for approval first.
+- Never run `git commit --amend` without explicit approval.
