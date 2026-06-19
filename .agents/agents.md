@@ -4,7 +4,7 @@ This file is the single source of truth for **any AI agent** (Cursor, Claude Cod
 
 The root `AGENTS.md` is a compatibility symlink to this file for tools that still discover only the older AGENTS.md convention.
 
-For human-facing context see the root [`README.md`](../README.md) and [`CONTRIBUTING.md`](../CONTRIBUTING.md), plus one README per package under `packages/<name>/README.md`.
+For human-facing context see the root [`README.md`](../README.md) and [`CONTRIBUTING.md`](../CONTRIBUTING.md), plus one README per package under `packages/<name>/README.md`. For the visual identity (colour, type, surfaces) that any UI change must follow, see [`DESIGN.md`](../DESIGN.md).
 
 ---
 
@@ -92,6 +92,7 @@ Full rules in [`CONTRIBUTING.md` § Governance](../CONTRIBUTING.md#governance); 
 ├── tsconfig.base.json            # shared compiler options
 ├── README.md                     # human onboarding entry point
 ├── CONTRIBUTING.md               # contribution flow
+├── DESIGN.md                     # visual identity source of truth (Noir / Dark)
 ├── .agents/
 │   └── agents.md                 # ← you are here
 └── AGENTS.md                     # compatibility symlink
@@ -178,7 +179,7 @@ These rules apply to the API-wrapper packages (`@web-ai-sdk/prompt`, `webmcp`, `
 
 ### Home page styling (`apps/site`)
 
-The marketing site uses **Tailwind CSS v4**. Full guardrails: [`apps/site/README.md`](../apps/site/README.md).
+The marketing site uses **Tailwind CSS v4**. Full guardrails: [`apps/site/README.md`](../apps/site/README.md). Visual identity (colour semantics, typography, surfaces, motion) is governed by [`DESIGN.md`](../DESIGN.md); follow it for any UI change.
 
 - **Tailwind first.** New UI goes through `src/shared/ui.ts` (composed utilities), not new `.css` files or raw CSS in components.
 - **`src/styles/home.css` is bootstrap only** — `@theme` tokens, layout CSS variables, keyframes, and minimal `@layer base` resets. No component-level rules.
