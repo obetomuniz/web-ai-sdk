@@ -275,3 +275,4 @@ Or in one shot: `pnpm gate`.
 - Force-push is only allowed with explicit approval to update a PR already on main (e.g., `git push --force-with-lease origin <branch>`). Never rebase or delete branches without explicit approval.
 - No Co-authored-by or agent attribution in commits.
 - Always confirm PR title and description before opening a PR; show them to me for approval first.
+- Never run `git commit --amend` without explicit approval.
