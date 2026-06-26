@@ -95,10 +95,6 @@ export const useRewriter = (options: UseRewriterOptions): UseRewriterReturn => {
     })
       .then((result) => {
         if (controller.signal.aborted) return;
-        if (!result.output) {
-          setStatus("unavailable");
-          return;
-        }
         setOutput(result.output);
         setFromCache(result.cached);
         setStatus("done");
