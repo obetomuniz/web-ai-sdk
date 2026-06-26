@@ -312,22 +312,6 @@ Feature-detect helper.
 
 Forwards to `LanguageModel.availability()`. Returns `null` if the global is missing or the call throws.
 
-### Cache controls
-
-```ts
-import {
-  clearSessions,        // drop every cached one-shot session
-  clearSession,         // drop one cached session by create-options
-  configurePromptCache, // change the LRU cap (default 8)
-} from "@web-ai-sdk/prompt";
-```
-
-The internal session cache is LRU-bounded (default 8) and only memoizes warm base sessions used by `ask()`; each `ask()` prompt still runs on a clone or fresh one-shot instance. `createSession()` is never cached.
-
-### Lower-level helpers (advanced)
-
-`getLanguageModelApi`, `getOrCreateLanguageModel`, `defaultCacheKey`; exported so you can compose your own pipeline.
-
 ## Caching
 
 Two layers, same as `@web-ai-sdk/summarizer`:
