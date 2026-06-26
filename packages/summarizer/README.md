@@ -78,7 +78,7 @@ interface SummarizeOptions {
   sharedContext?: string;
   monitor?: (m: CreateMonitor) => void;
   cache?: "session" | "local" | { get, set };
-  cacheKey?: string; // default `${pathname}:${lang}`
+  cacheKey?: string; // default: JSON of [pathname, trimmed input, language, hints, type, length, format, preference, sharedContext]
   onUpdate?: (text: string) => void;
   signal?: AbortSignal;
 }

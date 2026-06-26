@@ -143,7 +143,6 @@ Directional, not a commitment. The bias is toward owning only the lifecycle and 
 
 - Native tool calling for the Prompt API
 - Session resilience (auto-retry on session loss)
-- Session context introspection (token / quota usage)
 - IndexedDB cache backend for result caches
 - Cloud / custom-provider fallback for unsupported browsers
 - More browser compatibility helpers
