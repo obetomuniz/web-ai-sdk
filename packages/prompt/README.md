@@ -312,10 +312,6 @@ Feature-detect helper.
 
 Forwards to `LanguageModel.availability()`. Returns `null` if the global is missing or the call throws.
 
-### Lower-level helpers (advanced)
-
-`getLanguageModelApi`, `getOrCreateLanguageModel`, `defaultCacheKey`; exported so you can compose your own pipeline.
-
 ## Caching
 
 Two layers, same as `@web-ai-sdk/summarizer`:

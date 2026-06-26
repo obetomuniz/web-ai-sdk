@@ -3,4 +3,4 @@
 "@web-ai-sdk/summarizer": patch
 ---
 
-Docs fixes: remove the phantom "Cache controls" section from the prompt README (it advertised `clearSessions` / `clearSession` / `configurePromptCache` exports that were never part of the public surface — copying the snippet fails to import), and correct the `summarizer` `cacheKey` default documented as `${pathname}:${lang}` to the real default (a JSON array of pathname, trimmed input, language, hints, and output-shaping options). Runtime behavior is unchanged.
+Docs fixes: remove the phantom "Cache controls" section and the "Lower-level helpers (advanced)" section from the prompt README and docs page (both advertised exports — `clearSessions` / `clearSession` / `configurePromptCache`, and `getLanguageModelApi` / `getOrCreateLanguageModel` / `defaultCacheKey` — that are no longer part of the public surface; copying the snippets fails to import), and clarify the `summarizer` `cacheKey` default documented as `${pathname}:${lang}` to the real default — `JSON.stringify([...])` of pathname, trimmed input, language, a boolean `languageHints`, and output-shaping options. Runtime behavior is unchanged.
