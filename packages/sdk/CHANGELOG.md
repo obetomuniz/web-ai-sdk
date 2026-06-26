@@ -1,5 +1,14 @@
 # @web-ai-sdk/all
 
+## 0.7.2
+
+### Patch Changes
+
+- Updated dependencies [572d033]
+  - @web-ai-sdk/summarizer@0.6.2
+  - @web-ai-sdk/writer@0.6.2
+  - @web-ai-sdk/rewriter@0.6.2
+
 ## 0.7.1
 
 ### Patch Changes
