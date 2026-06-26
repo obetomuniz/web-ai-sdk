@@ -57,7 +57,7 @@ interface SummarizeOptions {
 | `sharedContext` | `string` | Native `sharedContext` string (a hint about who/what the summary is for). |
 | `monitor` | `(m) => void` | Observe the first-call model download (~1.7 GB on a fresh profile). |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
-| `cacheKey` | `string` | Override the default cache key (defaults to `JSON.stringify([pathname, trimmed input, language, languageHints, type, length, format, preference, sharedContext])`; `languageHints` is a boolean derived from `supportedLanguages`). |
+| `cacheKey` | `string` | Override the default cache key (defaults to `JSON.stringify([pathname, trimmed input, normalizedLanguage, languageHints, type, length, format, preference, sharedContext])`; `normalizedLanguage` is `language`'s lowercase primary subtag (e.g. `pt-BR` → `pt`), and `languageHints` is a boolean for whether that language is in `supportedLanguages`). |
 | `onUpdate` | `(text: string) => void` | Streaming update callback. Receives the cumulative buffer, not deltas. |
 | `signal` | `AbortSignal` | Abort signal. |
 
