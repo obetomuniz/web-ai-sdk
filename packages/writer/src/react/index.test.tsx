@@ -57,6 +57,17 @@ describe("useWriter", () => {
     expect(result.current.error).toBeNull();
   });
 
+  it("sets status to done, not unavailable, when the result is empty", async () => {
+    installFakeWriter({ output: "" });
+    const { result } = renderHook(() =>
+      useWriter({ input: "Draft an email." }),
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    expect(result.current.output).toBeNull();
+    expect(result.current.error).toBeNull();
+  });
+
   it("re-runs when input changes", async () => {
     const api = installFakeWriter({ output: "ok" });
     const { result, rerender } = renderHook(

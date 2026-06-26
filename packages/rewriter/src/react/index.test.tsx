@@ -57,6 +57,17 @@ describe("useRewriter", () => {
     expect(result.current.error).toBeNull();
   });
 
+  it("sets status to done, not unavailable, when the result is empty", async () => {
+    installFakeRewriter({ output: "" });
+    const { result } = renderHook(() =>
+      useRewriter({ input: "A long sentence.", length: "shorter" }),
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    expect(result.current.output).toBeNull();
+    expect(result.current.error).toBeNull();
+  });
+
   it("re-runs when input changes", async () => {
     const api = installFakeRewriter({ output: "ok" });
     const { result, rerender } = renderHook(

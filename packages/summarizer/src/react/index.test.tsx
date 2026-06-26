@@ -69,6 +69,18 @@ describe("useSummarizer", () => {
     expect(result.current.output).toBe("Result.");
   });
 
+  it("sets status to done, not unavailable, when the result is empty", async () => {
+    installFakeSummarizer({ summary: "" });
+    const cache = inMemoryCache();
+    const { result } = renderHook(() =>
+      useSummarizer({ language: "en", input: "body", cache, cacheKey: "k" }),
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    expect(result.current.output).toBeNull();
+    expect(result.current.error).toBeNull();
+  });
+
   it("streams chunks to the consumer", async () => {
     installFakeSummarizer({ chunks: ["Hel", "lo", "."] });
     const cache = inMemoryCache();
