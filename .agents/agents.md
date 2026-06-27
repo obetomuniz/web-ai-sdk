@@ -46,7 +46,7 @@ Full rules in [`CONTRIBUTING.md` § Governance](../CONTRIBUTING.md#governance); 
 ## 2. Stack & runtime
 
 - **TypeScript** strict, ESM (`"type": "module"`), `verbatimModuleSyntax`.
-- **pnpm 9** workspaces (declared in `pnpm-workspace.yaml`).
+- **pnpm 10** workspaces (declared in `pnpm-workspace.yaml`).
 - **tsup** for builds; emits ESM + CJS + `.d.ts` from `src/index.ts` and `src/react/index.ts`.
 - **Vitest + happy-dom** for tests.
 - **Biome** for lint + format (one tool, scoped to `packages/**` and `apps/**` `.ts`/`.tsx`). No ESLint, no Prettier.
@@ -87,7 +87,7 @@ Full rules in [`CONTRIBUTING.md` § Governance](../CONTRIBUTING.md#governance); 
 ├── .github/workflows/            # CI gate + release + Pages deploy
 ├── .nvmrc                        # pins Node 24 for local dev
 ├── biome.json                    # lint + format
-├── package.json                  # workspace root + every pnpm script (incl. "packageManager" → pnpm 9.15.0)
+├── package.json                  # workspace root + every pnpm script (incl. "packageManager" → pnpm@10.34.3)
 ├── pnpm-workspace.yaml
 ├── tsconfig.base.json            # shared compiler options
 ├── README.md                     # human onboarding entry point
