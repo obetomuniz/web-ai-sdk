@@ -279,22 +279,23 @@ Or in one shot: `pnpm gate`.
 - Always confirm PR title and description before opening a PR; show them to me for approval first.
 - Never run `git commit --amend` without explicit approval.
 
-## 11. Work in-tree, isolate in-tree
+## 11. Work in the session's tree — never create worktrees
 
 The goal: every change stays visible to the tools bound to this repo — editors, git GUIs, and the coding agent itself. **Isolation is fine; invisibility is not.**
 
 This applies to **any** agent, skill, GUI, or automation touching this repo — regardless of its default isolation behaviour.
 
-- **Default to the main working tree.** Most tasks edit the checked-out tree on a dedicated branch. That's the baseline.
-- **Worktrees are allowed for parallel work** — they're how you work on multiple branches at once — but they must stay *in-tree*:
-  - Create them **inside the repo path** under `.worktrees/<branch>/` (gitignored), **never** under `$TMPDIR` or any out-of-repo scratch location. Note: `.git/worktrees/` is git's internal metadata store, not a working-tree location — never put code there.
-  - Use `git worktree add -b <branch> .worktrees/<branch>`; remove with `git worktree remove .worktrees/<branch>` (clean trees only; `--force` otherwise). Never `rm -rf` a worktree — if you do, run `git worktree prune`. Move with `git worktree move`, not manual `mv`.
-  - Each worktree is an independent checkout needing its own `pnpm install`.
-  - Prefer the coding agent's built-in isolation/worktree tooling when it has one; only fall back to raw `git worktree add` with an in-repo path. If a skill's default is to isolate under a temp dir, override it to `.worktrees/`. If the host can only isolate out-of-tree and can't be redirected, hand the plan back for manual in-tree execution rather than work invisibly.
-  - When searching (`glob`/`grep`), scope to `packages/` and `apps/` — don't recurse into `.worktrees/` or results will be duplicated.
-- **Start from a clean working tree.** If uncommitted changes are present, stop and ask me to commit or stash before beginning work.
-- **Before editing, create and check out a dedicated branch** from HEAD (e.g. `<type>/<scope>-<slug>`). All edits and commits land on that branch — whether in the main tree or a worktree.
-- **Never merge, push, or commit to `main` directly** — leave the branch for me to review and merge.
-- **Review branches in-tree** (`git diff --stat main..<branch>`, re-run any acceptance criteria). Remove a worktree only after its branch merges — never to abandon uncommitted work.
+> **Why:** the workspace bound to this session — whatever tool it is — tracks a **single working tree**: the one checkout it was opened on. A `git worktree` is a *separate* directory with its own checkout, so changes made there are **real but invisible** to that workspace (its git view shows "working tree clean"), and the branch gets locked to that folder (selecting it elsewhere errors with *"already used by worktree"*). A `.worktrees/` subdir is inside the repo path but is still a separate working tree — being "in the repo path" does NOT make it visible.
 
-The test this section enforces: if the editor/workspace bound to this directory can't see the files (because they're under `$TMPDIR` or a random scratch path), that's the failure mode. Keep work where the tools already are.
+- **The rule: edit the session's bound working tree, in place, on a dedicated branch.** `git switch -c <type>/<scope>-<slug>` from HEAD and edit the checked-out tree directly. Every change then shows live in the workspace's git view. This covers single-branch work, which is essentially all work.
+- **Do NOT create a worktree — by any mechanism.** This is a hard rule for every agent, skill, skill variant, subagent, and automation. It bans both:
+  - raw `git worktree add` (and any `$TMPDIR` / out-of-repo scratch checkout), and
+  - a skill's built-in "isolation/worktree" mode. `/improve` and its variants default to `isolation: "worktree"`; that default is **overridden to in-place execution here**. Do not opt back into it.
+  - Rationale: a worktree you create is a separate checkout the session is **not** bound to, so the work is invisible and the branch gets locked. (The restriction is on *creation*: a worktree the human has already set up and switched the session into is fine to edit and manage normally.)
+- **Need a parallel branch? Hand it back to me.** If a task genuinely requires a second branch checked out at the same time, **stop and tell me** — creating worktrees is my call, done through my tool's own worktree feature so the session is actually bound to it. Never improvise one yourself.
+- **Start from a clean working tree.** If uncommitted changes are present, stop and ask me to commit or stash before beginning work.
+- **Never merge, push, or commit to `main` directly** — leave the branch for me to review and merge.
+- **Review branches in-tree** (`git diff --stat main..<branch>`, re-run any acceptance criteria).
+- When searching (`glob`/`grep`), scope to `packages/` and `apps/` — don't recurse into `.worktrees/` (any existing worktrees there would duplicate results).
+
+The test this section enforces: if the workspace bound to this session can't see your changes — because they're in a worktree (anywhere, `.worktrees/` included) or under `$TMPDIR` — that's the failure mode. Edit the tree the session is already bound to.
