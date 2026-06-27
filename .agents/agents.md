@@ -279,11 +279,14 @@ Or in one shot: `pnpm gate`.
 - Always confirm PR title and description before opening a PR; show them to me for approval first.
 - Never run `git commit --amend` without explicit approval.
 
-## 11. Plan execution (advisor / `improve` skill)
+## 11. Work in-tree
 
-When executing an advisor plan (the `improve` skill's `execute <plan>` flow), the executor **must work in-tree, never in an out-of-tree git worktree.** This rule overrides the skill's default `isolation: "worktree"` dispatch — it exists so the work stays visible in the editor and git UI (openChamber binds to this working directory; a worktree under `$TMPDIR` is invisible to it).
+All edits and commits must happen **in this working tree**, never in an out-of-tree git worktree. The repo is bound to this directory by editors and git GUIs (e.g. openChamber); a worktree under `$TMPDIR` is invisible to them, so work done there disappears from view.
 
-- Do **not** spawn the executor with worktree isolation, and do **not** run `git worktree add`.
-- The executor's first action is to create and check out a dedicated branch from HEAD: `advisor/<plan-number>-<slug>` (e.g. `advisor/004-fix-pnpm-override-config`). All edits and commits land on that branch.
-- Precondition: the working tree must be clean before dispatch (so the executor's work doesn't mix with uncommitted changes). If dirty, stop and ask me to commit or stash first.
-- Review the executor's branch in-tree (`git diff --stat main..<branch>`, re-run the plan's done criteria). Never merge, push, or commit to `main` — leave the branch for me to merge.
+This applies to **any** agent, skill, GUI, or automation touching this repo — regardless of whether it defaults to worktree isolation. When a tool's default is to isolate via a worktree, that default is overridden here.
+
+- Do **not** create or dispatch into a separate worktree. Do **not** run `git worktree add`.
+- Start from a clean working tree. If uncommitted changes are present, stop and ask me to commit or stash before beginning work.
+- Before editing, create and check out a dedicated branch from HEAD (e.g. `<type>/<scope>-<slug>`). All edits and commits land on that branch.
+- Never merge, push, or commit to `main` directly — leave the branch for me to review and merge.
+- Review the branch in-tree (`git diff --stat main..<branch>`, re-run any acceptance criteria).
