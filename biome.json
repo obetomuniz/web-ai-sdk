@@ -11,7 +11,8 @@
       "!**/*.d.ts",
       "!**/storybook-static",
       "!**/.astro",
-      "!**/_site"
+      "!**/_site",
+      "!**/.worktrees"
     ]
   },
   "linter": {
