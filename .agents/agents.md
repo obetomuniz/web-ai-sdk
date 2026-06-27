@@ -278,3 +278,12 @@ Or in one shot: `pnpm gate`.
 - Do not add `Co-authored-by:` trailers or agent attribution in commits.
 - Always confirm PR title and description before opening a PR; show them to me for approval first.
 - Never run `git commit --amend` without explicit approval.
+
+## 11. Plan execution (advisor / `improve` skill)
+
+When executing an advisor plan (the `improve` skill's `execute <plan>` flow), the executor **must work in-tree, never in an out-of-tree git worktree.** This rule overrides the skill's default `isolation: "worktree"` dispatch — it exists so the work stays visible in the editor and git UI (openChamber binds to this working directory; a worktree under `$TMPDIR` is invisible to it).
+
+- Do **not** spawn the executor with worktree isolation, and do **not** run `git worktree add`.
+- The executor's first action is to create and check out a dedicated branch from HEAD: `advisor/<plan-number>-<slug>` (e.g. `advisor/004-fix-pnpm-override-config`). All edits and commits land on that branch.
+- Precondition: the working tree must be clean before dispatch (so the executor's work doesn't mix with uncommitted changes). If dirty, stop and ask me to commit or stash first.
+- Review the executor's branch in-tree (`git diff --stat main..<branch>`, re-run the plan's done criteria). Never merge, push, or commit to `main` — leave the branch for me to merge.
