@@ -278,3 +278,15 @@ Or in one shot: `pnpm gate`.
 - Do not add `Co-authored-by:` trailers or agent attribution in commits.
 - Always confirm PR title and description before opening a PR; show them to me for approval first.
 - Never run `git commit --amend` without explicit approval.
+
+## 11. Work in-tree
+
+All edits and commits must happen **in this working tree**, never in an out-of-tree git worktree. The repo is bound to this directory by editors and git GUIs (e.g. openChamber); a worktree under `$TMPDIR` is invisible to them, so work done there disappears from view.
+
+This applies to **any** agent, skill, GUI, or automation touching this repo — regardless of whether it defaults to worktree isolation. When a tool's default is to isolate via a worktree, that default is overridden here.
+
+- Do **not** create or dispatch into a separate worktree. Do **not** run `git worktree add`.
+- Start from a clean working tree. If uncommitted changes are present, stop and ask me to commit or stash before beginning work.
+- Before editing, create and check out a dedicated branch from HEAD (e.g. `<type>/<scope>-<slug>`). All edits and commits land on that branch.
+- Never merge, push, or commit to `main` directly — leave the branch for me to review and merge.
+- Review the branch in-tree (`git diff --stat main..<branch>`, re-run any acceptance criteria).
