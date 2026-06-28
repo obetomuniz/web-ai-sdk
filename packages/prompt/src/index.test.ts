@@ -646,6 +646,40 @@ describe("ask", () => {
       }),
     ).rejects.toThrow(/aborted/i);
   });
+
+  it("aborts a streaming ask between yielded chunks", async () => {
+    let resolveGate: () => void = () => {};
+    const gate = new Promise<void>((r) => {
+      resolveGate = r;
+    });
+    const session: FakeSession = {
+      prompt: vi.fn(),
+      promptStreaming: vi.fn(async function* () {
+        yield "a";
+        await gate;
+        yield "b";
+      }),
+      destroy: vi.fn(),
+    };
+    installFakeLanguageModel({ sessionFactory: () => session });
+
+    const controller = new AbortController();
+    const updates: string[] = [];
+    const p = ask({
+      input: "hi",
+      signal: controller.signal,
+      onUpdate: (t) => updates.push(t),
+    });
+    for (let i = 0; i < 50 && updates.length === 0; i++) {
+      await Promise.resolve();
+    }
+    expect(updates).toEqual(["a"]);
+    controller.abort();
+    resolveGate();
+    await expect(p).rejects.toBeInstanceOf(PromptAbortError);
+    expect(updates).toEqual(["a"]);
+    expect(session.destroy).toHaveBeenCalled();
+  });
 });
 
 describe("createSession", () => {
@@ -725,6 +759,45 @@ describe("createSession", () => {
     await expect(session.send("hi")).rejects.toMatchObject({
       name: "SessionDestroyedError",
     });
+  });
+
+  it("destroy() aborts an in-flight sendStreaming and marks the session destroyed", async () => {
+    let resolveGate: () => void = () => {};
+    const gate = new Promise<void>((r) => {
+      resolveGate = r;
+    });
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(),
+        promptStreaming: vi.fn(async function* () {
+          yield "a";
+          await gate;
+          yield "b";
+        }),
+        destroy: vi.fn(),
+      }),
+    });
+
+    const session = createSession();
+    const collected: string[] = [];
+    let rejection: unknown;
+    const drain = (async () => {
+      try {
+        for await (const d of session.sendStreaming("hi")) collected.push(d);
+      } catch (e) {
+        rejection = e;
+      }
+    })();
+    for (let i = 0; i < 50 && collected.length === 0; i++) {
+      await Promise.resolve();
+    }
+    expect(collected).toEqual(["a"]);
+    session.destroy();
+    expect(session.destroyed).toBe(true);
+    resolveGate();
+    await drain;
+    expect(collected).toEqual(["a"]);
+    expect(rejection).toBeInstanceOf(PromptAbortError);
   });
 
   it("does NOT queue concurrent sends; consumers handle sequencing themselves", async () => {
