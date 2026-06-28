@@ -204,8 +204,8 @@ interface Session {
   readonly destroyed: boolean;
   readonly contextWindow?: number; // context window in tokens; undefined pre-creation
   readonly contextUsage?: number;  // tokens used so far; undefined pre-creation
-  send(input: string, options?: SessionSendOptions): Promise<string | null>;
-  sendStreaming(input: string, options?: SessionSendOptions): AsyncIterable<string>;
+  send(input: string | LanguageModelMessage[], options?: SessionSendOptions): Promise<string | null>;
+  sendStreaming(input: string | LanguageModelMessage[], options?: SessionSendOptions): AsyncIterable<string>;
   abort(): void;
   clone(options?: { signal?: AbortSignal }): Promise<Session>;
   append(messages: LanguageModelMessage[], options?: { signal?: AbortSignal }): Promise<void>; // context without a turn
@@ -284,6 +284,39 @@ const plan = await session.send("Based on that, suggest an outfit.");
 ```
 
 `append()` throws `SessionDestroyedError` if the session is destroyed and `PromptUnavailableError` if the browser instance doesn't support `append()`. Aborts reject with `PromptAbortError`.
+
+### Prefill and message arrays
+
+`Session.send` / `sendStreaming` accept either a single string turn or a full `LanguageModelMessage[]`. Passing an array lets you supply multi-message context, control roles per turn, and — most usefully — **prefill** the assistant's reply: set `prefix: true` on the trailing `assistant` message and the model treats its `content` as the start of its own answer rather than a turn to respond to.
+
+```ts
+const session = createSession({ systemPrompt });
+
+// Multi-message turn: full conversation context, roles per message.
+const reply = await session.send([
+  { role: "user", content: "What is RAG?" },
+  { role: "assistant", content: "Retrieval-Augmented Generation." },
+  { role: "user", content: "Give me the three-step recipe." },
+]);
+
+// Prefill: bias the model toward JSON without a full schema.
+const json = await session.send([
+  { role: "user", content: "Describe a cat in one word of JSON." },
+  { role: "assistant", content: '{"thought":"', prefix: true },
+]);
+// model completes: feline"}  ->  you parse {"thought":"feline"}
+```
+
+**Prefill vs `responseConstraint`** — both shape output, different trade-offs:
+
+- **Prefill** (`prefix: true`): cheaper per turn (no schema inlined into context), weaker guarantee — the model may drift off the prefixed format. Good for cheap nudges and structured-output hints that you parse defensively.
+- **`responseConstraint`**: enforced JSON Schema (the runtime validates against it), higher per-turn token cost when the schema is large. Use `omitResponseConstraintInput: true` to drop the inlined schema and keep only the enforced constraint.
+
+They compose: prefill the opening brace, set `responseConstraint` for the full shape.
+
+**Spec rule:** `prefix: true` is only valid on the **trailing** `assistant` message. Anywhere else (a non-final message, a non-assistant role) the browser throws a `"SyntaxError"` `DOMException` — the SDK does **not** catch this, so it propagates to your `send` / `sendStreaming` caller.
+
+> **Note on `content`:** `LanguageModelMessage.content` is currently `string` only. Multimodal `ContentPart[]` content (images, audio) is tracked as a future enhancement; no timeline is promised.
 
 ### Context-window introspection
 

@@ -1028,6 +1028,113 @@ describe("createSession", () => {
   });
 });
 
+describe("Session.send with message arrays", () => {
+  it("forwards a message array unchanged, preserving prefix:true on the trailing assistant message", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const session = createSession();
+    const messages = [
+      { role: "user" as const, content: "Return JSON." },
+      {
+        role: "assistant" as const,
+        content: '{"thought":"',
+        prefix: true,
+      },
+    ];
+    await session.send(messages);
+    expect(fake.promptSpy).toHaveBeenCalledTimes(1);
+    expect(fake.promptSpy.mock.calls[0]?.[0]).toEqual(messages);
+    session.destroy();
+  });
+
+  it("forwards a multi-message turn array as-is", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const session = createSession();
+    const messages = [
+      { role: "user" as const, content: "a" },
+      { role: "assistant" as const, content: "b" },
+      { role: "user" as const, content: "c" },
+    ];
+    await session.send(messages);
+    expect(fake.promptSpy.mock.calls[0]?.[0]).toEqual(messages);
+    session.destroy();
+  });
+
+  it("still accepts a plain string (regression)", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const session = createSession();
+    await session.send("ping");
+    expect(fake.promptSpy.mock.calls[0]?.[0]).toBe("ping");
+    session.destroy();
+  });
+
+  it("short-circuits an empty array without calling the model", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const session = createSession();
+    const result = await session.send([]);
+    expect(result).toBeNull();
+    expect(fake.promptSpy).not.toHaveBeenCalled();
+    session.destroy();
+  });
+
+  it("short-circuits an all-empty-content array without calling the model", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const session = createSession();
+    const result = await session.send([{ role: "user", content: "   " }]);
+    expect(result).toBeNull();
+    expect(fake.promptSpy).not.toHaveBeenCalled();
+    session.destroy();
+  });
+
+  it("sendStreaming forwards a prefill array and yields chunks", async () => {
+    const fake = installFakeLanguageModel({ chunks: ['"hi"', "}"] });
+    const session = createSession();
+    const messages = [
+      { role: "user" as const, content: "Return JSON." },
+      {
+        role: "assistant" as const,
+        content: '{"thought":"',
+        prefix: true,
+      },
+    ];
+    const deltas: string[] = [];
+    for await (const d of session.sendStreaming(messages)) {
+      deltas.push(d);
+    }
+    expect(deltas).toEqual(['"hi"', "}"]);
+    expect(fake.streamingSpy).not.toBeNull();
+    expect(fake.streamingSpy?.mock.calls[0]?.[0]).toEqual(messages);
+    session.destroy();
+  });
+
+  it("forwards a prefill array from a clone()d session", async () => {
+    const childPrompt = vi.fn(async (_input: unknown) => "child reply");
+    const cloneSpy = vi.fn(async () => ({
+      prompt: childPrompt,
+      destroy: vi.fn(),
+    }));
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => "parent reply"),
+        destroy: vi.fn(),
+        clone: cloneSpy,
+      }),
+    });
+    const base = createSession({ systemPrompt: "S" });
+    await base.send("warm");
+    const turn = await base.clone();
+    const messages = [
+      { role: "user" as const, content: "go" },
+      { role: "assistant" as const, content: "{", prefix: true },
+    ];
+    const result = await turn.send(messages);
+    expect(result).toBe("child reply");
+    expect(childPrompt).toHaveBeenCalledTimes(1);
+    expect(childPrompt.mock.calls[0]?.[0]).toEqual(messages);
+    turn.destroy();
+    base.destroy();
+  });
+});
+
 describe("Session.clone", () => {
   it("forks via the native instance.clone() and the clone works independently", async () => {
     const parentDestroy = vi.fn();

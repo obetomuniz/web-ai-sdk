@@ -204,14 +204,23 @@ export interface SessionSendOptions {
 export interface Session {
   /** Whether `destroy()` has been called. After destroy, sends throw `SessionDestroyedError`. */
   readonly destroyed: boolean;
-  /** Run a turn. Returns the cleaned final text, or `null` if nothing meaningful remains. */
-  send(input: string, options?: SessionSendOptions): Promise<string | null>;
+  /**
+   * Run a turn. Accepts a single string turn or a `LanguageModelMessage[]`
+   * (multi-message context, role-per-turn control, assistant prefill via
+   * `prefix: true`). Returns the cleaned final text, or `null` if nothing
+   * meaningful remains.
+   */
+  send(
+    input: string | LanguageModelMessage[],
+    options?: SessionSendOptions,
+  ): Promise<string | null>;
   /**
    * Run a turn and yield **delta** chunks (each chunk is the *new* text since
-   * the last yield, never cumulative).
+   * the last yield, never cumulative). Accepts the same `string |
+   * LanguageModelMessage[]` input as {@link send}.
    */
   sendStreaming(
-    input: string,
+    input: string | LanguageModelMessage[],
     options?: SessionSendOptions,
   ): AsyncIterable<string>;
   /** Abort the most recent in-flight `send` / `sendStreaming`. No-op when idle. */
@@ -378,11 +387,15 @@ const wrapInstance = (
   };
 
   const send = async (
-    input: string,
+    input: string | LanguageModelMessage[],
     options?: SessionSendOptions,
   ): Promise<string | null> => {
     ensureLive();
-    if (!input.trim()) return null;
+    const isEmpty =
+      typeof input === "string"
+        ? !input.trim()
+        : input.length === 0 || input.every((m) => !m.content?.trim());
+    if (isEmpty) return null;
     const { instance } = await ready;
     ensureLive();
 
@@ -414,12 +427,16 @@ const wrapInstance = (
   };
 
   const sendStreaming = (
-    input: string,
+    input: string | LanguageModelMessage[],
     options?: SessionSendOptions,
   ): AsyncIterable<string> => ({
     [Symbol.asyncIterator]: async function* () {
       ensureLive();
-      if (!input.trim()) return;
+      const isEmpty =
+        typeof input === "string"
+          ? !input.trim()
+          : input.length === 0 || input.every((m) => !m.content?.trim());
+      if (isEmpty) return;
       const { instance } = await ready;
       ensureLive();
 

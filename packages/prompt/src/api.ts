@@ -11,6 +11,15 @@ export type LanguageModelRole = "system" | "user" | "assistant";
 export interface LanguageModelMessage {
   role: LanguageModelRole;
   content: string;
+  /**
+   * When `true` on the trailing `assistant` message, the model treats
+   * `content` as a prefix to complete rather than a turn to respond to.
+   * Spec: only valid on the final `assistant`-role message; the browser
+   * throws a `"SyntaxError"` `DOMException` if used elsewhere. Use it to
+   * bias structured output (e.g. prefill `{"thought":"` for JSON) without
+   * inlining a full `responseConstraint` schema into context every turn.
+   */
+  prefix?: boolean;
 }
 
 export interface LanguageModelExpectedInput {
