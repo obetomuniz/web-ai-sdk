@@ -128,6 +128,24 @@ try {
 
 `clone()` throws `SessionDestroyedError` if the base has been destroyed, and `PromptUnavailableError` if the underlying browser instance doesn't support cloning. The clone is fully independent: destroying it never affects the base, and vice versa. The React `useSession` hook returns the `Session` directly, so `session.clone()` is available there too.
 
+## Injecting context without a turn — `Session.append()`
+
+Agent loops often need to push tool results or other context into history **without** triggering a model turn. Faking this with an extra `send()` wastes tokens and latency on an empty intermediate response. `session.append()` forwards to the native `LanguageModel.append()`: the messages land in history, and the next `send` / `sendStreaming` sees them as prior turns.
+
+```ts
+const session = createSession({ systemPrompt });
+await session.send("What's the weather in Tokyo?");
+// The model asked to call a tool; run it yourself, then inject the result:
+await session.append([
+  { role: "assistant", content: "I'll check the weather." },
+  { role: "user", content: "tool result: 24°C, clear" },
+]);
+// The next turn sees the tool result as history — no wasted intermediate turn.
+const plan = await session.send("Based on that, suggest an outfit.");
+```
+
+`append()` throws `SessionDestroyedError` if the session is destroyed and `PromptUnavailableError` if the browser instance doesn't support `append()`. Aborts reject with `PromptAbortError`.
+
 ## Context-window introspection
 
 `Session` surfaces the live token budget the native instance reports, so consumers can size work to the real context window instead of hardcoding a char cap (the exact bypass — reaching past the SDK to `globalThis.LanguageModel` — that this avoids):

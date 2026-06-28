@@ -17,6 +17,7 @@ interface FakeSession {
   promptStreaming?: ReturnType<typeof vi.fn>;
   destroy?: ReturnType<typeof vi.fn>;
   clone?: ReturnType<typeof vi.fn>;
+  append?: ReturnType<typeof vi.fn>;
   contextWindow?: number;
   contextUsage?: number;
   inputQuota?: number;
@@ -901,6 +902,81 @@ describe("Session.clone", () => {
     await expect(base.clone()).rejects.toMatchObject({
       name: "SessionDestroyedError",
     });
+  });
+});
+
+describe("Session.append", () => {
+  it("forwards messages to the native instance.append()", async () => {
+    const appendSpy = vi.fn(async () => {});
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => "ok"),
+        append: appendSpy,
+        destroy: vi.fn(),
+      }),
+    });
+    const session = createSession();
+    await session.send("warm");
+    const messages = [
+      { role: "assistant" as const, content: "I called a tool." },
+      { role: "user" as const, content: "tool result: 42" },
+    ];
+    await session.append(messages);
+    expect(appendSpy).toHaveBeenCalledTimes(1);
+    expect(appendSpy).toHaveBeenCalledWith(
+      messages,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    session.destroy();
+  });
+
+  it("throws PromptUnavailableError when the instance has no append()", async () => {
+    installFakeLanguageModel({
+      sessionFactory: () => ({ prompt: vi.fn(async () => "x") }),
+    });
+    const session = createSession();
+    await session.send("warm");
+    await expect(
+      session.append([{ role: "user", content: "hi" }]),
+    ).rejects.toBeInstanceOf(PromptUnavailableError);
+    session.destroy();
+  });
+
+  it("throws SessionDestroyedError when appending to a destroyed session", async () => {
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => "x"),
+        append: vi.fn(async () => {}),
+        destroy: vi.fn(),
+      }),
+    });
+    const session = createSession();
+    await session.send("warm");
+    session.destroy();
+    await expect(
+      session.append([{ role: "user", content: "hi" }]),
+    ).rejects.toMatchObject({ name: "SessionDestroyedError" });
+  });
+
+  it("rejects with PromptAbortError when the signal aborts", async () => {
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => "ok"),
+        append: vi.fn(async () => {
+          await new Promise((r) => setTimeout(r, 20));
+        }),
+        destroy: vi.fn(),
+      }),
+    });
+    const session = createSession();
+    await session.send("warm");
+    const controller = new AbortController();
+    const pending = session.append([{ role: "user", content: "hi" }], {
+      signal: controller.signal,
+    });
+    controller.abort();
+    await expect(pending).rejects.toBeInstanceOf(PromptAbortError);
+    session.destroy();
   });
 });
 

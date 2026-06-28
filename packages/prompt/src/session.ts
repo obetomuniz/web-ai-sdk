@@ -23,6 +23,7 @@ import {
   type LanguageModelExpectedInput,
   type LanguageModelExpectedOutput,
   type LanguageModelInstance,
+  type LanguageModelMessage,
   type LanguageModelPromptOptions,
   type LanguageModelSamplingMode,
   type LanguageModelTool,
@@ -228,6 +229,20 @@ export interface Session {
    * vice versa.
    */
   clone(options?: { signal?: AbortSignal }): Promise<Session>;
+  /**
+   * Push messages into the session's conversation history **without** running a
+   * model turn. Use it to inject tool results or other context between turns
+   * — the next `send` / `sendStreaming` sees the appended messages as prior
+   * history, with no wasted tokens or latency on an empty intermediate turn.
+   *
+   * Throws `SessionDestroyedError` if the session is destroyed, and
+   * `PromptUnavailableError` if the underlying browser instance doesn't
+   * support `append()`. Aborts reject with `PromptAbortError`.
+   */
+  append(
+    messages: LanguageModelMessage[],
+    options?: { signal?: AbortSignal },
+  ): Promise<void>;
   /**
    * Max input tokens for this session (the context window), as reported by
    * the underlying instance — mirrors the native `contextWindow`. `undefined`
@@ -510,6 +525,34 @@ const wrapInstance = (
     }
   };
 
+  const append = async (
+    messages: LanguageModelMessage[],
+    options?: { signal?: AbortSignal },
+  ): Promise<void> => {
+    ensureLive();
+    const { instance } = await ready;
+    ensureLive();
+    if (typeof instance.append !== "function") {
+      throw new PromptUnavailableError(
+        "This LanguageModel instance does not support append() in this browser.",
+      );
+    }
+
+    const { controller, cleanup } = setupController(options?.signal);
+
+    try {
+      await instance.append(messages, { signal: controller.signal });
+      if (controller.signal.aborted) throw new PromptAbortError();
+    } catch (err) {
+      if ((err as { name?: string })?.name === "AbortError") {
+        throw new PromptAbortError();
+      }
+      throw err;
+    } finally {
+      cleanup();
+    }
+  };
+
   const destroy = (): void => {
     if (destroyed) return;
     destroyed = true;
@@ -544,6 +587,7 @@ const wrapInstance = (
     sendStreaming,
     abort,
     clone,
+    append,
     onContextOverflow,
     destroy,
   };

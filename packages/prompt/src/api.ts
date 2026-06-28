@@ -107,6 +107,10 @@ export interface LanguageModelInstance {
     input: string | LanguageModelMessage[],
     options?: LanguageModelPromptOptions,
   ): AsyncIterable<string>;
+  append?(
+    messages: LanguageModelMessage[],
+    options?: { signal?: AbortSignal },
+  ): Promise<void>;
   clone?(options?: { signal?: AbortSignal }): Promise<LanguageModelInstance>;
   destroy?(): void;
   /**
