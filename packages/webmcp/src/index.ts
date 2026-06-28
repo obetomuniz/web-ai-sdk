@@ -297,7 +297,11 @@ const registerOne = (
           }
           return;
         }
-        throw retryErr;
+        if (typeof console !== "undefined") {
+          console.error(
+            `[@web-ai-sdk/webmcp] tool "${registered.name}" could not be registered after retry: ${(retryErr as Error)?.message ?? String(retryErr)}`,
+          );
+        }
       }
     });
     return false;
