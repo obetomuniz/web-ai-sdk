@@ -1,6 +1,6 @@
 ---
 title: "@web-ai-sdk/all"
-description: "One-install meta-package for web-ai-sdk, the TypeScript SDK for the Web's Built-in AI APIs. Pulls in every @web-ai-sdk/* building block: prompt, summarizer, translator, detector, writer, rewriter, proofreader, and webmcp, each as a regular dependency so consumers don't have to track them individually."
+description: "One-install meta-package for web-ai-sdk, the TypeScript SDK for the Web AI surface. Pulls in every @web-ai-sdk/* building block: prompt, summarizer, translator, detector, writer, rewriter, proofreader, and webmcp, each as a regular dependency so consumers don't have to track them individually."
 editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/sdk/README.md
 ---
 
@@ -8,12 +8,12 @@ editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/sdk/README.
 This page is synced from [`packages/sdk/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/sdk/README.md) by `pnpm --filter @web-ai-sdk-apps/site docs:sync`. Edits should go to the README.
 :::
 
-One-install meta-package for web-ai-sdk, the TypeScript SDK for the Web's Built-in AI APIs. Pulls in every `@web-ai-sdk/*` building block: `prompt`, `summarizer`, `translator`, `detector`, `writer`, `rewriter`, `proofreader`, and `webmcp`, each as a regular dependency so consumers don't have to track them individually.
+One-install meta-package for web-ai-sdk, the TypeScript SDK for the Web AI surface. Pulls in every `@web-ai-sdk/*` building block: `prompt`, `summarizer`, `translator`, `detector`, `writer`, `rewriter`, `proofreader`, and `webmcp`, each as a regular dependency so consumers don't have to track them individually.
 
 
 ## Status
 
-Each underlying scoped package is independently supported in Chrome / Edge with the corresponding Built-in AI flag enabled. See the per-package READMEs for browser support details:
+Each underlying scoped package is independently supported in Chrome / Edge with the corresponding Web AI flag enabled. See the per-package READMEs for browser support details:
 
 - [`@web-ai-sdk/prompt`](https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/prompt)
 - [`@web-ai-sdk/summarizer`](https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/summarizer)

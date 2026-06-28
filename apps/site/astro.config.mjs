@@ -42,7 +42,7 @@ export default defineConfig({
     starlight({
       title: "web-ai-sdk",
       description:
-        "web-ai-sdk is a TypeScript SDK for the Web's Built-in AI APIs: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps.",
+        "web-ai-sdk is a TypeScript SDK for the Web AI surface: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps.",
       disable404Route: true,
       components: {
         Head: "./src/features/docs/components/Head.astro",

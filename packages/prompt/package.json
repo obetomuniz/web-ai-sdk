@@ -1,7 +1,7 @@
 {
   "name": "@web-ai-sdk/prompt",
   "version": "0.8.0",
-  "description": "Prompt API support for web-ai-sdk, the TypeScript SDK for the Web's Built-in AI APIs.",
+  "description": "Prompt API support for web-ai-sdk, the TypeScript SDK for the Web AI surface.",
   "license": "MIT",
   "author": "Beto Muniz",
   "homepage": "https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/prompt#readme",

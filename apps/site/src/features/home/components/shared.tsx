@@ -300,17 +300,17 @@ export const UnavailableNotice = ({
   const browser = detectBrowser();
 
   // Safari, Firefox, and mobile browsers (including Chrome and Edge on
-  // iOS/Android, which report as "other") don't implement the Web's Built-in AI
+  // iOS/Android, which report as "other") don't implement the Web AI
   // APIs, so Chrome/Edge flag instructions would mislead. These APIs are
   // desktop-only today; say so plainly.
   if (browser === "other") {
     return (
       <div className="block rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_40%,var(--color-hairline))] bg-surface px-3 py-[9px] font-mono text-[11.5px] text-warn">
         <span>
-          {api} isn't supported in this browser yet. The Web's Built-in AI APIs
-          currently run only on desktop Chrome and Edge (mobile browsers,
-          including Chrome and Edge on iOS and Android, aren't supported yet).
-          Open this page on desktop Chrome or Edge to try the demo.
+          {api} isn't supported in this browser yet. The Web AI APIs currently
+          run only on desktop Chrome and Edge (mobile browsers, including Chrome
+          and Edge on iOS and Android, aren't supported yet). Open this page on
+          desktop Chrome or Edge to try the demo.
         </span>
       </div>
     );

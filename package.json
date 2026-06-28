@@ -2,7 +2,7 @@
   "name": "web-ai-sdk",
   "private": true,
   "version": "0.0.0",
-  "description": "Building blocks for the Web's Built-in AI APIs",
+  "description": "Building blocks for the Web AI surface",
   "license": "MIT",
   "author": "Beto Muniz",
   "homepage": "https://github.com/obetomuniz/web-ai-sdk#readme",

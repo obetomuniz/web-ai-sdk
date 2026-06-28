@@ -1,7 +1,7 @@
 {
   "$schema": "https://webmcp.org/manifest.schema.json",
   "name": "web-ai-sdk",
-  "description": "Documentation and package metadata for web-ai-sdk, a TypeScript SDK for the Web's built-in AI APIs.",
+  "description": "Documentation and package metadata for web-ai-sdk, a TypeScript SDK for the Web AI surface.",
   "url": "https://web-ai-sdk.dev/",
   "tools": [
     {

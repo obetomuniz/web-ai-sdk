@@ -1,12 +1,12 @@
 # @web-ai-sdk/all
 
-One-install meta-package for web-ai-sdk, the TypeScript SDK for the Web's Built-in AI APIs. Pulls in every `@web-ai-sdk/*` building block: `prompt`, `summarizer`, `translator`, `detector`, `writer`, `rewriter`, `proofreader`, and `webmcp`, each as a regular dependency so consumers don't have to track them individually.
+One-install meta-package for web-ai-sdk, the TypeScript SDK for the Web AI surface. Pulls in every `@web-ai-sdk/*` building block: `prompt`, `summarizer`, `translator`, `detector`, `writer`, `rewriter`, `proofreader`, and `webmcp`, each as a regular dependency so consumers don't have to track them individually.
 
 **Docs:** <https://web-ai-sdk.dev/docs/guides/meta-package/>
 
 ## Status
 
-Each underlying scoped package is independently supported in Chrome / Edge with the corresponding Built-in AI flag enabled. See the per-package READMEs for browser support details:
+Each underlying scoped package is independently supported in Chrome / Edge with the corresponding Web AI flag enabled. See the per-package READMEs for browser support details:
 
 - [`@web-ai-sdk/prompt`](https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/prompt)
 - [`@web-ai-sdk/summarizer`](https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/summarizer)

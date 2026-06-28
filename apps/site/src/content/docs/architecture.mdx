@@ -35,7 +35,7 @@ Every `@web-ai-sdk/*` package ships with **no runtime dependencies and no peer d
 
 This is policy, not aspiration. The reasoning:
 
-- The Built-in AI APIs are still evolving. The SDK tracks a moving spec; we don't want to also be tracking a moving dependency graph.
+- The Web AI surface is still evolving. The SDK tracks a moving spec; we don't want to also be tracking a moving dependency graph.
 - A wrapper that introduces transitive dependencies imports their security surface, their breaking changes, and their abandonment risk. We don't think a `LanguageModel` wrapper should ever pull in a logging library or a polyfill.
 - Zero deps means a `pnpm add @web-ai-sdk/prompt` adds exactly one entry to your lockfile.
 
@@ -80,7 +80,7 @@ This shape isn't novel, and that's the point. The most durable JS utility librar
 - **lodash** ceded most of its surface to native array and object methods.
 - **moment** is superseded by the `Temporal` proposal; **date-fns** is now [reorienting to be "Temporal-first"](https://x.com/kossnocorp/status/2056306289480020338): document where `Temporal` replaces a function outright, map the gaps it can't cover, and ship the rest as functions that operate directly on `Temporal` objects.
 
-`web-ai-sdk` starts from that endpoint instead of migrating toward it. The Built-in AI APIs are the primitive; the SDK only owns the lifecycle and ergonomics the primitive leaves rough (feature detection, session reuse, stream smoothing, safe cleanup). As the APIs stabilize, the right outcome is for this layer to get *thinner*, not fatter. If a capability graduates to needing nothing but the raw API, the corresponding wrapper has done its job.
+`web-ai-sdk` starts from that endpoint instead of migrating toward it. The Web AI APIs are the primitive; the SDK only owns the lifecycle and ergonomics the primitive leaves rough (feature detection, session reuse, stream smoothing, safe cleanup). As the APIs stabilize, the right outcome is for this layer to get *thinner*, not fatter. If a capability graduates to needing nothing but the raw API, the corresponding wrapper has done its job.
 
 ## Summary
 

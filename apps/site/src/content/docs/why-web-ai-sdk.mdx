@@ -1,9 +1,9 @@
 ---
 title: Why web-ai-sdk
-description: How web-ai-sdk differs from provider SDKs like Vercel's AI SDK. web-ai-sdk is a typed layer for the browser's Built-in AI APIs, not a server-side model-provider SDK.
+description: How web-ai-sdk differs from provider SDKs like Vercel's AI SDK. web-ai-sdk is a typed layer for the Web AI surface, not a server-side model-provider SDK.
 ---
 
-`web-ai-sdk` is a TypeScript SDK for the Web's Built-in AI APIs: the browser-native `LanguageModel` (Prompt), `Writer`, `Rewriter`, `Proofreader`, `Translator`, `Summarizer`, `LanguageDetector`, and `document.modelContext` (WebMCP) surfaces.
+`web-ai-sdk` is a TypeScript SDK for the Web AI surface: the browser-native `LanguageModel` (Prompt), `Writer`, `Rewriter`, `Proofreader`, `Translator`, `Summarizer`, `LanguageDetector`, and `document.modelContext` (WebMCP) surfaces.
 
 ## Not a provider SDK
 
@@ -27,7 +27,7 @@ That breadth is the point, not an accident. The model abstraction is one surface
 
 ## What the SDK owns
 
-The Built-in AI APIs are young and shifting. Every app that touches them re-implements the same lifecycle, so `web-ai-sdk` owns it once:
+The Web AI surface is young and shifting. Every app that touches it re-implements the same lifecycle, so `web-ai-sdk` owns it once:
 
 - Feature detection and availability checks, with a no-op fallback when an API is missing
 - Session creation, reuse, and cleanup

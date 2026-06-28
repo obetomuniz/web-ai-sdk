@@ -110,9 +110,9 @@ function buildLlmsIndex() {
   return [
     "# web-ai-sdk",
     "",
-    "> Building blocks in TypeScript for the Web's built-in AI APIs. Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.",
+    "> Building blocks in TypeScript for the Web AI surface. Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.",
     "",
-    "Each package wraps one Built-in AI surface (Prompt, Summarizer, Translator, Detector, Writer, Rewriter, Proofreader, WebMCP) plus an optional `/react` adapter. The per-package READMEs (linked below) are the source of truth for the API surface; the docs site hosts hand-curated conceptual guides. Full README content is also available concatenated at [llms-full.txt](" + SITE_URL + "/llms-full.txt).",
+    "Each package wraps one Web AI surface (the seven Built-in AI APIs — Prompt, Summarizer, Translator, Detector, Writer, Rewriter, Proofreader — plus the WebMCP agent surface) and an optional `/react` adapter. The per-package READMEs (linked below) are the source of truth for the API surface; the docs site hosts hand-curated conceptual guides. Full README content is also available concatenated at [llms-full.txt](" + SITE_URL + "/llms-full.txt).",
     "",
     "## Packages",
     "",

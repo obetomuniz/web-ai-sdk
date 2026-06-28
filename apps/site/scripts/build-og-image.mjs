@@ -152,10 +152,10 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
     <circle cx="56" cy="18" r="3.8" fill="${ACCENT_HI}"/>
   </g>
 
-  <!-- Eyebrow pill: white spark bullet + "Built-in AI, the right way" -->
+  <!-- Eyebrow pill: white spark bullet + "Web AI, the right way" -->
   <g transform="translate(70, 220)">
     <circle cx="8" cy="12" r="5" fill="${ACCENT}"/>
-    <text x="24" y="18" font-family="${MONO}" font-size="20" fill="${PAPER_2}" letter-spacing="0">Built-in AI, the right way</text>
+    <text x="24" y="18" font-family="${MONO}" font-size="20" fill="${PAPER_2}" letter-spacing="0">Web AI, the right way</text>
   </g>
 
   <!-- Wordmark, the hero. "web-ai-sdk" with the "ai" in bright accent, plus an
@@ -165,7 +165,7 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
   <rect x="${CARET_X}" y="349" width="66" height="11" rx="2" fill="${ACCENT}"/>
 
   <!-- Tagline -->
-  <text x="70" y="425" font-family="${SANS}" font-weight="600" font-size="31" fill="${PAPER}">The TypeScript SDK <tspan font-weight="400" fill="${PAPER_2}">for the Web's Built-in AI APIs.</tspan></text>
+  <text x="70" y="425" font-family="${SANS}" font-weight="600" font-size="31" fill="${PAPER}">The TypeScript SDK <tspan font-weight="400" fill="${PAPER_2}">for the Web AI surface.</tspan></text>
   <text x="70" y="462" font-family="${SANS}" font-weight="400" font-size="21" fill="${MUTED}">Composable building blocks, no runtime deps, just lifecycle, streaming, and AbortSignals.</text>
 
   <!-- Install pill. One text element (not two) so the space between
