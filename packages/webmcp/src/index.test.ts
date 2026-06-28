@@ -312,6 +312,40 @@ describe("registerTool", () => {
     expect(map.has("t")).toBe(true); // retry landed it
     expect(registerTool_).toHaveBeenCalledTimes(2);
   });
+
+  it("logs and gives up (no uncaught throw) when the retry fails with a non-duplicate error", async () => {
+    let calls = 0;
+    const registerTool_ = vi.fn(() => {
+      calls += 1;
+      // First call: duplicate (enters the microtask retry path). Retry
+      // call: a non-duplicate failure that the old code re-threw from
+      // inside queueMicrotask (uncaught by construction).
+      if (calls === 1) {
+        throw new Error(
+          "Failed to execute 'registerTool' on 'ModelContext': Duplicate tool name",
+        );
+      }
+      throw new Error("InvalidStateError: sandbox unavailable");
+    });
+    Object.defineProperty(navigator, "modelContext", {
+      value: { registerTool: registerTool_ },
+      configurable: true,
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    expect(() =>
+      registerTool({ name: "t", description: "d", execute: async () => ({}) }),
+    ).not.toThrow();
+    await Promise.resolve(); // flush microtask; if the throw survived it would surface here
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/could not be registered after retry/),
+    );
+    expect(warnSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
 });
 
 describe("defineTool", () => {
