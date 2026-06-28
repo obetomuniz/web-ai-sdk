@@ -30,6 +30,10 @@ article-aware summarization, detect-then-summarize chains) are
 deliberately out of scope — the SDK wraps one capability per package;
 composition is your code.
 
+## One capability per package, on purpose
+
+A single text-generation model abstraction reaches exactly one of these built-ins, `LanguageModel` (Prompt). The other seven carry options it cannot express (target language, tone, length, confidence thresholds, per-issue offsets), and one of them, WebMCP, is an *agent* surface rather than a model. That breadth is why the SDK is per-capability rather than one provider adapter. The model abstraction is one surface among eight, not the whole product. See [Why web-ai-sdk](/docs/why-web-ai-sdk/) for the full argument.
+
 ## Why not just use the APIs directly?
 
 You can, and nothing here stops you. The browser's built-in AI APIs are the foundation; web-ai-sdk owns the thin, repetitive lifecycle layer you'd otherwise rewrite in every component, and nothing more.

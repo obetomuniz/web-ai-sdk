@@ -25,6 +25,8 @@ The capability can originate from an official Built-in AI API (`LanguageModel`, 
 
 The structural rule is mechanical: **one package = one cohesive capability**. If the description of a package needs the word "and" to be honest about its scope, it's probably two packages.
 
+This is forced by shape, not just taste. The specialized built-ins carry option surfaces (target language, tone, length, confidence thresholds, per-issue offsets) that a single text-model abstraction cannot express, and WebMCP is an agent surface rather than a model. One capability per package is the only honest boundary.
+
 No SDK package imports from another published SDK package. Composition across capabilities (running a Prompt session over a tool registered with WebMCP, for example) is something you write in your application code.
 
 ## Zero-dependency policy

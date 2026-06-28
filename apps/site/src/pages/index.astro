@@ -442,6 +442,7 @@ const supportVersionTone = (value: string) => {
         </a>
         <div class={ui.navLinks}>
           <a href="#why-raw">Why not raw?</a>
+          <a href="#why-sdk">Why per-capability</a>
           <a href="#packages">Packages</a>
           <a href="#philosophy">Why composable</a>
           <a href="#how">How</a>
@@ -516,6 +517,45 @@ const supportVersionTone = (value: string) => {
                 web-ai-sdk owns the thin, repetitive lifecycle layer you would otherwise rewrite in every app: capability checks, model downloads, session reuse, streaming with chunk smoothing, AbortSignal cleanup, opt-in result caching, and feature-detected fallbacks. Drop down to the raw APIs whenever you want.
               </p>
               <a class={`${ui.pkgDocs} mt-5`} href="#philosophy">See why it's composable <span class={ui.pkgDocsArrow}>→</span></a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class={ui.section} data-section="why-sdk">
+        <div class={ui.container}>
+          <div class={`${ui.sectionHead} ${ui.sectionAnchor}`} id="why-sdk">
+            <div>
+              <div class={ui.sectionEyebrow}>coverage</div>
+              <h2 class="mt-2">Why one package per capability.</h2>
+            </div>
+            <a class={ui.permalink} href="#why-sdk"><span aria-hidden="true">§</span><span class={ui.srOnly}>Link to the why one package per capability section</span></a>
+          </div>
+          <div class={`${ui.twoCol} ${ui.reveal}`} data-reveal>
+            <div>
+              <h3 class={ui.philosophyTitle}><span class={ui.philosophyNum}>01</span> One model surface.</h3>
+              <p class={ui.philosophyText}>
+                A single text-generation model abstraction reaches exactly one of these built-ins, <code>LanguageModel</code> (Prompt). Useful, but one surface, not the whole product.
+              </p>
+              <ul class={ui.philosophyList}>
+                <li>Prompt / LanguageModel only</li>
+                <li>Text, tools, structured output</li>
+              </ul>
+            </div>
+            <div>
+              <h3 class={ui.philosophyTitle}><span class={ui.philosophyNum}>02</span> Seven surfaces beyond it.</h3>
+              <p class={ui.philosophyText}>
+                The rest carry options a text-out contract cannot hold, so each gets its own thin package.
+              </p>
+              <ul class={ui.philosophyList}>
+                <li>Translator (source + target language, pair-cached sessions)</li>
+                <li>Summarizer (type and length)</li>
+                <li>Writer (tone, format, length)</li>
+                <li>Rewriter (relative tone/length shifts)</li>
+                <li>Proofreader (per-issue offsets)</li>
+                <li>Detector (confidence scores, alternates)</li>
+                <li>WebMCP (an agent surface, not a model)</li>
+              </ul>
             </div>
           </div>
         </div>

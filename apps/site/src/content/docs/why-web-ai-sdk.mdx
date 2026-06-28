@@ -11,6 +11,20 @@ It is not a provider SDK for OpenAI, Anthropic, Google AI Studio, or other serve
 
 If your code calls a hosted model behind an API key, reach for a provider SDK. If your code wants to run on the model the browser ships, on-device, with no key and no server, that is what `web-ai-sdk` wraps.
 
+## Specialized built-ins, not just one model
+
+A single text-generation model abstraction can only express one of these surfaces, `LanguageModel` (Prompt). The other seven cannot be funneled through it, because each carries options a text-out contract has no room for.
+
+- **Translator** takes a source and target language and caches a session per language pair.
+- **Summarizer** is shaped by type (key-points, TL;DR, headlines) and length.
+- **Writer** is parameterized by tone, format, and length.
+- **Rewriter** applies relative shifts (shorter, longer, more formal) to existing text.
+- **Proofreader** returns per-issue corrections with offsets into the original input.
+- **Detector** returns a confidence-scored, sorted list of language alternates.
+- **WebMCP** (`document.modelContext`) is an *agent* surface, not a model surface. Tools call into the page, and it does not generate text.
+
+That breadth is the point, not an accident. The model abstraction is one surface among eight, so `web-ai-sdk` is per-capability by design, a thin layer over each, built to get thinner as the platform matures.
+
 ## What the SDK owns
 
 The Built-in AI APIs are young and shifting. Every app that touches them re-implements the same lifecycle, so `web-ai-sdk` owns it once:
