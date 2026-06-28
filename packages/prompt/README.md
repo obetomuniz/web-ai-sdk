@@ -201,6 +201,7 @@ interface Session {
   sendStreaming(input: string, options?: SessionSendOptions): AsyncIterable<string>;
   abort(): void;
   clone(options?: { signal?: AbortSignal }): Promise<Session>;
+  append(messages: LanguageModelMessage[], options?: { signal?: AbortSignal }): Promise<void>; // context without a turn
   onContextOverflow(listener: () => void): () => void; // returns an idempotent cleanup
   destroy(): void;
 }
@@ -258,6 +259,24 @@ try {
 ```
 
 `clone()` throws `SessionDestroyedError` if the base is destroyed and `PromptUnavailableError` if the browser instance doesn't support cloning. Destroying a clone never affects the base, and vice versa.
+
+### Injecting context without a turn — `Session.append()`
+
+Agent loops often need to push tool results or other context into conversation history **without** triggering a model turn. Faking this with an extra `send()` wastes tokens and latency on an empty intermediate response. `Session.append()` forwards to the native `LanguageModel.append()`: the messages land in history, and the next `send` / `sendStreaming` sees them as prior turns.
+
+```ts
+const session = createSession({ systemPrompt });
+await session.send("What's the weather in Tokyo?");
+// The model asked to call a tool; run it yourself, then inject the result:
+await session.append([
+  { role: "assistant", content: "I'll check the weather." },
+  { role: "user", content: "tool result: 24°C, clear" },
+]);
+// The next turn sees the tool result as history — no wasted intermediate turn.
+const plan = await session.send("Based on that, suggest an outfit.");
+```
+
+`append()` throws `SessionDestroyedError` if the session is destroyed and `PromptUnavailableError` if the browser instance doesn't support `append()`. Aborts reject with `PromptAbortError`.
 
 ### Context-window introspection
 
