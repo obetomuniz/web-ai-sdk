@@ -250,4 +250,15 @@ describe("useSession", () => {
     rerender({ samplingMode: "creative" });
     expect(api.create).toHaveBeenCalledTimes(2);
   });
+
+  it("forwards monitor onto the LanguageModel.create() call", async () => {
+    const api = installFakeLanguageModel();
+    const monitor = vi.fn();
+    const { result } = renderHook(() =>
+      useSession({ systemPrompt: "S", monitor }),
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    const createOpts = api.create.mock.calls[0]?.[0];
+    expect(createOpts).toMatchObject({ monitor });
+  });
 });

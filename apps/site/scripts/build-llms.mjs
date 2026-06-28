@@ -4,7 +4,7 @@
 //
 // Inputs:
 //   - packages/*/README.md             (source of truth for llms content)
-//   - apps/site/src/content/docs/** (route enumeration for sitemap)
+//   - apps/site/src/content/docs/** (route enumeration for sitemap; JSX-free conceptual docs feed llms-full.txt)
 // Outputs:
 //   - apps/site/dist/llms.txt
 //   - apps/site/dist/llms-full.txt
@@ -12,7 +12,8 @@
 //
 // llms.txt format follows https://llmstxt.org — H1 title, blockquote
 // summary, per-section bullet list of links. llms-full.txt concatenates the
-// full README bodies so an LLM can ingest everything in one fetch.
+// full README bodies plus the JSX-free conceptual docs so an LLM can ingest
+// everything in one fetch.
 
 import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
@@ -47,8 +48,26 @@ const PACKAGES = [
 
 const readmeUrl = (dir) => `${REPO_URL}/tree/main/packages/${dir}#readme`;
 
+// Cross-cutting conceptual docs (plain Markdown, no JSX) appended to
+// llms-full.txt so a coding agent gets the mental model + browser matrix in one
+// fetch. Keep this list to JSX-free docs; guides/react docs stay out.
+const CONCEPTUAL_DOCS = [
+  { file: "browser-support.mdx", route: "/docs/browser-support/" },
+  { file: "architecture.mdx", route: "/docs/architecture/" },
+  { file: "why-web-ai-sdk.mdx", route: "/docs/why-web-ai-sdk/" },
+];
+
 function readReadme(dir) {
   return readFileSync(resolve(PACKAGES_DIR, dir, "README.md"), "utf8");
+}
+
+// Read a content doc and strip its leading YAML frontmatter block so only the
+// Markdown body is concatenated into llms-full.txt.
+function readDocBody(absPath) {
+  const raw = readFileSync(absPath, "utf8");
+  // Frontmatter is a leading `---` line, content, then a closing `---` line.
+  const fm = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/;
+  return raw.replace(fm, "").trim();
 }
 
 function summary(md) {
@@ -167,6 +186,19 @@ function buildLlmsFull() {
     parts.push(`<!-- Source: ${readmeUrl(p.dir)} -->`);
     parts.push("");
     parts.push(md.trimEnd());
+    parts.push("");
+  }
+  parts.push("---");
+  parts.push("");
+  parts.push("# Conceptual guides");
+  parts.push("");
+  for (const d of CONCEPTUAL_DOCS) {
+    const body = readDocBody(resolve(DOCS_CONTENT_DIR, d.file));
+    parts.push("---");
+    parts.push("");
+    parts.push(`<!-- Source: ${SITE_URL}${d.route} -->`);
+    parts.push("");
+    parts.push(body);
     parts.push("");
   }
   return parts.join("\n");
