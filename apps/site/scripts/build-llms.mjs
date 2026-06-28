@@ -4,7 +4,7 @@
 //
 // Inputs:
 //   - packages/*/README.md             (source of truth for llms content)
-//   - apps/site/src/content/docs/** (route enumeration for sitemap)
+//   - apps/site/src/content/docs/** (route enumeration for sitemap; JSX-free conceptual docs feed llms-full.txt)
 // Outputs:
 //   - apps/site/dist/llms.txt
 //   - apps/site/dist/llms-full.txt
@@ -12,7 +12,8 @@
 //
 // llms.txt format follows https://llmstxt.org — H1 title, blockquote
 // summary, per-section bullet list of links. llms-full.txt concatenates the
-// full README bodies so an LLM can ingest everything in one fetch.
+// full README bodies plus the JSX-free conceptual docs so an LLM can ingest
+// everything in one fetch.
 
 import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
