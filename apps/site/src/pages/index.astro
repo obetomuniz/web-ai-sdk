@@ -49,6 +49,15 @@ const structuredData = {
   "@context": "https://schema.org",
   "@graph": [
     {
+      "@type": "Organization",
+      "@id": "https://web-ai-sdk.dev/#org",
+      name: "web-ai-sdk",
+      url: CANONICAL_URL,
+      description:
+        "web-ai-sdk is a TypeScript SDK for the Web's Built-in AI APIs: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP.",
+      sameAs: [repoUrl, npmOrgUrl, "https://github.com/obetomuniz"],
+    },
+    {
       "@type": "WebSite",
       "@id": "https://web-ai-sdk.dev/#website",
       name: "web-ai-sdk",
@@ -73,7 +82,9 @@ const structuredData = {
         "@type": "Person",
         name: "Beto Muniz",
         url: "https://github.com/obetomuniz",
+        sameAs: ["https://github.com/obetomuniz", authorUrl],
       },
+      publisher: { "@id": "https://web-ai-sdk.dev/#org" },
       mainEntityOfPage: { "@id": "https://web-ai-sdk.dev/#website" },
     },
     {
@@ -93,7 +104,9 @@ const structuredData = {
         "@type": "Person",
         name: "Beto Muniz",
         url: "https://github.com/obetomuniz",
+        sameAs: ["https://github.com/obetomuniz", authorUrl],
       },
+      publisher: { "@id": "https://web-ai-sdk.dev/#org" },
       offers: {
         "@type": "Offer",
         price: "0",
