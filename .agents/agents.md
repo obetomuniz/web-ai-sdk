@@ -73,7 +73,7 @@ Full rules in [`CONTRIBUTING.md` § Governance](../CONTRIBUTING.md#governance); 
 │   │   ├── tsup.config.ts
 │   │   ├── vitest.config.ts
 │   │   └── README.md
-│   ├── translator/               # same shape; adds serialize.ts for DOM block walking
+│   ├── translator/               # same shape; adds api.ts + cache.ts
 │   ├── summarizer/               # same shape; adds skeleton.ts + cache.ts
 │   ├── prompt/                   # same shape; adds api.ts + cache.ts
 │   ├── detector/                 # same shape; adds api.ts + cache.ts
@@ -150,7 +150,7 @@ These rules apply to the API-wrapper packages (`@web-ai-sdk/prompt`, `webmcp`, `
 
 - **No UI components in the core wrappers.** A core package may never render DOM. The React adapter is a hook, not a component. UI primitives would ship as a separate `@web-ai-sdk/ui` package, not bolted into a wrapper.
 - **Feature detect, never throw.** If the underlying browser API is missing, the package is a no-op (return a no-op cleanup, return `undefined`, etc.) so consumers can ship the same code to all browsers.
-- **Configurable selectors / roots.** Don't hardcode page-specific assumptions. The translator's `[data-translate-root]` is a default, not a requirement; every selector / root element must be overridable via the API.
+- **Configurable selectors / roots.** Don't hardcode page-specific assumptions; every selector or root element an SDK helper accepts must be overridable via the API.
 - **Cleanup must be idempotent.** Returning a cleanup function from `register*` / `start*` is the universal lifecycle. Calling it twice must not throw.
 
 ### React adapter shape
