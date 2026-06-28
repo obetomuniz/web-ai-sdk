@@ -280,7 +280,7 @@ const plan = await session.send("Based on that, suggest an outfit.");
 
 ### Prefill and message arrays
 
-`Session.send` / `sendStreaming` accept either a single string turn or a full `LanguageModelMessage[]`. Passing an array lets you supply multi-message context, control roles per turn, and — most usefully — **prefill** the assistant's reply: set `prefix: true` on the trailing `assistant` message and the model treats its `content` as the start of its own answer rather than a turn to respond to.
+`Session.send` / `sendStreaming` accept either a single string turn or a full `LanguageModelMessage[]`. Passing an array lets you supply multi-message context, control roles per turn, and, most usefully, **prefill** the assistant's reply: set `prefix: true` on the trailing `assistant` message and the model treats its `content` as the start of its own answer rather than a turn to respond to.
 
 ```ts
 const session = createSession({ systemPrompt });
@@ -300,14 +300,14 @@ const json = await session.send([
 // model completes: feline"}  ->  you parse {"thought":"feline"}
 ```
 
-**Prefill vs `responseConstraint`** — both shape output, different trade-offs:
+**Prefill vs `responseConstraint`**: both shape output, different trade-offs:
 
-- **Prefill** (`prefix: true`): cheaper per turn (no schema inlined into context), weaker guarantee — the model may drift off the prefixed format. Good for cheap nudges and structured-output hints that you parse defensively.
+- **Prefill** (`prefix: true`): cheaper per turn (no schema inlined into context), weaker guarantee; the model may drift off the prefixed format. Good for cheap nudges and structured-output hints that you parse defensively.
 - **`responseConstraint`**: enforced JSON Schema (the runtime validates against it), higher per-turn token cost when the schema is large. Use `omitResponseConstraintInput: true` to drop the inlined schema and keep only the enforced constraint.
 
 They compose: prefill the opening brace, set `responseConstraint` for the full shape.
 
-**Spec rule:** `prefix: true` is only valid on the **trailing** `assistant` message. Anywhere else (a non-final message, a non-assistant role) the browser throws a `"SyntaxError"` `DOMException` — the SDK does **not** catch this, so it propagates to your `send` / `sendStreaming` caller.
+**Spec rule:** `prefix: true` is only valid on the **trailing** `assistant` message. Anywhere else (a non-final message, a non-assistant role) the browser throws a `"SyntaxError"` `DOMException`. The SDK does **not** catch this, so it propagates to your `send` / `sendStreaming` caller.
 
 > **Note on `content`:** `LanguageModelMessage.content` is currently `string` only. Multimodal `ContentPart[]` content (images, audio) is tracked as a future enhancement; no timeline is promised.
 
