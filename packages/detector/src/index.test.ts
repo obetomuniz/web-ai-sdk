@@ -309,4 +309,89 @@ describe("detect", () => {
       detect({ input: "hi", signal: controller.signal }),
     ).rejects.toMatchObject({ name: "AbortError" });
   });
+
+  it('honors cache: "session" via sessionStorage', async () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: vi.fn((k: string) => store.get(k) ?? null),
+      setItem: vi.fn((k: string, v: string) => {
+        store.set(k, v);
+      }),
+    };
+    vi.stubGlobal("sessionStorage", storage);
+    try {
+      const api = installFakeDetector();
+      const first = await detect({
+        input: "hello",
+        cache: "session",
+        cacheKey: "k",
+      });
+      expect(first.cached).toBe(false);
+      expect(first.output?.language).toBe("en");
+      expect(storage.setItem).toHaveBeenCalledWith(
+        "detector:k",
+        expect.any(String),
+      );
+
+      const createsAfterFirst = api.create.mock.calls.length;
+      const second = await detect({
+        input: "hello",
+        cache: "session",
+        cacheKey: "k",
+      });
+      expect(second.output?.language).toBe("en");
+      expect(second.cached).toBe(true);
+      expect(api.create).toHaveBeenCalledTimes(createsAfterFirst);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('honors cache: "local" via localStorage', async () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: vi.fn((k: string) => store.get(k) ?? null),
+      setItem: vi.fn((k: string, v: string) => {
+        store.set(k, v);
+      }),
+    };
+    vi.stubGlobal("localStorage", storage);
+    try {
+      const api = installFakeDetector();
+      const first = await detect({
+        input: "hello",
+        cache: "local",
+        cacheKey: "k",
+      });
+      expect(first.cached).toBe(false);
+      expect(first.output?.language).toBe("en");
+      expect(storage.setItem).toHaveBeenCalledWith(
+        "detector:k",
+        expect.any(String),
+      );
+
+      const createsAfterFirst = api.create.mock.calls.length;
+      const second = await detect({
+        input: "hello",
+        cache: "local",
+        cacheKey: "k",
+      });
+      expect(second.output?.language).toBe("en");
+      expect(second.cached).toBe(true);
+      expect(api.create).toHaveBeenCalledTimes(createsAfterFirst);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("aborts without writing the cache", async () => {
+    installFakeDetector();
+    const cache = { get: vi.fn(() => null), set: vi.fn() };
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      detect({ input: "hi", cache, signal: controller.signal }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(cache.set).not.toHaveBeenCalled();
+  });
 });

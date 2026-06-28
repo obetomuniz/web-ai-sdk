@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __clearSessionCacheForTests } from "../api.js";
 import { useTranslator } from "./index.js";
@@ -116,5 +116,45 @@ describe("useTranslator", () => {
     );
     await waitFor(() => expect(result.current.status).toBe("done"));
     expect(result.current.output).toBeNull();
+  });
+
+  it("discards a stale request when input changes (cleanup aborts the prior run)", async () => {
+    const resolvers: Array<(out: string) => void> = [];
+    const methodSpy = vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          resolvers.push(resolve);
+        }),
+    );
+    const api = {
+      availability: vi.fn(async () => "available" as const),
+      create: vi.fn(async () => ({ translate: methodSpy })),
+    };
+    (globalThis as { Translator?: typeof api }).Translator = api;
+
+    const { result, rerender } = renderHook(
+      ({ input }: { input: string }) =>
+        useTranslator({ input, sourceLanguage: "pt", targetLanguage: "en" }),
+      { initialProps: { input: "A" } },
+    );
+    await waitFor(() => expect(resolvers).toHaveLength(1));
+
+    rerender({ input: "B" });
+    await waitFor(() => expect(resolvers).toHaveLength(2));
+
+    await act(async () => {
+      resolvers[0]?.("stale-A");
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.output).not.toBe("stale-A");
+
+    await act(async () => {
+      resolvers[1]?.("fresh-B");
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    expect(result.current.output).toBe("fresh-B");
   });
 });

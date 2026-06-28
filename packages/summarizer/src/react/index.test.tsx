@@ -145,4 +145,44 @@ describe("useSummarizer", () => {
     await waitFor(() => expect(result.current.status).toBe("unavailable"));
     expect(result.current.error).toBeNull();
   });
+
+  it("discards a stale request when input changes (cleanup aborts the prior run)", async () => {
+    const resolvers: Array<(out: string) => void> = [];
+    const methodSpy = vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          resolvers.push(resolve);
+        }),
+    );
+    const api = {
+      availability: vi.fn(async () => "available" as const),
+      create: vi.fn(async () => ({ summarize: methodSpy })),
+    };
+    (globalThis as { Summarizer?: typeof api }).Summarizer = api;
+
+    const { result, rerender } = renderHook(
+      ({ input }: { input: string }) =>
+        useSummarizer({ language: "en", input }),
+      { initialProps: { input: "A" } },
+    );
+    await waitFor(() => expect(resolvers).toHaveLength(1));
+
+    rerender({ input: "B" });
+    await waitFor(() => expect(resolvers).toHaveLength(2));
+
+    await act(async () => {
+      resolvers[0]?.("stale-A");
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.output).not.toBe("stale-A");
+
+    await act(async () => {
+      resolvers[1]?.("fresh-B");
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    expect(result.current.output).toBe("fresh-B");
+  });
 });
