@@ -15,7 +15,7 @@ If your code calls a hosted model behind an API key, reach for a provider SDK. I
 
 A single text-generation model abstraction can only express one of these surfaces, `LanguageModel` (Prompt). The other seven cannot be funneled through it, because each carries options a text-out contract has no room for.
 
-- **Translator** takes a target language and serializes whole DOM blocks, with sessions cached per source-target pair.
+- **Translator** takes a source and target language and caches a session per language pair.
 - **Summarizer** is shaped by type (key-points, TL;DR, headlines) and length.
 - **Writer** is parameterized by tone, format, and length.
 - **Rewriter** applies relative shifts (shorter, longer, more formal) to existing text.
