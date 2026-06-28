@@ -190,6 +190,7 @@ interface CreateSessionOptions {
   expectedInputs?: LanguageModelExpectedInput[];
   expectedOutputs?: LanguageModelExpectedOutput[];
   tools?: LanguageModelTool[]; // experimental: native function-calling passthrough
+  monitor?: (m: CreateMonitor) => void;     // observe first-call model download; wins over createOptions.monitor
   // Pass `initialPrompts` here to seed multi-turn context.
   createOptions?: Partial<LanguageModelCreateOptions>;
 }

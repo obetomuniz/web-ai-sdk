@@ -17,6 +17,7 @@
  */
 
 import {
+  type CreateMonitor,
   getLanguageModelApi,
   type LanguageModelApi,
   type LanguageModelCreateOptions,
@@ -181,6 +182,12 @@ export interface CreateSessionOptions {
    */
   tools?: LanguageModelTool[];
   /**
+   * Observe the first-call model download (~1.7 GB on a fresh profile).
+   * Forwarded to `LanguageModel.create()`. When both this and
+   * `createOptions.monitor` are set, the top-level `monitor` wins.
+   */
+  monitor?: (m: CreateMonitor) => void;
+  /**
    * Override `LanguageModel.create()` options entirely. Merged on top of
    * defaults. Pass `initialPrompts` here to seed multi-turn context (e.g.
    * restoring a conversation from storage).
@@ -311,6 +318,7 @@ const buildCreateOptions = (
         : {}),
     ...(options.tools ? { tools: options.tools } : {}),
     ...options.createOptions,
+    ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 };
 
