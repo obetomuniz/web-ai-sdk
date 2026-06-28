@@ -9,7 +9,7 @@ const detectBrowser = (): "chrome" | "edge" | "other" => {
 };
 
 /**
- * Hint shown when a demo's underlying Built-in AI API is unavailable.
+ * Hint shown when a demo's underlying Web AI API is unavailable.
  *
  * Desktop Chrome and Edge implement these APIs but enable them differently
  * (different flags, channels, and versions), so each gets its own instructions.
@@ -31,10 +31,10 @@ export const UnavailableHint = ({
   if (browser === "other") {
     return (
       <p className="demo-hint demo-hint--warn">
-        {api} isn't supported in this browser yet. The Web's Built-in AI APIs
-        currently run only on desktop Chrome and Edge (mobile browsers,
-        including Chrome and Edge on iOS and Android, aren't supported yet).
-        Open this page on desktop Chrome or Edge to try the demo.
+        {api} isn't supported in this browser yet. The Web AI APIs currently run
+        only on desktop Chrome and Edge (mobile browsers, including Chrome and
+        Edge on iOS and Android, aren't supported yet). Open this page on
+        desktop Chrome or Edge to try the demo.
       </p>
     );
   }

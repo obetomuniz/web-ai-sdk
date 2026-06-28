@@ -1,6 +1,6 @@
 # web-ai-sdk
 
-**web-ai-sdk is a TypeScript SDK for the Web's Built-in AI APIs.**
+**web-ai-sdk is a TypeScript SDK for the Web AI surface.**
 
 Use Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP with a stable, typed, composable interface, instead of wiring up each experimental browser API by hand.
 
@@ -16,7 +16,7 @@ A small, focused monorepo of framework-agnostic packages that smooth over the gn
 
 ## Why this exists
 
-The Web's Built-in AI APIs are promising but still early and shifting. Every app that touches them re-implements the same lifecycle: feature-detect, wait for model availability, create and reuse sessions, stream chunks, abort cleanly, and fall back when the capability is missing. web-ai-sdk owns that layer so you build against one stable, typed surface rather than coupling your whole app to today's experimental API shape. The wrappers feature-detect and no-op when a browser lacks the API, so the same code ships everywhere.
+The Web AI surface is promising but still early and shifting. Every app that touches it re-implements the same lifecycle: feature-detect, wait for model availability, create and reuse sessions, stream chunks, abort cleanly, and fall back when the capability is missing. web-ai-sdk owns that layer so you build against one stable, typed surface rather than coupling your whole app to today's experimental API shape. The wrappers feature-detect and no-op when a browser lacks the API, so the same code ships everywhere.
 
 The SDK is per-capability because the Web ships more than one AI surface. Six specialized built-ins (Translator, Summarizer, Writer, Rewriter, Proofreader, Language Detector) each carry option spaces a single text-model abstraction cannot express, and WebMCP (`document.modelContext`) is an agent surface rather than a model at all. That breadth is the point, not an accident. One package per capability, and the model abstraction is one of them rather than the whole product.
 
@@ -53,7 +53,7 @@ The browser is becoming both an AI runtime and an agent surface. The Built-in AI
 
 ## Why composable
 
-Browsers are shipping built-in AI APIs behind flags. The shape changes; the lifecycle is similar across them: feature-detect, lazily create a session, stream chunks, cache results, clean up. Those concerns are framework-agnostic and worth sharing.
+Browsers are shipping Web AI APIs behind flags. The shape changes; the lifecycle is similar across them: feature-detect, lazily create a session, stream chunks, cache results, clean up. Those concerns are framework-agnostic and worth sharing.
 
 **We ship that lifecycle layer.** Framework adapters, polyfills, UI primitives stay optional subpaths so they don't constrain your design system, framework, or styling stack. Pick the layers you need; skip the rest.
 
@@ -141,7 +141,7 @@ Toolchain: Node 24 (pinned in `.nvmrc`) + pnpm 9.15.0 (pinned via `package.json#
 
 ## Roadmap
 
-Directional, not a commitment. The bias is toward owning only the lifecycle and ergonomics the raw APIs leave rough, and thinning out as the Built-in AI APIs stabilize.
+Directional, not a commitment. The bias is toward owning only the lifecycle and ergonomics the raw APIs leave rough, and thinning out as the Web AI APIs stabilize.
 
 - Native tool calling for the Prompt API
 - Session resilience (auto-retry on session loss)

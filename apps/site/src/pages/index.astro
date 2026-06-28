@@ -63,7 +63,7 @@ const structuredData = {
       name: "web-ai-sdk",
       url: CANONICAL_URL,
       description:
-        "web-ai-sdk is a TypeScript SDK for the Web's Built-in AI APIs: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps.",
+        "web-ai-sdk is a TypeScript SDK for the Web AI surface: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps.",
       inLanguage: "en",
     },
     {
@@ -71,7 +71,7 @@ const structuredData = {
       "@id": "https://web-ai-sdk.dev/#sourcecode",
       name: "web-ai-sdk",
       description:
-        "web-ai-sdk is a TypeScript SDK for the Web's Built-in AI APIs: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP.",
+        "web-ai-sdk is a TypeScript SDK for the Web AI surface: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP.",
       url: CANONICAL_URL,
       codeRepository: repoUrl,
       programmingLanguage: ["TypeScript", "JavaScript"],
@@ -95,7 +95,7 @@ const structuredData = {
       operatingSystem: "Web",
       softwareVersion: SDK_VERSION,
       description:
-        "web-ai-sdk is a TypeScript SDK for the Web's Built-in AI APIs: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps.",
+        "web-ai-sdk is a TypeScript SDK for the Web AI surface: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps.",
       url: CANONICAL_URL,
       codeRepository: repoUrl,
       programmingLanguage: ["TypeScript", "JavaScript"],
@@ -123,7 +123,7 @@ const structuredData = {
           name: "What does web-ai-sdk wrap?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "web-ai-sdk wraps the Web's built-in AI APIs: Prompt, Summarizer, Translator, Language Detector, Writer, Rewriter, Proofreader, and WebMCP.",
+            text: "web-ai-sdk wraps the Web AI surface: Prompt, Summarizer, Translator, Language Detector, Writer, Rewriter, Proofreader, and WebMCP.",
           },
         },
         {
@@ -136,7 +136,7 @@ const structuredData = {
         },
         {
           "@type": "Question",
-          name: "What happens when a browser does not support a built-in AI API?",
+          name: "What happens when a browser does not support a Web AI API?",
           acceptedAnswer: {
             "@type": "Answer",
             text: "The wrappers feature-detect the browser APIs and fall back to no-op cleanup functions, undefined availability, or typed unavailable errors so apps can ship without browser-specific branches.",
@@ -372,10 +372,10 @@ const supportVersionTone = (value: string) => {
         });
       })();
     </script>
-    <title>web-ai-sdk · TypeScript SDK for the Web's Built-in AI APIs</title>
+    <title>web-ai-sdk · TypeScript SDK for the Web AI surface</title>
     <meta
       name="description"
-      content="web-ai-sdk is a TypeScript SDK for the Web's Built-in AI APIs: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps."
+      content="web-ai-sdk is a TypeScript SDK for the Web AI surface: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps."
     />
     <link rel="icon" type="image/svg+xml" href={pathFromBase("favicon.svg")} />
     <link rel="canonical" href={CANONICAL_URL} />
@@ -428,16 +428,16 @@ const supportVersionTone = (value: string) => {
     <meta property="og:type" content="website" />
     <meta property="og:url" content={CANONICAL_URL} />
     <meta property="og:site_name" content="web-ai-sdk" />
-    <meta property="og:title" content="web-ai-sdk · TypeScript SDK for the Web's Built-in AI APIs" />
-    <meta property="og:description" content="web-ai-sdk is a TypeScript SDK for the Web's Built-in AI APIs: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps." />
+    <meta property="og:title" content="web-ai-sdk · TypeScript SDK for the Web AI surface" />
+    <meta property="og:description" content="web-ai-sdk is a TypeScript SDK for the Web AI surface: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps." />
     <meta property="og:image" content={ogImageUrl} />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="web-ai-sdk · npm install @web-ai-sdk/all" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="web-ai-sdk · TypeScript SDK for the Web's Built-in AI APIs" />
-    <meta name="twitter:description" content="web-ai-sdk is a TypeScript SDK for the Web's Built-in AI APIs: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps." />
+    <meta name="twitter:title" content="web-ai-sdk · TypeScript SDK for the Web AI surface" />
+    <meta name="twitter:description" content="web-ai-sdk is a TypeScript SDK for the Web AI surface: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps." />
     <meta name="twitter:image" content={ogImageUrl} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -489,7 +489,7 @@ const supportVersionTone = (value: string) => {
             <span class={ui.caret}></span>
           </h1>
           <p class={`${ui.subhead} ${heroTextShadow}`}>
-            The TypeScript SDK for the Web's Built-in AI APIs.<span class={ui.subheadSub}>Composable building blocks, no runtime deps, just lifecycle, streaming, and AbortSignals.</span>
+            The TypeScript SDK for the Web AI surface.<span class={ui.subheadSub}>Composable building blocks, no runtime deps, just lifecycle, streaming, and AbortSignals.</span>
           </p>
           <a class={`${ui.pkgDocs} ${heroTextShadow} w-fit`} href="#how">
             See the same task: 15 lines with the SDK vs 37+ with the raw APIs
@@ -523,7 +523,7 @@ const supportVersionTone = (value: string) => {
           </div>
           <div class={`${ui.whyRawGrid} ${ui.reveal}`} data-reveal>
             <p class={ui.whyRawLead}>
-              You can, and nothing here stops you. The browser's built-in AI APIs are the foundation.
+              You can, and nothing here stops you. The Web AI surface is the foundation.
             </p>
             <div>
               <p class={ui.whyRawText}>
@@ -634,7 +634,7 @@ const supportVersionTone = (value: string) => {
             <div>
               <h3 class={ui.philosophyTitle}><span class={ui.philosophyNum}>01</span> We handle the rough edges.</h3>
               <p class={ui.philosophyText}>
-                The built-in AI surface is young. Capability checks, model downloads, abortable streams, session lifetimes, and DOM-rebuild safety are all things you would otherwise re-implement in every component.
+                The Web AI surface is young. Capability checks, model downloads, abortable streams, session lifetimes, and DOM-rebuild safety are all things you would otherwise re-implement in every component.
               </p>
               <ul class={ui.philosophyList}>
                 <li>Feature detection per package</li>
@@ -663,7 +663,7 @@ const supportVersionTone = (value: string) => {
             <div class={`${ui.stackRowBase} ${ui.stackRowApi}`}>
               <span class={ui.stackIdx}>00</span>
               <div class={ui.stackBody}>
-                <div class={`${ui.stackName} ${ui.stackNameMuted}`}>Browser built-in AI</div>
+                <div class={`${ui.stackName} ${ui.stackNameMuted}`}>Browser Web AI</div>
                 <div class={`${ui.stackDetail} ${ui.stackDetailMuted}`}>document.modelContext, Summarizer, Translator, LanguageModel, LanguageDetector, Writer, Rewriter, Proofreader</div>
               </div>
               <span class={ui.stackOwner}>platform</span>
@@ -718,7 +718,7 @@ const supportVersionTone = (value: string) => {
             <div>
               <div class={ui.sectionEyebrow}>support</div>
               <h2 class="mt-2">Browser support.</h2>
-              <p class="mt-3.5">Built-in AI lands engine by engine, and it is desktop-only for now: mobile browsers, including Chrome and Edge on iOS and Android, are not supported yet. Where it is not there yet, you get a feature-detected no-op so your code does not crash.</p>
+              <p class="mt-3.5">Web AI support lands engine by engine, and it is desktop-only for now: mobile browsers, including Chrome and Edge on iOS and Android, are not supported yet. Where it is not there yet, you get a feature-detected no-op so your code does not crash.</p>
             </div>
             <a class={ui.permalink} href="#support"><span aria-hidden="true">§</span><span class={ui.srOnly}>Link to Browser support section</span></a>
           </div>
@@ -790,7 +790,7 @@ const supportVersionTone = (value: string) => {
         <div class={ui.footerGrid}>
           <div>
             <div class={ui.footerBrandTitle}><span>web-ai-sdk</span><span class={ui.caret}></span></div>
-            <p class={ui.footerBrandText}>The TypeScript SDK for the Web's Built-in AI APIs.</p>
+            <p class={ui.footerBrandText}>The TypeScript SDK for the Web AI surface.</p>
           </div>
           <div>
             <h3 class={ui.footerColTitle}>Project</h3>

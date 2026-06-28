@@ -5,9 +5,9 @@
     {
       "name": "web-ai-sdk-docs",
       "type": "skill-md",
-      "description": "Use web-ai-sdk documentation and package references to build with the Web's built-in AI APIs.",
+      "description": "Use web-ai-sdk documentation and package references to build with the Web AI surface.",
       "url": "https://web-ai-sdk.dev/.well-known/agent-skills/web-ai-sdk-docs/SKILL.md",
-      "digest": "sha256:4ff5c2fc09d4cc2fee24b8f3899abcc002cb618b44069818878e3de51e319e18"
+      "digest": "sha256:3fa74be4d90045bb9a5547322ebbfd5d73ebb98083f41c4c505dcf1fbf521716"
     }
   ]
 }

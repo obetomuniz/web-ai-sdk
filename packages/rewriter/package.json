@@ -1,7 +1,7 @@
 {
   "name": "@web-ai-sdk/rewriter",
   "version": "0.6.2",
-  "description": "Rewriter API support for web-ai-sdk, the TypeScript SDK for the Web's Built-in AI APIs.",
+  "description": "Rewriter API support for web-ai-sdk, the TypeScript SDK for the Web AI surface.",
   "license": "MIT",
   "author": "Beto Muniz",
   "homepage": "https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/rewriter#readme",
