@@ -404,4 +404,126 @@ describe("summarize", () => {
     >;
     expect(availabilityOpts.preference).toBe("speed");
   });
+
+  it('honors cache: "session" via sessionStorage', async () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: vi.fn((k: string) => store.get(k) ?? null),
+      setItem: vi.fn((k: string, v: string) => {
+        store.set(k, v);
+      }),
+    };
+    vi.stubGlobal("sessionStorage", storage);
+    try {
+      const api = installFakeSummarizer({ summary: "Stored." });
+      const first = await summarize({
+        language: "en",
+        input: "body",
+        cache: "session",
+        cacheKey: "k",
+      });
+      expect(first).toEqual({ output: "Stored.", cached: false });
+      expect(storage.setItem).toHaveBeenCalledWith("summarizer:k", "Stored.");
+
+      const createsAfterFirst = api.create.mock.calls.length;
+      const second = await summarize({
+        language: "en",
+        input: "body",
+        cache: "session",
+        cacheKey: "k",
+      });
+      expect(second).toEqual({ output: "Stored.", cached: true });
+      expect(api.create).toHaveBeenCalledTimes(createsAfterFirst);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('honors cache: "local" via localStorage', async () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: vi.fn((k: string) => store.get(k) ?? null),
+      setItem: vi.fn((k: string, v: string) => {
+        store.set(k, v);
+      }),
+    };
+    vi.stubGlobal("localStorage", storage);
+    try {
+      const api = installFakeSummarizer({ summary: "Stored." });
+      const first = await summarize({
+        language: "en",
+        input: "body",
+        cache: "local",
+        cacheKey: "k",
+      });
+      expect(first).toEqual({ output: "Stored.", cached: false });
+      expect(storage.setItem).toHaveBeenCalledWith("summarizer:k", "Stored.");
+
+      const createsAfterFirst = api.create.mock.calls.length;
+      const second = await summarize({
+        language: "en",
+        input: "body",
+        cache: "local",
+        cacheKey: "k",
+      });
+      expect(second).toEqual({ output: "Stored.", cached: true });
+      expect(api.create).toHaveBeenCalledTimes(createsAfterFirst);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("aborts without writing the cache", async () => {
+    installFakeSummarizer({ summary: "..." });
+    const cache = { get: vi.fn(() => null), set: vi.fn() };
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      summarize({
+        language: "en",
+        input: "body",
+        cache,
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(cache.set).not.toHaveBeenCalled();
+  });
+
+  it("aborts a streaming summarize without writing the cache", async () => {
+    let resolveGate: () => void = () => {};
+    const gate = new Promise<void>((r) => {
+      resolveGate = r;
+    });
+    const api: FakeApi = {
+      availability: vi.fn(async () => "available"),
+      create: vi.fn(async () => ({
+        summarize: vi.fn(),
+        summarizeStreaming: async function* () {
+          yield "a";
+          await gate;
+          yield "b";
+        },
+      })),
+    };
+    (globalThis as { Summarizer?: FakeApi }).Summarizer = api;
+
+    const controller = new AbortController();
+    const cache = { get: vi.fn(() => null), set: vi.fn() };
+    const updates: string[] = [];
+    const p = summarize({
+      language: "en",
+      input: "body",
+      cache,
+      signal: controller.signal,
+      onUpdate: (c) => updates.push(c),
+    });
+    for (let i = 0; i < 50 && updates.length === 0; i++) {
+      await Promise.resolve();
+    }
+    expect(updates).toEqual(["a"]);
+    controller.abort();
+    resolveGate();
+    await expect(p).rejects.toMatchObject({ name: "AbortError" });
+    expect(cache.set).not.toHaveBeenCalled();
+  });
 });

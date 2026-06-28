@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __clearSessionCacheForTests } from "../api.js";
 import { useDetector } from "./index.js";
@@ -111,5 +111,48 @@ describe("useDetector", () => {
 
     await waitFor(() => expect(result.current.status).toBe("done"));
     expect(result.current.output).toBeNull();
+  });
+
+  it("discards a stale request when input changes (cleanup aborts the prior run)", async () => {
+    type FakeResults = Array<{
+      detectedLanguage: string;
+      confidence: number;
+    }>;
+    const resolvers: Array<(out: FakeResults) => void> = [];
+    const methodSpy = vi.fn(
+      () =>
+        new Promise<FakeResults>((resolve) => {
+          resolvers.push(resolve);
+        }),
+    );
+    const api = {
+      availability: vi.fn(async () => "available"),
+      create: vi.fn(async () => ({ detect: methodSpy })),
+    };
+    (globalThis as { LanguageDetector?: typeof api }).LanguageDetector = api;
+
+    const { result, rerender } = renderHook(
+      ({ input }: { input: string }) => useDetector({ input }),
+      { initialProps: { input: "A" } },
+    );
+    await waitFor(() => expect(resolvers).toHaveLength(1));
+
+    rerender({ input: "B" });
+    await waitFor(() => expect(resolvers).toHaveLength(2));
+
+    await act(async () => {
+      resolvers[0]?.([{ detectedLanguage: "stale-A", confidence: 0.9 }]);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.output?.language).not.toBe("stale-A");
+
+    await act(async () => {
+      resolvers[1]?.([{ detectedLanguage: "fresh-B", confidence: 0.9 }]);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    expect(result.current.output?.language).toBe("fresh-B");
   });
 });

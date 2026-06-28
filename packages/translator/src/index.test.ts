@@ -425,4 +425,93 @@ describe("translate", () => {
     >;
     expect(createArgs.targetLanguage).toBe("en");
   });
+
+  it('honors cache: "session" via sessionStorage', async () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: vi.fn((k: string) => store.get(k) ?? null),
+      setItem: vi.fn((k: string, v: string) => {
+        store.set(k, v);
+      }),
+    };
+    vi.stubGlobal("sessionStorage", storage);
+    try {
+      const { api } = installFakeTranslator();
+      const first = await translate({
+        input: "Olá",
+        sourceLanguage: "pt",
+        targetLanguage: "en",
+        cache: "session",
+        cacheKey: "k",
+      });
+      expect(first).toEqual({ output: "[t]Olá", cached: false });
+      expect(storage.setItem).toHaveBeenCalledWith("translator:k", "[t]Olá");
+
+      const createsAfterFirst = api.create.mock.calls.length;
+      const second = await translate({
+        input: "Olá",
+        sourceLanguage: "pt",
+        targetLanguage: "en",
+        cache: "session",
+        cacheKey: "k",
+      });
+      expect(second).toEqual({ output: "[t]Olá", cached: true });
+      expect(api.create).toHaveBeenCalledTimes(createsAfterFirst);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('honors cache: "local" via localStorage', async () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: vi.fn((k: string) => store.get(k) ?? null),
+      setItem: vi.fn((k: string, v: string) => {
+        store.set(k, v);
+      }),
+    };
+    vi.stubGlobal("localStorage", storage);
+    try {
+      const { api } = installFakeTranslator();
+      const first = await translate({
+        input: "Olá",
+        sourceLanguage: "pt",
+        targetLanguage: "en",
+        cache: "local",
+        cacheKey: "k",
+      });
+      expect(first).toEqual({ output: "[t]Olá", cached: false });
+      expect(storage.setItem).toHaveBeenCalledWith("translator:k", "[t]Olá");
+
+      const createsAfterFirst = api.create.mock.calls.length;
+      const second = await translate({
+        input: "Olá",
+        sourceLanguage: "pt",
+        targetLanguage: "en",
+        cache: "local",
+        cacheKey: "k",
+      });
+      expect(second).toEqual({ output: "[t]Olá", cached: true });
+      expect(api.create).toHaveBeenCalledTimes(createsAfterFirst);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("aborts without writing the cache", async () => {
+    installFakeTranslator();
+    const cache = { get: vi.fn(() => null), set: vi.fn() };
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      translate({
+        input: "Olá",
+        sourceLanguage: "pt",
+        targetLanguage: "en",
+        cache,
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(cache.set).not.toHaveBeenCalled();
+  });
 });

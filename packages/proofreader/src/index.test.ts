@@ -294,4 +294,89 @@ describe("proofread", () => {
       }),
     ).rejects.toMatchObject({ name: "AbortError" });
   });
+
+  it('honors cache: "session" via sessionStorage', async () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: vi.fn((k: string) => store.get(k) ?? null),
+      setItem: vi.fn((k: string, v: string) => {
+        store.set(k, v);
+      }),
+    };
+    vi.stubGlobal("sessionStorage", storage);
+    try {
+      const api = installFakeProofreader({ correctedInput: "Fixed." });
+      const first = await proofread({
+        input: "text",
+        cache: "session",
+        cacheKey: "k",
+      });
+      expect(first.cached).toBe(false);
+      expect(first.output?.correctedInput).toBe("Fixed.");
+      expect(storage.setItem).toHaveBeenCalledWith(
+        "proofreader:k",
+        '{"correctedInput":"Fixed.","corrections":[]}',
+      );
+
+      const createsAfterFirst = api.create.mock.calls.length;
+      const second = await proofread({
+        input: "text",
+        cache: "session",
+        cacheKey: "k",
+      });
+      expect(second.output?.correctedInput).toBe("Fixed.");
+      expect(second.cached).toBe(true);
+      expect(api.create).toHaveBeenCalledTimes(createsAfterFirst);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('honors cache: "local" via localStorage', async () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: vi.fn((k: string) => store.get(k) ?? null),
+      setItem: vi.fn((k: string, v: string) => {
+        store.set(k, v);
+      }),
+    };
+    vi.stubGlobal("localStorage", storage);
+    try {
+      const api = installFakeProofreader({ correctedInput: "Fixed." });
+      const first = await proofread({
+        input: "text",
+        cache: "local",
+        cacheKey: "k",
+      });
+      expect(first.cached).toBe(false);
+      expect(first.output?.correctedInput).toBe("Fixed.");
+      expect(storage.setItem).toHaveBeenCalledWith(
+        "proofreader:k",
+        '{"correctedInput":"Fixed.","corrections":[]}',
+      );
+
+      const createsAfterFirst = api.create.mock.calls.length;
+      const second = await proofread({
+        input: "text",
+        cache: "local",
+        cacheKey: "k",
+      });
+      expect(second.output?.correctedInput).toBe("Fixed.");
+      expect(second.cached).toBe(true);
+      expect(api.create).toHaveBeenCalledTimes(createsAfterFirst);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("aborts without writing the cache", async () => {
+    installFakeProofreader();
+    const cache = { get: vi.fn(() => null), set: vi.fn() };
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      proofread({ input: "text", cache, signal: controller.signal }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(cache.set).not.toHaveBeenCalled();
+  });
 });

@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __clearSessionCacheForTests } from "../api.js";
 import { useProofreader } from "./index.js";
@@ -73,5 +73,45 @@ describe("useProofreader", () => {
 
     rerender({ input: "second" });
     await waitFor(() => expect(api.proofreadSpy).toHaveBeenCalledTimes(2));
+  });
+
+  it("discards a stale request when input changes (cleanup aborts the prior run)", async () => {
+    type FakeResult = { correctedInput: string; corrections: [] };
+    const resolvers: Array<(out: FakeResult) => void> = [];
+    const methodSpy = vi.fn(
+      () =>
+        new Promise<FakeResult>((resolve) => {
+          resolvers.push(resolve);
+        }),
+    );
+    const api = {
+      availability: vi.fn(async () => "available"),
+      create: vi.fn(async () => ({ proofread: methodSpy })),
+    };
+    (globalThis as { Proofreader?: typeof api }).Proofreader = api;
+
+    const { result, rerender } = renderHook(
+      ({ input }: { input: string }) => useProofreader({ input }),
+      { initialProps: { input: "A" } },
+    );
+    await waitFor(() => expect(resolvers).toHaveLength(1));
+
+    rerender({ input: "B" });
+    await waitFor(() => expect(resolvers).toHaveLength(2));
+
+    await act(async () => {
+      resolvers[0]?.({ correctedInput: "stale-A", corrections: [] });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.output?.correctedInput).not.toBe("stale-A");
+
+    await act(async () => {
+      resolvers[1]?.({ correctedInput: "fresh-B", corrections: [] });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    expect(result.current.output?.correctedInput).toBe("fresh-B");
   });
 });
