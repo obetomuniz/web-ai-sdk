@@ -89,7 +89,7 @@ git clone https://github.com/obetomuniz/web-ai-sdk.git
 cd web-ai-sdk
 
 # Node 24 (or any version-manager that respects .nvmrc) + Corepack picks up
-# pnpm 9.15.0 automatically from package.json's "packageManager" field.
+# pnpm 10.34.3 automatically from package.json's "packageManager" field.
 pnpm install
 pnpm build:packages  # build packages so workspace consumers can resolve them
 pnpm dev             # site at http://localhost:5173/, docs at /docs/
@@ -137,17 +137,15 @@ For the AI APIs to actually run, open a supporting browser. On Chrome, Summarize
 | Build Pages artifact            | `pnpm pages:build`    |
 | Preview combined Pages locally  | `pnpm pages:preview`  |
 
-Toolchain: Node 24 (pinned in `.nvmrc`) + pnpm 9.15.0 (pinned via `package.json#packageManager` and provisioned automatically by Corepack on Node 16.13+).
+Toolchain: Node 24 (pinned in `.nvmrc`) + pnpm 10.34.3 (pinned via `package.json#packageManager` and provisioned automatically by Corepack on Node 16.13+).
 
 ## Roadmap
 
 Directional, not a commitment. The bias is toward owning only the lifecycle and ergonomics the raw APIs leave rough, and thinning out as the Web AI APIs stabilize.
 
-- Native tool calling for the Prompt API
-- Session resilience (auto-retry on session loss)
-- IndexedDB cache backend for result caches
 - Cloud / custom-provider fallback for unsupported browsers
 - More browser compatibility helpers
+- Broader browser adoption of the Writer / Rewriter / Proofreader APIs as they ship
 
 ## Contributing
 
