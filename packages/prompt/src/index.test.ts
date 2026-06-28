@@ -680,6 +680,116 @@ describe("ask", () => {
     expect(updates).toEqual(["a"]);
     expect(session.destroy).toHaveBeenCalled();
   });
+
+  it('honors cache: "session" via sessionStorage', async () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: vi.fn((k: string) => store.get(k) ?? null),
+      setItem: vi.fn((k: string, v: string) => {
+        store.set(k, v);
+      }),
+    };
+    vi.stubGlobal("sessionStorage", storage);
+    try {
+      const fake = installFakeLanguageModel();
+      const first = await ask({
+        input: "hi",
+        cache: "session",
+        cacheKey: "k",
+      });
+      expect(first).toEqual({ output: "Hello, world.", cached: false });
+      expect(storage.setItem).toHaveBeenCalledWith("prompt:k", "Hello, world.");
+
+      const createsAfterFirst = fake.create.mock.calls.length;
+      const second = await ask({
+        input: "hi",
+        cache: "session",
+        cacheKey: "k",
+      });
+      expect(second).toEqual({ output: "Hello, world.", cached: true });
+      expect(fake.create).toHaveBeenCalledTimes(createsAfterFirst);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('honors cache: "local" via localStorage', async () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: vi.fn((k: string) => store.get(k) ?? null),
+      setItem: vi.fn((k: string, v: string) => {
+        store.set(k, v);
+      }),
+    };
+    vi.stubGlobal("localStorage", storage);
+    try {
+      const fake = installFakeLanguageModel();
+      const first = await ask({
+        input: "hi",
+        cache: "local",
+        cacheKey: "k",
+      });
+      expect(first).toEqual({ output: "Hello, world.", cached: false });
+      expect(storage.setItem).toHaveBeenCalledWith("prompt:k", "Hello, world.");
+
+      const createsAfterFirst = fake.create.mock.calls.length;
+      const second = await ask({
+        input: "hi",
+        cache: "local",
+        cacheKey: "k",
+      });
+      expect(second).toEqual({ output: "Hello, world.", cached: true });
+      expect(fake.create).toHaveBeenCalledTimes(createsAfterFirst);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("aborts without writing the cache", async () => {
+    installFakeLanguageModel();
+    const cache = { get: vi.fn(() => null), set: vi.fn() };
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      ask({ input: "hi", cache, signal: controller.signal }),
+    ).rejects.toBeInstanceOf(PromptAbortError);
+    expect(cache.set).not.toHaveBeenCalled();
+  });
+
+  it("aborts a streaming ask without writing the cache", async () => {
+    let resolveGate: () => void = () => {};
+    const gate = new Promise<void>((r) => {
+      resolveGate = r;
+    });
+    const session: FakeSession = {
+      prompt: vi.fn(),
+      promptStreaming: vi.fn(async function* () {
+        yield "a";
+        await gate;
+        yield "b";
+      }),
+      destroy: vi.fn(),
+    };
+    installFakeLanguageModel({ sessionFactory: () => session });
+
+    const controller = new AbortController();
+    const cache = { get: vi.fn(() => null), set: vi.fn() };
+    const updates: string[] = [];
+    const p = ask({
+      input: "hi",
+      cache,
+      signal: controller.signal,
+      onUpdate: (t) => updates.push(t),
+    });
+    for (let i = 0; i < 50 && updates.length === 0; i++) {
+      await Promise.resolve();
+    }
+    expect(updates).toEqual(["a"]);
+    controller.abort();
+    resolveGate();
+    await expect(p).rejects.toBeInstanceOf(PromptAbortError);
+    expect(cache.set).not.toHaveBeenCalled();
+  });
 });
 
 describe("createSession", () => {
