@@ -18,6 +18,8 @@ A small, focused monorepo of framework-agnostic packages that smooth over the gn
 
 The Web's Built-in AI APIs are promising but still early and shifting. Every app that touches them re-implements the same lifecycle: feature-detect, wait for model availability, create and reuse sessions, stream chunks, abort cleanly, and fall back when the capability is missing. web-ai-sdk owns that layer so you build against one stable, typed surface rather than coupling your whole app to today's experimental API shape. The wrappers feature-detect and no-op when a browser lacks the API, so the same code ships everywhere.
 
+The SDK is per-capability because the Web ships more than one AI surface. Six specialized built-ins (Translator, Summarizer, Writer, Rewriter, Proofreader, Language Detector) each carry option spaces a single text-model abstraction cannot express, and WebMCP (`document.modelContext`) is an agent surface rather than a model at all. That breadth is the point, not an accident. One package per capability, and the model abstraction is one of them rather than the whole product.
+
 ## What it is
 
 **`web-ai-sdk`** ships one package per browser capability. Zero runtime dependencies. Written in TypeScript. That's it. The SDK tracks a moving browser spec and intentionally stays out of the way of *how* you build an app.
