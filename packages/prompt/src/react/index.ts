@@ -152,7 +152,7 @@ export interface UseSessionReturn {
  * sampling, and lifecycle — `abort()` / `destroy()` on one component's
  * session never touch another's — and the session is destroyed on unmount
  * or when any primitive option (`systemPrompt`, `samplingMode`,
- * `temperature`, `topK`, `language`, `enabled`) changes.
+ * `temperature`, `topK`, `language`, `enabled`, `monitor`) changes.
  *
  * Token-level interleaving across sessions is browser-defined: the
  * underlying on-device model is single-instance, so Chrome 148 / Edge 138
@@ -183,6 +183,7 @@ export const useSession = (
     expectedInputs,
     expectedOutputs,
     tools,
+    monitor,
     createOptions,
   } = options;
 
@@ -216,6 +217,7 @@ export const useSession = (
         expectedInputs,
         expectedOutputs,
         tools,
+        monitor,
         createOptions,
       });
       session = created.session;
@@ -261,6 +263,7 @@ export const useSession = (
     expectedInputs,
     expectedOutputs,
     tools,
+    monitor,
     createOptions,
   ]);
 

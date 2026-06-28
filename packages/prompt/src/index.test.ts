@@ -967,6 +967,32 @@ describe("createSession", () => {
     session.destroy();
   });
 
+  it("forwards monitor to the underlying LanguageModel.create()", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const monitor = vi.fn();
+    const session = createSession({ systemPrompt: "S", monitor });
+    await session.send("warm");
+    const createOpts = fake.create.mock.calls[0]?.[0];
+    expect(createOpts).toMatchObject({ monitor });
+    session.destroy();
+  });
+
+  it("top-level monitor wins over createOptions.monitor", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const top = vi.fn();
+    const inner = vi.fn();
+    const session = createSession({
+      systemPrompt: "S",
+      monitor: top,
+      createOptions: { monitor: inner },
+    });
+    await session.send("warm");
+    const createOpts = fake.create.mock.calls[0]?.[0];
+    expect(createOpts).toMatchObject({ monitor: top });
+    expect(createOpts).not.toMatchObject({ monitor: inner });
+    session.destroy();
+  });
+
   it("rejects createSession options that mix semantic and raw sampling", () => {
     installFakeLanguageModel({ response: "ok" });
     expect(() =>
