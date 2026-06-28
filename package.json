@@ -43,7 +43,7 @@
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "check": "pnpm lint && pnpm build:packages && pnpm typecheck && pnpm test",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build:packages && changeset publish",
