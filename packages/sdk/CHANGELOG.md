@@ -1,5 +1,14 @@
 # @web-ai-sdk/all
 
+## 0.7.3
+
+### Patch Changes
+
+- Updated dependencies [55d5c73]
+- Updated dependencies [c859410]
+  - @web-ai-sdk/prompt@0.8.0
+  - @web-ai-sdk/webmcp@0.6.1
+
 ## 0.7.2
 
 ### Patch Changes
