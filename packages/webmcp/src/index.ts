@@ -190,7 +190,10 @@ interface RegisterToolOptions {
 }
 
 interface ModelContext {
-  registerTool: (def: RegisteredTool, options?: RegisterToolOptions) => void;
+  registerTool: (
+    def: RegisteredTool,
+    options?: RegisterToolOptions,
+  ) => Promise<void> | void;
 }
 
 interface HostWithModelContext {
@@ -257,55 +260,99 @@ const trackOwnership = (controller: AbortController, name: string): void => {
 };
 
 /**
- * Returns `true` if registration succeeded synchronously with `controller`,
- * `false` if a transient duplicate was hit and we scheduled a microtask
- * retry (the registration will land asynchronously), or if another caller
- * permanently owns the name.
+ * Normalize the native `registerTool` call into a `Promise<void>`, supporting
+ * both the legacy synchronous shape (returns `undefined`, throws on duplicate)
+ * and the spec-current asynchronous shape (returns `Promise<void>`, rejects on
+ * duplicate). Cross-origin iframe tool sharing made registration inherently
+ * asynchronous — see WebMCP spec issue #175 / PR #228.
  */
-const registerOne = (
+const callRegister = (
   mc: ModelContext,
   registered: RegisteredTool,
   controller: AbortController,
-): boolean => {
+): Promise<void> => {
+  try {
+    return Promise.resolve(
+      mc.registerTool(registered, { signal: controller.signal }),
+    );
+  } catch (err) {
+    return Promise.reject(err);
+  }
+};
+
+/**
+ * Register a single tool against the host modelContext, async-safe.
+ *
+ * Must be **total**: it never rejects. Every failure path logs and resolves
+ * `false`. That invariant is what lets `registerTool` fire-and-forget the
+ * returned promise without an unhandled-rejection guard.
+ *
+ * Returns `true` if registration succeeded (ownership tracked), `false`
+ * otherwise. The return value is unused by the caller today; kept for symmetry.
+ *
+ * Error posture follows the package's "feature detect, never throw" contract:
+ * a first-call non-duplicate failure used to `throw` to the caller (catchable
+ * only while registration was synchronous); the spec's async registration
+ * update makes that throw uncatchable, so it is now logged — matching the
+ * retry path.
+ */
+const registerOne = async (
+  mc: ModelContext,
+  registered: RegisteredTool,
+  controller: AbortController,
+): Promise<boolean> => {
   // If we still hold a live controller for this name, evict it before the
-  // native register call so Chrome doesn't throw InvalidStateError.
+  // native register call so Chrome doesn't reject with InvalidStateError.
   const prior = ownedControllers.get(registered.name);
   if (prior && prior !== controller && !prior.signal.aborted) {
     prior.abort();
   }
+
   try {
-    mc.registerTool(registered, { signal: controller.signal });
+    await callRegister(mc, registered, controller);
   } catch (err) {
-    if (!isDuplicateNameError(err)) throw err;
-    // Chrome's AbortSignal-driven unregistration isn't guaranteed to
-    // propagate to the registry in the same tick as `.abort()`. A fresh
-    // re-register fired immediately after an abort (e.g. React effect
-    // cleanup → mount cycle, or a hook re-running on dep change) can land
-    // before Chrome processes the queued removal. Yield to a microtask and
-    // retry once. If the retry also fails, log and give up.
-    queueMicrotask(() => {
-      if (controller.signal.aborted) return;
-      try {
-        mc.registerTool(registered, { signal: controller.signal });
-        trackOwnership(controller, registered.name);
-      } catch (retryErr) {
-        if (isDuplicateNameError(retryErr)) {
-          if (typeof console !== "undefined") {
-            console.warn(
-              `[@web-ai-sdk/webmcp] tool "${registered.name}" is already registered by another caller; skipping. This is usually a transient race. If you see it in production, ensure only one caller registers each name.`,
-            );
-          }
-          return;
-        }
+    // If our own controller was aborted (a later caller evicted us, or our
+    // cleanup fired, while registration was still pending), treat it as a
+    // clean cancellation — no log, no retry.
+    if (controller.signal.aborted) return false;
+
+    if (!isDuplicateNameError(err)) {
+      // Unrecoverable first-call failure: log and give up (no throw).
+      if (typeof console !== "undefined") {
+        console.error(
+          `[@web-ai-sdk/webmcp] tool "${registered.name}" could not be registered: ${(err as Error)?.message ?? String(err)}`,
+        );
+      }
+      return false;
+    }
+
+    // Duplicate: Chrome's AbortSignal-driven unregistration isn't guaranteed
+    // to have drained by the time our (now async) rejection landed. A fresh
+    // re-register fired right after an abort can still race the queued
+    // removal. Yield once and retry. If the retry also fails, log and give up.
+    await Promise.resolve();
+    if (controller.signal.aborted) return false;
+    try {
+      await callRegister(mc, registered, controller);
+    } catch (retryErr) {
+      if (controller.signal.aborted) return false;
+      if (isDuplicateNameError(retryErr)) {
         if (typeof console !== "undefined") {
-          console.error(
-            `[@web-ai-sdk/webmcp] tool "${registered.name}" could not be registered after retry: ${(retryErr as Error)?.message ?? String(retryErr)}`,
+          console.warn(
+            `[@web-ai-sdk/webmcp] tool "${registered.name}" is already registered by another caller; skipping. This is usually a transient race. If you see it in production, ensure only one caller registers each name.`,
           );
         }
+        return false;
       }
-    });
-    return false;
+      if (typeof console !== "undefined") {
+        console.error(
+          `[@web-ai-sdk/webmcp] tool "${registered.name}" could not be registered after retry: ${(retryErr as Error)?.message ?? String(retryErr)}`,
+        );
+      }
+      return false;
+    }
   }
+
   trackOwnership(controller, registered.name);
   return true;
 };
@@ -327,7 +374,11 @@ export const registerTool = <TInput, TOutput>(
 
   const registered = toRegistered(tool as Tool);
   const controller = new AbortController();
-  registerOne(mc, registered, controller);
+  // Fire-and-forget: registerOne is total (never rejects — see its contract),
+  // so there is no unhandled-rejection risk. The sync cleanup below aborts the
+  // controller; if registration is still pending, the abort propagates to the
+  // host and registerOne treats it as a clean cancellation.
+  void registerOne(mc, registered, controller);
 
   let disposed = false;
   return () => {

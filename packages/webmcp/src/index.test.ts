@@ -29,24 +29,53 @@ const setModelContext = (host: Host, value: unknown) => {
   );
 };
 
+/** Flush all pending microtasks (the async register pipeline chains several). */
+const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
 /**
  * Mirror the native WebMCP shape: a single `registerTool(def, { signal? })`
  * method. There is no `unregisterTool`; cleanup happens by aborting the signal
  * that was passed at registration. Installs on `navigator` by default; pass
  * `host: "document"` to mount on `document.modelContext` instead.
+ *
+ * By default mirrors the spec-current async shape: `registerTool` returns a
+ * `Promise<void>`. The promise executor runs synchronously (so
+ * `registered.set(...)` is visible in the same tick), but the settle
+ * (resolve/reject) is observed on a later microtask. Pass `{ sync: true }`
+ * for the legacy synchronous shape (throws synchronously, returns
+ * `undefined`).
  */
-const installFakeModelContext = (host: Host = "navigator") => {
+const installFakeModelContext = (
+  host: Host = "navigator",
+  { sync = false }: { sync?: boolean } = {},
+) => {
   const registered = new Map<string, RegisteredCall>();
+  const dup = () =>
+    new Error(
+      "Failed to execute 'registerTool' on 'ModelContext': Duplicate tool name",
+    );
+  const apply = (def: RegisteredCall, options?: RegisterOptions) => {
+    if (registered.has(def.name)) throw dup();
+    registered.set(def.name, def);
+    options?.signal?.addEventListener("abort", () => {
+      registered.delete(def.name);
+    });
+  };
   const registerTool = vi.fn(
     (def: RegisteredCall, options?: RegisterOptions) => {
-      if (registered.has(def.name)) {
-        throw new Error(
-          "Failed to execute 'registerTool' on 'ModelContext': Duplicate tool name",
-        );
+      if (sync) {
+        apply(def, options); // legacy: throws synchronously, returns undefined
+        return undefined;
       }
-      registered.set(def.name, def);
-      options?.signal?.addEventListener("abort", () => {
-        registered.delete(def.name);
+      // Spec-current shape: returns a Promise. Executor is sync (mutations
+      // visible same tick), but settle is observed on a later microtask.
+      return new Promise<void>((resolve, reject) => {
+        try {
+          apply(def, options);
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
       });
     },
   );
@@ -216,13 +245,15 @@ describe("registerTool", () => {
     expect(() => cleanup()).not.toThrow();
   });
 
-  it("evicts a prior live registration for the same name (last writer wins)", () => {
+  it("evicts a prior live registration for the same name (last writer wins)", async () => {
     const { registered } = installFakeModelContext();
     const cleanupA = registerTool({
       name: "shared",
       description: "first",
       execute: () => ({ which: "A" }),
     });
+    // Let A's registration settle so its ownership is tracked before B runs.
+    await flush();
     expect(registered.get("shared")?.description).toBe("first");
 
     // Fresh call for the same name. The prior controller should be aborted
@@ -232,6 +263,7 @@ describe("registerTool", () => {
       description: "second",
       execute: () => ({ which: "B" }),
     });
+    await flush();
     expect(registered.get("shared")?.description).toBe("second");
 
     // The first caller's cleanup is a no-op now (its controller was already
@@ -242,6 +274,34 @@ describe("registerTool", () => {
     // The second caller's cleanup removes the tool.
     cleanupB();
     expect(registered.has("shared")).toBe(false);
+  });
+
+  it("same-tick double-register of one name degrades to warn-and-skip (first wins)", async () => {
+    const { registered } = installFakeModelContext();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    // No flush between the two calls: neither registration has settled, so
+    // neither sees the other in ownedControllers and no eviction happens.
+    registerTool({
+      name: "tick",
+      description: "first",
+      execute: async () => ({}),
+    });
+    registerTool({
+      name: "tick",
+      description: "second",
+      execute: async () => ({}),
+    });
+    await flush();
+
+    expect(registered.get("tick")?.description).toBe("first");
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/already registered by another caller/),
+    );
+    expect(errorSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 
   it("warns and skips when the name is owned outside the wrapper (no throw)", async () => {
@@ -260,7 +320,7 @@ describe("registerTool", () => {
       execute: async () => ({}),
     });
     // The wrapper retries on a microtask before giving up; flush it.
-    await Promise.resolve();
+    await flush();
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringMatching(/already registered/i),
     );
@@ -308,7 +368,7 @@ describe("registerTool", () => {
 
     registerTool({ name: "t", description: "d", execute: async () => ({}) });
     expect(map.has("t")).toBe(false); // not yet; retry is queued
-    await Promise.resolve(); // flush microtask
+    await flush(); // flush the async register pipeline
     expect(map.has("t")).toBe(true); // retry landed it
     expect(registerTool_).toHaveBeenCalledTimes(2);
   });
@@ -337,7 +397,7 @@ describe("registerTool", () => {
     expect(() =>
       registerTool({ name: "t", description: "d", execute: async () => ({}) }),
     ).not.toThrow();
-    await Promise.resolve(); // flush microtask; if the throw survived it would surface here
+    await flush(); // flush the async register pipeline; if the throw survived it would surface here
 
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringMatching(/could not be registered after retry/),
@@ -345,6 +405,76 @@ describe("registerTool", () => {
     expect(warnSpy).not.toHaveBeenCalled();
     errorSpy.mockRestore();
     warnSpy.mockRestore();
+  });
+
+  it("logs and gives up (no throw) when the FIRST call fails with a non-duplicate error", async () => {
+    const registerTool_ = vi.fn(() =>
+      Promise.reject(new Error("InvalidStateError: sandbox unavailable")),
+    );
+    Object.defineProperty(navigator, "modelContext", {
+      value: { registerTool: registerTool_ },
+      configurable: true,
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    expect(() =>
+      registerTool({ name: "t", description: "d", execute: async () => ({}) }),
+    ).not.toThrow();
+    await flush();
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/could not be registered:/),
+    );
+    expect(warnSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  it("treats abort-during-pending registration as a clean cancellation (no error/warn)", async () => {
+    const registerTool_ = vi.fn(
+      (_def: RegisteredCall, options?: RegisterOptions) =>
+        new Promise<void>((_resolve, reject) => {
+          // Never resolves on its own; only rejects when aborted.
+          options?.signal?.addEventListener("abort", () => {
+            reject(
+              new DOMException("The user aborted a request.", "AbortError"),
+            );
+          });
+        }),
+    );
+    Object.defineProperty(navigator, "modelContext", {
+      value: { registerTool: registerTool_ },
+      configurable: true,
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const cleanup = registerTool({
+      name: "x",
+      description: "x",
+      execute: async () => ({}),
+    });
+    cleanup(); // abort before the pending registration settles
+    await flush();
+
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  it("handles the legacy synchronous-throw shape (callRegister normalizes it)", async () => {
+    const { registered } = installFakeModelContext("navigator", {
+      sync: true,
+    });
+    registerTool({
+      name: "sync",
+      description: "old chrome",
+      execute: async () => ({}),
+    });
+    await flush();
+    expect(registered.has("sync")).toBe(true);
   });
 });
 

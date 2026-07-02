@@ -8,7 +8,7 @@ An ergonomic, framework-agnostic adapter over the native browser API, with safe 
 
 ## Status
 
-WebMCP shipped as an early preview in Chrome 146+ behind `chrome://flags/#enable-webmcp-testing`; a public [origin trial](https://developer.chrome.com/docs/ai/webmcp) opens in Chrome 149. Edge added support in 147+ behind the matching `edge://flags/` toggle. On any browser that doesn't expose `document.modelContext` (or the legacy `navigator.modelContext`), this library is a no-op. Your app stays callable, and no tools get registered.
+WebMCP shipped as an early preview in Chrome 146+ behind `chrome://flags/#enable-webmcp-testing`; a public [origin trial](https://developer.chrome.com/docs/ai/webmcp) opens in Chrome 149. Edge added support in 147+ behind the matching `edge://flags/` toggle. On any browser that doesn't expose `document.modelContext` (or the legacy `navigator.modelContext`), this library is a no-op. Your app stays callable, and no tools get registered. A WebMCP spec update changed `registerTool` to return a Promise (cross-origin iframe tool sharing made registration asynchronous); this adapter normalizes both the legacy synchronous shape and the async shape, so consumer code is unchanged.
 
 ## Install
 
@@ -104,6 +104,8 @@ The hook registers on mount, unregisters on unmount, and re-registers when the a
 ### `registerTool(tool): () => void`
 
 Register a single tool. Returns a cleanup function. No-op on unsupported browsers.
+
+Registration is asynchronous under the hood (per the current spec); the returned cleanup is synchronous and safe to call before registration settles — it aborts the in-flight registration cleanly.
 
 To register many at once, map and combine:
 
