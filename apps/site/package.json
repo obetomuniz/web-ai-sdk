@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@astrojs/react": "5.0.7",
-    "@astrojs/starlight": "0.40.0",
+    "@astrojs/starlight": "0.41.1",
     "@web-ai-sdk/detector": "workspace:*",
     "@web-ai-sdk/prompt": "workspace:*",
     "@web-ai-sdk/proofreader": "workspace:*",
@@ -29,7 +29,7 @@
     "marked": "^18.0.5",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "sharp": "^0.35.1"
+    "sharp": "^0.35.2"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
