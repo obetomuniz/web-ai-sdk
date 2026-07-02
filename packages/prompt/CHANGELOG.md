@@ -1,5 +1,15 @@
 # @web-ai-sdk/prompt
 
+## 0.9.0
+
+### Minor Changes
+
+- f2e6695: Add `monitor` option to `createSession()` and `useSession()`, forwarding the
+  first-call download-progress callback to `LanguageModel.create()` — the same
+  parity `ask()` already has. When both top-level `monitor` and
+  `createOptions.monitor` are set, the top-level one wins.
+- e0d340e: Widen `Session.send` / `sendStreaming` to accept `string | LanguageModelMessage[]`. Add optional `prefix?: boolean` to `LanguageModelMessage` for assistant prefill (spec-canonical on the trailing assistant message). The empty-input guard now handles both shapes. Backward-compatible: existing string calls and the React hook are unchanged.
+
 ## 0.8.0
 
 ### Minor Changes
