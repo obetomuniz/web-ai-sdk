@@ -63,21 +63,154 @@
     }
   }
 
-  /* Hover "stream then settle" loop for the package icons. Paths use
-     pathLength="1", so a normalized dash draws every shape consistently. */
-  --animate-icon-stream: icon-stream 1.6s ease-in-out;
+  /* Semantic, one-shot package icon motions. Icon shapes use pathLength="1"
+     so draw animations stay consistent across different geometries. */
+  --animate-icon-draw: icon-draw 620ms ease-out;
+  --animate-icon-register: icon-register 560ms ease-out;
+  --animate-icon-compress-top: icon-compress-top 720ms ease-in-out;
+  --animate-icon-compress-middle: icon-compress-middle 720ms ease-in-out;
+  --animate-icon-compress-bottom: icon-compress-bottom 720ms ease-in-out;
+  --animate-icon-swap-forward: icon-swap-forward 760ms ease-in-out;
+  --animate-icon-swap-back: icon-swap-back 760ms ease-in-out;
+  --animate-icon-scan: icon-scan 720ms ease-out;
+  --animate-icon-write: icon-write 760ms ease-in-out;
+  --animate-icon-send: icon-send 620ms ease-in-out;
+  --animate-icon-check: icon-check 620ms ease-out;
 
-  @keyframes icon-stream {
-    0% {
-      stroke-dashoffset: 0;
-    }
-    12% {
+  @keyframes icon-draw {
+    from {
+      opacity: 0.45;
+      stroke-dasharray: 1;
       stroke-dashoffset: 1;
     }
-    65% {
+    to {
+      opacity: 1;
+      stroke-dasharray: 1;
       stroke-dashoffset: 0;
     }
+  }
+
+  @keyframes icon-register {
+    0% {
+      opacity: 0.4;
+      transform: scale(0.72);
+    }
+    58% {
+      opacity: 1;
+      transform: scale(1.14);
+    }
     100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes icon-compress-top {
+    0%,
+    100% {
+      opacity: 1;
+      transform: translateY(0) scaleX(1);
+    }
+    45%,
+    65% {
+      opacity: 0.35;
+      transform: translateY(6px) scaleX(0.52);
+    }
+  }
+
+  @keyframes icon-compress-middle {
+    0%,
+    100% {
+      transform: scaleX(1);
+    }
+    45%,
+    65% {
+      transform: scaleX(0.58);
+    }
+  }
+
+  @keyframes icon-compress-bottom {
+    0%,
+    100% {
+      opacity: 1;
+      transform: translateY(0) scaleX(1);
+    }
+    45%,
+    65% {
+      opacity: 0.35;
+      transform: translateY(-6px) scaleX(0.52);
+    }
+  }
+
+  @keyframes icon-swap-forward {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    45%,
+    55% {
+      transform: translate(8px, 8px);
+    }
+  }
+
+  @keyframes icon-swap-back {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    45%,
+    55% {
+      transform: translate(-8px, -8px);
+    }
+  }
+
+  @keyframes icon-scan {
+    0% {
+      opacity: 0.55;
+      transform: scale(0.82);
+    }
+    55% {
+      opacity: 1;
+      transform: scale(1.14);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes icon-write {
+    0%,
+    100% {
+      transform: translate(0, 0) rotate(0);
+    }
+    35% {
+      transform: translate(1px, -1.5px) rotate(-4deg);
+    }
+    68% {
+      transform: translate(2.5px, 0) rotate(2deg);
+    }
+  }
+
+  @keyframes icon-send {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    55% {
+      transform: translateX(2.5px);
+    }
+  }
+
+  @keyframes icon-check {
+    from {
+      opacity: 0.35;
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+    }
+    to {
+      opacity: 1;
+      stroke-dasharray: 1;
       stroke-dashoffset: 0;
     }
   }
@@ -102,6 +235,19 @@
     }
     to {
       background-position: -200% center;
+    }
+  }
+
+  /* Slow ambient drift for the final CTA halo. The gradient is wider than its
+     panel so colors can travel without exposing an edge. */
+  --animate-rainbow-glow: rainbow-glow 9s ease-in-out infinite alternate;
+
+  @keyframes rainbow-glow {
+    from {
+      background-position: 0% center;
+    }
+    to {
+      background-position: 100% center;
     }
   }
 }

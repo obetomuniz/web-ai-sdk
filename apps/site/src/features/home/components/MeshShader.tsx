@@ -33,7 +33,7 @@ const FRAG = [
   "  vec2 d=b-a;float L2=max(dot(d,d),1e-4);",
   "  float h=clamp(dot(gp-a,d)/L2,0.0,1.0);",
   "  float perp=length(gp-(a+d*h));",
-  "  float line=smoothstep(0.014,0.0,perp)*g;",
+  "  float line=smoothstep(0.006,0.0,perp)*g;",
   // dots travel a -> b along the wire (one-directional stream)
   "  float ph=h*sqrt(L2)*1.7 - u_time*0.5 + link*6.0;",
   "  float f=fract(ph);",
@@ -57,7 +57,7 @@ const FRAG = [
   "    vec2 a=nodeAt(c);float aa=actAt(c);",
   // square module node (a building block, not a neuron)
   "    vec2 q=abs(gp-a);float bd=max(q.x,q.y)-0.045;",
-  "    nodeI=max(nodeI,smoothstep(0.018,0.0,bd)*(0.4+0.6*aa));",
+  "    nodeI=max(nodeI,smoothstep(0.010,0.0,bd)*(0.4+0.6*aa));",
   "    vec2 e=edge(gp,a,aa,c,c+vec2(1.0,0.0));",
   "    e=max(e,edge(gp,a,aa,c,c+vec2(0.0,1.0)));",
   "    e=max(e,edge(gp,a,aa,c,c+vec2(1.0,1.0)));",

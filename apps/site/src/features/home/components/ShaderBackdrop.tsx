@@ -123,7 +123,7 @@ export function ShaderBackdrop({
     let cells = 48;
 
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, 3);
       const cssW = canvas.clientWidth || 1;
       const w = Math.max(1, Math.round(cssW * dpr));
       const h = Math.max(1, Math.round((canvas.clientHeight || 1) * dpr));

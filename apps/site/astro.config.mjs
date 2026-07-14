@@ -39,6 +39,9 @@ export default defineConfig({
     },
   },
   integrations: [
+    // React must register before Starlight's MDX renderer; otherwise MDX probes
+    // React function components directly during dev SSR, which trips hook calls.
+    react(),
     starlight({
       title: "web-ai-sdk",
       description:
@@ -192,6 +195,5 @@ export default defineConfig({
         },
       ],
     }),
-    react(),
   ],
 });

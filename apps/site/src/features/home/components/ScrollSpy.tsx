@@ -2,10 +2,12 @@ import { useEffect } from "react";
 
 const IDS = [
   "why-raw",
+  "why-sdk",
+  "matrix",
   "packages",
-  "philosophy",
-  "how",
   "support",
+  "how",
+  "philosophy",
   "start",
 ] as const;
 
@@ -39,8 +41,25 @@ export const ScrollSpy = () => {
         if (section.getBoundingClientRect().top <= marker) activeIndex = i;
       }
 
+      const root = document.documentElement;
+      const atDocumentEnd =
+        root.scrollHeight > window.innerHeight &&
+        Math.ceil(window.scrollY + window.innerHeight) >= root.scrollHeight - 2;
+
+      if (atDocumentEnd) {
+        for (let i = sections.length - 1; i >= 0; i--) {
+          if (sections[i]) {
+            activeIndex = i;
+            break;
+          }
+        }
+      }
+
       links.forEach((link, i) => {
-        link?.classList.toggle("active", i === activeIndex);
+        const isActive = i === activeIndex;
+        link?.classList.toggle("active", isActive);
+        if (isActive) link?.setAttribute("aria-current", "location");
+        else link?.removeAttribute("aria-current");
       });
     };
 
