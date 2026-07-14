@@ -7,6 +7,7 @@ import { PackageExplorer } from "../features/home/components/PackageExplorer.js"
 import { ScrollSpy } from "../features/home/components/ScrollSpy.js";
 import { StarWidget } from "../features/home/components/StarWidget.js";
 import { ThemeSwitcher } from "../features/home/components/ThemeSwitcher.js";
+import SiteNav from "../shared/components/SiteNav.astro";
 import * as ui from "../shared/ui.js";
 import { SDK_VERSION } from "../features/home/sdk-version.js";
 import "../styles/home.css";
@@ -17,6 +18,7 @@ const SITE_ORIGIN = "https://web-ai-sdk.dev";
 const baseUrl = new URL(import.meta.env.BASE_URL, "https://web-ai-sdk.dev");
 const pathFromBase = (path: string) => new URL(path, baseUrl).pathname;
 const docsUrl = pathFromBase("docs/");
+const playgroundUrl = pathFromBase("playground/");
 const repoUrl = new URL(REPO, "https://github.com/").toString();
 const issuesUrl = new URL(`${REPO}/issues`, "https://github.com/").toString();
 const discussionsUrl = new URL(
@@ -416,38 +418,26 @@ const browserColumns = [
     />
   </head>
   <body>
-    <nav class={ui.nav}>
-      <div class={`${ui.container} ${ui.navInner}`}>
-        <a class={ui.navBrand} href="#top">
-          <span>web-ai-sdk</span>
-          <span class={ui.caret}></span>
-        </a>
-        <div class={ui.navMinimap} role="group" aria-label="Page sections">
-          {
-            navItems.map((item) => (
-              <a class={ui.navMinimapLink} href={`#${item.id}`} aria-label={item.label}>
-                <span class={`${ui.navMinimapTick} ${item.tick}`} aria-hidden="true"></span>
-                <span class={ui.navMinimapPreview} aria-hidden="true">
-                  <span class={ui.navMinimapTitle}>{item.label}</span>
-                  <span class={ui.navMinimapSummary}>{item.summary}</span>
-                </span>
-              </a>
-            ))
-          }
-        </div>
-        <div class={ui.navActions}>
-          <a class={ui.navIcon} href={docsUrl} aria-label="Read the web-ai-sdk docs" title="Docs">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
-          </a>
-          <a class={ui.navCta} href={repoUrl} target="_blank" rel="noopener noreferrer" aria-label="View the GitHub repository" title="GitHub">
-            <span class="max-[640px]:hidden">GitHub</span>
-            <svg class="hidden size-4 fill-current max-[640px]:block" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M10.226 17.284c-2.965-.36-5.054-2.493-5.054-5.256 0-1.123.404-2.336 1.078-3.144-.292-.741-.247-2.314.09-2.965.898-.112 2.111.36 2.83 1.01.853-.269 1.752-.404 2.853-.404 1.1 0 1.999.135 2.807.382.696-.629 1.932-1.1 2.83-.988.315.606.36 2.179.067 2.942.72.854 1.101 2 1.101 3.167 0 2.763-2.089 4.852-5.098 5.234.763.494 1.28 1.572 1.28 2.807v2.336c0 .674.561 1.056 1.235.786 4.066-1.55 7.255-5.615 7.255-10.646C23.5 6.188 18.334 1 11.978 1 5.62 1 .5 6.188.5 12.545c0 4.986 3.167 9.12 7.435 10.669.606.225 1.19-.18 1.19-.786V20.63a2.9 2.9 0 0 1-1.078.224c-1.483 0-2.359-.808-2.987-2.313-.247-.607-.517-.966-1.034-1.033-.27-.023-.359-.135-.359-.27 0-.27.45-.471.898-.471.652 0 1.213.404 1.797 1.235.45.651.921.943 1.483.943.561 0 .92-.202 1.437-.719.382-.381.674-.718.944-.943"></path>
-            </svg>
-          </a>
-        </div>
+    <SiteNav
+      brandHref="#top"
+      docsHref={docsUrl}
+      playgroundHref={playgroundUrl}
+      repoHref={repoUrl}
+    >
+      <div slot="center" class={ui.navMinimap} role="group" aria-label="Page sections">
+        {
+          navItems.map((item) => (
+            <a class={ui.navMinimapLink} href={`#${item.id}`} aria-label={item.label}>
+              <span class={`${ui.navMinimapTick} ${item.tick}`} aria-hidden="true"></span>
+              <span class={ui.navMinimapPreview} aria-hidden="true">
+                <span class={ui.navMinimapTitle}>{item.label}</span>
+                <span class={ui.navMinimapSummary}>{item.summary}</span>
+              </span>
+            </a>
+          ))
+        }
       </div>
-    </nav>
+    </SiteNav>
 
     <main>
       <header class={`${ui.hero} relative overflow-hidden`} id="top">

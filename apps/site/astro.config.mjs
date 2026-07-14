@@ -160,6 +160,7 @@ export default defineConfig({
         {
           label: "Start",
           items: [
+            { label: "Playground", link: "/playground/" },
             { label: "Why web-ai-sdk", slug: "docs/why-web-ai-sdk" },
             { label: "Browser support", slug: "docs/browser-support" },
             { label: "Architecture", slug: "docs/architecture" },

@@ -1,0 +1,83 @@
+---
+import { Playground } from "../../features/playground/Playground.js";
+import SiteNav from "../../shared/components/SiteNav.astro";
+import { playground as ui } from "../../shared/ui.js";
+import "../../styles/home.css";
+
+const SITE_ORIGIN = "https://web-ai-sdk.dev";
+const baseUrl = new URL(import.meta.env.BASE_URL, SITE_ORIGIN);
+const pathFromBase = (path: string) => new URL(path, baseUrl).pathname;
+const homeUrl = pathFromBase("");
+const docsUrl = pathFromBase("docs/");
+const playgroundUrl = pathFromBase("playground/");
+const repoUrl = new URL("obetomuniz/web-ai-sdk", "https://github.com/").toString();
+const canonicalUrl = new URL("playground/", SITE_ORIGIN).toString();
+const ogImageUrl = new URL("og-image.png", SITE_ORIGIN).toString();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta
+      name="description"
+      content="Build with browser-native AI in an on-device agent playground powered by web-ai-sdk."
+    />
+    <meta name="theme-color" content="#0a0a0a" />
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="icon" type="image/svg+xml" href={pathFromBase("favicon.svg")} />
+    <title>Playground · web-ai-sdk</title>
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:title" content="Playground · web-ai-sdk" />
+    <meta
+      property="og:description"
+      content="A fully on-device agent playground for the Web AI surface."
+    />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Playground · web-ai-sdk" />
+    <meta
+      name="twitter:description"
+      content="A fully on-device agent playground for the Web AI surface."
+    />
+    <meta name="twitter:image" content={ogImageUrl} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script
+      is:inline
+      defer
+      src="https://cloud.umami.is/script.js"
+      data-website-id="9e24f5c3-6b64-48fc-8679-610907092f1c"
+    ></script>
+  </head>
+  <body class="min-h-screen bg-bg">
+    <SiteNav
+      brandHref={homeUrl}
+      docsHref={docsUrl}
+      playgroundHref={playgroundUrl}
+      repoHref={repoUrl}
+      activePage="playground"
+    >
+      <span slot="center" class={ui.navTrail}>Playground · local-first</span>
+    </SiteNav>
+    <main>
+      <Playground client:only="react">
+        <section slot="fallback" class={ui.loadingShell} aria-live="polite">
+          <div class={ui.loadingPanel}>
+            <span class={ui.loadingDot}></span>
+            <div>
+              <p class={ui.loadingTitle}>Loading Playground</p>
+              <p class={ui.loadingText}>Preparing the on-device agent workspace.</p>
+            </div>
+          </div>
+        </section>
+      </Playground>
+    </main>
+  </body>
+</html>

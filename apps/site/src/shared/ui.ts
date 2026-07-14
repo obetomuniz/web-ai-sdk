@@ -224,6 +224,9 @@ export const navMinimapTitle =
 export const navMinimapSummary =
   "font-sans text-[12.5px] leading-snug text-fg-3";
 
+export const navCenterPlaceholder =
+  "h-10 w-48 justify-self-center max-[640px]:hidden";
+
 export const navCta =
   "inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-sm border border-hairline-2 px-3 py-2 font-mono text-[12.5px] text-fg-2 transition-all hover:border-accent-line hover:text-fg max-[640px]:size-9 max-[640px]:p-0";
 
@@ -234,6 +237,10 @@ export const navActions = "flex items-center justify-self-end gap-2";
 // scale + color lift on hover gives it a tactile affordance without a box.
 export const navIcon =
   "inline-flex items-center justify-center rounded-sm p-2 text-fg-3 transition-all duration-200 ease-out hover:scale-110 hover:text-fg";
+
+export const navGitHubLabel = "max-[640px]:hidden";
+
+export const navGitHubMark = "hidden size-4 fill-current max-[640px]:block";
 
 export const hero =
   "flex min-h-[100svh] flex-col justify-center py-[calc(96px*var(--density))] max-[880px]:min-h-[clamp(420px,64svh,540px)] max-[880px]:py-12 max-[640px]:py-10";
@@ -484,3 +491,222 @@ export const backToTop =
   "fixed bottom-5 left-1/2 z-40 inline-flex -translate-x-1/2 cursor-pointer items-center gap-1.5 rounded-pill border border-hairline-2 bg-[color-mix(in_oklch,var(--color-surface)_82%,transparent)] py-1.5 pr-3 pl-2.5 font-mono text-[11px] leading-none tracking-[0.02em] text-fg-3 shadow-card backdrop-blur-[14px] backdrop-saturate-[1.2] transition-[opacity,transform,color,border-color] duration-300 ease-[cubic-bezier(0.2,0.6,0.2,1)] hover:-translate-y-px hover:border-accent-line hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent data-[visible=false]:pointer-events-none data-[visible=false]:translate-y-3 data-[visible=false]:opacity-0";
 
 export const backToTopArrow = "text-accent transition-transform";
+
+/** Playground route: dense, responsive instrument-panel compositions. */
+export const playground = {
+  navTrail:
+    "justify-self-center font-mono text-[11px] uppercase tracking-[0.12em] text-fg-4 max-[640px]:hidden",
+  loadingShell:
+    "grid min-h-[calc(100svh-var(--nav-height))] place-items-center bg-bg px-5 text-fg",
+  loadingPanel:
+    "flex items-center gap-3 rounded-md border border-hairline-2 bg-surface px-5 py-4 shadow-card",
+  loadingDot: "size-2 animate-pulse rounded-full bg-accent",
+  loadingTitle: "font-mono text-[12px] uppercase tracking-[0.08em] text-fg",
+  loadingText: "mt-1 text-[13px] text-fg-3",
+  shell:
+    "grid min-h-[calc(100svh-var(--nav-height))] grid-cols-[260px_minmax(0,1fr)_300px] bg-bg text-fg max-[1180px]:grid-cols-[240px_minmax(0,1fr)] max-[760px]:grid-cols-1",
+  sidebar:
+    "sticky top-[var(--nav-height)] flex h-[calc(100svh-var(--nav-height))] min-w-0 flex-col bg-surface shadow-card max-[760px]:static max-[760px]:h-auto max-[760px]:max-h-[48svh]",
+  sidebarHeader:
+    "flex min-h-20 items-center border-b border-hairline px-5 py-4",
+  brandStack: "grid gap-1",
+  brand:
+    "flex items-baseline gap-[0.08em] font-display text-xl font-medium tracking-[-0.025em]",
+  brandSub: "font-mono text-[10px] uppercase tracking-[0.14em] text-fg-4",
+  sidebarBody:
+    "grid min-h-0 flex-1 content-start gap-7 overflow-y-auto px-3 py-5 [scrollbar-width:thin] max-[760px]:grid-cols-[repeat(3,minmax(220px,1fr))] max-[760px]:overflow-x-auto max-[760px]:overflow-y-hidden",
+  sidebarSection: "grid min-w-0 content-start gap-2",
+  sectionTitle:
+    "px-2 font-mono text-[10px] uppercase tracking-[0.14em] text-fg-4",
+  presets: "grid gap-1",
+  preset:
+    "grid w-full cursor-pointer gap-1 rounded-sm border border-transparent bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50",
+  presetActive:
+    "grid w-full cursor-pointer gap-1 rounded-sm border border-hairline-2 bg-surface-2 px-3 py-2.5 text-left shadow-card transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+  presetName: "truncate font-sans text-[13px] font-medium leading-snug text-fg",
+  presetDesc: "line-clamp-2 font-sans text-[11px] leading-[1.45] text-fg-4",
+  smallButton:
+    "inline-flex cursor-pointer items-center justify-center rounded-sm border border-hairline-2 bg-transparent px-3 py-2 font-mono text-[11px] text-fg-2 transition-colors hover:border-accent-line hover:text-fg disabled:cursor-not-allowed disabled:opacity-45",
+  wideButton:
+    "inline-flex w-full cursor-pointer items-center justify-center rounded-sm border border-hairline-2 bg-transparent px-3 py-2 font-mono text-[11px] text-fg-2 transition-colors hover:border-accent-line hover:text-fg disabled:cursor-not-allowed disabled:opacity-45",
+  main: "flex min-w-0 flex-col bg-bg",
+  mainHeader:
+    "flex min-h-20 items-center justify-between gap-4 border-b border-hairline px-6 py-4 max-[640px]:items-start max-[640px]:px-4",
+  titleBlock: "min-w-0",
+  title: "truncate font-display text-xl font-medium tracking-[-0.02em] text-fg",
+  subtitle: "mt-1 font-mono text-[11px] text-fg-4",
+  headerActions: "flex shrink-0 flex-wrap justify-end gap-2",
+  mainBody:
+    "grid min-h-0 flex-1 grid-rows-[auto_minmax(360px,1fr)_auto] gap-3 p-5 max-[640px]:p-3",
+  colRow: "flex min-w-0 items-center justify-between gap-3 px-1",
+  colTitle: "font-mono text-[10px] uppercase tracking-[0.14em] text-fg-4",
+  status:
+    "inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.08em] text-fg-3 before:size-1.5 before:rounded-full before:bg-accent before:content-['']",
+  transcriptPanel:
+    "relative min-h-0 overflow-hidden rounded-lg bg-surface shadow-card",
+  answer:
+    "h-full min-h-[360px] overflow-y-auto px-6 py-5 [scrollbar-width:thin] max-[640px]:px-4 max-[640px]:py-4",
+  banner:
+    "mb-4 rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_35%,transparent)] bg-[color-mix(in_oklch,var(--color-warn)_10%,var(--color-bg))] px-3.5 py-3 font-mono text-[11px] leading-relaxed text-warn [&_code]:text-fg",
+  bannerError:
+    "mb-4 rounded-sm border border-[color-mix(in_oklch,var(--color-err)_35%,transparent)] bg-[color-mix(in_oklch,var(--color-err)_10%,var(--color-bg))] px-3.5 py-3 font-mono text-[11px] leading-relaxed text-err",
+  jump: "absolute right-4 bottom-4 inline-flex cursor-pointer items-center gap-1.5 rounded-pill border border-hairline-2 bg-[color-mix(in_oklch,var(--color-surface-3)_92%,transparent)] px-3 py-1.5 font-mono text-[10px] text-fg-2 shadow-card backdrop-blur-sm hover:text-fg",
+  composer:
+    "grid gap-2 rounded-lg bg-surface p-3 shadow-card focus-within:bg-surface-2",
+  composerInput:
+    "min-h-20 w-full resize-none border-0 bg-transparent px-1 py-1 font-sans text-[14px] leading-[1.55] text-fg outline-none placeholder:text-fg-4 disabled:cursor-not-allowed disabled:opacity-55",
+  composerRow:
+    "flex min-w-0 items-end justify-between gap-3 border-t border-hairline pt-2 max-[640px]:items-stretch",
+  examples:
+    "flex min-w-0 flex-1 flex-wrap gap-1.5 overflow-hidden max-[640px]:max-h-16",
+  example:
+    "max-w-56 cursor-pointer truncate rounded-pill border border-hairline bg-bg px-2.5 py-1 font-mono text-[9px] text-fg-4 transition-colors hover:border-hairline-2 hover:text-fg-2 disabled:cursor-not-allowed disabled:opacity-45",
+  exampleStatic:
+    "max-w-56 cursor-pointer truncate rounded-pill border border-dashed border-accent-line bg-accent-soft px-2.5 py-1 font-mono text-[9px] text-accent transition-colors hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-45",
+  composerActions: "flex shrink-0 items-center",
+  sendButton:
+    "inline-flex min-h-9 min-w-20 cursor-pointer items-center justify-center rounded-sm border border-accent bg-accent px-4 py-2 font-mono text-[11px] font-semibold text-brand-dark transition-colors hover:bg-accent-bright disabled:cursor-not-allowed disabled:opacity-45",
+  stopButton:
+    "inline-flex min-h-9 min-w-20 cursor-pointer items-center justify-center rounded-sm border border-err bg-[color-mix(in_oklch,var(--color-err)_12%,transparent)] px-4 py-2 font-mono text-[11px] font-semibold text-err transition-colors hover:bg-[color-mix(in_oklch,var(--color-err)_20%,transparent)]",
+  workspace:
+    "sticky top-[var(--nav-height)] flex h-[calc(100svh-var(--nav-height))] min-w-0 flex-col bg-surface shadow-card max-[1180px]:static max-[1180px]:col-span-2 max-[1180px]:h-auto max-[760px]:col-span-1",
+  workspaceHeader:
+    "flex min-h-20 items-center border-b border-hairline px-5 py-4",
+  workspaceTitle:
+    "font-display text-base font-medium tracking-[-0.015em] text-fg",
+  workspaceCount: "font-mono text-[10px] text-fg-4",
+  workspaceBody:
+    "grid min-h-0 flex-1 content-start gap-4 overflow-y-auto p-4 [scrollbar-width:thin] max-[1180px]:grid-cols-[auto_minmax(0,1fr)] max-[760px]:grid-cols-1",
+  chips: "flex flex-wrap gap-1.5",
+  chipOn:
+    "rounded-pill border border-[color-mix(in_oklch,var(--color-ok)_36%,transparent)] bg-[color-mix(in_oklch,var(--color-ok)_10%,transparent)] px-2 py-1 font-mono text-[9px] uppercase tracking-[0.06em] text-ok",
+  chipOff:
+    "rounded-pill border border-hairline bg-bg px-2 py-1 font-mono text-[9px] uppercase tracking-[0.06em] text-fg-4",
+  workspacePane:
+    "min-w-0 overflow-hidden rounded-md bg-bg shadow-card max-[1180px]:min-h-40",
+  paneTabs: "flex border-b border-hairline px-2",
+  paneTab:
+    "cursor-pointer border-x-0 border-t-0 border-b border-transparent bg-transparent px-3 py-2.5 font-mono text-[10px] text-fg-4 transition-colors hover:text-fg",
+  paneTabActive:
+    "cursor-pointer border-x-0 border-t-0 border-b border-accent bg-transparent px-3 py-2.5 font-mono text-[10px] text-fg",
+  hints:
+    "grid list-disc gap-3 px-8 py-5 font-sans text-[12px] leading-[1.6] text-fg-3 marker:text-fg-4 [&_code]:font-mono [&_code]:text-[10px] [&_code]:text-fg",
+  empty:
+    "rounded-sm border border-dashed border-hairline-2 px-4 py-5 text-center font-mono text-[10px] leading-relaxed text-fg-4",
+  activity: "grid list-none divide-y divide-hairline p-0",
+  activityItem:
+    "grid grid-cols-[52px_52px_minmax(0,1fr)] gap-2 px-3 py-2 font-mono text-[9px] leading-relaxed",
+  activityTime: "text-fg-4 tabular-nums",
+  activityKind: "truncate uppercase text-fg-3",
+  activityMain: "grid min-w-0 gap-0.5",
+  activityMessage: "truncate text-fg-2",
+  activityDetail: "truncate text-fg-4",
+  toolList: "grid list-none gap-1.5 p-0",
+  tool: "grid gap-1 rounded-sm border border-hairline bg-bg px-2.5 py-2",
+  toolHead: "flex min-w-0 items-center gap-1.5",
+  toolName: "min-w-0 truncate font-mono text-[10px] text-fg-2",
+  toolTag:
+    "rounded-pill border border-hairline-2 px-1.5 py-0.5 font-mono text-[7px] uppercase text-fg-4",
+  toolTagDanger:
+    "rounded-pill border border-[color-mix(in_oklch,var(--color-err)_35%,transparent)] px-1.5 py-0.5 font-mono text-[7px] uppercase text-err",
+  toolDesc: "line-clamp-2 text-[10px] leading-[1.45] text-fg-4",
+  threadTranscript: "grid gap-8",
+  threadTurn: "grid gap-4",
+  userBubble:
+    "ml-auto max-w-[82%] rounded-lg rounded-br-sm bg-surface-3 px-4 py-3 text-[13px] leading-[1.55] text-fg shadow-card",
+  transcript: "grid gap-3",
+  turn: "grid gap-3",
+  answerMarkdown:
+    "min-w-0 text-[13px] leading-7 text-fg-2 [&_a]:text-fg [&_a]:underline [&_a]:decoration-hairline-2 [&_a]:underline-offset-3 [&_blockquote]:border-l-2 [&_blockquote]:border-hairline-2 [&_blockquote]:pl-4 [&_code]:font-mono [&_h1]:font-display [&_h1]:text-xl [&_h1]:text-fg [&_h2]:font-display [&_h2]:text-lg [&_h2]:text-fg [&_h3]:font-display [&_h3]:text-base [&_h3]:text-fg [&_li]:my-1 [&_ol]:my-3 [&_ol]:pl-5 [&_p]:my-2 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-sm [&_pre]:border [&_pre]:border-hairline [&_pre]:bg-bg [&_pre]:p-3 [&_ul]:my-3 [&_ul]:pl-5",
+  markdownInlineCode:
+    "rounded bg-surface-3 px-1.5 py-0.5 font-mono text-[0.88em] text-fg",
+  markdownStream: "whitespace-pre-wrap",
+  working:
+    "inline-flex w-fit items-center gap-2 rounded-pill border border-hairline bg-bg px-3 py-1.5 font-mono text-[10px] text-fg-3",
+  workingDots: "inline-flex items-center gap-1",
+  workingDot: "size-1 animate-pulse rounded-full bg-fg-3",
+  workingTimer: "text-fg-4 tabular-nums",
+  answerBlock: "grid gap-2",
+  answerBlockWarn:
+    "grid gap-2 rounded-sm border-l-2 border-warn bg-[color-mix(in_oklch,var(--color-warn)_7%,transparent)] px-3 py-2",
+  answerBlockError:
+    "grid gap-2 rounded-sm border-l-2 border-err bg-[color-mix(in_oklch,var(--color-err)_7%,transparent)] px-3 py-2",
+  answerHead: "flex items-center justify-between",
+  answerLabel: "font-mono text-[9px] uppercase tracking-[0.12em] text-fg-4",
+  answerPlaceholder: "font-mono text-[10px] leading-relaxed text-fg-4",
+  stop: "font-mono text-[9px] uppercase tracking-[0.08em] text-fg-4",
+  stopWarn: "font-mono text-[9px] uppercase tracking-[0.08em] text-warn",
+  stopError: "font-mono text-[9px] uppercase tracking-[0.08em] text-err",
+  toolCards: "grid list-none gap-2 p-0",
+  toolCard: "overflow-hidden rounded-sm border border-hairline bg-bg",
+  toolCardCalling: "overflow-hidden rounded-sm border border-accent-line bg-bg",
+  toolCardWarn:
+    "overflow-hidden rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_35%,transparent)] bg-bg",
+  toolCardError:
+    "overflow-hidden rounded-sm border border-[color-mix(in_oklch,var(--color-err)_35%,transparent)] bg-bg",
+  toolCardHead:
+    "flex items-center justify-between gap-3 px-3 py-2 font-mono text-[10px]",
+  toolCardName: "truncate text-fg-2",
+  toolStatus: "shrink-0 uppercase tracking-[0.06em] text-fg-4",
+  toolStatusCalling: "shrink-0 animate-pulse uppercase text-accent",
+  toolStatusWarn: "shrink-0 uppercase text-warn",
+  toolStatusError: "shrink-0 uppercase text-err",
+  toolProgress: "grid list-none gap-1 border-t border-hairline px-3 py-2",
+  toolProgressItem:
+    "flex min-w-0 items-center gap-2 font-mono text-[9px] text-fg-4",
+  toolProgressDot: "size-1 shrink-0 rounded-full bg-accent",
+  toolDetails: "border-t border-hairline",
+  toolSummary:
+    "cursor-pointer truncate px-3 py-2 font-mono text-[9px] text-fg-4 hover:text-fg-2",
+  toolJson:
+    "max-h-48 overflow-auto border-t border-hairline bg-surface px-3 py-2 font-mono text-[9px] leading-relaxed text-fg-3",
+  toolItem: "grid gap-1 rounded-sm border border-hairline bg-bg px-3 py-2",
+  toolItemHead: "flex items-center justify-between gap-3",
+  toolItemName: "font-mono text-[10px] text-fg-2",
+  toolItemStatus: "font-mono text-[9px] uppercase text-fg-4",
+  toolItemBody: "truncate font-mono text-[9px] text-fg-4",
+  streamStats:
+    "mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-hairline pt-2 font-mono text-[8px] uppercase tracking-[0.06em] text-fg-4",
+  thinking: "inline-flex items-center gap-2 font-mono text-[10px] text-fg-3",
+  thinkingVerb: "min-w-16",
+  thinkingDots: "inline-flex gap-1",
+  thinkingDot: "size-1 animate-pulse rounded-full bg-fg-3",
+  a2uiRoot: "grid gap-4",
+  a2uiSurface: "min-w-0",
+  a2uiColumn: "grid gap-3",
+  a2uiRow: "flex flex-wrap gap-3",
+  a2uiStack: "grid gap-4",
+  a2uiSlot: "min-w-0",
+  a2uiCard:
+    "rounded-md bg-[linear-gradient(145deg,var(--color-surface-2),var(--color-surface))] p-5 shadow-card",
+  a2uiHeading: "font-display text-xl font-medium tracking-[-0.02em] text-fg",
+  a2uiLead: "text-[13px] leading-relaxed text-fg-3",
+  a2uiText: "text-[13px] leading-relaxed text-fg-2",
+  a2uiDivider: "border-0 border-t border-hairline",
+  a2uiActions: "flex flex-wrap gap-2",
+  a2uiButton:
+    "inline-flex cursor-pointer items-center justify-center rounded-sm border border-accent bg-accent px-3.5 py-2 font-mono text-[11px] font-semibold text-brand-dark",
+  a2uiField: "grid gap-2",
+  a2uiFieldLabel: "font-mono text-[9px] uppercase tracking-[0.08em] text-fg-4",
+  a2uiFieldInput:
+    "w-full rounded-sm border border-hairline bg-bg px-3 py-2.5 font-mono text-[11px] text-fg outline-none",
+  a2uiList: "grid list-disc gap-2 pl-5 text-[12px] text-fg-2",
+  a2uiChart: "overflow-x-auto pt-2",
+  a2uiChartBars:
+    "flex h-48 min-w-[360px] list-none items-end gap-3 border-b border-hairline px-2 pb-2",
+  a2uiChartBar:
+    "grid h-full min-w-10 flex-1 grid-rows-[1fr_auto_auto] gap-1 text-center",
+  a2uiChartTrack: "flex h-full items-end overflow-hidden rounded-t-sm bg-bg",
+  a2uiChartFill:
+    "w-full rounded-t-sm bg-[linear-gradient(180deg,var(--color-accent-bright),var(--color-fg-3))] transition-[height] duration-500",
+  a2uiChartValue: "font-mono text-[9px] text-fg-2",
+  a2uiChartLabel: "truncate font-mono text-[8px] text-fg-4",
+  a2uiStats: "grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-2",
+  a2uiStat: "grid gap-1 rounded-sm bg-bg p-3",
+  a2uiStatValue: "font-display text-2xl font-medium tracking-[-0.03em] text-fg",
+  a2uiStatLabel: "font-mono text-[9px] uppercase tracking-[0.08em] text-fg-4",
+  a2uiUnknown:
+    "rounded-sm border border-dashed border-hairline-2 px-3 py-2 font-mono text-[10px] text-fg-4",
+  a2uiPlaceholder:
+    "rounded-sm border border-dashed border-hairline-2 px-3 py-4 text-center font-mono text-[10px] text-fg-4",
+} as const;

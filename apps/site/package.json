@@ -29,7 +29,10 @@
     "marked": "^18.0.6",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "sharp": "^0.35.3"
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "sharp": "^0.35.3",
+    "valibot": "^1.4.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
