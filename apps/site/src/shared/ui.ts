@@ -77,15 +77,45 @@ export const chipSelectCaret =
 export const caret =
   "inline-block h-[0.08em] w-[0.5em] shrink-0 animate-blink rounded-[1px] bg-accent align-baseline ml-[0.06em]";
 
-export const tabs =
-  "flex gap-1 border-b border-hairline px-2 max-[880px]:flex-nowrap max-[880px]:overflow-x-auto max-[880px]:[scrollbar-width:thin]";
+const tabsBase =
+  "flex gap-1 border-b border-hairline max-[880px]:flex-nowrap max-[880px]:overflow-x-auto max-[880px]:[scrollbar-width:thin]";
+
+export const tabs = `${tabsBase} px-2`;
+
+// Flush variant for bare (non-card) tab strips: no container inset, so each
+// tab's own px-4 (tabBase) sets the gap from the section edge instead of
+// stacking on top of a container inset. The inset is omitted from the base
+// rather than overridden with px-0, per the rule against conflicting utility
+// merges.
+export const tabsFlush = `${tabsBase}`;
 
 const tabBase =
-  "mb-[-1px] inline-flex shrink-0 cursor-pointer items-center gap-2.5 border-x-0 border-t-0 border-b border-solid border-transparent bg-transparent px-4 py-3 font-mono text-[12.5px] transition-colors max-[880px]:px-3.5";
+  "group/tab mb-[-1px] inline-flex shrink-0 cursor-pointer items-center gap-2 border-x-0 border-t-0 border-b border-solid border-transparent bg-transparent px-4 py-3 font-mono text-[12.5px] transition-colors focus-visible:relative focus-visible:z-1 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent max-[880px]:px-3.5";
 
 export const tab = `${tabBase} text-fg-3 hover:text-fg`;
 
 export const tabActive = `${tabBase} border-b-accent text-accent`;
+
+export const tabPackageIcon =
+  "size-4 shrink-0 overflow-visible [&_*]:origin-center [&_*]:[transform-box:fill-box] motion-reduce:[&_*]:animate-none";
+
+export const tabPackageIconMotion = {
+  prompt: "group-hover/tab:[&_path]:animate-icon-draw",
+  webmcp:
+    "group-hover/tab:[&_rect]:animate-icon-register group-hover/tab:[&_rect:nth-child(2)]:[animation-delay:70ms] group-hover/tab:[&_rect:nth-child(3)]:[animation-delay:140ms] group-hover/tab:[&_rect:nth-child(4)]:[animation-delay:210ms]",
+  summarizer:
+    "group-hover/tab:[&_line]:origin-left group-hover/tab:[&_line:nth-child(1)]:animate-icon-compress-top group-hover/tab:[&_line:nth-child(2)]:animate-icon-compress-middle group-hover/tab:[&_line:nth-child(3)]:animate-icon-compress-bottom",
+  translator:
+    "group-hover/tab:[&_.translator-source]:animate-icon-swap-forward group-hover/tab:[&_.translator-target]:animate-icon-swap-back",
+  detector:
+    "group-hover/tab:[&_circle]:animate-icon-scan group-hover/tab:[&_path]:animate-icon-draw",
+  writer:
+    "group-hover/tab:[&_path:first-child]:animate-icon-draw group-hover/tab:[&_path:last-child]:animate-icon-write",
+  rewriter:
+    "group-hover/tab:[&_path:nth-child(1)]:animate-icon-draw group-hover/tab:[&_path:nth-child(2)]:animate-icon-send group-hover/tab:[&_path:nth-child(3)]:animate-icon-draw group-hover/tab:[&_path:nth-child(4)]:animate-icon-send group-hover/tab:[&_path:nth-child(4)]:[animation-delay:120ms]",
+  proofreader:
+    "group-hover/tab:[&_circle]:animate-icon-scan group-hover/tab:[&_path]:animate-icon-check",
+} as const;
 
 export const tabLines = "text-[11px] text-fg-4";
 
@@ -170,19 +200,35 @@ export const srOnly =
 export const nav =
   "sticky top-0 z-50 border-b border-hairline bg-[color-mix(in_oklch,var(--color-bg)_78%,transparent)] backdrop-blur-[14px] backdrop-saturate-[1.2]";
 
-export const navInner = "flex h-14 items-center justify-between";
+export const navInner =
+  "grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-4 max-[640px]:grid-cols-[1fr_auto]";
 
 export const navBrand =
   "flex items-baseline gap-[0.1em] font-mono text-sm tracking-[-0.01em]";
 
-export const navLinks =
-  "flex items-center gap-6 font-mono text-[12.5px] text-fg-3 max-[880px]:hidden [&_a]:relative [&_a]:text-fg-3 [&_a]:transition-colors [&_a:hover]:text-fg [&_a.active]:text-accent [&_a]:after:pointer-events-none [&_a]:after:absolute [&_a]:after:-bottom-1 [&_a]:after:left-0 [&_a]:after:h-px [&_a]:after:w-full [&_a]:after:origin-left [&_a]:after:scale-x-0 [&_a]:after:bg-accent [&_a]:after:transition-transform [&_a]:after:duration-200 [&_a]:after:ease-out [&_a]:after:content-[''] [&_a:hover]:after:scale-x-100 [&_a.active]:after:scale-x-100";
+export const navMinimap =
+  "relative flex h-10 w-48 items-center justify-center justify-self-center [&_a.active>span:first-child]:!h-8 [&_a.active>span:first-child]:!w-[3px] [&_a.active>span:first-child]:!bg-accent [&_a.active>span:first-child]:!opacity-100 max-[640px]:hidden";
+
+export const navMinimapLink =
+  "group/map relative flex h-10 w-6 items-center justify-center rounded-sm focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent";
+
+export const navMinimapTick =
+  "block w-0.5 rounded-pill bg-fg-4 opacity-55 transition-[width,height,background-color,opacity] duration-200 group-hover/map:h-6 group-hover/map:w-[3px] group-hover/map:bg-fg-2 group-hover/map:opacity-100 group-focus-visible/map:h-6 group-focus-visible/map:w-[3px] group-focus-visible/map:bg-fg-2 group-focus-visible/map:opacity-100";
+
+export const navMinimapPreview =
+  "pointer-events-none absolute top-[calc(100%+8px)] left-1/2 z-60 grid w-[300px] -translate-x-1/2 -translate-y-1 gap-1 rounded-md border border-hairline-2 bg-[color-mix(in_oklch,var(--color-surface-2)_94%,transparent)] px-4 py-3 text-left shadow-card opacity-0 backdrop-blur-[16px] transition-[opacity,transform] duration-150 group-hover/map:translate-y-0 group-hover/map:opacity-100 group-focus-visible/map:translate-y-0 group-focus-visible/map:opacity-100 max-[640px]:fixed max-[640px]:top-[calc(var(--nav-height)+10px)] max-[640px]:w-[calc(100vw-40px)] max-[640px]:translate-y-0";
+
+export const navMinimapTitle =
+  "font-sans text-[14px] font-medium leading-snug text-fg";
+
+export const navMinimapSummary =
+  "font-sans text-[12.5px] leading-snug text-fg-3";
 
 export const navCta =
-  "rounded-sm border border-hairline-2 px-3 py-2 font-mono text-[12.5px] text-fg-2 transition-all hover:border-accent-line hover:text-fg";
+  "inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-sm border border-hairline-2 px-3 py-2 font-mono text-[12.5px] text-fg-2 transition-all hover:border-accent-line hover:text-fg max-[640px]:size-9 max-[640px]:p-0";
 
 // Right-aligned nav action group: the icon-only Docs link plus the GitHub CTA.
-export const navActions = "flex items-center gap-2";
+export const navActions = "flex items-center justify-self-end gap-2";
 
 // Borderless, icon-only nav button. Sits next to the GitHub CTA; a micro
 // scale + color lift on hover gives it a tactile affordance without a box.
@@ -190,12 +236,19 @@ export const navIcon =
   "inline-flex items-center justify-center rounded-sm p-2 text-fg-3 transition-all duration-200 ease-out hover:scale-110 hover:text-fg";
 
 export const hero =
-  "py-[calc(120px*var(--density))] pb-[calc(72px*var(--density))] max-[880px]:py-20 max-[880px]:pb-14";
+  "flex min-h-[100svh] flex-col justify-center py-[calc(96px*var(--density))] max-[880px]:min-h-[clamp(420px,64svh,540px)] max-[880px]:py-12 max-[640px]:py-10";
 
-export const heroGrid = "grid gap-8";
+export const heroGrid =
+  "grid gap-8 max-[880px]:gap-6 max-[640px]:justify-items-center max-[640px]:gap-7 max-[640px]:text-center";
 
-export const heroEyebrow =
-  "inline-flex w-fit items-center gap-2.5 rounded-pill border border-hairline bg-surface py-1.5 pr-3 pl-2.5 font-mono text-xs text-fg-3";
+// Bare mono kicker (no pill box): a plain uppercase label with the accent dot,
+// used above the hero headline in place of the old slogan-in-a-pill eyebrow.
+export const heroKicker =
+  "inline-flex w-fit items-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-4";
+
+export const heroKickerDesktopLabel = "max-[640px]:hidden";
+
+export const heroKickerMobileLabel = "hidden max-[640px]:inline";
 
 export const heroEyebrowDot =
   "size-1.5 rounded-full bg-accent shadow-[0_0_0_3px_var(--color-accent-soft)]";
@@ -207,17 +260,16 @@ export const gradientText =
   "bg-[image:var(--gradient-text)] bg-clip-text text-transparent [filter:var(--glow-text)]";
 
 export const heroTitle =
-  "flex flex-nowrap items-baseline gap-[0.1em] font-mono text-[clamp(54px,9vw,112px)] leading-[0.95] font-medium tracking-[-0.04em] max-[640px]:text-[56px] max-[480px]:text-[44px]";
+  "flex flex-nowrap items-baseline gap-[0.1em] font-display text-[clamp(54px,9vw,112px)] leading-[0.95] font-medium tracking-[-0.04em] max-[640px]:text-[56px] max-[480px]:text-[44px]";
+
+export const heroTextBackdrop =
+  "[text-shadow:0_1px_2px_var(--color-bg),0_0_18px_var(--color-bg),0_0_42px_var(--color-bg)]";
 
 export const subhead =
   "max-w-[820px] text-[clamp(17px,1.6vw,20px)] leading-[1.5] tracking-[-0.01em] text-fg-2 [&_strong]:font-medium [&_strong]:text-fg";
 
-// Secondary line under the subhead: smaller (relative em so it tracks the
-// subhead clamp) and dimmer, so the positioning line stays primary.
-export const subheadSub = "mt-1 block text-[0.85em] text-fg-3";
-
 export const ctaRow =
-  "mt-2 flex flex-wrap items-center gap-3 max-[640px]:gap-2.5";
+  "mt-2 flex flex-wrap items-center gap-6 max-[640px]:w-full max-[640px]:flex-col max-[640px]:justify-center max-[640px]:gap-4";
 
 const btnBase =
   "inline-flex cursor-pointer items-center gap-2.5 rounded-pill border px-5 py-3 font-mono text-[13px] tracking-[-0.005em] no-underline transition-all active:translate-y-px max-[640px]:px-4 max-[640px]:py-2.5 max-[640px]:text-[13px]";
@@ -226,34 +278,16 @@ export const btn = `${btnBase} border-transparent`;
 
 export const btnPrimary = `${btnBase} border-accent bg-accent font-semibold text-brand-dark hover:border-accent-bright hover:bg-accent-bright hover:text-brand-dark`;
 
-export const btnGhost = `${btnBase} border-fg-4 bg-bg text-fg hover:border-fg-3 hover:text-fg`;
+// Package explorer panel: two-column grid without stacked-row sibling margins.
+// Panels are siblings where all but one carry the `hidden` attribute, and
+// `.x + .x` matches hidden siblings too, so a sibling margin would shift the
+// visible panel whenever a non-first tab is active.
+export const pkgPanel =
+  "grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-start gap-16 pt-10 max-[880px]:grid-cols-1 max-[880px]:gap-8 max-[880px]:pt-8";
 
-export const btnArrow = "transition-transform group-hover:translate-x-[3px]";
-
-export const badgeRow = "mt-8 flex flex-wrap gap-2";
-
-const badgeBase =
-  "inline-flex items-center gap-1.5 rounded-sm border bg-surface px-2.5 py-[5px] font-mono text-[11px] tracking-[0.04em]";
-
-export const badge = `${badgeBase} border-hairline text-fg-3`;
-
-export const badgeAccent = `${badgeBase} border-accent-line text-accent-bright`;
-
-export const badgeKey = "text-fg-4";
-
-export const badgeVal = "text-fg-2";
-
-export const badgeValAccent = "text-accent-bright";
-
-export const pkgRow =
-  "grid scroll-mt-[calc(var(--nav-height)+1.5rem)] grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-start gap-16 max-[880px]:grid-cols-1 max-[880px]:gap-8 [&+&]:mt-24 max-[880px]:[&+&]:mt-16";
-
-export const pkgLeft = "group min-w-0 pt-2";
+export const pkgLeft = "min-w-0 pt-2";
 
 export const pkgRight = "min-w-0";
-
-export const pkgIcon =
-  "mb-6 grid size-9 place-items-center rounded-sm border border-accent-line bg-accent-soft text-accent transition-[transform,background-color,border-color] duration-300 ease-out group-hover:-translate-y-0.5 group-hover:border-accent group-hover:bg-[color-mix(in_oklch,var(--color-accent)_16%,transparent)] [&_svg_*]:[stroke-dasharray:1] group-hover:[&_svg_*]:animate-icon-stream";
 
 export const pkgName =
   "mb-2.5 font-mono text-[22px] tracking-[-0.02em] text-fg";
@@ -276,7 +310,10 @@ export const pkgInstallPrompt = "mr-2 text-fg-4";
 export const pkgInstallPkg = "text-accent";
 
 export const pkgDocs =
-  "group inline-flex items-center gap-2 font-mono text-[12.5px] text-fg-3 hover:text-accent";
+  "inline-flex items-center font-mono text-[12.5px] text-fg-3 hover:text-accent";
+
+export const heroRepoLink =
+  "inline-flex items-center gap-2 font-mono text-[15px] font-semibold text-fg no-underline transition-colors hover:text-accent-bright";
 
 // Silver shimmer for link labels: clips the metallic --gradient-silver ramp to
 // the text and loops a traveling highlight (see home.css keyframes). Disabled
@@ -284,8 +321,7 @@ export const pkgDocs =
 export const silverText =
   "bg-[image:var(--gradient-silver)] bg-[length:200%_100%] bg-clip-text text-transparent animate-silver motion-reduce:animate-none";
 
-export const pkgDocsArrow =
-  "transition-transform group-hover:translate-x-[3px]";
+export const githubMark = "size-5 shrink-0 fill-current";
 
 export const twoCol = "grid grid-cols-2 gap-8 max-[880px]:grid-cols-1";
 
@@ -313,23 +349,25 @@ export const stackDiagram =
   "relative mt-10 overflow-hidden rounded-lg bg-surface shadow-card";
 
 export const stackHeader =
-  "flex items-center justify-between border-b border-hairline bg-surface-2 px-6 py-3 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-4";
+  "grid grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-5 bg-surface-2 px-6 py-3 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-4 [&>span:first-child]:col-start-2 max-[640px]:grid-cols-[36px_minmax(0,1fr)] max-[640px]:gap-4 max-[640px]:px-4 max-[640px]:[&>span:last-child]:hidden";
 
 export const stackRowBase =
-  "relative grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-6 border-b border-hairline px-6 py-6 transition-colors last:border-b-0 hover:bg-surface-2 before:pointer-events-none before:absolute before:bottom-0 before:left-[39px] before:top-0 before:w-px before:bg-hairline-2 before:content-[''] first:before:top-1/2 last:before:bottom-1/2 max-[640px]:grid-cols-[44px_minmax(0,1fr)] max-[640px]:gap-4 max-[640px]:px-4 max-[640px]:py-4 max-[640px]:before:left-[33px]";
+  "relative grid grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-x-5 px-6 py-6 transition-colors hover:bg-surface-2 before:pointer-events-none before:absolute before:bottom-0 before:left-[44px] before:top-0 before:w-px before:bg-hairline-2 before:content-[''] max-[640px]:grid-cols-[36px_minmax(0,1fr)] max-[640px]:gap-x-4 max-[640px]:px-4 max-[640px]:py-4 max-[640px]:before:left-[34px]";
 
-export const stackRowApi = "bg-transparent";
+export const stackRowStart = "before:!top-1/2";
 
 export const stackRowHook =
   "bg-[color-mix(in_oklch,var(--color-accent)_5%,transparent)] hover:bg-[color-mix(in_oklch,var(--color-accent)_8%,transparent)]";
 
-export const stackIdx =
-  "relative z-1 inline-flex min-w-8 items-center justify-center rounded-sm border border-hairline-2 bg-bg px-2 py-1 font-mono text-[11px] tracking-[0.08em] text-fg-4";
+export const stackRowEnd = "before:!bottom-1/2";
 
-export const stackIdxAccent =
+export const stackIcon =
+  "relative z-1 grid size-9 place-items-center justify-self-center rounded-sm border border-hairline-2 bg-bg text-fg-3 [&_svg]:size-4";
+
+export const stackAccent =
   "border-accent-line bg-accent-soft text-accent-bright";
 
-export const stackIdxMuted = "text-fg-2";
+export const stackMuted = "text-fg-2";
 
 export const stackBody = "min-w-0";
 
@@ -352,12 +390,20 @@ export const supportWrap =
   "overflow-x-auto overflow-y-hidden [-webkit-overflow-scrolling:touch]";
 
 export const supportTable =
-  "min-w-[560px] w-full border-separate border-spacing-0 overflow-hidden rounded-lg bg-surface shadow-card font-mono text-[13px] [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap [&_td]:border-r [&_td]:border-b [&_td]:border-hairline [&_td]:px-5 [&_td]:py-3.5 [&_td]:align-middle [&_td]:text-fg-2 [&_td:last-child]:border-r-0 [&_th]:border-r [&_th]:border-b [&_th]:border-hairline [&_th]:px-5 [&_th]:py-3.5 [&_th]:text-left [&_th:last-child]:border-r-0 [&_tr:last-child_td]:border-b-0 [&_tr:last-child_th]:border-b-0 [&_td]:transition-colors [&_th]:transition-colors [&_tbody_tr:hover_td]:bg-surface-2 [&_tbody_tr:hover_th]:bg-surface-3";
+  "min-w-[560px] w-full border-separate border-spacing-0 font-mono text-[13px] [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap [&_td]:px-5 [&_td]:py-3.5 [&_td]:text-center [&_td]:align-middle [&_td]:text-fg-2 [&_thead_th]:px-5 [&_thead_th]:pt-1 [&_thead_th]:pb-3 [&_thead_th]:text-left [&_tbody_td]:bg-surface [&_tbody_td]:transition-colors [&_tbody_th]:text-left [&_tbody_th]:transition-colors [&_tbody_tr:nth-child(even)_td]:bg-surface-2 [&_tbody_tr:nth-child(even)_th]:bg-surface-2 [&_tbody_tr:first-child_th]:rounded-tl-md [&_tbody_tr:first-child_td:last-child]:rounded-tr-md [&_tbody_tr:last-child_th]:rounded-bl-md [&_tbody_tr:last-child_td:last-child]:rounded-br-md [&_tbody_tr:hover_td]:!bg-surface-3 [&_tbody_tr:hover_th]:!bg-surface-3";
 
 export const supportHead =
-  "bg-surface-2 text-[11px] font-medium uppercase tracking-[0.1em] text-fg-4";
+  "text-[11px] font-medium uppercase tracking-[0.1em] text-fg-4";
 
-export const supportRowHead = "bg-surface-2 text-[12.5px] font-normal text-fg";
+export const supportCenteredHead = "!text-center";
+
+export const browserLabel =
+  "inline-flex items-center justify-center gap-2.5 text-fg-3";
+
+export const browserIcon = "size-[18px] shrink-0 object-contain";
+
+export const supportRowHead =
+  "bg-surface px-5 py-3.5 text-[12.5px] font-normal text-fg";
 
 export const supportVersion =
   "inline-block rounded-sm bg-surface-3 px-2 py-[3px] text-[11px] tracking-[0.04em]";
@@ -386,8 +432,27 @@ export const supportPillWarn =
 export const supportNote =
   "mt-3 font-mono text-[10.5px] leading-[1.5] tracking-[0.02em] text-fg-4";
 
+// Capability matrix: same table skeleton as the browser support grid
+// (supportWrap / supportTable / supportHead / supportRowHead), one row per
+// API, one column per lifecycle feature the SDK layer provides.
+export const matrixCell = "text-center";
+
+export const matrixMark =
+  "inline-flex size-5 items-center justify-center rounded-full text-[11px]";
+
+export const matrixMarkOn =
+  "bg-[color-mix(in_oklch,var(--color-ok)_15%,var(--color-surface-3))] text-ok";
+
+export const matrixMarkOff = "text-fg-4";
+
 export const ctaBlock =
-  "rounded-lg bg-surface shadow-card bg-[radial-gradient(600px_200px_at_50%_0%,var(--color-accent-soft),transparent_70%)] px-14 py-14 text-center max-[880px]:px-6 max-[880px]:py-9";
+  "relative z-1 rounded-lg bg-surface shadow-card bg-[radial-gradient(600px_200px_at_50%_0%,var(--color-accent-soft),transparent_70%)] px-14 py-14 text-center max-[880px]:px-6 max-[880px]:py-9";
+
+export const ctaSection =
+  "relative z-0 overflow-visible py-[var(--section-py)] pb-[calc(var(--section-py)*2)]";
+
+export const ctaGlow =
+  "relative z-0 isolate before:pointer-events-none before:absolute before:-inset-x-5 before:-top-5 before:bottom-0 before:-z-1 before:animate-rainbow-glow before:rounded-[24px] before:bg-[linear-gradient(100deg,#d946ef_0%,#8b5cf6_24%,#3b82f6_48%,#06b6d4_70%,#22c55e_100%)] before:bg-[length:180%_100%] before:opacity-55 before:blur-[52px] before:will-change-[background-position] before:content-[''] max-[640px]:before:-inset-x-2 max-[640px]:before:-top-2 max-[640px]:before:opacity-45 max-[640px]:before:blur-[34px]";
 
 export const ctaBlockTitle = "mb-3";
 
