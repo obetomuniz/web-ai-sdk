@@ -337,8 +337,6 @@ export const whyRawText =
 export const philosophyTitle =
   "mb-3 font-sans text-[25px] leading-[1.3] tracking-[-0.03em] text-fg max-[640px]:text-[20px]";
 
-export const philosophyNum = "mr-2.5 font-mono text-sm text-accent";
-
 export const philosophyText =
   "text-[16.5px] leading-[1.8] text-fg-2 max-[640px]:text-[15.5px]";
 
