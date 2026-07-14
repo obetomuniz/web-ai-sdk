@@ -15,7 +15,7 @@
     "docs:check": "node scripts/sync-package-docs.mjs --check"
   },
   "dependencies": {
-    "@astrojs/react": "5.0.7",
+    "@astrojs/react": "6.0.1",
     "@astrojs/starlight": "0.40.0",
     "@web-ai-sdk/detector": "workspace:*",
     "@web-ai-sdk/prompt": "workspace:*",
