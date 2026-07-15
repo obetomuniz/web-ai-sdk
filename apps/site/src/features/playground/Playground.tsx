@@ -165,7 +165,7 @@ export function Playground() {
   };
 
   const selectThread = (id: string) => {
-    if (id === activeThread.id) return;
+    if (busy || id === activeThread.id) return;
     ops.select(id);
     newSession();
     const thread = threads.find((candidate) => candidate.id === id);
@@ -173,6 +173,20 @@ export function Playground() {
       kind: "chat_switch",
       message: "thread",
       detail: thread?.name ?? id,
+    });
+  };
+
+  const closeThread = (id: string) => {
+    if (busy) return;
+    const thread = threads.find((candidate) => candidate.id === id);
+    if (!thread) return;
+    const wasActive = id === activeThread.id;
+    ops.remove(id);
+    if (wasActive) newSession();
+    pushActivity({
+      kind: "chat_close",
+      message: "close thread",
+      detail: thread.name,
     });
   };
 
@@ -214,20 +228,39 @@ export function Playground() {
             </button>
             <div className={ui.presets}>
               {threads.map((thread) => (
-                <button
+                <div
                   key={thread.id}
-                  type="button"
+                  data-thread-id={thread.id}
+                  data-active={thread.id === activeThread.id}
                   className={
-                    thread.id === activeThread.id ? ui.presetActive : ui.preset
+                    thread.id === activeThread.id
+                      ? ui.threadItemActive
+                      : ui.threadItem
                   }
-                  onClick={() => selectThread(thread.id)}
                 >
-                  <span className={ui.presetName}>{thread.name}</span>
-                  <span className={ui.presetDesc}>
-                    {findSkillName(thread.skillId)} · {thread.turns.length} turn
-                    {thread.turns.length === 1 ? "" : "s"}
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    className={ui.threadSelect}
+                    onClick={() => selectThread(thread.id)}
+                    disabled={busy}
+                  >
+                    <span className={ui.presetName}>{thread.name}</span>
+                    <span className={ui.presetDesc}>
+                      {findSkillName(thread.skillId)} · {thread.turns.length}{" "}
+                      turn{thread.turns.length === 1 ? "" : "s"}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={ui.threadClose}
+                    onClick={() => closeThread(thread.id)}
+                    disabled={busy}
+                    aria-label={`Close thread ${thread.name}`}
+                    title="Close thread"
+                  >
+                    <span aria-hidden="true">×</span>
+                  </button>
+                </div>
               ))}
             </div>
           </section>

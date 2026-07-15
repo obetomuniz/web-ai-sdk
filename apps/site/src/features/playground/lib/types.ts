@@ -13,6 +13,7 @@ export type ActivityKind =
   | "chat_response"
   | "chat_abort"
   | "chat_clear"
+  | "chat_close"
   | "chat_switch"
   | "tool_invoked"
   | "info";

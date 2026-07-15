@@ -523,6 +523,14 @@ export const playground = {
     "grid w-full cursor-pointer gap-1 rounded-sm border border-transparent bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50",
   presetActive:
     "grid w-full cursor-pointer gap-1 rounded-sm border border-hairline-2 bg-surface-2 px-3 py-2.5 text-left shadow-card transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+  threadItem:
+    "grid grid-cols-[minmax(0,1fr)_2rem] items-stretch rounded-sm border border-transparent bg-transparent transition-colors hover:bg-surface-2",
+  threadItemActive:
+    "grid grid-cols-[minmax(0,1fr)_2rem] items-stretch rounded-sm border border-hairline-2 bg-surface-2 shadow-card",
+  threadSelect:
+    "grid min-w-0 cursor-pointer gap-1 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50",
+  threadClose:
+    "m-0.5 inline-flex size-7 cursor-pointer items-center justify-center self-center rounded-sm font-mono text-base leading-none text-fg-4 transition-colors hover:bg-surface-3 hover:text-warn focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-45",
   presetName: "truncate font-sans text-[13px] font-medium leading-snug text-fg",
   presetDesc: "line-clamp-2 font-sans text-[11px] leading-[1.45] text-fg-4",
   smallButton:
