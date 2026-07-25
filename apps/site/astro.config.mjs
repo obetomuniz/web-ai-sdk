@@ -7,6 +7,14 @@ import { defineConfig } from "astro/config";
 // Defaults to the custom-domain root. GitHub Pages builds override this with
 // SITE_BASE for project Pages or any other host prefix.
 const base = process.env.SITE_BASE ?? "/";
+const basePath = base.endsWith("/") ? base : `${base}/`;
+const pathFromBase = (path) => `${basePath}${path.replace(/^\//, "")}`;
+const preloadedFonts = [
+  "geist-latin-wght-normal.woff2",
+  "space-grotesk-latin-wght-normal.woff2",
+  "ibm-plex-mono-latin-400-normal.woff2",
+  "ibm-plex-mono-latin-600-normal.woff2",
+];
 
 export default defineConfig({
   base,
@@ -60,25 +68,16 @@ export default defineConfig({
             "data-website-id": "9e24f5c3-6b64-48fc-8679-610907092f1c",
           },
         },
-        {
-          tag: "link",
-          attrs: { rel: "preconnect", href: "https://fonts.googleapis.com" },
-        },
-        {
+        ...preloadedFonts.map((file) => ({
           tag: "link",
           attrs: {
-            rel: "preconnect",
-            href: "https://fonts.gstatic.com",
+            rel: "preload",
+            href: pathFromBase(`fonts/${file}`),
+            as: "font",
+            type: "font/woff2",
             crossorigin: true,
           },
-        },
-        {
-          tag: "link",
-          attrs: {
-            rel: "stylesheet",
-            href: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap",
-          },
-        },
+        })),
         {
           tag: "meta",
           attrs: {

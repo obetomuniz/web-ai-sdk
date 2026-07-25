@@ -1,4 +1,9 @@
 import { useEffect, useRef } from "react";
+import {
+  shaderBackdrop,
+  shaderCanvas,
+  shaderFade,
+} from "../../../shared/ui.js";
 
 /**
  * Shared WebGL backdrop engine (no libraries). Renders a full-screen fragment
@@ -147,6 +152,7 @@ export function ShaderBackdrop({
 
     let raf = 0;
     let visible = true;
+    let ready = false;
     const start = performance.now();
     const frame = (now: number) => {
       // Note: do NOT reset raf to 0 here. Keeping the live id non-zero during the
@@ -159,6 +165,10 @@ export function ShaderBackdrop({
       gl.uniform2f(uMouse, mouse[0], mouse[1]);
       gl.uniform1f(uCells, cells);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
+      if (!ready) {
+        ready = true;
+        canvas.dataset.ready = "true";
+      }
       raf = visible ? requestAnimationFrame(frame) : 0;
     };
 
@@ -179,6 +189,7 @@ export function ShaderBackdrop({
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("themechange", syncColors);
+      delete canvas.dataset.ready;
       probe.remove();
       gl.deleteProgram(prog);
       gl.deleteShader(vs);
@@ -188,13 +199,10 @@ export function ShaderBackdrop({
   }, [frag]);
 
   return (
-    <div
-      aria-hidden="true"
-      className={`pointer-events-none absolute inset-0 overflow-hidden ${className ?? ""}`}
-    >
-      <canvas ref={canvasRef} className="block h-full w-full" />
+    <div aria-hidden="true" className={`${shaderBackdrop} ${className ?? ""}`}>
+      <canvas ref={canvasRef} className={shaderCanvas} />
       {/* Bottom-to-top page-bg gradient eases the shader into the page. */}
-      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-[linear-gradient(to_top,var(--color-bg)_0%,var(--color-bg)_18%,transparent_100%)]" />
+      <div className={shaderFade} />
     </div>
   );
 }

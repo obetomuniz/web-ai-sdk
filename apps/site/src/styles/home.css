@@ -1,5 +1,80 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Geist";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/geist-latin-wght-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Geist Fallback";
+  font-style: normal;
+  font-weight: 400 700;
+  src: local("Arial");
+  ascent-override: 94.56%;
+  descent-override: 27.76%;
+  line-gap-override: 0%;
+  size-adjust: 106.28%;
+}
+
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-latin-wght-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Space Grotesk Fallback";
+  font-style: normal;
+  font-weight: 400 700;
+  src: local("Arial");
+  size-adjust: 106%;
+}
+
+@font-face {
+  font-family: "Space Grotesk Hero Fallback";
+  font-style: normal;
+  font-weight: 500;
+  src: local("Arial");
+  size-adjust: 113.3%;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-mono-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "IBM Plex Mono Fallback";
+  font-style: normal;
+  font-weight: 400 600;
+  src: local("Menlo");
+  size-adjust: 99.66%;
+}
+
 @theme {
   /* Default theme = Noir · Dark. These are the design-token *defaults*; the
    * runtime ThemeSwitcher (src/shared/themes.ts) overrides any of them on :root to
@@ -26,10 +101,14 @@
   --color-err: #ff6b7a;
   --color-brand-dark: #0a0a0a;
 
-  --font-display: "Space Grotesk", "Geist", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, "SF Mono", Menlo,
-    monospace;
+  --font-display: "Space Grotesk", "Space Grotesk Fallback", "Geist",
+    "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-hero: "Space Grotesk", "Space Grotesk Hero Fallback", Arial,
+    ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, -apple-system,
+    sans-serif;
+  --font-mono: "IBM Plex Mono", "IBM Plex Mono Fallback", "JetBrains Mono",
+    ui-monospace, "SF Mono", Menlo, monospace;
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -305,6 +384,7 @@
   body {
     @apply m-0 bg-bg p-0 font-sans text-fg antialiased scroll-smooth;
     font-feature-settings: "ss01", "cv11", "tnum";
+    font-synthesis: none;
   }
 
   body {
