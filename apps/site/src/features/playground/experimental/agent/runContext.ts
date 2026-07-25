@@ -9,6 +9,8 @@ export interface AgentRunContext {
   readonly userInput: string;
   /** Normalized HTTP(S) URLs the user named in `userInput`. */
   readonly userUrls: ReadonlySet<string>;
+  /** Normalized URLs successfully fetched earlier in this conversation. */
+  readonly knownUrls: ReadonlySet<string>;
   /** Bodies from successful fetches this run (for provenance checks). */
   readonly fetchedSources: readonly string[];
 }

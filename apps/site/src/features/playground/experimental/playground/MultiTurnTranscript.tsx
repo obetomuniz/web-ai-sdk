@@ -1,90 +1,114 @@
 import { playground as ui } from "../../../../shared/ui.js";
-import type { A2uiSnapshot } from "../agent/a2ui/index.js";
-import { createEmptyA2uiSnapshot } from "../agent/a2ui/index.js";
-import type { AgentEvent, AgentStopReason, AgentTurn } from "../agent/types.js";
+import type { AgentThreadTurn } from "../../lib/agentThreads.js";
+import type {
+  AgentEvent,
+  AgentFailure,
+  AgentStopReason,
+  AgentTurn,
+} from "../agent/types.js";
 import { Transcript } from "./Transcript.js";
 import type { ToolRendererId } from "./toolRenderers.js";
 import type { TranscriptRendererId } from "./transcriptRenderers.js";
 
 interface Props {
-  turns: AgentTurn[];
+  turns: AgentThreadTurn[];
+  currentTurnId?: string | null;
   currentInput?: string;
   events: AgentEvent[];
   text: string;
-  a2uiSnapshot: A2uiSnapshot;
   liveThought: { index: number; text: string } | null;
   stopReason: AgentStopReason | null;
+  failure?: AgentFailure;
   busy: boolean;
   transcriptRendererId?: TranscriptRendererId;
   toolRendererId?: ToolRendererId;
-  a2uiEnabled?: boolean;
 }
 
 export function MultiTurnTranscript({
   turns,
+  currentTurnId,
   currentInput,
   events,
   text,
-  a2uiSnapshot,
   liveThought,
   stopReason,
+  failure,
   busy,
   transcriptRendererId,
   toolRendererId,
-  a2uiEnabled,
 }: Props) {
   const hasLiveTurn =
     Boolean(currentInput) || events.length > 0 || text || busy || stopReason;
   if (turns.length === 0 && !hasLiveTurn) {
     return (
-      <div className={ui.empty}>
-        Start a thread to see the agent's messages, tool calls, and answers
-        appear here.
+      <div className={ui.emptyConversation}>
+        <div className={ui.emptyConversationTitle}>Start a conversation</div>
+        <p className={ui.emptyConversationText}>
+          Messages, tool calls, and answers will appear here.
+        </p>
       </div>
     );
   }
 
+  const visibleTurns: TranscriptTurn[] = turns.map((turn) => ({
+    id: turn.id,
+    userInput: turn.userInput,
+    events: eventsFromTurn(turn),
+    text: turn.assistantText,
+    liveThought: null,
+    stopReason: turn.stopReason,
+    durationMs: turn.durationMs,
+    failure: turn.failure,
+    busy: false,
+  }));
+
+  if (hasLiveTurn) {
+    visibleTurns.push({
+      id: currentTurnId ?? "live-turn",
+      userInput: currentInput,
+      events,
+      text,
+      liveThought,
+      stopReason,
+      failure,
+      busy,
+    });
+  }
+
   return (
     <div className={ui.threadTranscript}>
-      {turns.map((turn, index) => (
-        <section key={turnKey(turn, index)} className={ui.threadTurn}>
-          <div className={ui.userBubble}>{turn.userInput}</div>
+      {visibleTurns.map((turn) => (
+        <section key={turn.id} className={ui.threadTurn}>
+          {turn.userInput && (
+            <div className={ui.userBubble}>{turn.userInput}</div>
+          )}
           <Transcript
-            events={eventsFromTurn(turn)}
-            text={turn.assistantText}
-            a2uiSnapshot={turn.a2uiSnapshot ?? createEmptyA2uiSnapshot()}
-            liveThought={null}
+            events={turn.events}
+            text={turn.text}
+            liveThought={turn.liveThought}
             stopReason={turn.stopReason}
-            busy={false}
+            durationMs={turn.durationMs}
+            failure={turn.failure}
+            busy={turn.busy}
             transcriptRendererId={transcriptRendererId}
             toolRendererId={toolRendererId}
-            a2uiEnabled={a2uiEnabled}
           />
         </section>
       ))}
-      {hasLiveTurn && (
-        <section className={ui.threadTurn}>
-          {currentInput && <div className={ui.userBubble}>{currentInput}</div>}
-          <Transcript
-            events={events}
-            text={text}
-            a2uiSnapshot={a2uiSnapshot}
-            liveThought={liveThought}
-            stopReason={stopReason}
-            busy={busy}
-            transcriptRendererId={transcriptRendererId}
-            toolRendererId={toolRendererId}
-            a2uiEnabled={a2uiEnabled}
-          />
-        </section>
-      )}
     </div>
   );
 }
 
-function turnKey(turn: AgentTurn, index: number): string {
-  const maybePersisted = turn as AgentTurn & { id?: string };
-  return maybePersisted.id ?? `${turn.userInput}-${index}`;
+interface TranscriptTurn {
+  id: string;
+  userInput?: string;
+  events: AgentEvent[];
+  text: string;
+  liveThought: { index: number; text: string } | null;
+  stopReason: AgentStopReason | null;
+  durationMs?: number;
+  failure?: AgentFailure;
+  busy: boolean;
 }
 
 function eventsFromTurn(turn: AgentTurn): AgentEvent[] {
@@ -127,6 +151,7 @@ function eventsFromTurn(turn: AgentTurn): AgentEvent[] {
       type: "done",
       reason: turn.stopReason,
       text: turn.assistantText,
+      failure: turn.failure,
     });
   }
   return events;

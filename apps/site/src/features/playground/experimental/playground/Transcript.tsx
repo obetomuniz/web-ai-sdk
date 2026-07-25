@@ -20,9 +20,11 @@
 
 import { type ReactElement, useEffect, useMemo, useState } from "react";
 import { playground as ui } from "../../../../shared/ui.js";
-import type { A2uiSnapshot } from "../agent/a2ui/index.js";
-import type { AgentEvent, AgentStopReason } from "../agent/types.js";
-import { A2uiView } from "./a2ui/A2uiView.js";
+import type {
+  AgentEvent,
+  AgentFailure,
+  AgentStopReason,
+} from "../agent/types.js";
 import {
   resolveToolRenderer,
   type ToolRendererId,
@@ -36,14 +38,14 @@ import {
 interface Props {
   events: AgentEvent[];
   text: string;
-  a2uiSnapshot: A2uiSnapshot;
   /** Thought of the in-flight planning turn, streamed token-by-token. */
   liveThought: { index: number; text: string } | null;
   stopReason: AgentStopReason | null;
+  durationMs?: number;
+  failure?: AgentFailure;
   busy: boolean;
   transcriptRendererId?: TranscriptRendererId;
   toolRendererId?: ToolRendererId;
-  a2uiEnabled?: boolean;
 }
 
 interface StepFrame {
@@ -134,8 +136,6 @@ function build(events: AgentEvent[]): BuiltTranscript {
         // Single non-streamed final message; the parent still owns the
         // text state, no per-event work here.
         break;
-      case "a2ui_message":
-        break;
       case "done":
         break;
     }
@@ -143,37 +143,47 @@ function build(events: AgentEvent[]): BuiltTranscript {
   return { steps, hasStreamedText };
 }
 
-function hasA2uiContent(snapshot: A2uiSnapshot): boolean {
-  return Object.values(snapshot).some(
-    (s) => Object.keys(s.components).length > 0 || (s.ready && !!s.rootId),
-  );
-}
-
 function stopTone(reason: AgentStopReason | null): "error" | "warn" | null {
-  if (!reason || reason === "done") return null;
+  // A user-requested stop is a normal interaction, not an error state. Keep
+  // the partial response neutral and identify it with the compact label.
+  if (!reason || reason === "done" || reason === "aborted") return null;
   if (reason === "budget_exhausted") return "warn";
   return "error";
+}
+
+function stopLabel(reason: AgentStopReason): string {
+  switch (reason) {
+    case "model_error":
+      return "Model error";
+    case "context_overflow":
+      return "Context full";
+    case "tool_error":
+      return "Tool failed";
+    case "budget_exhausted":
+      return "Step limit reached";
+    case "unavailable":
+      return "Model unavailable";
+    case "aborted":
+      return "Stopped";
+    case "stalled":
+      return "Model stalled";
+    case "done":
+      return "Done";
+  }
 }
 
 export function Transcript({
   events,
   text,
-  a2uiSnapshot,
   liveThought,
   stopReason,
+  durationMs,
+  failure,
   busy,
   transcriptRendererId,
   toolRendererId,
-  a2uiEnabled,
 }: Props) {
   const { steps, hasStreamedText } = useMemo(() => build(events), [events]);
-  const showA2ui = hasA2uiContent(a2uiSnapshot);
-  const a2uiFailed =
-    !!a2uiEnabled &&
-    stopReason === "done" &&
-    !busy &&
-    !showA2ui &&
-    !text.trim();
   const renderTranscriptContent =
     resolveTranscriptRenderer(transcriptRendererId);
   const ToolRenderer = resolveToolRenderer(toolRendererId);
@@ -184,21 +194,14 @@ export function Transcript({
   // the fetches complete and before the answer's first token streams in.
   const anyToolPending = steps.some((s) => s.tools.some((t) => t.pending));
   const hasSettledTool = steps.some((s) => s.tools.some((t) => !t.pending));
-  const showThinking = busy && !text && !showA2ui && !anyToolPending;
+  const showThinking = busy && !text && !anyToolPending;
   const thinkingLabel = hasSettledTool ? "Drafting answer…" : "Thinking…";
   const waitSeconds = useElapsedSeconds(showThinking);
 
   const tone = stopTone(stopReason);
 
-  const empty = steps.length === 0 && !text && !showA2ui;
-  if (empty) {
-    return (
-      <div className={ui.empty}>
-        Run a prompt to see the agent's steps, tool calls, and final answer
-        appear here.
-      </div>
-    );
-  }
+  const empty = steps.length === 0 && !text;
+  if (empty && !busy) return null;
 
   return (
     <div className={ui.transcript}>
@@ -228,6 +231,7 @@ export function Transcript({
                 <TranscriptContent
                   content={thought}
                   streaming={streaming}
+                  showActions={false}
                   render={renderTranscriptContent}
                 />
               </div>
@@ -257,7 +261,7 @@ export function Transcript({
         </div>
       )}
 
-      {(text || showA2ui || hasStreamedText || stopReason) && (
+      {(text || hasStreamedText || stopReason) && (
         <article
           className={
             tone === "warn"
@@ -269,47 +273,37 @@ export function Transcript({
         >
           {stopReason && stopReason !== "done" && (
             <div className={ui.answerHead}>
-              <span className={ui.answerLabel}>{stopReason}</span>
+              <span className={ui.answerLabel}>{stopLabel(stopReason)}</span>
             </div>
           )}
           <div className={ui.answerMarkdown}>
-            {showA2ui ? (
-              <A2uiView snapshot={a2uiSnapshot} streaming={busy} />
-            ) : text ? (
+            {text ? (
               <TranscriptContent
                 content={text}
                 streaming={busy}
+                showActions={!stopReason || stopReason === "done"}
+                durationMs={durationMs}
                 render={renderTranscriptContent}
               />
-            ) : a2uiFailed ? (
-              <p className={ui.answerPlaceholder}>
-                The model finished without valid UI JSON (or without a
-                renderable surface). Try again, or ask a plain-text question.
-                Open the event log in devtools if you need the raw stream.
-              </p>
             ) : (
               <p className={ui.answerPlaceholder}>
                 {stopReason === "aborted"
-                  ? "Run was stopped before any answer was produced. The transcript above shows what the agent did before you hit Stop."
-                  : "(no answer)"}
+                  ? "Stopped before a response was produced."
+                  : "The run ended before a response was produced."}
               </p>
+            )}
+            {failure && (
+              <details className={ui.failureDetails}>
+                <summary className={ui.failureSummary}>
+                  Technical details
+                </summary>
+                <code className={ui.failureCode}>
+                  {failure.name}: {failure.message}
+                </code>
+              </details>
             )}
           </div>
         </article>
-      )}
-
-      {stopReason && stopReason !== "done" && (
-        <footer
-          className={
-            tone === "warn"
-              ? ui.stopWarn
-              : tone === "error"
-                ? ui.stopError
-                : ui.stop
-          }
-        >
-          stopped: <code>{stopReason}</code>
-        </footer>
       )}
     </div>
   );
@@ -339,14 +333,20 @@ function useElapsedSeconds(active: boolean): number {
 function TranscriptContent({
   content,
   streaming,
+  showActions,
+  durationMs,
   render,
 }: {
   content: string;
   streaming: boolean;
+  showActions: boolean;
+  durationMs?: number;
   render: (props: {
     content: string;
     streaming: boolean;
+    showActions: boolean;
+    durationMs?: number;
   }) => ReactElement | null;
 }) {
-  return render({ content, streaming });
+  return render({ content, streaming, showActions, durationMs });
 }

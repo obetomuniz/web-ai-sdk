@@ -1,0 +1,158 @@
+---
+import { playground as ui } from "../../shared/ui.js";
+---
+
+<div class={ui.shell} aria-hidden="true" inert>
+  <div class:list={[ui.layoutGrid, ui.shellMobileWithSidebar]}>
+  <div class:list={[ui.sidebarSlot, ui.panelSlotOpen]}>
+  <aside class:list={[ui.sidebar, ui.panelOpen]}>
+    <header class={ui.sidebarHeader}>
+      <h2 class={ui.sectionTitle}>Conversations</h2>
+      <span class={ui.panelToggle}>
+        <svg
+          class={ui.panelToggleIcon}
+          viewBox="0 0 18 18"
+          fill="none"
+          aria-hidden="true"
+        >
+          <rect
+            x="2.25"
+            y="2.75"
+            width="13.5"
+            height="12.5"
+            rx="2.25"
+            stroke="currentColor"
+            stroke-width="1.25"
+          ></rect>
+          <path
+            d="M6.5 3.25v11.5"
+            stroke="currentColor"
+            stroke-width="1.25"
+          ></path>
+        </svg>
+      </span>
+    </header>
+    <div class={ui.sidebarBody}>
+      <section class={ui.sidebarSection}>
+        <span class={ui.wideButton}>
+          <span class={ui.wideButtonIcon}>+</span>
+          <span class={ui.wideButtonLabel}>New conversation</span>
+        </span>
+        <div class={ui.presets}>
+          <div class={ui.threadItemActive}>
+            <span class={ui.threadSelect}>
+              <span class={ui.threadTitleRow}>
+                <span class={ui.presetName}>New conversation</span>
+              </span>
+              <span class={ui.presetDesc}>Platform reach · 0 turns</span>
+            </span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </aside>
+  </div>
+
+  <div class={ui.main}>
+    <header class={ui.mainHeader}>
+      <h1 class={ui.title}>New conversation</h1>
+    </header>
+
+    <div class={ui.mainBody}>
+      <section class={ui.transcriptPanel}>
+        <div class={ui.answer}>
+          <div class={ui.emptyConversation}>
+            <h2 class={ui.emptyConversationTitle}>Start a conversation</h2>
+            <p class={ui.emptyConversationText}>
+              Messages, tool calls, and answers will appear here.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div class={ui.composer}>
+        <div class:list={[ui.composerInput, ui.fallbackMuted]}>
+          Ask anything
+        </div>
+        <div class={ui.composerRow}>
+          <div class={ui.composerLeading}>
+            <span class={ui.modeTrigger} data-accent="warn">
+              <span class={ui.modeTriggerName} data-accent="warn">
+                Platform reach
+              </span>
+              <svg
+                class={ui.modeTriggerChevron}
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="m4.5 6 3.5 3.5L11.5 6"
+                  stroke="currentColor"
+                  stroke-width="1.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                ></path>
+              </svg>
+            </span>
+          </div>
+          <div class={ui.composerActions}>
+            <span class={ui.toolSummaryTrigger}>5 tools</span>
+            <span class={ui.sendButton}>↑</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class:list={[ui.workspaceSlot, ui.panelSlotOpen]}>
+  <section class:list={[ui.workspace, ui.panelOpen]}>
+    <header class={ui.workspaceHeader}>
+      <span class={ui.workspaceHeading}>
+        <h2 class={ui.workspaceTitle}>Runtime</h2>
+      </span>
+      <span class={ui.panelToggle}>
+        <svg
+          class={ui.panelToggleIcon}
+          viewBox="0 0 18 18"
+          fill="none"
+          aria-hidden="true"
+        >
+          <rect
+            x="2.25"
+            y="2.75"
+            width="13.5"
+            height="12.5"
+            rx="2.25"
+            stroke="currentColor"
+            stroke-width="1.25"
+          ></rect>
+          <path
+            d="M11.5 3.25v11.5"
+            stroke="currentColor"
+            stroke-width="1.25"
+          ></path>
+        </svg>
+      </span>
+    </header>
+    <div class={ui.workspaceBody}>
+      <div class={ui.chips}>
+        <span class={ui.chipOn}>prompt on</span>
+        <span class={ui.chipOn}>summarizer on</span>
+        <span class={ui.chipOn}>webmcp on</span>
+      </div>
+      <div class={ui.workspaceHeading}>
+        <h2 class={ui.workspaceTitle}>Activity</h2>
+        <div class={ui.workspaceCount}>0 events</div>
+      </div>
+      <div class={ui.workspacePane}>
+        <div class={ui.empty}>Activity appears here.</div>
+      </div>
+      <div class={ui.workspaceFootnote}>
+        Conversations stored in this browser
+      </div>
+    </div>
+  </section>
+  </div>
+  </div>
+</div>

@@ -36,6 +36,9 @@ function resolveToolCardStatus(
 ): "calling" | "ok" | "error" | "warn" {
   if (tool.pending) return "calling";
   if (tool.error) return "error";
+  const outputIssue = resolveOutputIssue(tool.output);
+  if (outputIssue?.kind === "error") return "error";
+  if (outputIssue?.kind === "warn") return "warn";
   if (
     tool.name === "summarize_text" &&
     tool.output &&
@@ -49,6 +52,7 @@ function resolveToolCardStatus(
 
 function DefaultToolRenderer({ tool }: ToolRendererProps) {
   const status = resolveToolCardStatus(tool);
+  const outputIssue = resolveOutputIssue(tool.output);
 
   return (
     <li
@@ -62,59 +66,70 @@ function DefaultToolRenderer({ tool }: ToolRendererProps) {
               : ui.toolCard
       }
     >
-      <header className={ui.toolCardHead}>
-        <code className={ui.toolCardName}>{tool.name}</code>
-        <span
-          className={
-            status === "calling"
-              ? ui.toolStatusCalling
-              : status === "warn"
-                ? ui.toolStatusWarn
-                : status === "error"
-                  ? ui.toolStatusError
-                  : ui.toolStatus
-          }
-        >
-          {status === "calling" && "calling..."}
-          {status === "ok" && `${Math.round(tool.durationMs ?? 0)}ms`}
-          {status === "warn" && "unavailable"}
-          {status === "error" && "error"}
-        </span>
-      </header>
-
-      {tool.progress.length > 0 && (
-        <ul className={ui.toolProgress}>
-          {tool.progress.map((progress) => (
-            <li key={summarizeJson(progress)} className={ui.toolProgressItem}>
-              <span className={ui.toolProgressDot} />
-              <code>{summarizeJson(progress)}</code>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <details className={ui.toolDetails}>
-        <summary className={ui.toolSummary}>
-          input · {summarizeJson(tool.input)}
+      <details className={ui.toolCardDisclosure}>
+        <summary className={ui.toolCardHead}>
+          <span className={ui.toolCardIdentity}>
+            <span className={ui.toolCardChevron} aria-hidden="true">
+              ›
+            </span>
+            <code className={ui.toolCardName}>{tool.name}</code>
+          </span>
+          <span
+            className={
+              status === "calling"
+                ? ui.toolStatusCalling
+                : status === "warn"
+                  ? ui.toolStatusWarn
+                  : status === "error"
+                    ? ui.toolStatusError
+                    : ui.toolStatus
+            }
+          >
+            {status === "calling" && "calling..."}
+            {status === "ok" && `${Math.round(tool.durationMs ?? 0)}ms`}
+            {status === "warn" && "unavailable"}
+            {status === "error" && "error"}
+          </span>
         </summary>
-        <pre className={ui.toolJson}>{JSON.stringify(tool.input, null, 2)}</pre>
-      </details>
-      {!tool.pending && (
-        <details className={ui.toolDetails} open={!!tool.error}>
+
+        {tool.progress.length > 0 && (
+          <ul className={ui.toolProgress}>
+            {tool.progress.map((progress) => (
+              <li key={summarizeJson(progress)} className={ui.toolProgressItem}>
+                <span className={ui.toolProgressDot} />
+                <code>{summarizeJson(progress)}</code>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <details className={ui.toolDetails}>
           <summary className={ui.toolSummary}>
-            {tool.error
-              ? `error · ${truncate(tool.error.message, 80)}`
-              : status === "warn"
-                ? "summarizer unavailable · answered below"
-                : `output · ${summarizeJson(tool.output)}`}
+            input · {summarizeJson(tool.input)}
           </summary>
           <pre className={ui.toolJson}>
-            {tool.error
-              ? formatError(tool.error)
-              : JSON.stringify(tool.output, null, 2)}
+            {JSON.stringify(tool.input, null, 2)}
           </pre>
         </details>
-      )}
+        {!tool.pending && (
+          <details className={ui.toolDetails}>
+            <summary className={ui.toolSummary}>
+              {tool.error
+                ? `error · ${truncate(tool.error.message, 80)}`
+                : outputIssue
+                  ? `${outputIssue.kind} · ${truncate(outputIssue.message, 80)}`
+                  : status === "warn"
+                    ? "summarizer unavailable · answered below"
+                    : `output · ${summarizeJson(tool.output)}`}
+            </summary>
+            <pre className={ui.toolJson}>
+              {tool.error
+                ? formatError(tool.error)
+                : JSON.stringify(tool.output, null, 2)}
+            </pre>
+          </details>
+        )}
+      </details>
     </li>
   );
 }
@@ -169,4 +184,18 @@ function truncate(s: string, n: number): string {
 function formatError(err: { message: string; name?: string }): string {
   if (err.name) return `${err.name}: ${err.message}`;
   return err.message;
+}
+
+function resolveOutputIssue(
+  output: unknown,
+): { kind: "error" | "warn"; message: string } | undefined {
+  if (!output || typeof output !== "object") return undefined;
+  const record = output as { error?: unknown; unavailable?: unknown };
+  if (typeof record.error === "string" && record.error.trim()) {
+    return { kind: "error", message: record.error };
+  }
+  if (record.unavailable === true) {
+    return { kind: "warn", message: "Unavailable in this browser" };
+  }
+  return undefined;
 }

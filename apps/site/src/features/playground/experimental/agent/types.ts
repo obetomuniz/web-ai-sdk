@@ -1,5 +1,4 @@
 import type { LanguageModelSamplingMode } from "@web-ai-sdk/prompt";
-import type { A2uiServerMessage, A2uiSnapshot } from "./a2ui/types.js";
 
 /**
  * Public types for the experimental agent loop prototype.
@@ -109,9 +108,16 @@ export type AgentStopReason =
   | "budget_exhausted"
   | "aborted"
   | "tool_error"
+  | "model_error"
   | "unavailable"
   | "context_overflow"
   | "stalled";
+
+/** Serializable technical detail for a terminal run failure. */
+export interface AgentFailure {
+  name: string;
+  message: string;
+}
 
 export interface AgentToolCallRecord {
   callId: string;
@@ -134,6 +140,7 @@ export interface AgentRunResult {
   text: string;
   steps: AgentStep[];
   stopReason: AgentStopReason;
+  failure?: AgentFailure;
 }
 
 /** Serializable result of one agent run - host apps persist these in a thread. */
@@ -142,20 +149,21 @@ export interface AgentTurn {
   assistantText: string;
   steps: AgentStep[];
   stopReason: AgentStopReason | null;
-  a2uiSnapshot?: A2uiSnapshot;
+  /** Wall-clock duration measured by the consuming UI for this run. */
+  durationMs?: number;
+  failure?: AgentFailure;
 }
 
 export function toAgentTurn(
   userInput: string,
   result: AgentRunResult,
-  extras: { a2uiSnapshot?: A2uiSnapshot } = {},
 ): AgentTurn {
   return {
     userInput,
     assistantText: result.text,
     steps: result.steps,
     stopReason: result.stopReason,
-    ...extras,
+    failure: result.failure,
   };
 }
 
@@ -231,15 +239,13 @@ export type AgentEvent =
   | { type: "text_delta"; delta: string }
   | { type: "message"; text: string }
 
-  // A2UI v0.8 - one parsed JSONL server message per line
-  | {
-      type: "a2ui_message";
-      index: number;
-      message: A2uiServerMessage;
-    }
-
   // Terminal event - always last, always exactly one per run
-  | { type: "done"; reason: AgentStopReason; text: string };
+  | {
+      type: "done";
+      reason: AgentStopReason;
+      text: string;
+      failure?: AgentFailure;
+    };
 
 // Helpers for narrowing by `type`. Consumers use these to make
 // pipe/filter expressions read naturally.
@@ -285,6 +291,11 @@ export type AgentOnToolErrorPolicy = "report" | "throw" | "stop";
 export interface CreateAgentOptions {
   systemPrompt?: string;
   tools?: readonly AgentTool[];
+  /** Completed turns used to restore a persisted conversation session. */
+  initialTurns?: readonly Pick<
+    AgentTurn,
+    "userInput" | "assistantText" | "stopReason" | "steps"
+  >[];
   /** Required upper bound on planning loop iterations. Defaults to 5. */
   maxSteps?: number;
   samplingMode?: LanguageModelSamplingMode;
@@ -305,15 +316,6 @@ export interface CreateAgentOptions {
    * NOT re-prompt the model. Bounded to once per run. Default `true`.
    */
   autoFetchUrls?: boolean;
-  /**
-   * Enable A2UI v0.8 JSONL generative UI in the system prompt and stream
-   * parser. UI messages are emitted as `a2ui_message` events (transport is
-   * your `AgentEvent` pipe; AG-UI is optional and not required).
-   */
-  a2ui?: {
-    enabled?: boolean;
-    catalogId?: string;
-  };
 }
 
 export interface Agent {

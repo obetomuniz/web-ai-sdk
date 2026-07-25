@@ -3,10 +3,12 @@ import type { AgentTurn } from "../experimental/agent/types.js";
 import {
   type AgentThread,
   createAgentThread,
+  DEFAULT_THREAD_NAME,
   deriveThreadName,
-  findSkill,
+  findMode,
   loadAgentThreadState,
   saveAgentThreadState,
+  sortAgentThreads,
 } from "./agentThreads.js";
 
 interface State {
@@ -15,13 +17,13 @@ interface State {
 }
 
 export interface AgentThreadOps {
-  create(skillId?: string): AgentThread;
+  create(modeId?: string): AgentThread;
   remove(id: string): void;
   select(id: string): void;
   rename(id: string, name: string): void;
-  appendTurn(id: string, turn: AgentTurn): void;
-  clearTurns(id: string): void;
-  setSkill(id: string, skillId: string): void;
+  touch(id: string): void;
+  appendTurn(id: string, turn: AgentTurn, turnId?: string): void;
+  setMode(id: string, modeId: string): void;
 }
 
 export function useAgentThreads() {
@@ -31,23 +33,28 @@ export function useAgentThreads() {
     saveAgentThreadState(state);
   }, [state]);
 
+  const threads = useMemo(
+    () => sortAgentThreads(state.threads),
+    [state.threads],
+  );
+
   const activeThread = useMemo(
     () =>
-      state.threads.find((thread) => thread.id === state.activeId) ??
-      state.threads[0] ??
+      threads.find((thread) => thread.id === state.activeId) ??
+      threads[0] ??
       createAgentThread(),
-    [state.activeId, state.threads],
+    [state.activeId, threads],
   );
 
-  const activeSkill = useMemo(
-    () => findSkill(activeThread.skillId),
-    [activeThread.skillId],
+  const activeMode = useMemo(
+    () => findMode(activeThread.modeId),
+    [activeThread.modeId],
   );
 
-  const create = useCallback((skillId?: string): AgentThread => {
-    const thread = createAgentThread(skillId);
+  const create = useCallback((modeId?: string): AgentThread => {
+    const thread = createAgentThread(modeId);
     setState((current) => ({
-      threads: [...current.threads, thread],
+      threads: [thread, ...current.threads],
       activeId: thread.id,
     }));
     return thread;
@@ -59,7 +66,7 @@ export function useAgentThreads() {
       const list = remaining.length > 0 ? remaining : [createAgentThread()];
       const activeId =
         current.activeId === id
-          ? (list.at(-1) ?? createAgentThread()).id
+          ? (sortAgentThreads(list)[0] ?? createAgentThread()).id
           : current.activeId;
       return { threads: list, activeId };
     });
@@ -75,51 +82,58 @@ export function useAgentThreads() {
     setState((current) => ({
       ...current,
       threads: current.threads.map((thread) =>
-        thread.id === id ? { ...thread, name } : thread,
+        thread.id === id ? { ...thread, name, updatedAt: Date.now() } : thread,
       ),
     }));
   }, []);
 
-  const appendTurn = useCallback((id: string, turn: AgentTurn) => {
-    setState((current) => ({
-      ...current,
-      threads: current.threads.map((thread) => {
-        if (thread.id !== id) return thread;
-        const named =
-          thread.name === "New thread"
-            ? deriveThreadName(turn.userInput)
-            : thread.name;
-        return {
-          ...thread,
-          name: named,
-          turns: [
-            ...thread.turns,
-            {
-              ...turn,
-              id: crypto.randomUUID(),
-              createdAt: Date.now(),
-            },
-          ],
-        };
-      }),
-    }));
-  }, []);
-
-  const clearTurns = useCallback((id: string) => {
+  const touch = useCallback((id: string) => {
     setState((current) => ({
       ...current,
       threads: current.threads.map((thread) =>
-        thread.id === id ? { ...thread, turns: [] } : thread,
+        thread.id === id ? { ...thread, updatedAt: Date.now() } : thread,
       ),
     }));
   }, []);
 
-  const setSkill = useCallback((id: string, skillId: string) => {
-    const next = findSkill(skillId);
+  const appendTurn = useCallback(
+    (id: string, turn: AgentTurn, turnId?: string) => {
+      const updatedAt = Date.now();
+      setState((current) => ({
+        ...current,
+        threads: current.threads.map((thread) => {
+          if (thread.id !== id) return thread;
+          const named =
+            thread.name === DEFAULT_THREAD_NAME
+              ? deriveThreadName(turn.userInput)
+              : thread.name;
+          return {
+            ...thread,
+            name: named,
+            updatedAt,
+            turns: [
+              ...thread.turns,
+              {
+                ...turn,
+                id: turnId ?? crypto.randomUUID(),
+                createdAt: updatedAt,
+              },
+            ],
+          };
+        }),
+      }));
+    },
+    [],
+  );
+
+  const setMode = useCallback((id: string, modeId: string) => {
+    const next = findMode(modeId);
     setState((current) => ({
       ...current,
       threads: current.threads.map((thread) =>
-        thread.id === id ? { ...thread, skillId: next.id } : thread,
+        thread.id === id
+          ? { ...thread, modeId: next.id, updatedAt: Date.now() }
+          : thread,
       ),
     }));
   }, []);
@@ -130,17 +144,17 @@ export function useAgentThreads() {
       remove,
       select,
       rename,
+      touch,
       appendTurn,
-      clearTurns,
-      setSkill,
+      setMode,
     }),
-    [appendTurn, clearTurns, create, remove, rename, select, setSkill],
+    [appendTurn, create, remove, rename, select, setMode, touch],
   );
 
   return {
-    threads: state.threads,
+    threads,
     activeThread,
-    activeSkill,
+    activeMode,
     activeId: state.activeId,
     ops,
   };

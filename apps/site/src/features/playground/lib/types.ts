@@ -11,6 +11,7 @@ export interface ChatMessage {
 export type ActivityKind =
   | "chat_send"
   | "chat_response"
+  | "chat_error"
   | "chat_abort"
   | "chat_clear"
   | "chat_close"

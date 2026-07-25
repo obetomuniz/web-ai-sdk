@@ -14,12 +14,6 @@
 
 import { isAvailable as isPromptAvailable } from "@web-ai-sdk/prompt";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  type A2uiServerMessage,
-  type A2uiSnapshot,
-  applyA2uiMessage,
-  createEmptyA2uiSnapshot,
-} from "../a2ui/index.js";
 import { createAgent } from "../createAgent.js";
 import type {
   Agent,
@@ -44,6 +38,8 @@ export type UseAgentStatus =
 
 export interface UseAgentOptions extends CreateAgentOptions {
   tools?: readonly AgentTool[];
+  /** Recreate the native session when the host selects another conversation. */
+  sessionKey?: string;
   /**
    * Cap on how many events to keep in `events`. Older events are
    * dropped. Default 500. The full stream is still consumed; this only
@@ -60,8 +56,6 @@ export type LiveThought = { index: number; text: string } | null;
 export interface UseAgentReturn {
   status: UseAgentStatus;
   text: string;
-  /** Latest A2UI v0.8 surface snapshot from `a2ui_message` events. */
-  a2uiSnapshot: A2uiSnapshot;
   /** Streaming thought of the in-flight planning turn (null when idle/none). */
   liveThought: LiveThought;
   steps: AgentStep[];
@@ -77,8 +71,6 @@ export interface UseAgentReturn {
   newSession: () => void;
   reset: () => void;
   clearStreamingTurn: () => void;
-  /** Apply a fixed A2UI surface without calling the model (playground demos). */
-  previewA2ui: (messages: readonly A2uiServerMessage[]) => void;
 }
 
 const EMPTY_EVENTS: AgentEvent[] = [];
@@ -108,8 +100,7 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
     options.sessionMode,
     options.onToolError,
     options.tools,
-    options.a2ui?.enabled,
-    options.a2ui?.catalogId,
+    options.sessionKey,
     promptAvailable,
   ]);
 
@@ -117,9 +108,6 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
     promptAvailable ? "idle" : "unavailable",
   );
   const [text, setText] = useState("");
-  const [a2uiSnapshot, setA2uiSnapshot] = useState<A2uiSnapshot>(
-    createEmptyA2uiSnapshot,
-  );
   // Thought of the in-flight planning turn, streamed token-by-token.
   // Kept separate from `steps`/`events` (like `text`) so the high-freq
   // deltas don't flood the structural feed.
@@ -140,7 +128,6 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
   const reset = useCallback(() => {
     setStatus(promptAvailable ? "idle" : "unavailable");
     setText("");
-    setA2uiSnapshot(createEmptyA2uiSnapshot());
     setLiveThought(null);
     setSteps(EMPTY_STEPS);
     setEvents(EMPTY_EVENTS);
@@ -150,7 +137,6 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
 
   const clearStreamingTurn = useCallback(() => {
     setText("");
-    setA2uiSnapshot(createEmptyA2uiSnapshot());
     setLiveThought(null);
     setSteps(EMPTY_STEPS);
     setEvents(EMPTY_EVENTS);
@@ -183,42 +169,6 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
     clearStreamingTurn();
   }, [clearStreamingTurn, promptAvailable]);
 
-  const previewA2ui = useCallback((messages: readonly A2uiServerMessage[]) => {
-    if (runningRef.current) {
-      abortedRef.current = true;
-      agentRef.current?.abort();
-      runningRef.current = false;
-    }
-    let snap = createEmptyA2uiSnapshot();
-    const evs: AgentEvent[] = [{ type: "step_start", index: 0 }];
-    for (const message of messages) {
-      snap = applyA2uiMessage(snap, message);
-      evs.push({ type: "a2ui_message", index: 0, message });
-    }
-    evs.push({
-      type: "plan",
-      index: 0,
-      plan: { final: true, message: "" },
-    });
-    evs.push({ type: "step_end", index: 0 });
-    evs.push({ type: "done", reason: "done", text: "" });
-    setLiveThought(null);
-    setText("");
-    setA2uiSnapshot(snap);
-    setSteps([
-      {
-        index: 0,
-        plan: { final: true, message: "" },
-        toolCalls: [],
-        text: "",
-      },
-    ]);
-    setEvents(evs);
-    setStopReason("done");
-    setStatus("done");
-    setError(null);
-  }, []);
-
   const getStream = useCallback(
     (input: string): AgentStream => {
       if (!promptAvailable || !agentRef.current) {
@@ -242,13 +192,15 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
 
       runningRef.current = true;
       abortedRef.current = false;
+      const startedAt = performance.now();
       setStatus("planning");
       clearStreamingTurn();
       setEvents([]);
 
       const eventBuffer: AgentEvent[] = [];
       const stepsByIndex = new Map<number, AgentStep>();
-      let currentA2uiSnapshot = createEmptyA2uiSnapshot();
+      let projectedText = "";
+      let completedTurn = false;
       // Coalesce token-level text updates to one React render per frame.
       // High token rates (100+ deltas/s) otherwise cause visible stutter.
       let pendingTextDelta = "";
@@ -344,7 +296,6 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
                 prev && prev.index === ev.index ? null : prev,
               );
               setText("");
-              setA2uiSnapshot(createEmptyA2uiSnapshot());
               const step = stepsByIndex.get(ev.index);
               if (step) {
                 step.toolCalls = [];
@@ -352,14 +303,6 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
               }
               break;
             }
-            case "a2ui_message":
-              setStatus("streaming");
-              currentA2uiSnapshot = applyA2uiMessage(
-                currentA2uiSnapshot,
-                ev.message,
-              );
-              setA2uiSnapshot(currentA2uiSnapshot);
-              break;
             case "plan_delta":
               break;
             case "thought_delta":
@@ -414,6 +357,7 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
             }
             case "text_delta":
               setStatus("streaming");
+              projectedText += ev.delta;
               if (!hasPaintedFirstText) {
                 // Paint the first chunk now so the answer starts the moment
                 // the model produces it, with no frame of buffering delay.
@@ -433,19 +377,27 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
               // normal path this equals the streamed text (no flicker).
               cancelTextFlush();
               pendingTextDelta = "";
+              projectedText = ev.text;
               setText(ev.text);
               break;
             case "done":
+              completedTurn = true;
               setLiveThought(null);
               {
                 const completedSteps = Array.from(stepsByIndex.values());
                 setSteps(completedSteps);
+                if (ev.failure) {
+                  const terminalError = new Error(ev.failure.message);
+                  terminalError.name = ev.failure.name;
+                  setError(terminalError);
+                }
                 optionsRef.current.onTurnComplete?.({
                   userInput: input,
                   assistantText: ev.text,
                   steps: completedSteps,
                   stopReason: ev.reason,
-                  a2uiSnapshot: currentA2uiSnapshot,
+                  durationMs: performance.now() - startedAt,
+                  failure: ev.failure,
                 });
               }
               setStopReason(ev.reason);
@@ -466,14 +418,33 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
         flushPendingText();
         const e = err instanceof Error ? err : new Error(String(err));
         setError(e);
+        setStopReason("model_error");
         setStatus("error");
+        completedTurn = true;
+        optionsRef.current.onTurnComplete?.({
+          userInput: input,
+          assistantText:
+            "The run stopped unexpectedly. Try again; if it repeats, reload the playground.",
+          steps: Array.from(stepsByIndex.values()),
+          stopReason: "model_error",
+          durationMs: performance.now() - startedAt,
+          failure: { name: e.name, message: e.message },
+        });
       } finally {
         cancelTextFlush();
         flushPendingText();
+        if (abortedRef.current && !completedTurn) {
+          optionsRef.current.onTurnComplete?.({
+            userInput: input,
+            assistantText: projectedText,
+            steps: Array.from(stepsByIndex.values()),
+            stopReason: "aborted",
+            durationMs: performance.now() - startedAt,
+          });
+        }
         runningRef.current = false;
         if (optionsRef.current.sessionMode === "thread") {
           clearStreamingTurn();
-          setStatus(promptAvailable ? "idle" : "unavailable");
         }
       }
     },
@@ -483,7 +454,6 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
   return {
     status,
     text,
-    a2uiSnapshot,
     liveThought,
     steps,
     events,
@@ -496,6 +466,5 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
     newSession,
     reset,
     clearStreamingTurn,
-    previewA2ui,
   };
 }

@@ -89,7 +89,7 @@ export function stripToolCode(text: string): string {
 /**
  * Index one past the last character of leading prose that is safe to show
  * while streaming: everything before the first ``` fence, minus a trailing
- * run of 1–2 backticks that might be the start of a fence still arriving.
+ * run of one or two backticks that might start a fence still arriving.
  */
 export function proseStreamLimit(text: string): number {
   const fence = text.indexOf("```");

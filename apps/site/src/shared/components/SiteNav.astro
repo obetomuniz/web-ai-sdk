@@ -31,7 +31,9 @@ const {
 
     <div class={ui.navActions}>
       <a
-        class={ui.navCta}
+        class={`${ui.navCtaPrimary} ${
+          activePage === "playground" ? ui.navCtaCurrent : ""
+        }`}
         href={playgroundHref}
         aria-current={activePage === "playground" ? "page" : undefined}
       >

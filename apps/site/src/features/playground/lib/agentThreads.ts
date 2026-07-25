@@ -1,6 +1,6 @@
 import type { AgentTurn } from "../experimental/agent/types.js";
-import type { AgentPreset } from "../experimental/playground/presets.js";
-import { PRESETS } from "../experimental/playground/presets.js";
+import type { AgentMode } from "../experimental/playground/presets.js";
+import { MODES } from "../experimental/playground/presets.js";
 
 export interface AgentThreadTurn extends AgentTurn {
   id: string;
@@ -10,9 +10,10 @@ export interface AgentThreadTurn extends AgentTurn {
 export interface AgentThread {
   id: string;
   name: string;
-  skillId: string;
+  modeId: string;
   turns: AgentThreadTurn[];
   createdAt: number;
+  updatedAt: number;
 }
 
 export interface AgentThreadState {
@@ -20,33 +21,49 @@ export interface AgentThreadState {
   activeId: string;
 }
 
-export const DEFAULT_SKILL_ID = "platform";
-export const DEFAULT_THREAD_NAME = "New thread";
+export const DEFAULT_MODE_ID = "platform";
+export const DEFAULT_THREAD_NAME = "New conversation";
 
 export const STORAGE_KEY = "web-ai-sdk:playground:v1:agent-threads";
-const THREAD_NAME_LIMIT = 32;
 
-export function findSkill(id: string): AgentPreset {
-  return PRESETS.find((p) => p.id === id) ?? PRESETS[0];
+export function findMode(id: string): AgentMode {
+  return MODES.find((mode) => mode.id === id) ?? MODES[0];
 }
 
 export function createAgentThread(
-  skillId: string = DEFAULT_SKILL_ID,
+  modeId: string = DEFAULT_MODE_ID,
 ): AgentThread {
+  const now = Date.now();
   return {
     id: crypto.randomUUID(),
     name: DEFAULT_THREAD_NAME,
-    skillId: findSkill(skillId).id,
+    modeId: findMode(modeId).id,
     turns: [],
-    createdAt: Date.now(),
+    createdAt: now,
+    updatedAt: now,
   };
+}
+
+export function sortAgentThreads(threads: AgentThread[]): AgentThread[] {
+  return [...threads].sort(
+    (left, right) =>
+      right.updatedAt - left.updatedAt || right.createdAt - left.createdAt,
+  );
 }
 
 export function deriveThreadName(text: string): string {
   const trimmed = text.trim().replace(/\s+/g, " ");
-  if (!trimmed) return DEFAULT_THREAD_NAME;
-  if (trimmed.length <= THREAD_NAME_LIMIT) return trimmed;
-  return `${trimmed.slice(0, THREAD_NAME_LIMIT - 1)}...`;
+  return trimmed || DEFAULT_THREAD_NAME;
+}
+
+function recoverLegacyThreadName(
+  name: string,
+  turns: AgentThreadTurn[],
+): string {
+  if (!name.endsWith("...")) return name;
+  const firstInput = turns[0]?.userInput.trim().replace(/\s+/g, " ");
+  const storedPrefix = name.slice(0, -3);
+  return firstInput?.startsWith(storedPrefix) ? firstInput : name;
 }
 
 function isThreadTurn(value: unknown): value is AgentThreadTurn {
@@ -61,36 +78,68 @@ function isThreadTurn(value: unknown): value is AgentThreadTurn {
   );
 }
 
-function isThread(value: unknown): value is AgentThread {
-  if (!value || typeof value !== "object") return false;
-  const thread = value as Partial<AgentThread>;
-  return (
-    typeof thread.id === "string" &&
-    typeof thread.name === "string" &&
-    typeof thread.skillId === "string" &&
-    Array.isArray(thread.turns) &&
-    thread.turns.every(isThreadTurn) &&
-    typeof thread.createdAt === "number"
-  );
+function parseThread(value: unknown): AgentThread | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const thread = value as Partial<AgentThread> & { skillId?: unknown };
+  const modeId =
+    typeof thread.modeId === "string"
+      ? thread.modeId
+      : typeof thread.skillId === "string"
+        ? thread.skillId
+        : undefined;
+  if (
+    typeof thread.id !== "string" ||
+    typeof thread.name !== "string" ||
+    !modeId ||
+    !Array.isArray(thread.turns) ||
+    !thread.turns.every(isThreadTurn) ||
+    typeof thread.createdAt !== "number"
+  ) {
+    return undefined;
+  }
+  return {
+    id: thread.id,
+    name:
+      thread.name === "New thread"
+        ? DEFAULT_THREAD_NAME
+        : recoverLegacyThreadName(thread.name, thread.turns),
+    modeId: findMode(modeId).id,
+    turns: thread.turns,
+    createdAt: thread.createdAt,
+    updatedAt:
+      typeof thread.updatedAt === "number"
+        ? thread.updatedAt
+        : Math.max(
+            thread.createdAt,
+            ...thread.turns.map((turn) => turn.createdAt),
+          ),
+  };
 }
 
 export function loadAgentThreadState(): AgentThreadState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as AgentThreadState;
+      const parsed = JSON.parse(raw) as Partial<AgentThreadState>;
       if (
         parsed &&
         Array.isArray(parsed.threads) &&
-        parsed.threads.length > 0 &&
-        parsed.threads.every(isThread)
+        parsed.threads.length > 0
       ) {
-        const firstThread = parsed.threads[0];
+        const threads = parsed.threads.flatMap((thread) => {
+          const normalized = parseThread(thread);
+          return normalized ? [normalized] : [];
+        });
+        if (threads.length !== parsed.threads.length) {
+          return createDefaultThreadState();
+        }
+        const sortedThreads = sortAgentThreads(threads);
+        const firstThread = sortedThreads[0];
         if (!firstThread) return createDefaultThreadState();
         const activeId =
-          parsed.threads.find((thread) => thread.id === parsed.activeId)?.id ??
+          sortedThreads.find((thread) => thread.id === parsed.activeId)?.id ??
           firstThread.id;
-        return { threads: parsed.threads, activeId };
+        return { threads: sortedThreads, activeId };
       }
     }
   } catch {

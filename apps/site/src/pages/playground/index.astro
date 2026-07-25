@@ -1,5 +1,6 @@
 ---
 import { Playground } from "../../features/playground/Playground.js";
+import PlaygroundFallback from "../../features/playground/PlaygroundFallback.astro";
 import SiteNav from "../../shared/components/SiteNav.astro";
 import { playground as ui } from "../../shared/ui.js";
 import "../../styles/home.css";
@@ -64,19 +65,11 @@ const ogImageUrl = new URL("og-image.png", SITE_ORIGIN).toString();
       repoHref={repoUrl}
       activePage="playground"
     >
-      <span slot="center" class={ui.navTrail}>Playground · local-first</span>
+      <span slot="center" class={ui.navTrail}>Playground</span>
     </SiteNav>
     <main>
       <Playground client:only="react">
-        <section slot="fallback" class={ui.loadingShell} aria-live="polite">
-          <div class={ui.loadingPanel}>
-            <span class={ui.loadingDot}></span>
-            <div>
-              <p class={ui.loadingTitle}>Loading Playground</p>
-              <p class={ui.loadingText}>Preparing the on-device agent workspace.</p>
-            </div>
-          </div>
-        </section>
+        <PlaygroundFallback slot="fallback" />
       </Playground>
     </main>
   </body>

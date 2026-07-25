@@ -13,22 +13,6 @@
  * examples.
  */
 
-export {
-  A2UI_V0_8_STANDARD_CATALOG,
-  A2uiJsonlBuffer,
-  type A2uiServerMessage,
-  type A2uiSnapshot,
-  applyA2uiMessage,
-  buildA2uiPromptAppendix,
-  createEmptyA2uiSnapshot,
-  extractA2uiJsonlLines,
-  feedA2uiReply,
-  looksLikeA2uiStream,
-  parseA2uiLine,
-  parseA2uiMessagesFromText,
-  replyHasA2uiPayload,
-  unwrapA2uiFence,
-} from "./a2ui/index.js";
 export { createAgent } from "./createAgent.js";
 export {
   AgentToolExecutionError,

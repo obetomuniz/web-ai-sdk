@@ -25,7 +25,7 @@
 
 import type { AgentRunContext } from "../runContext.js";
 import type { AgentTool } from "../types.js";
-import { normUrl } from "../urls.js";
+import { isContextuallyGroundedUrl, normUrl } from "../urls.js";
 
 interface FetchInput {
   url: string;
@@ -73,8 +73,9 @@ export function createFetchUrlTool(
     readOnly: true,
     acceptCall(input: Record<string, unknown>, ctx: AgentRunContext): boolean {
       const url = typeof input.url === "string" ? input.url : "";
-      if (!url.trim() || ctx.userUrls.size === 0) return false;
-      return ctx.userUrls.has(normUrl(url));
+      if (!url.trim()) return false;
+      if (ctx.userUrls.has(normUrl(url))) return true;
+      return isContextuallyGroundedUrl(url, ctx.userInput, ctx.knownUrls);
     },
     inputSchema: {
       type: "object",

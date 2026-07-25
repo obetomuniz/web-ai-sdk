@@ -35,6 +35,9 @@ export const clockNowTool: AgentTool<ClockInput, ClockOutput> = {
     },
     additionalProperties: false,
   },
+  acceptCall(_input, ctx) {
+    return isCurrentTimeRequest(ctx.userInput);
+  },
   async execute({ timeZone }) {
     const now = new Date();
     const resolved =
@@ -64,3 +67,16 @@ export const clockNowTool: AgentTool<ClockInput, ClockOutput> = {
     };
   },
 };
+
+const CURRENT_TIME_REQUESTS = [
+  /\b(?:what(?:'s| is)?|tell|show|give|check|get)\b.{0,48}\b(?:time|date|day)\b/i,
+  /\b(?:current|local|exact)\s+(?:time|date)\b/i,
+  /\b(?:time|date)\s+(?:is it|right now|now|in|for|at)\b/i,
+  /\bhow\s+late\s+is\s+it\b/i,
+  /\bwhat\s+day\s+is\s+it\b/i,
+  /\bis\s+it\s+(?:morning|afternoon|evening|night|midnight|noon)\b/i,
+] as const;
+
+function isCurrentTimeRequest(input: string): boolean {
+  return CURRENT_TIME_REQUESTS.some((pattern) => pattern.test(input));
+}

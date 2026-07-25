@@ -24,22 +24,12 @@
 import {
   createSession,
   isAvailable as isPromptAvailable,
+  type LanguageModelMessage,
   type LanguageModelTool,
   PromptAbortError,
   PromptUnavailableError,
   type Session,
 } from "@web-ai-sdk/prompt";
-import {
-  A2UI_PLAYGROUND_CONSTRAINT,
-  A2uiJsonlBuffer,
-  buildA2uiPromptAppendix,
-  parseA2uiLine,
-  repairAndParseA2ui,
-  replyHasA2uiPayload,
-  toolsCompatibleWithA2uiConstraint,
-  unwrapA2uiFence,
-  userWantsA2uiUi,
-} from "./a2ui/index.js";
 import { runDispatcher } from "./dispatcher.js";
 import {
   DIRECT_ANSWER_RETRY,
@@ -55,14 +45,16 @@ import { isEmptySummarizeOutput } from "./tools/summarize.js";
 import type {
   Agent,
   AgentEvent,
+  AgentFailure,
   AgentRunResult,
   AgentStep,
   AgentStopReason,
   AgentTool,
   AgentToolCallRecord,
+  AgentTurn,
   CreateAgentOptions,
 } from "./types.js";
-import { extractUrls, normUrl, userUrlSet } from "./urls.js";
+import { normUrl, resolveContextualUrls } from "./urls.js";
 
 const DEFAULT_MAX_STEPS = 5;
 const STALL_TIMEOUT_MS = 15_000;
@@ -96,19 +88,55 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
   // when the model finalizes without fetching, and flag any URL answer
   // that wasn't backed by a successful fetch.
   const autoFetchUrls = options.autoFetchUrls ?? true;
-  const a2uiEnabled = options.a2ui?.enabled ?? false;
-  const systemPrompt = buildNativePrompt(
-    options.systemPrompt,
-    tools,
-    a2uiEnabled,
-    options.a2ui?.catalogId,
-  );
+  const systemPrompt = buildNativePrompt(options.systemPrompt, tools);
   // The `tools` passthrough on `createSession` (since @web-ai-sdk/prompt
   // 0.5.1) is what lets this run through the SDK instead of reaching for
   // `globalThis.LanguageModel`. The SDK forwards `tools` to the native
   // `create()`; on stable Chrome the model surfaces calls as `tool_code`
   // text, which `toolCode.ts` parses (the SDK does NOT execute tools).
   const sdkTools = tools.map(toSdkTool);
+  const urlFetchingTool = findUrlFetchingTool(tools);
+  const restoredFetchUrls = collectSuccessfulFetchUrls(
+    options.initialTurns ?? [],
+    urlFetchingTool,
+  );
+  const knownFetchUrls = new Set(restoredFetchUrls);
+  const restoredMessages: LanguageModelMessage[] = (
+    options.initialTurns ?? []
+  ).flatMap((turn) => {
+    // Failed/stopped runs belong in the visible history, but they are not
+    // model answers. Replaying their guidance as assistant context makes the
+    // next turn treat an error message as ground truth.
+    if (
+      turn.stopReason !== "done" ||
+      !turn.userInput.trim() ||
+      !turn.assistantText.trim()
+    ) {
+      return [];
+    }
+    return [
+      { role: "user" as const, content: turn.userInput },
+      { role: "assistant" as const, content: turn.assistantText },
+    ];
+  });
+
+  const createConversationSession = (): Session =>
+    createSession({
+      systemPrompt,
+      samplingMode: options.samplingMode,
+      language: options.language,
+      tools: sdkTools,
+      ...(restoredMessages.length > 0
+        ? {
+            createOptions: {
+              initialPrompts: [
+                { role: "system", content: systemPrompt },
+                ...restoredMessages,
+              ],
+            },
+          }
+        : {}),
+    });
 
   // Same base-session + per-run-clone lifecycle as the constraint agent
   // (see createAgent.ts): one warm base holding the system prompt + tools,
@@ -125,12 +153,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
 
   const getBase = (): Session => {
     if (!baseSession) {
-      baseSession = createSession({
-        systemPrompt,
-        samplingMode: options.samplingMode,
-        language: options.language,
-        tools: sdkTools,
-      });
+      baseSession = createConversationSession();
     }
     return baseSession;
   };
@@ -140,12 +163,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
     try {
       return await base.clone();
     } catch {
-      return createSession({
-        systemPrompt,
-        samplingMode: options.samplingMode,
-        language: options.language,
-        tools: sdkTools,
-      });
+      return createConversationSession();
     }
   };
 
@@ -224,12 +242,30 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
     currentController = controller;
     const signal = composeSignals(controller.signal, externalSignal);
 
-    const inputUrls = extractUrls(input);
-    const userUrls = userUrlSet(input);
-    const fetchTool =
-      inputUrls.length > 0 ? findUrlFetchingTool(tools) : undefined;
+    const inputUrls = resolveContextualUrls(input, [...knownFetchUrls]);
+    const userUrls = new Set(inputUrls.map(normUrl));
+    const fetchTool = urlFetchingTool;
 
-    const session = await takeRunSession();
+    let session: Session;
+    try {
+      session = await takeRunSession();
+    } catch (error) {
+      if (currentController === controller) currentController = null;
+      const terminal = describeRunFailure(error);
+      if (terminal.text) yield { type: "message", text: terminal.text };
+      yield {
+        type: "done",
+        reason: terminal.reason,
+        text: terminal.text,
+        failure: terminal.failure,
+      };
+      return {
+        text: terminal.text,
+        steps: [],
+        stopReason: terminal.reason,
+        failure: terminal.failure,
+      };
+    }
     currentClone = session;
 
     // Size the fetch-content budget to the model's ACTUAL context. A cloned
@@ -261,6 +297,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
     let turnInput = input;
     let stopReason: AgentStopReason | null = null;
     let finalText = "";
+    let failure: AgentFailure | undefined;
 
     // Track which of the user's URLs were actually fetched - PER URL, not
     // just "any fetch happened" - so we can force-fetch the ones the model
@@ -272,6 +309,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
     const runCtx: AgentRunContext = {
       userInput: input,
       userUrls,
+      knownUrls: knownFetchUrls,
       fetchedSources,
     };
     let autoFetchDone = false;
@@ -288,7 +326,11 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
         const url = (r.input as { url?: unknown }).url;
         if (typeof url !== "string") continue;
         fetchTried.add(normUrl(url));
-        if (fetchDidSucceed(r)) fetchedOk.add(normUrl(url));
+        if (fetchDidSucceed(r)) {
+          const normalizedUrl = normUrl(url);
+          fetchedOk.add(normalizedUrl);
+          knownFetchUrls.add(normalizedUrl);
+        }
       }
     };
 
@@ -352,7 +394,6 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
 
         let reply: string;
         let streamedAnswerText = false;
-        let replyKind: ReplyKind | undefined;
         try {
           const streamed = yield* streamReply(
             session,
@@ -360,24 +401,14 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
             signal,
             stepIndex,
             tools,
-            a2uiEnabled,
           );
           reply = streamed.text;
           streamedAnswerText = streamed.streamedAnswerText;
-          replyKind = streamed.replyKind;
         } catch (err) {
-          if (err instanceof PromptAbortError || isAbort(err)) {
-            stopReason = "aborted";
-          } else if ((err as Error)?.name === "QuotaExceededError") {
-            stopReason = "context_overflow";
-            finalText =
-              "The on-device model's context window filled up on this run. Try again - the next run starts from a fresh cloned session.";
-          } else if (err instanceof AgentStalledError) {
-            stopReason = "stalled";
-            finalText = err.message;
-          } else if (err instanceof PromptUnavailableError) {
-            stopReason = "unavailable";
-          } else stopReason = "unavailable";
+          const terminal = describeRunFailure(err);
+          stopReason = terminal.reason;
+          finalText = terminal.text;
+          failure = terminal.failure;
           yield { type: "step_end", index: stepIndex };
           if (finalText) yield { type: "message", text: finalText };
           break;
@@ -459,58 +490,6 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
             continue;
           }
 
-          const a2uiBody = unwrapA2uiFence(reply);
-          const a2uiMsgs =
-            a2uiEnabled && !streamedAnswerText
-              ? repairAndParseA2ui(a2uiBody)
-              : [];
-          if (a2uiMsgs.length > 0) {
-            if (replyKind !== "a2ui") {
-              for (const message of a2uiMsgs) {
-                yield { type: "a2ui_message", index: stepIndex, message };
-              }
-            }
-            finalText = "";
-            yield {
-              type: "plan",
-              index: stepIndex,
-              plan: { final: true, message: "" },
-            };
-            steps.push({
-              index: stepIndex,
-              plan: { final: true, message: "" },
-              toolCalls: [],
-              text: "",
-            });
-            yield { type: "step_end", index: stepIndex };
-            stopReason = "done";
-            yield { type: "message", text: "" };
-            break;
-          }
-
-          if (
-            a2uiEnabled &&
-            !streamedAnswerText &&
-            replyHasA2uiPayload(a2uiBody)
-          ) {
-            finalText = "";
-            yield {
-              type: "plan",
-              index: stepIndex,
-              plan: { final: true, message: "" },
-            };
-            steps.push({
-              index: stepIndex,
-              plan: { final: true, message: "" },
-              toolCalls: [],
-              text: "",
-            });
-            yield { type: "step_end", index: stepIndex };
-            stopReason = "done";
-            yield { type: "message", text: "" };
-            break;
-          }
-
           // After the retry is spent, if it STILL looks like unparsed tool
           // scaffolding, don't show raw call code to the user - say so and
           // suggest a re-run.
@@ -554,7 +533,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
         // first…"). Native has no dedicated reasoning channel, so surface
         // that prose as a synthesized `thought` for parity with the
         // constraint path's transcript.
-        const thought = leadingProse(reply);
+        const thought = leadingProse(reply, tools);
         // We optimistically stream leading prose to the answer panel before
         // knowing the turn is a tool call. Now that it is, discard that
         // premature text so it isn't duplicated. It re-appears just below as
@@ -639,6 +618,12 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
         const fatal = records.find((r) => r.error);
         if (fatal && onToolError !== "report") {
           stopReason = "tool_error";
+          finalText = `I couldn't complete this request because ${fatal.name} failed.`;
+          failure = {
+            name: fatal.error?.name ?? "ToolError",
+            message:
+              fatal.error?.message ?? "The tool did not return a result.",
+          };
           break;
         }
 
@@ -657,8 +642,13 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
       }
     }
 
-    yield { type: "done", reason: stopReason, text: finalText };
-    return { text: finalText, steps, stopReason };
+    yield {
+      type: "done",
+      reason: stopReason,
+      text: finalText,
+      failure,
+    };
+    return { text: finalText, steps, stopReason, failure };
   }
 
   return {
@@ -685,6 +675,8 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
       conversationSession = null;
       baseSession?.destroy();
       baseSession = null;
+      knownFetchUrls.clear();
+      for (const url of restoredFetchUrls) knownFetchUrls.add(url);
       if (sessionMode === "run-isolated") prefetchRunClone();
     },
     destroy() {
@@ -709,33 +701,13 @@ type RaceStep =
   | { kind: "aborted" }
   | { kind: "stalled" };
 
-type ReplyKind = "prose" | "tool" | "a2ui";
+type ReplyKind = "prose" | "tool";
 
 interface StreamedReply {
-  /** The full accumulated reply (prose, `tool_code`, or A2UI JSONL). */
+  /** The full accumulated reply (prose or `tool_code`). */
   text: string;
   /** Whether any prose was streamed to the answer panel as `text_delta`. */
   streamedAnswerText: boolean;
-  replyKind?: ReplyKind;
-}
-
-function* emitA2uiLines(
-  lines: string[],
-  stepIndex: number,
-): Generator<AgentEvent, void, void> {
-  for (const line of lines) {
-    const message = parseA2uiLine(line);
-    if (message) yield { type: "a2ui_message", index: stepIndex, message };
-  }
-}
-
-function* emitA2uiMessages(
-  messages: ReturnType<typeof repairAndParseA2ui>,
-  stepIndex: number,
-): Generator<AgentEvent, void, void> {
-  for (const message of messages) {
-    yield { type: "a2ui_message", index: stepIndex, message };
-  }
 }
 
 async function* streamReply(
@@ -744,27 +716,12 @@ async function* streamReply(
   signal: AbortSignal,
   stepIndex: number,
   tools: readonly AgentTool[],
-  a2uiEnabled: boolean,
 ): AsyncGenerator<AgentEvent, StreamedReply, void> {
-  const constrainUi =
-    a2uiEnabled &&
-    userWantsA2uiUi(input) &&
-    (tools.length === 0 || toolsCompatibleWithA2uiConstraint(tools));
-
-  const stream = session.sendStreaming(input, {
-    signal,
-    ...(constrainUi
-      ? {
-          responseConstraint: A2UI_PLAYGROUND_CONSTRAINT,
-          omitResponseConstraintInput: true,
-        }
-      : {}),
-  });
+  const stream = session.sendStreaming(input, { signal });
   const it = stream[Symbol.asyncIterator]();
 
   let acc = "";
-  let kind: ReplyKind | undefined = constrainUi ? "a2ui" : undefined;
-  const jsonlBuf = new A2uiJsonlBuffer();
+  let kind: ReplyKind | undefined;
   // How many chars of clean leading prose we've already streamed. The
   // model often prefaces a `tool_code` block with a sentence ("I'll detect
   // the language first…"), which classifies the reply as prose; we still
@@ -796,24 +753,24 @@ async function* streamReply(
 
       yield { type: "plan_delta", index: stepIndex, raw: delta };
 
-      if (kind === undefined && !constrainUi) {
+      if (kind === undefined) {
         const trimmed = acc.trimStart();
         if (trimmed.startsWith("```")) {
-          if (/^```(?:a2ui|jsonl)\b/i.test(trimmed)) kind = "a2ui";
-          else kind = "tool";
-        } else if (a2uiEnabled && trimmed.startsWith("{")) {
-          kind = "a2ui";
-        } else if (trimmed.length >= 3) {
-          kind =
-            /tool_code/i.test(acc) || parseToolCode(acc, tools).length > 0
-              ? "tool"
-              : "prose";
+          kind = "tool";
+        } else if (
+          /tool_code/i.test(acc) ||
+          parseToolCode(acc, tools).length > 0
+        ) {
+          kind = "tool";
+        } else if (
+          trimmed.length >= 3 &&
+          !couldStillBeToolCall(trimmed, tools)
+        ) {
+          kind = "prose";
         }
       }
 
-      if (kind === "a2ui" && !constrainUi) {
-        yield* emitA2uiLines(jsonlBuf.feed(delta), stepIndex);
-      } else if (kind === "prose") {
+      if (kind === "prose") {
         const fence = acc.indexOf("```");
         if (fence !== -1) {
           if (fence > emittedProse) {
@@ -835,21 +792,9 @@ async function* streamReply(
     throw err instanceof Error ? err : new Error(String(err));
   }
 
-  if (a2uiEnabled && emittedProse === 0) {
-    const repaired = repairAndParseA2ui(acc);
-    if (repaired.length > 0) {
-      yield* emitA2uiMessages(repaired, stepIndex);
-      return { text: acc, streamedAnswerText: false, replyKind: "a2ui" };
-    }
-    if (constrainUi || replyHasA2uiPayload(acc)) {
-      return { text: acc, streamedAnswerText: false, replyKind: "a2ui" };
-    }
-  }
-
   return {
     text: acc,
     streamedAnswerText: emittedProse > 0,
-    replyKind: kind,
   };
 }
 
@@ -917,18 +862,12 @@ function toSdkTool(tool: AgentTool): LanguageModelTool {
 function buildNativePrompt(
   base: string | undefined,
   tools: readonly AgentTool[],
-  a2uiEnabled: boolean,
-  a2uiCatalogId?: string,
 ): string {
   const preamble =
     base ?? "You are a helpful, on-device assistant in the user's browser.";
-  const a2uiBlock = a2uiEnabled ? buildA2uiPromptAppendix(a2uiCatalogId) : "";
 
   if (tools.length === 0) {
-    const tail = a2uiEnabled
-      ? "For UI requests output one JSON object only. For simple Q&A, reply in plain markdown."
-      : "Reply to the user directly in plain text.";
-    return [preamble, a2uiBlock, tail].filter(Boolean).join("\n\n");
+    return [preamble, "Reply to the user directly in plain text."].join("\n\n");
   }
 
   const catalog = tools
@@ -953,13 +892,7 @@ function buildNativePrompt(
       "```",
       "If the user gives MULTIPLE URLs or asks about several items, fetch EACH one (call the tool again for each), then write ONE final answer that covers ALL of them - never answer about a URL you haven't fetched, and don't drop any.",
       "Never invent values a tool can provide. After you receive the tool results, reply to the user directly in plain text.",
-      ...(a2uiEnabled
-        ? [
-            "For chart/card/dashboard requests, output one JSON object as described in Generative UI - not tool_code. Use tools only when the user needs live data (e.g. clock_now for time in a timezone).",
-          ]
-        : []),
     ].join("\n"),
-    a2uiBlock,
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -1091,9 +1024,9 @@ function looksLikeUnparsedToolCall(
 // ─── URL safety net (parity with createAgent.ts) ──────────────────────────
 
 const NOTE_NOT_FETCHED =
-  "> ⚠ The agent answered without fetching the page, so it had no real content to work from. This answer is likely fabricated - verify in the transcript that `fetch_url` was actually called.\n\n";
+  "> ⚠ This page was not fetched, so the response below has no page content to rely on.\n\n";
 const NOTE_FETCH_FAILED =
-  "> ⚠ The page couldn't be fetched (often CORS on the browser), so the agent had no real content to work from. This answer may be fabricated - verify the tool calls in the transcript.\n\n";
+  "> ⚠ Browser access to this page failed (often CORS). The response below has no page content to rely on.\n\n";
 
 /**
  * Whether a fetch-tool call actually retrieved the page. A CORS / network
@@ -1123,6 +1056,29 @@ function findUrlFetchingTool(
     const props = (t.inputSchema?.properties ?? {}) as Record<string, unknown>;
     return Object.hasOwn(props, "url");
   });
+}
+
+function collectSuccessfulFetchUrls(
+  turns: readonly Pick<AgentTurn, "steps">[],
+  fetchTool: AgentTool | undefined,
+): string[] {
+  if (!fetchTool) return [];
+  const urls: string[] = [];
+  for (const turn of turns) {
+    for (const step of turn.steps) {
+      for (const record of step.toolCalls) {
+        const url = (record.input as { url?: unknown }).url;
+        if (
+          record.name === fetchTool.name &&
+          typeof url === "string" &&
+          fetchDidSucceed(record)
+        ) {
+          urls.push(normUrl(url));
+        }
+      }
+    }
+  }
+  return Array.from(new Set(urls));
 }
 
 /**
@@ -1155,10 +1111,9 @@ function maybeFlagUnverifiedUrl(
   } else {
     const list = ctx.unfetched.join(", ");
     note =
-      `> ⚠ ${ctx.unfetched.length} of ${ctx.totalUrls} URLs couldn't be fetched ` +
-      `(often CORS on the browser): ${list}. Anything about ` +
-      `${ctx.unfetched.length === 1 ? "it" : "them"} may be fabricated - ` +
-      `verify the \`fetch_url\` results in the transcript.\n\n`;
+      `> ⚠ Browser access failed for ${ctx.unfetched.length} of ${ctx.totalUrls} URLs ` +
+      `(often CORS): ${list}. The response below has no content from ` +
+      `${ctx.unfetched.length === 1 ? "that page" : "those pages"}.\n\n`;
   }
   return `${note}${finalText}`;
 }
@@ -1168,14 +1123,65 @@ function maybeFlagUnverifiedUrl(
  * used as a synthesized `thought`. Returns "" when the reply opens
  * straight into the call (the common case) or has no fence.
  */
-function leadingProse(reply: string): string {
+function leadingProse(reply: string, tools: readonly AgentTool[]): string {
   const end = proseStreamLimit(reply);
   if (end <= 0) return "";
-  const prose = reply.slice(0, end).trim();
+  const beforeFence = reply.slice(0, end);
+  const callStart = firstToolCallStart(beforeFence, tools);
+  const prose = beforeFence
+    .slice(0, callStart ?? beforeFence.length)
+    .replace(/(?:^|\s)tool_code\s*$/i, "")
+    .replace(/(?:^|\s)print\s*\(\s*$/i, "")
+    .trim();
   // Guard against a stray short token; only treat a real sentence as a
   // thought, and keep it bounded so a runaway preface can't flood the UI.
   if (prose.length < 4) return "";
   return prose.length > 600 ? `${prose.slice(0, 599)}…` : prose;
+}
+
+/** Keep an incomplete native call out of the prose stream until it resolves. */
+function couldStillBeToolCall(
+  text: string,
+  tools: readonly AgentTool[],
+): boolean {
+  const normalized = text.trimStart().toLocaleLowerCase();
+  const withoutMarker = normalized.replace(/^tool_code\b\s*/i, "");
+  if (withoutMarker !== normalized) {
+    if (!withoutMarker) return true;
+    return couldStillBeToolCall(withoutMarker, tools);
+  }
+
+  const prefixes = [
+    "tool_code",
+    "print",
+    "default_api",
+    ...tools.map((tool) => tool.name),
+  ];
+  if (prefixes.some((prefix) => prefix.startsWith(normalized))) return true;
+
+  const callHead = normalized.match(
+    /^(?:print\s*\(\s*)?(?:[a-z_]\w*\.)?([a-z_]\w*)\s*\(/i,
+  );
+  return Boolean(
+    callHead?.[1] && tools.some((tool) => tool.name === callHead[1]),
+  );
+}
+
+function firstToolCallStart(
+  text: string,
+  tools: readonly AgentTool[],
+): number | undefined {
+  let first: number | undefined;
+  for (const tool of tools) {
+    const pattern = new RegExp(
+      `(^|[^\\w.])(?:[A-Za-z_]\\w*\\.)?${escapeRegExp(tool.name)}\\s*\\(`,
+    );
+    const match = pattern.exec(text);
+    if (!match) continue;
+    const start = match.index + (match[1]?.length ?? 0);
+    first = first === undefined ? start : Math.min(first, start);
+  }
+  return first;
 }
 
 function makeAbortError(): Error {
@@ -1206,10 +1212,17 @@ function composeSignals(
 }
 
 function makeUnavailableAgent(tools: readonly AgentTool[]): Agent {
+  const text =
+    "The on-device model isn't available yet. Confirm the Prompt API model is downloaded in a supported Chrome build, then reload the playground.";
+  const failure: AgentFailure = {
+    name: "PromptUnavailableError",
+    message: "Prompt API is unavailable in this environment.",
+  };
   const fallback: AgentRunResult = {
-    text: "",
+    text,
     steps: [],
     stopReason: "unavailable",
+    failure,
   };
   return {
     get tools() {
@@ -1222,11 +1235,60 @@ function makeUnavailableAgent(tools: readonly AgentTool[]): Agent {
       return streamFromResult(fallback, {
         type: "done",
         reason: "unavailable",
-        text: "",
+        text,
+        failure,
       });
     },
     abort() {},
     newSession() {},
     destroy() {},
+  };
+}
+
+function describeRunFailure(error: unknown): {
+  reason: AgentStopReason;
+  text: string;
+  failure?: AgentFailure;
+} {
+  if (error instanceof PromptAbortError || isAbort(error)) {
+    return { reason: "aborted", text: "" };
+  }
+
+  const failure = toAgentFailure(error);
+  if (failure.name === "QuotaExceededError") {
+    return {
+      reason: "context_overflow",
+      text: "This conversation filled the model's context window. Start a new conversation or shorten the request, then try again.",
+      failure,
+    };
+  }
+  if (error instanceof AgentStalledError) {
+    return { reason: "stalled", text: error.message, failure };
+  }
+  if (error instanceof PromptUnavailableError) {
+    return {
+      reason: "unavailable",
+      text: "The on-device model couldn't start this response. Confirm the Prompt API model is downloaded, then try again or reload the playground.",
+      failure,
+    };
+  }
+
+  return {
+    reason: "model_error",
+    text: "The on-device model stopped before producing an answer. Try again; if it repeats, reload the playground.",
+    failure,
+  };
+}
+
+function toAgentFailure(error: unknown): AgentFailure {
+  if (error instanceof Error) {
+    return {
+      name: error.name || "Error",
+      message: error.message || "No technical detail was provided.",
+    };
+  }
+  return {
+    name: "Error",
+    message: String(error ?? "No technical detail was provided."),
   };
 }
