@@ -3,8 +3,6 @@ import type { AgentTurn } from "../experimental/agent/types.js";
 import {
   type AgentThread,
   createAgentThread,
-  DEFAULT_THREAD_NAME,
-  deriveThreadName,
   findMode,
   loadAgentThreadState,
   saveAgentThreadState,
@@ -103,13 +101,8 @@ export function useAgentThreads() {
         ...current,
         threads: current.threads.map((thread) => {
           if (thread.id !== id) return thread;
-          const named =
-            thread.name === DEFAULT_THREAD_NAME
-              ? deriveThreadName(turn.userInput)
-              : thread.name;
           return {
             ...thread,
-            name: named,
             updatedAt,
             turns: [
               ...thread.turns,

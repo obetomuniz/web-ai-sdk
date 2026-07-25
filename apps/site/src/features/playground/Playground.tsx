@@ -3,7 +3,10 @@ import {
   isAvailable as isPromptAvailable,
   type LanguageModelAvailability,
 } from "@web-ai-sdk/prompt";
-import { isAvailable as isSummarizerAvailable } from "@web-ai-sdk/summarizer";
+import {
+  isAvailable as isSummarizerAvailable,
+  summarize,
+} from "@web-ai-sdk/summarizer";
 import {
   type CSSProperties,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -23,6 +26,7 @@ import { MultiTurnTranscript } from "./experimental/playground/MultiTurnTranscri
 import { MODES } from "./experimental/playground/presets.js";
 import { ToolSummary } from "./experimental/playground/ToolSummary.js";
 import { useExamples } from "./experimental/playground/useExamples.js";
+import { deriveThreadName } from "./lib/agentThreads.js";
 import type { ActivityEvent } from "./lib/types.js";
 import { useAgentThreads } from "./lib/useAgentThreads.js";
 import { useStickToBottom } from "./lib/useStickToBottom.js";
@@ -156,11 +160,23 @@ export function Playground() {
     samplingMode: "predictable",
     language: "en",
     onTurnComplete: (turn) => {
+      const isFirstTurn = activeThread.turns.length === 0;
       ops.appendTurn(
         activeThread.id,
         turn,
         currentTurnIdRef.current ?? undefined,
       );
+      if (isFirstTurn) {
+        void generateConversationTitle(
+          activeThread.id,
+          turn.userInput,
+          turn.assistantText,
+          summarizerOn &&
+            turn.stopReason === "done" &&
+            Boolean(turn.assistantText.trim()),
+          ops.rename,
+        );
+      }
       // The Stop button records the user action synchronously. Avoid a second
       // terminal Activity row for the same cancellation.
       if (turn.stopReason === "aborted") return;
@@ -1035,6 +1051,40 @@ function fmtTime(ts: number): string {
 
 function truncate(s: string, n = 60): string {
   return s.length <= n ? s : `${s.slice(0, n - 1)}...`;
+}
+
+async function generateConversationTitle(
+  conversationId: string,
+  userInput: string,
+  assistantText: string,
+  canSummarize: boolean,
+  rename: (id: string, name: string) => void,
+): Promise<void> {
+  const fallbackTitle = deriveThreadName(userInput);
+  if (!canSummarize) {
+    rename(conversationId, fallbackTitle);
+    return;
+  }
+  try {
+    const result = await summarize({
+      input: `User request\n${userInput}\n\nAssistant response\n${assistantText}`,
+      language: "und",
+      type: "headline",
+      length: "short",
+      preference: "auto",
+      sharedContext:
+        "Create a concise, specific title for this AI conversation. Return only the title.",
+      cache: "session",
+      cacheKey: `playground:conversation-title:${conversationId}`,
+    });
+    const title = result.output
+      ?.replace(/^#+\s*/, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    rename(conversationId, title || fallbackTitle);
+  } catch {
+    rename(conversationId, fallbackTitle);
+  }
 }
 
 function clampSidebarWidth(width: number): number {
