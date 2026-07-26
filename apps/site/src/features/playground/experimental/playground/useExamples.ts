@@ -49,11 +49,13 @@ export function useExamples(
   const [generating, setGenerating] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const requestIdRef = useRef(0);
-  const generatedContextRef = useRef("");
+  const contextCursorRef = useRef<{
+    scope: string;
+    contextKey: string;
+  } | null>(null);
   const modeCacheKey = STORAGE_PREFIX + mode.id;
   const examplesScope = `${mode.id}:${context.conversationId}`;
   const contextKey = context.turns.map((turn) => turn.id).join(":");
-  const autoGenerationKey = `${mode.id}:${context.conversationId}:${contextKey}`;
   const conversationContext = context.turns
     .map(
       (turn) =>
@@ -70,7 +72,9 @@ export function useExamples(
 
   useEffect(() => {
     cancel();
-    generatedContextRef.current = `reset:${examplesScope}`;
+    if (contextCursorRef.current?.scope !== examplesScope) {
+      contextCursorRef.current = null;
+    }
     try {
       const cached = sessionStorage.getItem(modeCacheKey);
       if (cached) {
@@ -222,26 +226,31 @@ export function useExamples(
   );
 
   useEffect(() => {
+    const cursor = contextCursorRef.current;
+    if (!cursor || cursor.scope !== examplesScope) {
+      contextCursorRef.current = { scope: examplesScope, contextKey };
+      return;
+    }
     if (context.suspended) {
       cancel();
       return;
     }
     if (
       !contextKey ||
-      generatedContextRef.current === autoGenerationKey ||
+      cursor.contextKey === contextKey ||
       !canRegenerate ||
       generating
     ) {
       return;
     }
-    generatedContextRef.current = autoGenerationKey;
+    contextCursorRef.current = { scope: examplesScope, contextKey };
     void regenerate();
   }, [
-    autoGenerationKey,
     canRegenerate,
     cancel,
     context.suspended,
     contextKey,
+    examplesScope,
     generating,
     regenerate,
   ]);

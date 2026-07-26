@@ -498,14 +498,33 @@ export const backToTop =
 
 export const backToTopArrow = "text-accent transition-transform";
 
+const playgroundThreadTurnBase = "grid gap-4";
+const playgroundUserBubbleBase =
+  "ml-auto max-w-[82%] rounded-lg rounded-br-sm bg-surface-3 px-4 py-3 text-[13px] leading-[1.55] text-fg shadow-card max-[640px]:max-w-[90%] max-[640px]:px-3.5 max-[640px]:py-2.5";
+const playgroundAnswerBlockBase = "grid gap-2";
+const playgroundAnswerBlockWarnBase =
+  "grid gap-2 rounded-sm border-l-2 border-warn bg-[color-mix(in_oklch,var(--color-warn)_7%,transparent)] px-3 py-2";
+const playgroundAnswerBlockErrorBase =
+  "grid gap-2 rounded-sm border-l-2 border-err bg-[color-mix(in_oklch,var(--color-err)_7%,transparent)] px-3 py-2";
+const playgroundToolCardBase =
+  "overflow-hidden rounded-sm border border-hairline bg-bg transition-colors";
+const playgroundToolCardWarnBase =
+  "overflow-hidden rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_35%,transparent)] bg-bg";
+const playgroundToolCardErrorBase =
+  "overflow-hidden rounded-sm border border-[color-mix(in_oklch,var(--color-err)_35%,transparent)] bg-bg";
+
 /** Playground route: dense, responsive instrument-panel compositions. */
 export const playground = {
   navTrail:
     "justify-self-center font-mono text-[11px] uppercase tracking-[0.12em] text-fg-2 max-[640px]:hidden",
+  bootStack:
+    "grid h-[calc(100svh-var(--nav-height))] min-h-0 [&>*]:col-start-1 [&>*]:row-start-1",
+  bootLayer: "h-full min-h-0",
   shell:
     "flex h-[calc(100svh-var(--nav-height))] min-h-0 flex-col [--playground-sidebar-width:260px] [--playground-left-column:260px] [--playground-right-column:340px] overflow-hidden bg-bg text-fg",
   layoutGrid:
-    "relative grid min-h-0 flex-1 grid-cols-[minmax(0,var(--playground-left-column))_minmax(0,1fr)_minmax(0,var(--playground-right-column))] transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none max-[1180px]:grid-cols-[minmax(0,var(--playground-left-column))_minmax(0,1fr)] max-[760px]:grid-cols-1",
+    "relative grid min-h-0 flex-1 grid-cols-[minmax(0,var(--playground-left-column))_minmax(0,1fr)_minmax(0,var(--playground-right-column))] transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none max-[1180px]:grid-cols-[minmax(0,var(--playground-left-column))_minmax(0,1fr)_minmax(0,0px)] max-[760px]:grid-cols-1",
+  layoutGridResizing: "!transition-none",
   shellMobileWithSidebar: "max-[760px]:grid-rows-[auto_minmax(0,1fr)]",
   shellMobileWithoutSidebar: "max-[760px]:grid-rows-[minmax(0,1fr)]",
   sidebarSlot:
@@ -550,6 +569,7 @@ export const playground = {
   main: "flex h-full w-full max-w-[960px] min-w-0 justify-self-center flex-col overflow-hidden bg-bg max-[760px]:h-auto max-[760px]:max-w-none",
   mainHeader:
     "relative z-20 flex h-12 min-w-0 shrink-0 items-center gap-2.5 bg-bg px-3 shadow-[0_14px_30px_-18px_rgba(0,0,0,0.95)] max-[640px]:h-11 max-[640px]:px-4",
+  mainHeaderWithLeftRestore: "max-[760px]:!pl-12",
   title:
     "m-0 min-w-0 flex-1 truncate font-display text-base font-medium leading-none tracking-[-0.02em] text-fg",
   panelRestoreLeft:
@@ -618,8 +638,7 @@ export const playground = {
   composerInput:
     "min-h-20 w-full resize-none border-0 bg-transparent px-1 py-1 font-sans text-[14px] leading-[1.55] text-fg outline-none placeholder:text-fg-4 disabled:cursor-not-allowed disabled:opacity-55 max-[640px]:min-h-16",
   fallbackMuted: "text-fg-4",
-  composerRow:
-    "flex min-w-0 items-end justify-between gap-2 max-[720px]:flex-col max-[720px]:items-stretch max-[640px]:flex-row max-[640px]:items-center",
+  composerRow: "flex min-w-0 items-center justify-between gap-2",
   composerLeading:
     "flex min-w-0 flex-1 items-center gap-2 max-[720px]:w-full max-[640px]:w-auto",
   exampleRail: "flex min-w-0 flex-1 items-center gap-1 max-[640px]:hidden",
@@ -631,7 +650,7 @@ export const playground = {
     "inline-flex size-7 cursor-pointer items-center justify-center rounded-full bg-bg font-mono text-sm leading-none text-fg-3 transition-colors hover:bg-surface-3 hover:text-fg focus-visible:bg-surface-3 focus-visible:text-fg focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35",
   exampleRegenerateTooltip:
     "pointer-events-none invisible absolute bottom-[calc(100%+0.5rem)] left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-md bg-surface-3 px-2.5 py-1.5 font-mono text-[8px] text-fg-2 opacity-0 shadow-card transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100",
-  composerActions: "flex shrink-0 items-center gap-1.5 max-[720px]:self-end",
+  composerActions: "flex shrink-0 items-center gap-1.5",
   toolPill: "group relative",
   toolSummaryTrigger:
     "inline-flex min-h-9 cursor-help items-center rounded-pill bg-bg px-3 py-2 font-mono text-[10px] text-fg-3 transition-colors hover:bg-surface-3 hover:text-fg focus-visible:bg-surface-3 focus-visible:text-fg focus-visible:outline-none",
@@ -661,7 +680,7 @@ export const playground = {
   workspace:
     "ml-auto flex h-full w-[340px] shrink-0 flex-col overflow-hidden bg-transparent transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity] motion-reduce:transition-none max-[760px]:w-full",
   workspaceSlot:
-    "min-w-0 overflow-hidden max-[1180px]:absolute max-[1180px]:inset-y-0 max-[1180px]:right-0 max-[1180px]:z-50 max-[1180px]:w-[min(340px,100%)] max-[1180px]:translate-x-0 max-[1180px]:bg-bg max-[1180px]:opacity-100 max-[1180px]:shadow-card max-[1180px]:transition-[opacity,transform] max-[1180px]:duration-300 max-[1180px]:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+    "absolute inset-y-0 right-0 z-50 min-w-0 w-[min(340px,100%)] translate-x-0 overflow-hidden max-[1180px]:bg-bg max-[1180px]:opacity-100 max-[1180px]:shadow-card max-[1180px]:transition-[opacity,transform] max-[1180px]:duration-300 max-[1180px]:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
   workspaceSlotClosed:
     "pointer-events-none max-[1180px]:translate-x-full max-[1180px]:opacity-0 max-[1180px]:shadow-none",
   workspaceClosed: "pointer-events-none opacity-0",
@@ -699,14 +718,15 @@ export const playground = {
   activityMessage: "truncate text-fg-2",
   activityDetail: "truncate text-fg-4",
   threadTranscript: "grid gap-8 max-[640px]:gap-6",
-  threadTurn:
-    "grid gap-4 motion-safe:animate-[playground-enter_180ms_ease-out_both]",
-  userBubble:
-    "ml-auto max-w-[82%] rounded-lg rounded-br-sm bg-surface-3 px-4 py-3 text-[13px] leading-[1.55] text-fg shadow-card motion-safe:animate-[playground-enter_160ms_ease-out_both] max-[640px]:max-w-[90%] max-[640px]:px-3.5 max-[640px]:py-2.5",
+  threadTurn: `${playgroundThreadTurnBase} motion-safe:animate-[playground-enter_180ms_ease-out_both]`,
+  threadTurnStatic: playgroundThreadTurnBase,
+  userBubble: `${playgroundUserBubbleBase} motion-safe:animate-[playground-enter_160ms_ease-out_both]`,
+  userBubbleStatic: playgroundUserBubbleBase,
   transcript: "grid gap-3",
   turn: "grid gap-3",
   answerMarkdown:
-    "min-w-0 text-[13px] leading-7 text-fg-2 [&_a]:text-fg [&_a]:underline [&_a]:decoration-hairline-2 [&_a]:underline-offset-3 [&_blockquote]:border-l-2 [&_blockquote]:border-hairline-2 [&_blockquote]:pl-4 [&_code]:font-mono [&_h1]:font-display [&_h1]:text-xl [&_h1]:text-fg [&_h2]:font-display [&_h2]:text-lg [&_h2]:text-fg [&_h3]:font-display [&_h3]:text-base [&_h3]:text-fg [&_li]:my-1 [&_ol]:my-3 [&_ol]:pl-5 [&_p]:my-2 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-sm [&_pre]:border [&_pre]:border-hairline [&_pre]:bg-bg [&_pre]:p-3 [&_ul]:my-3 [&_ul]:pl-5",
+    "min-w-0 text-[13px] leading-7 text-fg-2 [&_a]:text-fg [&_a]:underline [&_a]:decoration-hairline-2 [&_a]:underline-offset-3 [&_blockquote]:border-l-2 [&_blockquote]:border-hairline-2 [&_blockquote]:pl-4 [&_code]:font-mono [&_h1]:font-display [&_h1]:text-xl [&_h1]:text-fg [&_h2]:font-display [&_h2]:text-lg [&_h2]:text-fg [&_h3]:font-display [&_h3]:text-base [&_h3]:text-fg [&_li]:my-0.5 [&_li]:pl-1 [&_li]:marker:text-fg-4 [&_li>p]:my-0 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol_ol]:my-1 [&_p]:my-2 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-sm [&_pre]:border [&_pre]:border-hairline [&_pre]:bg-bg [&_pre]:p-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ul_ul]:my-1 [&_ul_ul]:list-[circle]",
+  bootMessage: "m-0 whitespace-pre-wrap",
   markdownInlineCode:
     "rounded bg-surface-3 px-1.5 py-0.5 font-mono text-[0.88em] text-fg",
   working:
@@ -714,12 +734,12 @@ export const playground = {
   workingDots: "inline-flex items-center gap-1",
   workingDot: "size-1 animate-pulse rounded-full bg-fg-3",
   workingTimer: "text-fg-4 tabular-nums",
-  answerBlock:
-    "grid gap-2 motion-safe:animate-[playground-fade_160ms_ease-out_both]",
-  answerBlockWarn:
-    "grid gap-2 rounded-sm border-l-2 border-warn bg-[color-mix(in_oklch,var(--color-warn)_7%,transparent)] px-3 py-2 motion-safe:animate-[playground-enter_180ms_ease-out_both]",
-  answerBlockError:
-    "grid gap-2 rounded-sm border-l-2 border-err bg-[color-mix(in_oklch,var(--color-err)_7%,transparent)] px-3 py-2 motion-safe:animate-[playground-enter_180ms_ease-out_both]",
+  answerBlock: `${playgroundAnswerBlockBase} motion-safe:animate-[playground-fade_160ms_ease-out_both]`,
+  answerBlockStatic: playgroundAnswerBlockBase,
+  answerBlockWarn: `${playgroundAnswerBlockWarnBase} motion-safe:animate-[playground-enter_180ms_ease-out_both]`,
+  answerBlockWarnStatic: playgroundAnswerBlockWarnBase,
+  answerBlockError: `${playgroundAnswerBlockErrorBase} motion-safe:animate-[playground-enter_180ms_ease-out_both]`,
+  answerBlockErrorStatic: playgroundAnswerBlockErrorBase,
   answerHead: "flex items-center justify-between",
   answerLabel: "font-mono text-[9px] uppercase tracking-[0.12em] text-fg-4",
   answerPlaceholder: "font-mono text-[10px] leading-relaxed text-fg-4",
@@ -732,14 +752,14 @@ export const playground = {
   stopWarn: "font-mono text-[9px] uppercase tracking-[0.08em] text-warn",
   stopError: "font-mono text-[9px] uppercase tracking-[0.08em] text-err",
   toolCards: "grid list-none gap-2 p-0",
-  toolCard:
-    "overflow-hidden rounded-sm border border-hairline bg-bg transition-colors motion-safe:animate-[playground-enter_160ms_ease-out_both]",
+  toolCard: `${playgroundToolCardBase} motion-safe:animate-[playground-enter_160ms_ease-out_both]`,
+  toolCardStatic: playgroundToolCardBase,
   toolCardCalling:
     "overflow-hidden rounded-sm border border-accent-line bg-bg transition-colors motion-safe:animate-[playground-enter_160ms_ease-out_both]",
-  toolCardWarn:
-    "overflow-hidden rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_35%,transparent)] bg-bg",
-  toolCardError:
-    "overflow-hidden rounded-sm border border-[color-mix(in_oklch,var(--color-err)_35%,transparent)] bg-bg",
+  toolCardWarn: playgroundToolCardWarnBase,
+  toolCardWarnStatic: playgroundToolCardWarnBase,
+  toolCardError: playgroundToolCardErrorBase,
+  toolCardErrorStatic: playgroundToolCardErrorBase,
   toolCardDisclosure: "group",
   toolCardHead:
     "flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 font-mono text-[10px] [&::-webkit-details-marker]:hidden",
@@ -777,7 +797,8 @@ export const playground = {
     "inline-flex size-6 cursor-help items-center justify-center rounded-full bg-transparent text-fg-4 transition-colors hover:bg-surface-2 hover:text-fg-2 focus-visible:bg-surface-2 focus-visible:text-fg focus-visible:outline-none",
   streamStatsIcon: "size-3.5",
   streamStatsTooltip:
-    "pointer-events-none invisible absolute bottom-[calc(100%+0.5rem)] left-0 z-50 flex items-center gap-2 whitespace-nowrap rounded-md bg-surface-3 px-2.5 py-1.5 font-mono text-[8px] uppercase tracking-[0.06em] text-fg-3 opacity-0 shadow-card transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100",
+    "pointer-events-none invisible absolute bottom-[calc(100%+0.5rem)] left-0 z-50 flex items-center gap-2 whitespace-nowrap rounded-md bg-surface-3 px-2.5 py-1.5 font-mono text-[8px] uppercase tracking-[0.06em] text-fg-3 opacity-0 shadow-card",
+  streamStatsTooltipVisible: "visible opacity-100",
   thinking: "inline-flex items-center gap-2 font-mono text-[10px] text-fg-3",
   thinkingVerb: "min-w-16",
   thinkingDots: "inline-flex gap-1",

@@ -16,6 +16,7 @@ export type ToolRendererId = "default" | "minimal";
 
 type ToolRendererProps = {
   tool: TranscriptToolFrame;
+  animate?: boolean;
 };
 
 type ToolRendererComponent = (props: ToolRendererProps) => ReactElement;
@@ -50,7 +51,7 @@ function resolveToolCardStatus(
   return "ok";
 }
 
-function DefaultToolRenderer({ tool }: ToolRendererProps) {
+function DefaultToolRenderer({ tool, animate = true }: ToolRendererProps) {
   const status = resolveToolCardStatus(tool);
   const outputIssue = resolveOutputIssue(tool.output);
 
@@ -58,12 +59,20 @@ function DefaultToolRenderer({ tool }: ToolRendererProps) {
     <li
       className={
         status === "calling"
-          ? ui.toolCardCalling
+          ? animate
+            ? ui.toolCardCalling
+            : ui.toolCardStatic
           : status === "warn"
-            ? ui.toolCardWarn
+            ? animate
+              ? ui.toolCardWarn
+              : ui.toolCardWarnStatic
             : status === "error"
-              ? ui.toolCardError
-              : ui.toolCard
+              ? animate
+                ? ui.toolCardError
+                : ui.toolCardErrorStatic
+              : animate
+                ? ui.toolCard
+                : ui.toolCardStatic
       }
     >
       <details className={ui.toolCardDisclosure}>

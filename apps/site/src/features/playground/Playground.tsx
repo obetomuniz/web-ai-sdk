@@ -34,6 +34,7 @@ import { useWebMCPTools } from "./lib/useWebMCPTools.js";
 
 const MAX_ACTIVITY = 50;
 const DEFAULT_SIDEBAR_WIDTH = 260;
+const COLLAPSED_SIDEBAR_WIDTH = 52;
 const MIN_SIDEBAR_WIDTH = 200;
 const MAX_SIDEBAR_WIDTH = 400;
 const SIDEBAR_RESIZE_STEP = 16;
@@ -41,13 +42,15 @@ const SIDEBAR_WIDTH_STORAGE_KEY = "web-ai-sdk:playground:sidebar-width";
 type PromptReadiness = LanguageModelAvailability | "checking" | "unknown";
 
 export function Playground() {
+  const shellRef = useRef<HTMLDivElement>(null);
   const { threads, activeThread, activeMode, ops } = useAgentThreads();
   const [draft, setDraft] = useState("");
   const [currentInput, setCurrentInput] = useState("");
   const [currentTurnId, setCurrentTurnId] = useState<string | null>(null);
   const [eventsLog, setEventsLog] = useState<ActivityEvent[]>([]);
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+  const [sidebarWidth, setSidebarWidth] = useState(loadSidebarWidth);
+  const [sidebarResizing, setSidebarResizing] = useState(false);
   const [conversationsOpen, setConversationsOpen] = useState(true);
   const [runtimeOpen, setRuntimeOpen] = useState(
     () => window.matchMedia("(min-width: 1181px)").matches,
@@ -59,6 +62,7 @@ export function Playground() {
     startX: number;
     startWidth: number;
   } | null>(null);
+  const sidebarWidthRef = useRef(sidebarWidth);
   const promptExposed = useMemo(() => isPromptAvailable(), []);
   const [promptReadiness, setPromptReadiness] = useState<PromptReadiness>(
     promptExposed ? "checking" : "unavailable",
@@ -95,21 +99,22 @@ export function Playground() {
     };
   }, [promptExposed]);
 
-  useEffect(() => {
-    try {
-      const storedWidth = Number(
-        window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY),
-      );
-      if (Number.isFinite(storedWidth) && storedWidth > 0) {
-        setSidebarWidth(clampSidebarWidth(storedWidth));
-      }
-    } catch {
-      // Storage is optional; resizing still works for the current page.
-    }
+  // Swap the persisted boot shell for the interactive app in one layout
+  // phase. The shell remains visible while this client-only island loads,
+  // so locally stored conversations never disappear between Astro and React.
+  useLayoutEffect(() => {
+    const app = shellRef.current?.closest<HTMLElement>("[data-playground-app]");
+    const boot = app?.parentElement?.querySelector<HTMLElement>(
+      "[data-playground-boot]",
+    );
+    if (!app || !boot) return;
+    app.hidden = false;
+    boot.hidden = true;
   }, []);
 
   const updateSidebarWidth = useCallback((width: number) => {
     const nextWidth = clampSidebarWidth(width);
+    sidebarWidthRef.current = nextWidth;
     setSidebarWidth(nextWidth);
     try {
       window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(nextWidth));
@@ -117,6 +122,30 @@ export function Playground() {
       // Storage is optional; keep the in-memory width.
     }
   }, []);
+
+  const previewSidebarWidth = (width: number) => {
+    const nextWidth = clampSidebarWidth(width);
+    sidebarWidthRef.current = nextWidth;
+    shellRef.current?.style.setProperty(
+      "--playground-sidebar-width",
+      `${nextWidth}px`,
+    );
+    shellRef.current?.style.setProperty(
+      "--playground-left-column",
+      `${nextWidth}px`,
+    );
+  };
+
+  const commitSidebarResize = () => {
+    const nextWidth = sidebarWidthRef.current;
+    setSidebarWidth(nextWidth);
+    setSidebarResizing(false);
+    try {
+      window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(nextWidth));
+    } catch {
+      // Storage is optional; keep the in-memory width.
+    }
+  };
 
   const pushActivity = useCallback(
     (event: Omit<ActivityEvent, "id" | "ts">) => {
@@ -264,15 +293,6 @@ export function Playground() {
     pushActivity,
   });
 
-  useEffect(() => {
-    if (promptReadiness === "checking") return;
-    pushActivity({
-      kind: "info",
-      message: "ready",
-      detail: `prompt:${promptReadinessLabel(promptReadiness).toLowerCase()} · webmcp:${webmcpAvailable ? "on" : "off"} · summarizer:${summarizerOn ? "on" : "off"}`,
-    });
-  }, [promptReadiness, pushActivity, summarizerOn, webmcpAvailable]);
-
   const transcriptRef = useRef<HTMLDivElement>(null);
   const { isPinned, scrollToBottom } = useStickToBottom(transcriptRef, [
     activeThread.turns.length,
@@ -280,6 +300,14 @@ export function Playground() {
     events.length,
     liveThought?.text,
   ]);
+
+  // A selected conversation is local state and should appear at its final
+  // scroll position in the first paint. Streaming updates can then follow it
+  // smoothly without animating through another conversation's scroll offset.
+  useLayoutEffect(() => {
+    if (!activeThread.id) return;
+    scrollToBottom("auto");
+  }, [activeThread.id, scrollToBottom]);
 
   // Sending is an explicit request to follow the latest turn, even when the
   // user had scrolled up to read history. Run after the new bubble commits and
@@ -354,10 +382,11 @@ export function Playground() {
 
   const startSidebarResize = (event: ReactPointerEvent<HTMLDivElement>) => {
     event.preventDefault();
+    setSidebarResizing(true);
     sidebarResizeRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
-      startWidth: sidebarWidth,
+      startWidth: sidebarWidthRef.current,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -365,12 +394,13 @@ export function Playground() {
   const resizeSidebar = (event: ReactPointerEvent<HTMLDivElement>) => {
     const resize = sidebarResizeRef.current;
     if (!resize || resize.pointerId !== event.pointerId) return;
-    updateSidebarWidth(resize.startWidth + event.clientX - resize.startX);
+    previewSidebarWidth(resize.startWidth + event.clientX - resize.startX);
   };
 
   const finishSidebarResize = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (sidebarResizeRef.current?.pointerId !== event.pointerId) return;
     sidebarResizeRef.current = null;
+    commitSidebarResize();
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
@@ -396,18 +426,23 @@ export function Playground() {
 
   return (
     <div
+      ref={shellRef}
       className={ui.shell}
       style={
         {
           "--playground-sidebar-width": `${sidebarWidth}px`,
           "--playground-left-column": conversationsOpen
             ? `${sidebarWidth}px`
-            : "0px",
+            : `${COLLAPSED_SIDEBAR_WIDTH}px`,
           "--playground-right-column": runtimeOpen ? "340px" : "0px",
         } as CSSProperties
       }
     >
-      <div className={`${ui.layoutGrid} ${shellMobileRows}`}>
+      <div
+        className={`${ui.layoutGrid} ${
+          sidebarResizing ? ui.layoutGridResizing : ""
+        } ${shellMobileRows}`}
+      >
         <div
           className={`${ui.sidebarSlot} ${
             conversationsOpen ? ui.panelSlotOpen : ui.sidebarSlotClosed
@@ -541,21 +576,13 @@ export function Playground() {
             onPointerUp={finishSidebarResize}
             onPointerCancel={finishSidebarResize}
             onLostPointerCapture={() => {
+              if (!sidebarResizeRef.current) return;
               sidebarResizeRef.current = null;
+              commitSidebarResize();
             }}
             onKeyDown={resizeSidebarFromKeyboard}
             onDoubleClick={() => updateSidebarWidth(DEFAULT_SIDEBAR_WIDTH)}
           />
-        )}
-
-        {!conversationsOpen && (
-          <span className={ui.panelRestoreLeft}>
-            <PanelToggle
-              side="left"
-              open={false}
-              onClick={() => setConversationsOpen(true)}
-            />
-          </span>
         )}
 
         {!runtimeOpen && (
@@ -568,8 +595,22 @@ export function Playground() {
           </span>
         )}
 
+        {!conversationsOpen && (
+          <span className={ui.panelRestoreLeft}>
+            <PanelToggle
+              side="left"
+              open={false}
+              onClick={() => setConversationsOpen(true)}
+            />
+          </span>
+        )}
+
         <main className={ui.main}>
-          <header className={ui.mainHeader}>
+          <header
+            className={`${ui.mainHeader} ${
+              conversationsOpen ? "" : ui.mainHeaderWithLeftRestore
+            }`}
+          >
             <h1 className={ui.title}>{activeThread.name}</h1>
             {!runtimeOpen && (
               <span className={ui.panelRestoreRightMobile}>
@@ -584,7 +625,11 @@ export function Playground() {
 
           <div className={ui.mainBody}>
             <section className={ui.transcriptPanel}>
-              <div ref={transcriptRef} className={ui.answer}>
+              <div
+                ref={transcriptRef}
+                className={ui.answer}
+                data-playground-transcript
+              >
                 <MultiTurnTranscript
                   turns={activeThread.turns}
                   currentTurnId={currentTurnId}
@@ -1092,6 +1137,20 @@ function clampSidebarWidth(width: number): number {
     MAX_SIDEBAR_WIDTH,
     Math.max(MIN_SIDEBAR_WIDTH, Math.round(width)),
   );
+}
+
+function loadSidebarWidth(): number {
+  try {
+    const storedWidth = Number(
+      window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY),
+    );
+    if (Number.isFinite(storedWidth) && storedWidth > 0) {
+      return clampSidebarWidth(storedWidth);
+    }
+  } catch {
+    // Storage is optional; use the default width.
+  }
+  return DEFAULT_SIDEBAR_WIDTH;
 }
 
 function conversationStatusName(

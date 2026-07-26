@@ -60,10 +60,11 @@ export function MultiTurnTranscript({
     durationMs: turn.durationMs,
     failure: turn.failure,
     busy: false,
+    animate: false,
   }));
 
   if (hasLiveTurn) {
-    visibleTurns.push({
+    const liveTurn: TranscriptTurn = {
       id: currentTurnId ?? "live-turn",
       userInput: currentInput,
       events,
@@ -72,15 +73,33 @@ export function MultiTurnTranscript({
       stopReason,
       failure,
       busy,
-    });
+      animate: true,
+    };
+    // onTurnComplete persists the finished turn before useAgent clears its
+    // live projection. Replace that persisted copy in-place during the brief
+    // overlap so React always sees one child per key and can preserve the
+    // response DOM through the handoff.
+    const persistedIndex = visibleTurns.findIndex(
+      (turn) => turn.id === liveTurn.id,
+    );
+    if (persistedIndex === -1) {
+      visibleTurns.push(liveTurn);
+    } else {
+      visibleTurns[persistedIndex] = liveTurn;
+    }
   }
 
   return (
     <div className={ui.threadTranscript}>
       {visibleTurns.map((turn) => (
-        <section key={turn.id} className={ui.threadTurn}>
+        <section
+          key={turn.id}
+          className={turn.animate ? ui.threadTurn : ui.threadTurnStatic}
+        >
           {turn.userInput && (
-            <div className={ui.userBubble}>{turn.userInput}</div>
+            <div className={turn.animate ? ui.userBubble : ui.userBubbleStatic}>
+              {turn.userInput}
+            </div>
           )}
           <Transcript
             events={turn.events}
@@ -90,6 +109,7 @@ export function MultiTurnTranscript({
             durationMs={turn.durationMs}
             failure={turn.failure}
             busy={turn.busy}
+            animate={turn.animate}
             transcriptRendererId={transcriptRendererId}
             toolRendererId={toolRendererId}
           />
@@ -109,6 +129,7 @@ interface TranscriptTurn {
   durationMs?: number;
   failure?: AgentFailure;
   busy: boolean;
+  animate: boolean;
 }
 
 function eventsFromTurn(turn: AgentTurn): AgentEvent[] {

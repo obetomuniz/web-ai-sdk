@@ -4,7 +4,7 @@ import {
   type Tool,
 } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import * as v from "valibot";
 import { MODES } from "../experimental/playground/presets.js";
 import { type AgentThread, findMode } from "./agentThreads.js";
@@ -205,16 +205,6 @@ export function useWebMCPTools(args: Args) {
   }, []);
 
   useWebMCP(tools);
-
-  useEffect(() => {
-    if (available) {
-      argsRef.current.pushActivity({
-        kind: "info",
-        message: "WebMCP tools registered",
-        detail: tools.map((tool) => tool.name).join(", "),
-      });
-    }
-  }, [available, tools]);
 
   return { available };
 }

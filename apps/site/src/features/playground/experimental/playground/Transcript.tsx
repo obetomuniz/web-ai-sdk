@@ -44,6 +44,7 @@ interface Props {
   durationMs?: number;
   failure?: AgentFailure;
   busy: boolean;
+  animate?: boolean;
   transcriptRendererId?: TranscriptRendererId;
   toolRendererId?: ToolRendererId;
 }
@@ -180,6 +181,7 @@ export function Transcript({
   durationMs,
   failure,
   busy,
+  animate = true,
   transcriptRendererId,
   toolRendererId,
 }: Props) {
@@ -239,7 +241,11 @@ export function Transcript({
             {step.tools.length > 0 && (
               <ul className={ui.toolCards}>
                 {step.tools.map((tool) => (
-                  <ToolRenderer key={tool.callId} tool={tool} />
+                  <ToolRenderer
+                    key={tool.callId}
+                    tool={tool}
+                    animate={animate}
+                  />
                 ))}
               </ul>
             )}
@@ -265,10 +271,16 @@ export function Transcript({
         <article
           className={
             tone === "warn"
-              ? ui.answerBlockWarn
+              ? animate
+                ? ui.answerBlockWarn
+                : ui.answerBlockWarnStatic
               : tone === "error"
-                ? ui.answerBlockError
-                : ui.answerBlock
+                ? animate
+                  ? ui.answerBlockError
+                  : ui.answerBlockErrorStatic
+                : animate
+                  ? ui.answerBlock
+                  : ui.answerBlockStatic
           }
         >
           {stopReason && stopReason !== "done" && (

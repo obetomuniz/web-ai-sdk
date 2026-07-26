@@ -68,9 +68,14 @@ const ogImageUrl = new URL("og-image.png", SITE_ORIGIN).toString();
       <span slot="center" class={ui.navTrail}>Playground</span>
     </SiteNav>
     <main>
-      <Playground client:only="react">
-        <PlaygroundFallback slot="fallback" />
-      </Playground>
+      <div class={ui.bootStack} data-playground-root>
+        <div class={ui.bootLayer} data-playground-boot>
+          <PlaygroundFallback />
+        </div>
+        <div class={ui.bootLayer} data-playground-app hidden>
+          <Playground client:only="react" />
+        </div>
+      </div>
     </main>
   </body>
 </html>

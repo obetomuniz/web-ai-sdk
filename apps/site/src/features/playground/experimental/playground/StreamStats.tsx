@@ -21,6 +21,7 @@ function countWords(text: string): number {
 function StreamStatsImpl({ content, streaming, durationMs }: Props) {
   const startRef = useRef<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [tooltipVisible, setTooltipVisible] = useState(false);
   const tooltipId = useId();
 
   useEffect(() => {
@@ -56,6 +57,10 @@ function StreamStatsImpl({ content, streaming, durationMs }: Props) {
         className={ui.streamStatsTrigger}
         aria-label="Response metrics"
         aria-describedby={tooltipId}
+        onPointerMove={() => setTooltipVisible(true)}
+        onPointerLeave={() => setTooltipVisible(false)}
+        onFocus={() => setTooltipVisible(true)}
+        onBlur={() => setTooltipVisible(false)}
       >
         <svg
           className={ui.streamStatsIcon}
@@ -79,7 +84,13 @@ function StreamStatsImpl({ content, streaming, durationMs }: Props) {
           <circle cx="12" cy="13.5" r="0.9" fill="currentColor" />
         </svg>
       </button>
-      <span id={tooltipId} role="tooltip" className={ui.streamStatsTooltip}>
+      <span
+        id={tooltipId}
+        role="tooltip"
+        className={`${ui.streamStatsTooltip} ${
+          tooltipVisible ? ui.streamStatsTooltipVisible : ""
+        }`}
+      >
         <span>{seconds.toFixed(1)}s</span>
         <span>{words} words</span>
         <span>{chars} chars</span>

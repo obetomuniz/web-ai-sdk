@@ -7,10 +7,9 @@
  * yanking them down on every token.
  *
  * Pass the streaming value(s) in `deps` (e.g. `[messages]`, or
- * `[text, events.length]`) so the view re-pins on each update. The pin runs
- * in a layout effect (`scrollTop = scrollHeight` before the browser paints),
- * so the grown content lands at the bottom in the same frame - no flicker,
- * no intermediate paint at the old position.
+ * `[text, events.length]`) so the view follows each update. One animation
+ * frame loop tracks the latest scroll height instead of restarting native
+ * smooth scrolling for every chunk.
  *
  * Returns `{ isPinned, scrollToBottom }` so any consumer can reflect the
  * follow state (e.g. show a "jump to latest" pill) and re-pin imperatively.
@@ -28,6 +27,8 @@ import {
 } from "react";
 
 const NEAR_BOTTOM_PX = 80;
+const FOLLOW_EPSILON_PX = 0.5;
+const FOLLOW_EASING = 0.32;
 
 export interface StickToBottom {
   /** True while the view follows the bottom; false once the user scrolls up. */
@@ -46,21 +47,75 @@ export function useStickToBottom<T extends HTMLElement>(
   // "pinned" so the first content lands at the bottom before any scroll.
   const pinnedRef = useRef(true);
   const [isPinned, setIsPinned] = useState(true);
+  const followFrameRef = useRef<number | null>(null);
+  const programmaticFollowRef = useRef(false);
 
-  const setPinned = useCallback((next: boolean) => {
-    pinnedRef.current = next;
-    setIsPinned((prev) => (prev === next ? prev : next));
+  const cancelFollow = useCallback(() => {
+    if (followFrameRef.current !== null) {
+      cancelAnimationFrame(followFrameRef.current);
+      followFrameRef.current = null;
+    }
+    programmaticFollowRef.current = false;
   }, []);
+
+  const setPinned = useCallback(
+    (next: boolean) => {
+      pinnedRef.current = next;
+      setIsPinned((prev) => (prev === next ? prev : next));
+      if (!next) cancelFollow();
+    },
+    [cancelFollow],
+  );
 
   const scrollToBottom = useCallback(
     (behavior: ScrollBehavior = "smooth") => {
       const el = ref.current;
       if (!el) return;
+      cancelFollow();
       setPinned(true);
       el.scrollTo({ top: el.scrollHeight, behavior });
     },
-    [ref, setPinned],
+    [cancelFollow, ref, setPinned],
   );
+
+  const followBottom = useCallback(() => {
+    const el = ref.current;
+    if (!el || !pinnedRef.current || followFrameRef.current !== null) {
+      return;
+    }
+
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (reducedMotion) {
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+
+    programmaticFollowRef.current = true;
+    const tick = () => {
+      const current = ref.current;
+      if (!current || !pinnedRef.current) {
+        followFrameRef.current = null;
+        programmaticFollowRef.current = false;
+        return;
+      }
+
+      const target = Math.max(0, current.scrollHeight - current.clientHeight);
+      const distance = target - current.scrollTop;
+      if (Math.abs(distance) <= FOLLOW_EPSILON_PX) {
+        current.scrollTop = target;
+        followFrameRef.current = null;
+        programmaticFollowRef.current = false;
+        return;
+      }
+
+      current.scrollTop += distance * FOLLOW_EASING;
+      followFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    followFrameRef.current = requestAnimationFrame(tick);
+  }, [ref]);
 
   useEffect(() => {
     const el = ref.current;
@@ -90,7 +145,7 @@ export function useStickToBottom<T extends HTMLElement>(
         return;
       }
       const dist = height - top - el.clientHeight;
-      if (movedUp && !heightChanged) {
+      if (movedUp && !heightChanged && !programmaticFollowRef.current) {
         // User scrolled up (wheel, drag, keys, touch) - yield immediately,
         // even inside the bottom zone, so scrolling up stays smooth instead
         // of being yanked back by the next streamed token.
@@ -141,17 +196,15 @@ export function useStickToBottom<T extends HTMLElement>(
     };
   }, [ref, nearBottomPx, setPinned]);
 
-  // Pin on each content update before paint, so new content shows at the
-  // bottom in the same frame it's committed.
-  useLayoutEffect(
-    () => {
-      const el = ref.current;
-      if (!el || !pinnedRef.current) return;
-      el.scrollTop = el.scrollHeight;
-    },
-    // biome-ignore lint/correctness/useExhaustiveDependencies: Callers intentionally provide the content signals that should trigger pinning.
-    deps,
-  );
+  useEffect(() => cancelFollow, [cancelFollow]);
+
+  // Keep one animation alive while streamed content grows. Updating its target
+  // avoids restarting native smooth scrolling for every token batch, while
+  // easing line-height changes prevents the transcript from appearing to blink.
+  useLayoutEffect(() => {
+    if (!pinnedRef.current) return;
+    followBottom();
+  }, [followBottom, ...deps]);
 
   return { isPinned, scrollToBottom };
 }
