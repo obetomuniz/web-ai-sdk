@@ -33,6 +33,15 @@ export function PlaygroundLayout({
     if (!app || !boot) return;
     app.hidden = false;
     boot.hidden = true;
+
+    // Child layout effects run before this handoff while the app layer is
+    // still hidden, so their first scroll measurement is necessarily zero.
+    // Once the interactive layer is measurable, transfer the boot shell's
+    // "latest message" position before the browser paints it.
+    const transcript = shellRef.current?.querySelector<HTMLElement>(
+      "[data-playground-transcript]",
+    );
+    if (transcript) transcript.scrollTop = transcript.scrollHeight;
   }, [shellRef]);
 
   return (

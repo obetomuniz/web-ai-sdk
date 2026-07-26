@@ -75,4 +75,17 @@ describe("createPlaygroundWebMCPTools", () => {
 
     expect(result).toMatchObject({ ok: false, error: expect.any(String) });
   });
+
+  it("validates WebMCP input before invoking application code", async () => {
+    const context = createContext();
+    const sendMessage = findTool(
+      createPlaygroundWebMCPTools({ current: context }),
+      "send_message",
+    );
+
+    await expect(sendMessage.execute({ text: 42 })).rejects.toMatchObject({
+      name: "ToolValidationError",
+    });
+    expect(context.send).not.toHaveBeenCalled();
+  });
 });

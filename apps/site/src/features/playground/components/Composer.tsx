@@ -8,6 +8,8 @@ import {
   promptReadinessMessage,
 } from "../lib/promptReadiness.js";
 
+const browserSupportHref = `${import.meta.env.BASE_URL}docs/browser-support/`;
+
 export interface ComposerProps {
   draft: string;
   promptOn: boolean;
@@ -62,7 +64,14 @@ export function Composer({
         {!promptOn && (
           <div className={ui.composerNotice} role="status" aria-live="polite">
             <NoticeIcon className={ui.composerNoticeIcon} />
-            <span>{promptReadinessMessage(promptReadiness)}</span>
+            <span className={ui.composerNoticeCopy}>
+              <span>{promptReadinessMessage(promptReadiness)}</span>
+              {promptReadiness === "unavailable" && (
+                <a className={ui.composerNoticeLink} href={browserSupportHref}>
+                  Browser support
+                </a>
+              )}
+            </span>
           </div>
         )}
         {error && (

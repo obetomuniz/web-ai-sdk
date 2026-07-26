@@ -76,9 +76,7 @@ export function isContextuallyGroundedUrl(
 
     const previousPath = pathSegments(parsedPrevious);
     const candidatePath = pathSegments(parsedCandidate);
-    const sharesRoute = candidatePath.some(
-      (segment, index) => segment === previousPath[index],
-    );
+    const sharesRoute = sharesRoutePrefix(previousPath, candidatePath);
     if (!sharesRoute && parsedCandidate.pathname !== parsedPrevious.pathname) {
       continue;
     }
@@ -95,6 +93,23 @@ export function isContextuallyGroundedUrl(
   }
 
   return false;
+}
+
+function sharesRoutePrefix(
+  previousPath: readonly string[],
+  candidatePath: readonly string[],
+): boolean {
+  if (
+    previousPath.length === 0 ||
+    previousPath.length !== candidatePath.length
+  ) {
+    return false;
+  }
+
+  const firstChanged = candidatePath.findIndex(
+    (segment, index) => segment !== previousPath[index],
+  );
+  return firstChanged > 0;
 }
 
 function parseHttpUrl(value: string): URL | undefined {

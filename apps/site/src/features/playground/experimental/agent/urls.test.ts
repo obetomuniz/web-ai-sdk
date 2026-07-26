@@ -55,4 +55,14 @@ describe("isContextuallyGroundedUrl", () => {
       ),
     ).toBe(false);
   });
+
+  it("rejects an endpoint pivot that only shares an interior segment", () => {
+    expect(
+      isContextuallyGroundedUrl(
+        "https://api.github.com/users/obetomuniz/repos",
+        "now from users obetomuniz repos",
+        known,
+      ),
+    ).toBe(false);
+  });
 });

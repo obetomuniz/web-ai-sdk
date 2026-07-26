@@ -57,6 +57,56 @@ export interface FetchUrlToolOptions {
   maxArticleChars?: number;
 }
 
+async function readResponseBody(
+  response: Response,
+  maxBytes: number,
+): Promise<{ bytes: Uint8Array; truncated: boolean }> {
+  const limit = Math.max(0, Math.floor(maxBytes));
+  if (!response.body) {
+    const buffer = await response.arrayBuffer();
+    return {
+      bytes: new Uint8Array(buffer.slice(0, limit)),
+      truncated: buffer.byteLength > limit,
+    };
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  let truncated = false;
+
+  try {
+    while (true) {
+      const result = await reader.read();
+      if (result.done) break;
+
+      const remaining = limit - size;
+      if (result.value.byteLength > remaining) {
+        if (remaining > 0) {
+          chunks.push(result.value.subarray(0, remaining));
+          size += remaining;
+        }
+        truncated = true;
+        await reader.cancel("response byte limit reached");
+        break;
+      }
+
+      chunks.push(result.value);
+      size += result.value.byteLength;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { bytes, truncated };
+}
+
 export function createFetchUrlTool(
   options: FetchUrlToolOptions = {},
 ): AgentTool<FetchInput, FetchOutput> {
@@ -143,9 +193,10 @@ export function createFetchUrlTool(
       emit({ phase: "received", status: res.status });
 
       const contentType = res.headers.get("content-type");
-      const buf = await res.arrayBuffer();
-      const rawTruncated = buf.byteLength > maxBytes;
-      const view = new Uint8Array(buf.slice(0, maxBytes));
+      const { bytes: view, truncated: rawTruncated } = await readResponseBody(
+        res,
+        maxBytes,
+      );
       const rawText = new TextDecoder().decode(view);
 
       if (contentType?.includes("application/json")) {

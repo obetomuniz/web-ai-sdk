@@ -43,8 +43,13 @@ export function ThinkingIndicator() {
   }, []);
 
   return (
-    <span className={ui.thinking} aria-live="polite">
-      <span key={verb} className={ui.thinkingVerb}>
+    <span
+      className={ui.thinking}
+      role="status"
+      aria-live="polite"
+      aria-label="Thinking"
+    >
+      <span key={verb} className={ui.thinkingVerb} aria-hidden="true">
         {verb}
       </span>
       <span className={ui.thinkingDots} aria-hidden="true">

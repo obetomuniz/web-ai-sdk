@@ -98,6 +98,7 @@ export function createPlaygroundWebMCPTools(
     description:
       "Create and select a new agent conversation. Optionally pass a modeId from list_modes.",
     input: NewConversationInput,
+    validate: true,
     inputSchema: {
       type: "object",
       properties: { modeId: { type: "string" } },
@@ -116,6 +117,7 @@ export function createPlaygroundWebMCPTools(
     name: "switch_conversation",
     description: "Switch the active agent conversation by id.",
     input: ConversationIdInput,
+    validate: true,
     inputSchema: {
       type: "object",
       properties: { id: { type: "string", minLength: 1 } },
@@ -141,6 +143,7 @@ export function createPlaygroundWebMCPTools(
       "Delete an agent conversation by id. Destructive: persisted turns cannot be recovered.",
     destructive: true,
     input: ConversationIdInput,
+    validate: true,
     inputSchema: {
       type: "object",
       properties: { id: { type: "string", minLength: 1 } },
@@ -167,6 +170,7 @@ export function createPlaygroundWebMCPTools(
     description:
       "Set the active conversation mode while keeping its existing turns.",
     input: SetModeInput,
+    validate: true,
     inputSchema: {
       type: "object",
       properties: { modeId: { type: "string", minLength: 1 } },
@@ -192,6 +196,7 @@ export function createPlaygroundWebMCPTools(
     description:
       "Send a message to the active agent conversation. The reply streams into the conversation.",
     input: SendMessageInput,
+    validate: true,
     inputSchema: {
       type: "object",
       properties: { text: { type: "string", minLength: 1 } },
