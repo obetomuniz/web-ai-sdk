@@ -61,5 +61,6 @@ Docs styles live separately under `src/features/docs/styles`; these site guardra
 | `src/styles/home.css` | Theme + base layer |
 | `src/pages/index.astro` | Static page sections, nav, metadata, and island hydration |
 | `src/features/home/components/ScrollSpy.tsx` | Nav highlight + reveal animations |
+| `src/features/playground/README.md` | Playground architecture, decisions, and maintenance invariants |
 
 Run `pnpm gate` before committing site changes.

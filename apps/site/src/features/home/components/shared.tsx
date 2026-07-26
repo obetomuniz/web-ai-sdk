@@ -1,6 +1,10 @@
 import { marked } from "marked";
 import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
 import {
+  detectBrowser,
+  isDesktopWebAIBrowser,
+} from "../../../shared/browser.js";
+import {
   caret,
   markdownProse,
   markdownProseEmpty,
@@ -248,35 +252,8 @@ export const MarkdownOutput = ({
   );
 };
 
-type NavigatorWithUserAgentData = Navigator & {
-  userAgentData?: { brands?: Array<{ brand: string; version: string }> };
-};
-
-export const detectBrowser = (): "chrome" | "edge" | "other" => {
-  if (typeof navigator === "undefined") return "other";
-  const ua = navigator.userAgent;
-  if (/\bEdg\//.test(ua)) return "edge";
-  if (/\bChrome\//.test(ua)) return "chrome";
-  return "other";
-};
-
 /** Desktop Chrome or Edge — excludes mobile UAs and other Chromium forks. */
-export const isDesktopChromium = (): boolean => {
-  if (typeof navigator === "undefined") return false;
-  const ua = navigator.userAgent;
-  if (/Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(ua)) return false;
-
-  const brands = (navigator as NavigatorWithUserAgentData).userAgentData
-    ?.brands;
-  if (brands) {
-    return brands.some(
-      (b) => b.brand === "Google Chrome" || b.brand === "Microsoft Edge",
-    );
-  }
-
-  const browser = detectBrowser();
-  return browser === "edge" || browser === "chrome";
-};
+export const isDesktopChromium = isDesktopWebAIBrowser;
 
 export const detectModelName = (): string => {
   if (typeof globalThis === "undefined") return "on-device LM";

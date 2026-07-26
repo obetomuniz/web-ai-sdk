@@ -142,6 +142,26 @@
     }
   }
 
+  @keyframes playground-enter {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes playground-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
   /* Semantic, one-shot package icon motions. Icon shapes use pathLength="1"
      so draw animations stay consistent across different geometries. */
   --animate-icon-draw: icon-draw 620ms ease-out;
