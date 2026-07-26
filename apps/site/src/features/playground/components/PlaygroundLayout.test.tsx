@@ -3,6 +3,7 @@
 import { act, createRef, useLayoutEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { playground as ui } from "../../../shared/ui.js";
 import type { PlaygroundLayoutController } from "../lib/usePlaygroundLayout.js";
 import { PlaygroundLayout } from "./PlaygroundLayout.js";
 
@@ -22,6 +23,7 @@ describe("PlaygroundLayout", () => {
   it("reveals a restored conversation at the bottom", () => {
     const boot = document.createElement("div");
     boot.dataset.playgroundBoot = "";
+    boot.dataset.playgroundTranscriptScrolled = "true";
     const app = document.createElement("div");
     app.dataset.playgroundApp = "";
     app.hidden = true;
@@ -50,7 +52,12 @@ describe("PlaygroundLayout", () => {
         transcript.scrollTop = transcript.scrollHeight;
       }, []);
 
-      return <div ref={transcriptRef} data-playground-transcript />;
+      return (
+        <>
+          <header data-playground-main-header />
+          <div ref={transcriptRef} data-playground-transcript />
+        </>
+      );
     }
 
     const noop = vi.fn();
@@ -88,8 +95,12 @@ describe("PlaygroundLayout", () => {
     const transcript = app.querySelector<HTMLElement>(
       "[data-playground-transcript]",
     );
+    const header = app.querySelector<HTMLElement>(
+      "[data-playground-main-header]",
+    );
     expect(app.hidden).toBe(false);
     expect(boot.hidden).toBe(true);
     expect(transcript?.scrollTop).toBe(600);
+    expect(header?.classList.contains(ui.mainHeaderScrolled)).toBe(true);
   });
 });

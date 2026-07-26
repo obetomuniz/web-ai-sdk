@@ -14,22 +14,6 @@ export function promptIsReady(readiness: PromptReadiness): boolean {
   );
 }
 
-export function promptReadinessLabel(readiness: PromptReadiness): string {
-  switch (readiness) {
-    case "available":
-      return "On";
-    case "downloadable":
-      return "Download";
-    case "downloading":
-      return "Downloading";
-    case "checking":
-    case "unknown":
-      return "On";
-    case "unavailable":
-      return "Off";
-  }
-}
-
 export function promptReadinessMessage(
   readiness: PromptReadiness,
   browser: WebAIBrowser = detectBrowser(),

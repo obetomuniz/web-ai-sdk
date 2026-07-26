@@ -36,6 +36,7 @@ const truncateExample = (value: string, limit = 60) =>
   data-answer-markdown-class={ui.answerMarkdown}
   data-markdown-inline-code-class={ui.markdownInlineCode}
   data-boot-message-class={ui.bootMessage}
+  data-main-header-scrolled-class={ui.mainHeaderScrolled}
   data-workspace-slot-closed-class={ui.workspaceSlotClosed}
   data-workspace-closed-class={ui.workspaceClosed}
   data-example-class={ui.example}
@@ -91,7 +92,10 @@ const truncateExample = (value: string, limit = 60) =>
     </div>
 
     <div class={ui.main}>
-      <header class={ui.mainHeader}>
+      <header
+        class:list={[ui.mainHeader, ui.mainHeaderBoot]}
+        data-playground-main-header
+      >
         <h2 class={ui.title} data-playground-title>New conversation</h2>
       </header>
 
@@ -179,9 +183,6 @@ const truncateExample = (value: string, limit = 60) =>
         data-playground-workspace
       >
         <header class={ui.workspaceHeader}>
-          <span class={ui.workspaceHeading}>
-            <h2 class={ui.workspaceTitle}>Runtime</h2>
-          </span>
           <span class={ui.panelToggle}>
             <svg
               class={ui.panelToggleIcon}
@@ -205,17 +206,50 @@ const truncateExample = (value: string, limit = 60) =>
           </span>
         </header>
         <div class={ui.workspaceBody}>
-          <div class={ui.chips}>
-            <span class={ui.chipOn}>prompt on</span>
-            <span class={ui.chipOn}>summarizer on</span>
-            <span class={ui.chipOn}>webmcp on</span>
-          </div>
           <div class={ui.workspaceHeading}>
-            <h2 class={ui.workspaceTitle}>Activity</h2>
-            <div class={ui.workspaceCount}>0 events</div>
+            <h2 class={ui.workspaceTitle}>Recent activities</h2>
+            <div class={ui.workspaceCount}>3 checks · 0 events</div>
           </div>
           <div class={ui.workspacePane}>
-            <div class={ui.empty}>Activity appears here.</div>
+            <ul class={ui.activity}>
+              <li class={ui.activityItem}>
+                <span class={ui.activityMain}>
+                  <span class={ui.activityMessage}>Prompt API</span>
+                  <span class={ui.activityDetail}>Conversation responses</span>
+                </span>
+                <span class={ui.activityMeta}>
+                  <span class={ui.activityCheckState} data-tone="checking">
+                    checking
+                  </span>
+                </span>
+              </li>
+              <li class={ui.activityItem}>
+                <span class={ui.activityMain}>
+                  <span class={ui.activityMessage}>Summarizer API</span>
+                  <span class={ui.activityDetail}>
+                    Text summaries and conversation titles
+                  </span>
+                </span>
+                <span class={ui.activityMeta}>
+                  <span class={ui.activityCheckState} data-tone="ready">
+                    ready
+                  </span>
+                </span>
+              </li>
+              <li class={ui.activityItem}>
+                <span class={ui.activityMain}>
+                  <span class={ui.activityMessage}>WebMCP</span>
+                  <span class={ui.activityDetail}>
+                    Conversation controls for browser agents
+                  </span>
+                </span>
+                <span class={ui.activityMeta}>
+                  <span class={ui.activityCheckState} data-tone="ready">
+                    ready
+                  </span>
+                </span>
+              </li>
+            </ul>
           </div>
           <div class={ui.workspaceNotes}>
             <div class={ui.workspaceFootnote}>
@@ -747,6 +781,26 @@ const truncateExample = (value: string, limit = 60) =>
         // takes over without delaying the first paint.
         if (restoredTranscript instanceof HTMLElement) {
           restoredTranscript.scrollTop = restoredTranscript.scrollHeight;
+          const transcriptScrolled = restoredTranscript.scrollTop > 1;
+          const bootLayer = fallback.closest("[data-playground-boot]");
+          if (bootLayer instanceof HTMLElement) {
+            bootLayer.dataset.playgroundTranscriptScrolled =
+              String(transcriptScrolled);
+          }
+          const restoredHeader = fallback.querySelector(
+            "[data-playground-main-header]",
+          );
+          const scrolledClasses = (
+            fallback.dataset.mainHeaderScrolledClass ?? ""
+          )
+            .split(" ")
+            .filter(Boolean);
+          for (const className of scrolledClasses) {
+            restoredHeader?.classList.toggle(
+              className,
+              transcriptScrolled,
+            );
+          }
         }
         fallback.classList.remove("invisible");
       }

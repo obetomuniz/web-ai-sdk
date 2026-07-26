@@ -31,17 +31,35 @@ export function PlaygroundLayout({
       "[data-playground-boot]",
     );
     if (!app || !boot) return;
+    const transcript = shellRef.current?.querySelector<HTMLElement>(
+      "[data-playground-transcript]",
+    );
+    const header = shellRef.current?.querySelector<HTMLElement>(
+      "[data-playground-main-header]",
+    );
+
+    // The static shell records whether its restored transcript overflowed.
+    // Apply that state while the interactive layer is still display:none, so
+    // its first visible frame already has the correct shadow.
+    header?.classList.toggle(
+      ui.mainHeaderScrolled,
+      boot.dataset.playgroundTranscriptScrolled === "true",
+    );
     app.hidden = false;
-    boot.hidden = true;
 
     // Child layout effects run before this handoff while the app layer is
     // still hidden, so their first scroll measurement is necessarily zero.
     // Once the interactive layer is measurable, transfer the boot shell's
     // "latest message" position before the browser paints it.
-    const transcript = shellRef.current?.querySelector<HTMLElement>(
-      "[data-playground-transcript]",
-    );
-    if (transcript) transcript.scrollTop = transcript.scrollHeight;
+    if (transcript) {
+      transcript.scrollTop = transcript.scrollHeight;
+      header?.classList.toggle(ui.mainHeaderScrolled, transcript.scrollTop > 1);
+      // Programmatic scroll restoration may notify listeners after paint.
+      // Synchronize the React scroll state during this layout phase so a
+      // later readiness render cannot briefly remove the restored shadow.
+      transcript.dispatchEvent(new Event("scroll"));
+    }
+    boot.hidden = true;
   }, [shellRef]);
 
   return (

@@ -1,14 +1,10 @@
 import { playground as ui } from "../../../shared/ui.js";
-import {
-  type PromptReadiness,
-  promptReadinessLabel,
-} from "../lib/promptReadiness.js";
+import type { PromptReadiness } from "../lib/promptReadiness.js";
 import type { ActivityEvent } from "../lib/types.js";
 import { PanelToggle } from "./PanelToggle.js";
 
 interface Props {
   open: boolean;
-  promptOn: boolean;
   promptReadiness: PromptReadiness;
   summarizerOn: boolean;
   webmcpAvailable: boolean;
@@ -18,7 +14,6 @@ interface Props {
 
 export function RuntimePanel({
   open,
-  promptOn,
   promptReadiness,
   summarizerOn,
   webmcpAvailable,
@@ -37,38 +32,36 @@ export function RuntimePanel({
         className={`${ui.workspace} ${open ? ui.panelOpen : ui.workspaceClosed}`}
       >
         <header className={ui.workspaceHeader}>
-          <span className={ui.workspaceHeading}>
-            <h2 className={ui.workspaceTitle}>Runtime</h2>
-          </span>
           <PanelToggle side="right" open onClick={onHide} />
         </header>
         <div className={ui.workspaceBody}>
-          <div className={ui.chips}>
-            <RuntimeChip
-              on={promptOn}
-              label="prompt"
-              guidance="Runs conversation responses on-device with the browser's Prompt API."
-              stateLabel={promptReadinessLabel(promptReadiness)}
-            />
-            <RuntimeChip
-              on={summarizerOn}
-              label="summarizer"
-              guidance="Summarizes provided text on-device with the browser's Summarizer API."
-            />
-            <RuntimeChip
-              on={webmcpAvailable}
-              label="webmcp"
-              guidance="Exposes Playground conversation controls to compatible browser agents."
-            />
-          </div>
           <div className={ui.workspaceHeading}>
-            <h2 className={ui.workspaceTitle}>Activity</h2>
+            <h2 className={ui.workspaceTitle}>Recent activities</h2>
             <div className={ui.workspaceCount}>
-              {events.length} event{events.length === 1 ? "" : "s"}
+              3 checks · {events.length} event{events.length === 1 ? "" : "s"}
             </div>
           </div>
           <div className={ui.workspacePane}>
-            <ActivityList events={events} />
+            <ActivityList
+              checks={[
+                {
+                  label: "Prompt API",
+                  detail: "Conversation responses",
+                  state: promptCheckState(promptReadiness),
+                },
+                {
+                  label: "Summarizer API",
+                  detail: "Text summaries and conversation titles",
+                  state: summarizerOn ? "ready" : "unavailable",
+                },
+                {
+                  label: "WebMCP",
+                  detail: "Conversation controls for browser agents",
+                  state: webmcpAvailable ? "ready" : "unavailable",
+                },
+              ]}
+              events={events}
+            />
           </div>
           <div className={ui.workspaceNotes}>
             <div className={ui.workspaceFootnote}>
@@ -84,45 +77,61 @@ export function RuntimePanel({
   );
 }
 
-function RuntimeChip({
-  on,
-  label,
-  guidance,
-  stateLabel,
-}: {
-  on: boolean;
+type RuntimeCheckState =
+  | "ready"
+  | "checking"
+  | "download"
+  | "downloading"
+  | "unavailable"
+  | "unknown";
+
+interface RuntimeCheck {
   label: string;
-  guidance: string;
-  stateLabel?: string;
-}) {
-  const state = stateLabel ?? (on ? "Available" : "Unavailable");
-  return (
-    <span
-      className={on ? ui.chipOn : ui.chipOff}
-      title={`${guidance} ${state} in this browser.`}
-    >
-      {label} {stateLabel ? stateLabel.toLowerCase() : on ? "on" : "off"}
-    </span>
-  );
+  detail: string;
+  state: RuntimeCheckState;
 }
 
-function ActivityList({ events }: { events: ActivityEvent[] }) {
-  if (events.length === 0) {
-    return <div className={ui.empty}>Activity appears here.</div>;
-  }
+function promptCheckState(readiness: PromptReadiness): RuntimeCheckState {
+  if (readiness === "available") return "ready";
+  if (readiness === "downloadable") return "download";
+  return readiness;
+}
+
+function ActivityList({
+  checks,
+  events,
+}: {
+  checks: RuntimeCheck[];
+  events: ActivityEvent[];
+}) {
   return (
     <ul className={ui.activity}>
       {events.map((event) => (
         <li key={event.id} className={ui.activityItem}>
-          <span className={ui.activityTime}>{formatTime(event.ts)}</span>
-          <span className={ui.activityKind}>
-            {event.kind.replace("chat_", "")}
-          </span>
           <span className={ui.activityMain}>
             <span className={ui.activityMessage}>{event.message}</span>
             {event.detail && (
               <span className={ui.activityDetail}>{event.detail}</span>
             )}
+          </span>
+          <span className={ui.activityMeta}>
+            <span className={ui.activityKind}>
+              {event.kind.replace("chat_", "")}
+            </span>
+            <span className={ui.activityTime}>{formatTime(event.ts)}</span>
+          </span>
+        </li>
+      ))}
+      {checks.map((check) => (
+        <li key={check.label} className={ui.activityItem}>
+          <span className={ui.activityMain}>
+            <span className={ui.activityMessage}>{check.label}</span>
+            <span className={ui.activityDetail}>{check.detail}</span>
+          </span>
+          <span className={ui.activityMeta}>
+            <span className={ui.activityCheckState} data-tone={check.state}>
+              {check.state}
+            </span>
           </span>
         </li>
       ))}

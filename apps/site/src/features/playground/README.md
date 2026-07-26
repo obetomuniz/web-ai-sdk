@@ -44,7 +44,7 @@ feature.
 | `components/ConversationView.tsx` | Active conversation header, track, scroll behavior, and composer |
 | `components/ConversationTrack.tsx` | Persisted and live turns projected into the transcript renderer |
 | `components/Composer.tsx` | Prompt input, modes, examples, tools, notices, and send or stop actions |
-| `components/RuntimePanel.tsx` | Capability status, ephemeral Activity, and local-first guidance |
+| `components/RuntimePanel.tsx` | Runtime checks, ephemeral Activity, and local-first guidance |
 | `lib/agentThreads.ts` | Persistence schema, recovery, sorting, and thread construction |
 | `lib/useActivityLog.ts` | Bounded, ephemeral runtime diagnostics |
 | `lib/useAgentThreads.ts` | React state and mutation API for conversations |
@@ -182,8 +182,9 @@ preferences use immediate scrolling.
 ### 10. Examples have an immediate deterministic baseline
 
 Every mode ships curated examples, so the composer never waits for generated
-suggestions on first render. Generated examples are requested explicitly or
-after a newly completed turn provides useful conversation context.
+suggestions on first render. Generated examples are requested only when the
+user explicitly activates the generate control. Recent conversation turns
+provide context for that request without triggering it automatically.
 
 Generation is cancelled when the mode, conversation, or active run changes.
 Outputs are filtered for concrete goals and reject placeholder resources such
@@ -209,6 +210,11 @@ the title's content row or reduce the title's available width.
 Conversations and turns persist across reloads. Runtime Activity does not. It
 describes events from the current page session and is intentionally capped at
 50 entries.
+
+The Activity surface begins with live checks for Prompt, Summarizer, and WebMCP
+support. Keeping capability state in the same diagnostic list avoids decorative
+status chrome and makes unavailable or downloading states inspectable beside
+the events they affect.
 
 The Activity count is therefore not expected to equal persisted turn, tool, or
 agent-step counts. It is a lightweight inspection surface, not an audit log.

@@ -229,7 +229,6 @@ export function Playground() {
       runtime={
         <RuntimePanel
           open={layout.runtimeOpen}
-          promptOn={promptOn}
           promptReadiness={promptReadiness}
           summarizerOn={summarizerOn}
           webmcpAvailable={webmcpAvailable}

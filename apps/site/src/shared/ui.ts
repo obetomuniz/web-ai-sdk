@@ -577,7 +577,9 @@ export const playground = {
   wideButtonLabel: "max-[760px]:hidden",
   main: "flex h-full w-full max-w-[960px] min-w-0 justify-self-center flex-col overflow-hidden bg-bg max-[760px]:h-auto max-[760px]:max-w-none",
   mainHeader:
-    "relative z-20 flex h-12 min-w-0 shrink-0 items-center gap-2.5 bg-bg px-3 shadow-[0_14px_30px_-18px_rgba(0,0,0,0.95)] max-[640px]:h-11 max-[640px]:px-4",
+    "relative z-20 flex h-12 min-w-0 shrink-0 items-center gap-2.5 bg-bg px-3 after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-9 after:bg-[linear-gradient(to_bottom,var(--color-bg)_0%,color-mix(in_oklch,var(--color-bg)_78%,transparent)_48%,transparent_100%)] after:opacity-0 after:transition-opacity after:duration-200 after:ease-out after:content-[''] max-[640px]:h-11 max-[640px]:px-4",
+  mainHeaderBoot: "after:transition-none",
+  mainHeaderScrolled: "after:opacity-100",
   mainHeaderWithLeftRestore: "max-[760px]:!pl-12",
   title:
     "m-0 min-w-0 flex-1 truncate font-display text-base font-medium leading-none tracking-[-0.02em] text-fg",
@@ -697,18 +699,13 @@ export const playground = {
   workspaceSlotClosed:
     "pointer-events-none max-[1180px]:translate-x-full max-[1180px]:opacity-0 max-[1180px]:shadow-none",
   workspaceClosed: "pointer-events-none opacity-0",
-  workspaceHeader: "flex h-12 shrink-0 items-center justify-between gap-2 px-3",
+  workspaceHeader: "flex h-12 shrink-0 items-center justify-end gap-2 px-3",
   workspaceHeading: "grid min-w-0 gap-0.5",
   workspaceTitle:
     "m-0 font-display text-sm font-medium leading-none tracking-[-0.02em] text-fg",
   workspaceCount: "font-mono text-[8px] uppercase tracking-[0.06em] text-fg-4",
   workspaceBody:
     "flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-3 pb-3 [scrollbar-width:thin]",
-  chips: "mb-1.5 flex flex-wrap gap-1.5",
-  chipOn:
-    "inline-flex min-w-0 items-center rounded-pill bg-[color-mix(in_oklch,var(--color-ok)_9%,var(--color-surface))] px-2.5 py-2 font-mono text-[8px] uppercase tracking-[0.04em] text-ok",
-  chipOff:
-    "inline-flex min-w-0 items-center rounded-pill bg-surface px-2.5 py-2 font-mono text-[8px] uppercase tracking-[0.04em] text-fg-4",
   workspacePane:
     "min-w-0 max-h-64 overflow-y-auto rounded-lg bg-surface [scrollbar-width:thin]",
   workspaceNotes: "mt-auto grid gap-1.5 pt-3",
@@ -724,9 +721,12 @@ export const playground = {
     "m-0 max-w-md font-sans text-[13px] leading-relaxed text-fg-4",
   activity: "grid list-none divide-y divide-hairline p-0",
   activityItem:
-    "grid grid-cols-[48px_48px_minmax(0,1fr)] gap-2 px-3 py-2 font-mono text-[8px] leading-relaxed",
+    "grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 px-3 py-2.5 font-mono text-[8px] leading-relaxed",
+  activityMeta: "grid shrink-0 justify-items-end gap-0.5",
   activityTime: "text-fg-4 tabular-nums",
-  activityKind: "truncate uppercase text-fg-3",
+  activityKind: "whitespace-nowrap uppercase text-fg-3",
+  activityCheckState:
+    "shrink-0 whitespace-nowrap uppercase text-fg-3 data-[tone=ready]:text-ok data-[tone=download]:text-warn data-[tone=downloading]:text-warn data-[tone=unavailable]:text-err",
   activityMain: "grid min-w-0 gap-0.5",
   activityMessage: "truncate text-fg-2",
   activityDetail: "truncate text-fg-4",

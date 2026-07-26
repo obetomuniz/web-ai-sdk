@@ -2,6 +2,7 @@ import { summarize } from "@web-ai-sdk/summarizer";
 import { useCallback, useRef, useState } from "react";
 import { useAgent } from "../experimental/agent/react/index.js";
 import type { AgentMode } from "../experimental/playground/presets.js";
+import { activityPreview } from "./activity.js";
 import { type AgentThread, deriveThreadName } from "./agentThreads.js";
 import type { ActivityEvent } from "./types.js";
 import type { AgentThreadOps } from "./useAgentThreads.js";
@@ -60,10 +61,18 @@ export function useConversationAgent({
       // terminal Activity row for the same cancellation.
       if (turn.stopReason === "aborted") return;
       const complete = turn.stopReason === "done";
+      const requestPreview = activityPreview(turn.userInput, "Request");
       pushActivity({
         kind: complete ? "chat_response" : "chat_error",
-        message: complete ? "reply" : (turn.stopReason ?? "stopped"),
-        detail: turn.failure?.message ?? turn.userInput,
+        message: complete
+          ? activityPreview(turn.assistantText, "Response completed")
+          : activityPreview(
+              turn.failure?.message ?? "",
+              turn.stopReason ?? "Response stopped",
+            ),
+        detail: complete
+          ? `Reply to “${requestPreview}”`
+          : `Request “${requestPreview}”`,
       });
     },
   });
@@ -89,8 +98,7 @@ export function useConversationAgent({
       ops.touch(conversationId);
       pushActivity({
         kind: "chat_send",
-        message: "send",
-        detail: trimmed,
+        message: activityPreview(trimmed, "Message sent"),
       });
       setCurrentInput(trimmed);
       try {

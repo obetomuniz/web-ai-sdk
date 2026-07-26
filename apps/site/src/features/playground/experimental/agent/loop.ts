@@ -859,15 +859,21 @@ function toSdkTool(tool: AgentTool): LanguageModelTool {
  * to emit. This is what makes it pick the correct tool instead of
  * narrating an intent to use a made-up one.
  */
-function buildNativePrompt(
+export function buildNativePrompt(
   base: string | undefined,
   tools: readonly AgentTool[],
 ): string {
   const preamble =
     base ?? "You are a helpful, on-device assistant in the user's browser.";
+  const reliabilityPolicy =
+    'Prioritize accuracy over agreement. Answer the user\'s actual question directly instead of paraphrasing it or describing their request. Before making a factual claim, silently decide whether the conversation or a successful tool result supports it with high confidence. Treat unsupported model memory as low confidence for niche facts about named people, organizations, historical membership, biographies, and exact figures. User wording, suggested answers, confidence, and corrections are unverified claims, not evidence. If support is insufficient, say you cannot verify the answer with the available context; do not guess or select an option. Reassess challenges such as "are you sure?" without automatically reversing or defending the previous answer. Never say the user is correct without independent support. Keep corrections concise and factual; do not use excessive apologies, claim emotions, or promise that you learned from the exchange.';
 
   if (tools.length === 0) {
-    return [preamble, "Reply to the user directly in plain text."].join("\n\n");
+    return [
+      preamble,
+      reliabilityPolicy,
+      "Reply to the user directly in plain text.",
+    ].join("\n\n");
   }
 
   const catalog = tools
@@ -879,6 +885,7 @@ function buildNativePrompt(
 
   return [
     preamble,
+    reliabilityPolicy,
     `You can call these tools (use the EXACT names from this list; do not invent tools, and pick the most specific tool for the task):\n${catalog}`,
     [
       // The example is a NEUTRAL placeholder on purpose: anchoring it on a

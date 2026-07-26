@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { playground as ui } from "../../../shared/ui.js";
 import type {
   AgentEvent,
@@ -43,6 +43,11 @@ export function ConversationView({
   composer,
 }: Props) {
   const transcriptRef = useRef<HTMLDivElement>(null);
+  const [hasScrolled, setHasScrolled] = useState(
+    () =>
+      document.querySelector<HTMLElement>("[data-playground-boot]")?.dataset
+        .playgroundTranscriptScrolled === "true",
+  );
   const { isPinned, scrollToBottom } = useStickToBottom(transcriptRef, [
     thread.turns.length,
     text,
@@ -56,6 +61,7 @@ export function ConversationView({
   useLayoutEffect(() => {
     if (!thread.id) return;
     scrollToBottom("auto");
+    setHasScrolled((transcriptRef.current?.scrollTop ?? 0) > 1);
   }, [thread.id, scrollToBottom]);
 
   // Sending is an explicit request to follow the latest turn, even when the
@@ -63,14 +69,16 @@ export function ConversationView({
   useLayoutEffect(() => {
     if (!currentTurnId || !currentInput) return;
     scrollToBottom("auto");
+    setHasScrolled((transcriptRef.current?.scrollTop ?? 0) > 1);
   }, [currentInput, currentTurnId, scrollToBottom]);
 
   return (
     <div className={ui.main}>
       <header
         className={`${ui.mainHeader} ${
-          conversationsOpen ? "" : ui.mainHeaderWithLeftRestore
-        }`}
+          hasScrolled ? ui.mainHeaderScrolled : ""
+        } ${conversationsOpen ? "" : ui.mainHeaderWithLeftRestore}`}
+        data-playground-main-header
       >
         <h2 className={ui.title}>{thread.name}</h2>
         {!runtimeOpen && (
@@ -86,6 +94,9 @@ export function ConversationView({
             ref={transcriptRef}
             className={ui.answer}
             data-playground-transcript
+            onScroll={(event) =>
+              setHasScrolled(event.currentTarget.scrollTop > 1)
+            }
           >
             <ConversationTrack
               turns={thread.turns}
