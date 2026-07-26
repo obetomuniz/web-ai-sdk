@@ -34,10 +34,12 @@
   --color-err: #ff6b7a;
   --color-brand-dark: #0a0a0a;
 
-  --font-display: "Space Grotesk", "Geist", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, "SF Mono", Menlo,
-    monospace;
+  --font-display: "Space Grotesk", "Space Grotesk Fallback", "Geist",
+    "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, -apple-system,
+    sans-serif;
+  --font-mono: "IBM Plex Mono", "IBM Plex Mono Fallback", "JetBrains Mono",
+    ui-monospace, "SF Mono", Menlo, monospace;
 
   --radius-sm: 8px;
   --radius-md: 12px;

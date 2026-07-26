@@ -19,6 +19,18 @@ const baseUrl = new URL(import.meta.env.BASE_URL, "https://web-ai-sdk.dev");
 const pathFromBase = (path: string) => new URL(path, baseUrl).pathname;
 const docsUrl = pathFromBase("docs/");
 const playgroundUrl = pathFromBase("playground/");
+const fontUrls = {
+  geist: pathFromBase("fonts/geist-latin-wght-normal.woff2"),
+  spaceGrotesk: pathFromBase(
+    "fonts/space-grotesk-latin-wght-normal.woff2",
+  ),
+  ibmPlexMono400: pathFromBase(
+    "fonts/ibm-plex-mono-latin-400-normal.woff2",
+  ),
+  ibmPlexMono600: pathFromBase(
+    "fonts/ibm-plex-mono-latin-600-normal.woff2",
+  ),
+} as const;
 const repoUrl = new URL(REPO, "https://github.com/").toString();
 const issuesUrl = new URL(`${REPO}/issues`, "https://github.com/").toString();
 const discussionsUrl = new URL(
@@ -410,12 +422,17 @@ const browserColumns = [
     <meta name="twitter:title" content="web-ai-sdk · TypeScript SDK for the Web AI surface" />
     <meta name="twitter:description" content="web-ai-sdk is a TypeScript SDK for the Web AI surface: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps." />
     <meta name="twitter:image" content={ogImageUrl} />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
+    {
+      Object.values(fontUrls).map((href) => (
+        <link
+          rel="preload"
+          href={href}
+          as="font"
+          type="font/woff2"
+          crossorigin
+        />
+      ))
+    }
   </head>
   <body>
     <SiteNav
