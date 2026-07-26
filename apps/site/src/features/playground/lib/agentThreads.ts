@@ -81,6 +81,9 @@ function isThreadTurn(value: unknown): value is AgentThreadTurn {
 function parseThread(value: unknown): AgentThread | undefined {
   if (!value || typeof value !== "object") return undefined;
   const thread = value as Partial<AgentThread> & { skillId?: unknown };
+  const turns = Array.isArray(thread.turns)
+    ? thread.turns.filter(isThreadTurn)
+    : undefined;
   const modeId =
     typeof thread.modeId === "string"
       ? thread.modeId
@@ -91,8 +94,7 @@ function parseThread(value: unknown): AgentThread | undefined {
     typeof thread.id !== "string" ||
     typeof thread.name !== "string" ||
     !modeId ||
-    !Array.isArray(thread.turns) ||
-    !thread.turns.every(isThreadTurn) ||
+    !turns ||
     typeof thread.createdAt !== "number"
   ) {
     return undefined;
@@ -102,51 +104,49 @@ function parseThread(value: unknown): AgentThread | undefined {
     name:
       thread.name === "New thread"
         ? DEFAULT_THREAD_NAME
-        : recoverLegacyThreadName(thread.name, thread.turns),
+        : recoverLegacyThreadName(thread.name, turns),
     modeId: findMode(modeId).id,
-    turns: thread.turns,
+    turns,
     createdAt: thread.createdAt,
     updatedAt:
       typeof thread.updatedAt === "number"
         ? thread.updatedAt
-        : Math.max(
-            thread.createdAt,
-            ...thread.turns.map((turn) => turn.createdAt),
-          ),
+        : Math.max(thread.createdAt, ...turns.map((turn) => turn.createdAt)),
   };
+}
+
+export function normalizeAgentThreadState(
+  value: unknown,
+): AgentThreadState | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const parsed = value as Partial<AgentThreadState>;
+  if (!Array.isArray(parsed.threads) || parsed.threads.length === 0) {
+    return undefined;
+  }
+
+  const threads = parsed.threads.flatMap((thread) => {
+    const normalized = parseThread(thread);
+    return normalized ? [normalized] : [];
+  });
+  const sortedThreads = sortAgentThreads(threads);
+  const firstThread = sortedThreads[0];
+  if (!firstThread) return undefined;
+  const activeId =
+    sortedThreads.find((thread) => thread.id === parsed.activeId)?.id ??
+    firstThread.id;
+  return { threads: sortedThreads, activeId };
 }
 
 export function loadAgentThreadState(): AgentThreadState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<AgentThreadState>;
-      if (
-        parsed &&
-        Array.isArray(parsed.threads) &&
-        parsed.threads.length > 0
-      ) {
-        const threads = parsed.threads.flatMap((thread) => {
-          const normalized = parseThread(thread);
-          return normalized ? [normalized] : [];
-        });
-        if (threads.length !== parsed.threads.length) {
-          return createDefaultThreadState();
-        }
-        const sortedThreads = sortAgentThreads(threads);
-        const firstThread = sortedThreads[0];
-        if (!firstThread) return createDefaultThreadState();
-        const activeId =
-          sortedThreads.find((thread) => thread.id === parsed.activeId)?.id ??
-          firstThread.id;
-        return { threads: sortedThreads, activeId };
-      }
-    }
+    const normalized = raw
+      ? normalizeAgentThreadState(JSON.parse(raw) as unknown)
+      : undefined;
+    return normalized ?? createDefaultThreadState();
   } catch {
-    // fall through to default
+    return createDefaultThreadState();
   }
-
-  return createDefaultThreadState();
 }
 
 function createDefaultThreadState(): AgentThreadState {

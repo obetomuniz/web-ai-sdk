@@ -38,7 +38,7 @@
     "llms:build": "pnpm --filter @web-ai-sdk-apps/site run llms:build",
     "docs:check": "pnpm --filter @web-ai-sdk-apps/site run docs:check",
     "typecheck": "pnpm -r run typecheck",
-    "test": "pnpm --filter \"./packages/**\" -r run test",
+    "test": "pnpm --filter \"./packages/**\" --filter @web-ai-sdk-apps/site -r run test",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",

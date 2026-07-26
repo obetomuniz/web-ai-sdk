@@ -1,14 +1,14 @@
-import { playground as ui } from "../../../../shared/ui.js";
-import type { AgentThreadTurn } from "../../lib/agentThreads.js";
+import { playground as ui } from "../../../shared/ui.js";
 import type {
   AgentEvent,
   AgentFailure,
   AgentStopReason,
   AgentTurn,
-} from "../agent/types.js";
-import { Transcript } from "./Transcript.js";
-import type { ToolRendererId } from "./toolRenderers.js";
-import type { TranscriptRendererId } from "./transcriptRenderers.js";
+} from "../experimental/agent/types.js";
+import { Transcript } from "../experimental/playground/Transcript.js";
+import type { ToolRendererId } from "../experimental/playground/toolRenderers.js";
+import type { TranscriptRendererId } from "../experimental/playground/transcriptRenderers.js";
+import type { AgentThreadTurn } from "../lib/agentThreads.js";
 
 interface Props {
   turns: AgentThreadTurn[];
@@ -24,7 +24,7 @@ interface Props {
   toolRendererId?: ToolRendererId;
 }
 
-export function MultiTurnTranscript({
+export function ConversationTrack({
   turns,
   currentTurnId,
   currentInput,

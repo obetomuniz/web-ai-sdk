@@ -8,6 +8,7 @@
     "dev": "astro dev --port 5173 --strictPort",
     "build": "astro build && node scripts/build-llms.mjs",
     "preview": "astro preview --port 4173",
+    "test": "vitest run",
     "typecheck": "astro check",
     "og:build": "node scripts/build-og-image.mjs",
     "llms:build": "node scripts/build-llms.mjs",
@@ -42,6 +43,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.0.2",
     "tailwindcss": "^4.3.2",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   }
 }

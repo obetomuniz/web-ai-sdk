@@ -554,7 +554,7 @@ export const playground = {
     "grid min-w-0 cursor-pointer gap-1 py-2.5 pr-1 pl-3 text-left disabled:cursor-not-allowed disabled:opacity-50",
   threadTitleRow: "flex min-w-0 items-center gap-2",
   threadStatus:
-    "size-1.5 shrink-0 rounded-full bg-fg-3 data-[tone=active]:animate-pulse data-[tone=active]:bg-accent data-[tone=error]:bg-err data-[tone=off]:bg-fg-4",
+    "size-1.5 shrink-0 rounded-full bg-fg-3 data-[tone=active]:motion-safe:animate-pulse data-[tone=active]:bg-accent data-[tone=error]:bg-err data-[tone=off]:bg-fg-4",
   threadClose:
     "mt-1 inline-flex size-8 self-start cursor-pointer items-center justify-center rounded-full bg-transparent p-0 text-fg-4 transition-colors hover:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-45",
   threadCloseIcon: "size-4",
@@ -732,7 +732,7 @@ export const playground = {
   working:
     "inline-flex w-fit items-center gap-2 rounded-pill border border-hairline bg-bg px-3 py-1.5 font-mono text-[10px] text-fg-3 motion-safe:animate-[playground-fade_140ms_ease-out_both]",
   workingDots: "inline-flex items-center gap-1",
-  workingDot: "size-1 animate-pulse rounded-full bg-fg-3",
+  workingDot: "size-1 rounded-full bg-fg-3 motion-safe:animate-pulse",
   workingTimer: "text-fg-4 tabular-nums",
   answerBlock: `${playgroundAnswerBlockBase} motion-safe:animate-[playground-fade_160ms_ease-out_both]`,
   answerBlockStatic: playgroundAnswerBlockBase,
@@ -768,7 +768,7 @@ export const playground = {
     "shrink-0 text-sm leading-none text-fg-4 transition-transform group-open:rotate-90",
   toolCardName: "truncate text-fg-2",
   toolStatus: "shrink-0 uppercase tracking-[0.06em] text-fg-4",
-  toolStatusCalling: "shrink-0 animate-pulse uppercase text-accent",
+  toolStatusCalling: "shrink-0 uppercase text-accent motion-safe:animate-pulse",
   toolStatusWarn: "shrink-0 uppercase text-warn",
   toolStatusError: "shrink-0 uppercase text-err",
   toolProgress: "grid list-none gap-1 border-t border-hairline px-3 py-2",
@@ -802,5 +802,5 @@ export const playground = {
   thinking: "inline-flex items-center gap-2 font-mono text-[10px] text-fg-3",
   thinkingVerb: "min-w-16",
   thinkingDots: "inline-flex gap-1",
-  thinkingDot: "size-1 animate-pulse rounded-full bg-fg-3",
+  thinkingDot: "size-1 rounded-full bg-fg-3 motion-safe:animate-pulse",
 } as const;

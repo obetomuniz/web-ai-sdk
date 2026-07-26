@@ -192,6 +192,9 @@ function contextualScalar(text: string, previous: URL): string | undefined {
     "item",
     "one",
     "other",
+    "project",
+    "repo",
+    "repository",
     "resource",
     "the",
   ]);

@@ -92,7 +92,7 @@ const truncateExample = (value: string, limit = 60) =>
 
     <div class={ui.main}>
       <header class={ui.mainHeader}>
-        <h1 class={ui.title} data-playground-title>New conversation</h1>
+        <h2 class={ui.title} data-playground-title>New conversation</h2>
       </header>
 
       <div class={ui.mainBody}>
@@ -352,13 +352,19 @@ const truncateExample = (value: string, limit = 60) =>
 
     const isPersistedTurn = (value) =>
       isRecord(value) &&
+      typeof value.id === "string" &&
+      typeof value.createdAt === "number" &&
       typeof value.userInput === "string" &&
-      typeof value.assistantText === "string";
+      typeof value.assistantText === "string" &&
+      Array.isArray(value.steps);
 
     const isPersistedThread = (value) =>
       isRecord(value) &&
       typeof value.id === "string" &&
       typeof value.name === "string" &&
+      typeof value.createdAt === "number" &&
+      (typeof value.modeId === "string" ||
+        typeof value.skillId === "string") &&
       Array.isArray(value.turns);
 
     const safeMarkdownTags = new Set([
@@ -735,23 +741,14 @@ const truncateExample = (value: string, limit = 60) =>
       } catch {
         // A missing, disabled, or corrupt store falls back to the static shell.
       } finally {
-        // Do not expose the generic shell or unstyled persisted Markdown.
-        // Restored conversations need the document fonts and one layout pass
-        // before their final viewport height is known. Position the transcript
-        // once, then reveal it in that same frame so the initial paint and the
-        // React handoff share the same bottom anchor.
+        // Local conversations are the initial UI, not a loading placeholder.
+        // Reveal them synchronously so offline and cold-cache reloads are not
+        // gated by remote fonts. Scroll anchoring is corrected before React
+        // takes over without delaying the first paint.
         if (restoredTranscript instanceof HTMLElement) {
-          const revealRestoredConversation = () => requestAnimationFrame(() => {
-            restoredTranscript.scrollTop = restoredTranscript.scrollHeight;
-            fallback.classList.remove("invisible");
-          });
-          document.fonts.ready.then(
-            revealRestoredConversation,
-            revealRestoredConversation,
-          );
-        } else {
-          fallback.classList.remove("invisible");
+          restoredTranscript.scrollTop = restoredTranscript.scrollHeight;
         }
+        fallback.classList.remove("invisible");
       }
     })();
   </script>
