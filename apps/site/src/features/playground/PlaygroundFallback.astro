@@ -42,6 +42,7 @@ const truncateExample = (value: string, limit = 60) =>
   data-main-header-left-restore-class={ui.mainHeaderWithLeftRestore}
   data-layout-mobile-with-sidebar-class={ui.shellMobileWithSidebar}
   data-layout-mobile-without-sidebar-class={ui.shellMobileWithoutSidebar}
+  data-panel-slot-open-class={ui.panelSlotOpen}
   data-sidebar-slot-closed-class={ui.sidebarSlotClosed}
   data-sidebar-closed-class={ui.sidebarClosed}
   data-panel-open-class={ui.panelOpen}
@@ -683,6 +684,11 @@ const truncateExample = (value: string, limit = 60) =>
               .split(" ")
               .filter(Boolean),
           );
+          sidebarSlot?.classList.remove(
+            ...(fallback.dataset.panelSlotOpenClass ?? "")
+              .split(" ")
+              .filter(Boolean),
+          );
           sidebarSlot?.classList.add(
             ...(fallback.dataset.sidebarSlotClosedClass ?? "")
               .split(" ")
@@ -723,6 +729,11 @@ const truncateExample = (value: string, limit = 60) =>
             "[data-playground-workspace-slot]",
           );
           const workspace = fallback.querySelector("[data-playground-workspace]");
+          workspaceSlot?.classList.remove(
+            ...(fallback.dataset.panelSlotOpenClass ?? "")
+              .split(" ")
+              .filter(Boolean),
+          );
           workspaceSlot?.classList.add(
             ...(fallback.dataset.workspaceSlotClosedClass ?? "").split(" ").filter(Boolean),
           );
