@@ -224,8 +224,17 @@ export const navMinimapTitle =
 export const navMinimapSummary =
   "font-sans text-[12.5px] leading-snug text-fg-3";
 
-export const navCta =
-  "inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-sm border border-hairline-2 px-3 py-2 font-mono text-[12.5px] text-fg-2 transition-all hover:border-accent-line hover:text-fg max-[640px]:size-9 max-[640px]:p-0";
+export const navCenterPlaceholder =
+  "h-10 w-48 justify-self-center max-[640px]:hidden";
+
+const navCtaBase =
+  "inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-sm border px-3 py-2 font-mono text-[12.5px] transition-all max-[640px]:size-9 max-[640px]:p-0";
+
+export const navCta = `${navCtaBase} border-hairline-2 text-fg-2 hover:border-accent-line hover:text-fg`;
+
+export const navCtaPrimary = `${navCtaBase} border-accent bg-accent font-semibold text-brand-dark hover:border-accent-bright hover:bg-accent-bright`;
+
+export const navCtaCurrent = "max-[640px]:hidden";
 
 // Right-aligned nav action group: the icon-only Docs link plus the GitHub CTA.
 export const navActions = "flex items-center justify-self-end gap-2";
@@ -234,6 +243,10 @@ export const navActions = "flex items-center justify-self-end gap-2";
 // scale + color lift on hover gives it a tactile affordance without a box.
 export const navIcon =
   "inline-flex items-center justify-center rounded-sm p-2 text-fg-3 transition-all duration-200 ease-out hover:scale-110 hover:text-fg";
+
+export const navGitHubLabel = "max-[640px]:hidden";
+
+export const navGitHubMark = "hidden size-4 fill-current max-[640px]:block";
 
 export const hero =
   "flex min-h-[100svh] flex-col justify-center py-[calc(96px*var(--density))] max-[880px]:min-h-[clamp(420px,64svh,540px)] max-[880px]:py-12 max-[640px]:py-10";
@@ -260,7 +273,7 @@ export const gradientText =
   "bg-[image:var(--gradient-text)] bg-clip-text text-transparent [filter:var(--glow-text)]";
 
 export const heroTitle =
-  "flex flex-nowrap items-baseline gap-[0.1em] font-display text-[clamp(54px,9vw,112px)] leading-[0.95] font-medium tracking-[-0.04em] max-[640px]:text-[56px] max-[480px]:text-[44px]";
+  "flex flex-nowrap items-baseline gap-[0.1em] font-hero text-[clamp(54px,9vw,112px)] leading-[0.95] font-medium tracking-[-0.04em] max-[640px]:text-[56px] max-[480px]:text-[44px]";
 
 export const heroTextBackdrop =
   "[text-shadow:0_1px_2px_var(--color-bg),0_0_18px_var(--color-bg),0_0_42px_var(--color-bg)]";
@@ -314,6 +327,15 @@ export const pkgDocs =
 
 export const heroRepoLink =
   "inline-flex items-center gap-2 font-mono text-[15px] font-semibold text-fg no-underline transition-colors hover:text-accent-bright";
+
+export const shaderBackdrop =
+  "pointer-events-none absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_78%_42%,color-mix(in_oklch,var(--color-surface-3)_24%,transparent),transparent_58%)]";
+
+export const shaderCanvas =
+  "block h-full w-full opacity-0 transition-opacity duration-700 ease-out data-[ready=true]:opacity-100 motion-reduce:transition-none";
+
+export const shaderFade =
+  "absolute inset-x-0 bottom-0 h-1/3 bg-[linear-gradient(to_top,var(--color-bg)_0%,var(--color-bg)_18%,transparent_100%)]";
 
 // Silver shimmer for link labels: clips the metallic --gradient-silver ramp to
 // the text and loops a traveling highlight (see home.css keyframes). Disabled
@@ -484,3 +506,314 @@ export const backToTop =
   "fixed bottom-5 left-1/2 z-40 inline-flex -translate-x-1/2 cursor-pointer items-center gap-1.5 rounded-pill border border-hairline-2 bg-[color-mix(in_oklch,var(--color-surface)_82%,transparent)] py-1.5 pr-3 pl-2.5 font-mono text-[11px] leading-none tracking-[0.02em] text-fg-3 shadow-card backdrop-blur-[14px] backdrop-saturate-[1.2] transition-[opacity,transform,color,border-color] duration-300 ease-[cubic-bezier(0.2,0.6,0.2,1)] hover:-translate-y-px hover:border-accent-line hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent data-[visible=false]:pointer-events-none data-[visible=false]:translate-y-3 data-[visible=false]:opacity-0";
 
 export const backToTopArrow = "text-accent transition-transform";
+
+const playgroundThreadTurnBase = "grid gap-4";
+const playgroundUserBubbleBase =
+  "ml-auto max-w-[82%] rounded-lg rounded-br-sm bg-surface-3 px-4 py-3 text-[13px] leading-[1.55] text-fg shadow-card max-[640px]:max-w-[90%] max-[640px]:px-3.5 max-[640px]:py-2.5";
+const playgroundAnswerBlockBase = "grid gap-2";
+const playgroundAnswerBlockWarnBase =
+  "grid gap-2 rounded-sm border-l-2 border-warn bg-[color-mix(in_oklch,var(--color-warn)_7%,transparent)] px-3 py-2";
+const playgroundAnswerBlockErrorBase =
+  "grid gap-2 rounded-sm border-l-2 border-err bg-[color-mix(in_oklch,var(--color-err)_7%,transparent)] px-3 py-2";
+const playgroundToolCardBase =
+  "overflow-hidden rounded-sm border border-hairline bg-bg transition-colors";
+const playgroundToolCardWarnBase =
+  "overflow-hidden rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_35%,transparent)] bg-bg";
+const playgroundToolCardErrorBase =
+  "overflow-hidden rounded-sm border border-[color-mix(in_oklch,var(--color-err)_35%,transparent)] bg-bg";
+
+/** Playground route: dense, responsive instrument-panel compositions. */
+export const playground = {
+  navTrail:
+    "justify-self-center font-mono text-[11px] uppercase tracking-[0.12em] text-fg-2 max-[640px]:hidden",
+  bootStack:
+    "grid h-[calc(100svh-var(--nav-height))] min-h-0 [&>*]:col-start-1 [&>*]:row-start-1",
+  bootLayer: "h-full min-h-0",
+  shell:
+    "flex h-[calc(100svh-var(--nav-height))] min-h-0 flex-col [--playground-sidebar-width:260px] [--playground-left-column:260px] [--playground-right-column:340px] overflow-hidden bg-bg text-fg",
+  layoutGrid:
+    "relative grid min-h-0 flex-1 grid-cols-[minmax(0,var(--playground-left-column))_minmax(0,1fr)_minmax(0,var(--playground-right-column))] transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none max-[1180px]:grid-cols-[minmax(0,var(--playground-left-column))_minmax(0,1fr)_minmax(0,0px)] max-[760px]:grid-cols-1",
+  layoutGridResizing: "!transition-none",
+  shellMobileWithSidebar: "max-[760px]:grid-rows-[auto_minmax(0,1fr)]",
+  shellMobileWithoutSidebar: "max-[760px]:grid-rows-[minmax(0,1fr)]",
+  sidebarSlot:
+    "relative min-w-0 overflow-hidden max-[760px]:col-span-1 max-[760px]:w-full",
+  panelSlotOpen: "pointer-events-auto",
+  sidebarSlotClosed: "pointer-events-none max-[760px]:hidden",
+  sidebar:
+    "absolute top-0 right-0 flex h-full w-[var(--playground-sidebar-width)] shrink-0 flex-col overflow-hidden bg-surface transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity] motion-reduce:transition-none max-[760px]:static max-[760px]:h-auto max-[760px]:max-h-none max-[760px]:w-full max-[760px]:border-b max-[760px]:border-hairline",
+  panelOpen: "opacity-100",
+  sidebarClosed: "pointer-events-none opacity-0",
+  sidebarHeader:
+    "flex h-12 shrink-0 items-center justify-between px-3 max-[760px]:hidden",
+  sidebarResizeHandle:
+    "absolute top-0 left-[var(--playground-sidebar-width)] z-30 m-0 h-full w-3 -translate-x-1/2 cursor-col-resize touch-none border-0 bg-transparent p-0 outline-none before:pointer-events-none before:absolute before:top-1/2 before:left-1/2 before:h-10 before:w-0.5 before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full before:bg-transparent before:transition-[height,background-color] before:content-[''] hover:before:h-14 hover:before:bg-fg-4 focus-visible:before:h-14 focus-visible:before:bg-accent active:before:h-16 active:before:bg-accent max-[760px]:hidden",
+  sidebarBody:
+    "grid min-h-0 flex-1 content-start gap-7 overflow-y-auto px-3 py-4 [scrollbar-width:thin] max-[760px]:block max-[760px]:flex-none max-[760px]:overflow-x-auto max-[760px]:overflow-y-hidden max-[760px]:py-2.5",
+  sidebarSection:
+    "grid min-w-0 content-start gap-2 max-[760px]:flex max-[760px]:w-max max-[760px]:items-center",
+  sectionTitle:
+    "m-0 font-mono text-[10px] font-normal uppercase tracking-[0.14em] text-fg-4 max-[760px]:hidden",
+  presets: "grid gap-1 max-[760px]:flex max-[760px]:flex-nowrap",
+  threadItem:
+    "grid grid-cols-[minmax(0,1fr)_2rem] items-center rounded-md bg-transparent pr-2 transition-colors hover:bg-surface-2 max-[760px]:w-48 max-[760px]:shrink-0",
+  threadItemActive:
+    "grid grid-cols-[minmax(0,1fr)_2rem] items-center rounded-md bg-surface-2 pr-2 max-[760px]:w-48 max-[760px]:shrink-0",
+  threadSelect:
+    "grid min-w-0 cursor-pointer gap-1 py-2.5 pr-1 pl-3 text-left disabled:cursor-not-allowed disabled:opacity-50",
+  threadTitleRow: "flex min-w-0 items-center gap-2",
+  threadStatus:
+    "size-1.5 shrink-0 rounded-full bg-fg-3 data-[tone=active]:motion-safe:animate-pulse data-[tone=active]:bg-accent data-[tone=error]:bg-err data-[tone=off]:bg-fg-4",
+  threadClose:
+    "mt-1 inline-flex size-8 self-start cursor-pointer items-center justify-center rounded-full bg-transparent p-0 text-fg-4 transition-colors hover:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-45",
+  threadCloseIcon: "size-4",
+  presetName:
+    "min-w-0 flex-1 truncate font-sans text-[13px] font-medium leading-snug text-fg",
+  presetDesc:
+    "line-clamp-2 font-sans text-[11px] leading-[1.45] text-fg-4 max-[760px]:hidden",
+  wideButton:
+    "inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-pill bg-accent px-3 font-mono text-[10px] font-semibold text-brand-dark transition-[background-color,transform] hover:bg-accent-bright active:scale-95 disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transform-none max-[760px]:size-9 max-[760px]:shrink-0 max-[760px]:rounded-full max-[760px]:p-0",
+  wideButtonIcon: "text-sm leading-none",
+  wideButtonLabel: "max-[760px]:hidden",
+  main: "flex h-full w-full max-w-[960px] min-w-0 justify-self-center flex-col overflow-hidden bg-bg max-[760px]:h-auto max-[760px]:max-w-none",
+  mainHeader:
+    "relative z-20 flex h-12 min-w-0 shrink-0 items-center gap-2.5 bg-bg px-3 after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-9 after:bg-[linear-gradient(to_bottom,var(--color-bg)_0%,color-mix(in_oklch,var(--color-bg)_78%,transparent)_48%,transparent_100%)] after:opacity-0 after:transition-opacity after:duration-200 after:ease-out after:content-[''] max-[640px]:h-11 max-[640px]:px-4",
+  mainHeaderBoot: "after:transition-none",
+  mainHeaderScrolled: "after:opacity-100",
+  mainHeaderWithLeftRestore: "max-[760px]:!pl-12",
+  title:
+    "m-0 min-w-0 flex-1 truncate font-display text-base font-medium leading-none tracking-[-0.02em] text-fg",
+  panelRestoreLeft:
+    "absolute top-2.5 left-3 z-40 motion-safe:animate-[playground-fade_180ms_ease-out_100ms_both]",
+  panelRestoreRight:
+    "absolute top-2.5 right-3 z-40 motion-safe:animate-[playground-fade_180ms_ease-out_100ms_both] max-[760px]:hidden",
+  panelRestoreRightMobile:
+    "hidden shrink-0 motion-safe:animate-[playground-fade_180ms_ease-out_100ms_both] max-[760px]:inline-flex",
+  panelToggle:
+    "inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-sm bg-transparent text-fg-4 transition-[color,background-color,transform] hover:bg-surface hover:text-fg-2 active:scale-95 focus-visible:bg-surface focus-visible:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent motion-reduce:transform-none",
+  panelToggleIcon: "size-4",
+  modeSelector: "relative shrink-0",
+  modeTrigger:
+    "inline-flex min-h-9 max-w-52 cursor-pointer items-center gap-2 rounded-pill bg-bg px-3 py-2 text-left transition-colors data-[accent=info]:bg-[color-mix(in_oklch,var(--color-info)_9%,var(--color-bg))] data-[accent=ok]:bg-[color-mix(in_oklch,var(--color-ok)_9%,var(--color-bg))] data-[accent=warn]:bg-[color-mix(in_oklch,var(--color-warn)_9%,var(--color-bg))] data-[accent=violet]:bg-[color-mix(in_oklch,var(--color-info)_5%,color-mix(in_oklch,var(--color-err)_5%,var(--color-bg)))] hover:data-[accent=info]:bg-[color-mix(in_oklch,var(--color-info)_14%,var(--color-bg))] hover:data-[accent=ok]:bg-[color-mix(in_oklch,var(--color-ok)_14%,var(--color-bg))] hover:data-[accent=warn]:bg-[color-mix(in_oklch,var(--color-warn)_14%,var(--color-bg))] hover:data-[accent=violet]:bg-[color-mix(in_oklch,var(--color-info)_8%,color-mix(in_oklch,var(--color-err)_8%,var(--color-bg)))] focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 data-[accent=info]:focus-visible:outline-info data-[accent=ok]:focus-visible:outline-ok data-[accent=warn]:focus-visible:outline-warn data-[accent=violet]:focus-visible:outline-[color-mix(in_oklch,var(--color-info)_45%,var(--color-err))] disabled:cursor-not-allowed disabled:opacity-45",
+  modeTriggerName:
+    "truncate font-mono text-[10px] data-[accent=info]:text-info data-[accent=ok]:text-ok data-[accent=warn]:text-warn data-[accent=violet]:text-[color-mix(in_oklch,var(--color-info)_45%,var(--color-err))]",
+  modeTriggerChevron:
+    "size-3.5 shrink-0 text-fg-4 transition-transform duration-150",
+  modeTriggerChevronOpen:
+    "size-3.5 shrink-0 rotate-180 text-fg-4 transition-transform duration-150",
+  modeMenu:
+    "absolute bottom-[calc(100%+0.65rem)] left-0 z-50 w-[min(440px,calc(100vw-2rem))] overflow-x-hidden rounded-xl bg-surface-3 p-2 shadow-2xl max-[640px]:fixed max-[640px]:top-[calc(var(--nav-height)+0.75rem)] max-[640px]:right-3 max-[640px]:bottom-3 max-[640px]:left-3 max-[640px]:w-auto max-[640px]:overflow-y-auto",
+  modeMenuHeader: "grid gap-1 px-3 py-3",
+  modeMenuTitle: "font-sans text-[13px] font-medium text-fg",
+  modeMenuDescription: "text-[11px] leading-relaxed text-fg-4",
+  modeOptions: "grid gap-1 py-2",
+  modeOption:
+    "grid w-full cursor-pointer rounded-lg bg-transparent px-3 py-3 text-left transition-colors hover:bg-surface-2",
+  modeOptionActive:
+    "grid w-full cursor-pointer rounded-lg bg-surface-2 px-3 py-3 text-left",
+  modeOptionCopy: "grid min-w-0 gap-1",
+  modeOptionTitleRow: "flex min-w-0 items-center justify-between gap-3",
+  modeOptionIdentity: "flex min-w-0 items-center gap-2.5",
+  modeAccentDot:
+    "size-2 shrink-0 rounded-full data-[accent=info]:bg-info data-[accent=ok]:bg-ok data-[accent=warn]:bg-warn data-[accent=violet]:bg-[color-mix(in_oklch,var(--color-info)_45%,var(--color-err))]",
+  modeOptionName:
+    "truncate font-sans text-[13px] font-medium data-[accent=info]:text-info data-[accent=ok]:text-ok data-[accent=warn]:text-warn data-[accent=violet]:text-[color-mix(in_oklch,var(--color-info)_45%,var(--color-err))]",
+  modeOptionToolCount:
+    "shrink-0 font-mono text-[8px] uppercase tracking-[0.06em] text-fg-4",
+  modeOptionDescription: "text-[11px] leading-[1.45] text-fg-3",
+  modeMenuNote:
+    "rounded-md bg-bg px-3 py-2.5 font-mono text-[8px] leading-relaxed text-fg-4",
+  mainBody:
+    "grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-0 px-3 pb-4 max-[640px]:px-3 max-[640px]:pb-2",
+  transcriptPanel: "relative min-h-0 overflow-hidden",
+  answer:
+    "h-full min-h-0 overflow-y-auto px-6 pt-5 pb-6 [scrollbar-width:thin] max-[640px]:px-4 max-[640px]:pt-4 max-[640px]:pb-5",
+  banner:
+    "mb-4 rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_35%,transparent)] bg-[color-mix(in_oklch,var(--color-warn)_10%,var(--color-bg))] px-3.5 py-3 font-mono text-[11px] leading-relaxed text-warn [&_code]:text-fg",
+  bannerError:
+    "mb-4 rounded-sm border border-[color-mix(in_oklch,var(--color-err)_35%,transparent)] bg-[color-mix(in_oklch,var(--color-err)_10%,var(--color-bg))] px-3.5 py-3 font-mono text-[11px] leading-relaxed text-err",
+  jump: "absolute right-4 bottom-4 inline-flex size-8 cursor-pointer items-center justify-center rounded-full bg-[color-mix(in_oklch,var(--color-surface-3)_92%,transparent)] font-mono text-[13px] text-fg-2 shadow-card backdrop-blur-sm transition-colors hover:text-fg",
+  composer:
+    "relative z-10 grid gap-2 rounded-xl bg-surface p-2.5 shadow-[0_-14px_30px_-18px_rgba(0,0,0,0.95)] transition-colors focus-within:bg-surface-2 max-[640px]:gap-1.5 max-[640px]:p-2",
+  composerDock: "relative z-20",
+  composerNotices:
+    "pointer-events-none absolute bottom-[calc(100%+0.65rem)] left-0 z-30 grid w-full gap-1.5",
+  composerNotice:
+    "pointer-events-auto flex w-full items-center gap-2.5 rounded-lg bg-[color-mix(in_oklch,var(--color-warn)_8%,var(--color-surface-3))] px-3.5 py-2.5 font-sans text-[12px] leading-relaxed text-fg-2 shadow-card backdrop-blur-sm motion-safe:animate-[playground-enter_180ms_ease-out_both]",
+  composerNoticeCopy:
+    "flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5",
+  composerNoticeLink:
+    "shrink-0 font-medium text-fg underline decoration-hairline-2 underline-offset-3 transition-colors hover:text-accent",
+  composerNoticeError:
+    "pointer-events-auto flex w-full items-center gap-2.5 rounded-lg bg-[color-mix(in_oklch,var(--color-err)_8%,var(--color-surface-3))] px-3.5 py-2.5 font-sans text-[12px] leading-relaxed text-fg-2 shadow-card backdrop-blur-sm motion-safe:animate-[playground-enter_180ms_ease-out_both]",
+  composerNoticeIcon:
+    "inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklch,var(--color-warn)_14%,transparent)] text-warn [&_svg]:size-3.5 [&_svg_*]:stroke-current [&_svg_*]:stroke-[1.5] [&_svg_*]:[stroke-linecap:round] [&_svg_*]:[stroke-linejoin:round]",
+  composerNoticeErrorIcon:
+    "inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklch,var(--color-err)_14%,transparent)] text-err [&_svg]:size-3.5 [&_svg_*]:stroke-current [&_svg_*]:stroke-[1.5] [&_svg_*]:[stroke-linecap:round] [&_svg_*]:[stroke-linejoin:round]",
+  composerInput:
+    "min-h-20 w-full resize-none border-0 bg-transparent px-1 py-1 font-sans text-[14px] leading-[1.55] text-fg outline-none placeholder:text-fg-4 disabled:cursor-not-allowed disabled:opacity-55 max-[640px]:min-h-16",
+  fallbackMuted: "text-fg-4",
+  composerRow: "flex min-w-0 items-center justify-between gap-2",
+  composerLeading:
+    "flex min-w-0 flex-1 items-center gap-2 max-[720px]:w-full max-[640px]:w-auto",
+  exampleRail: "flex min-w-0 flex-1 items-center gap-1 max-[640px]:hidden",
+  examples: "flex min-w-0 flex-[0_1_auto] flex-nowrap gap-1 overflow-hidden",
+  example:
+    "max-w-48 cursor-pointer truncate rounded-pill bg-bg px-2.5 py-1.5 font-mono text-[8px] text-fg-4 transition-[color,background-color,transform] hover:bg-surface-3 hover:text-fg-2 active:scale-[0.98] motion-reduce:transform-none disabled:cursor-not-allowed disabled:opacity-45",
+  exampleRegenerateWrap: "group relative shrink-0",
+  exampleRegenerate:
+    "inline-flex size-7 cursor-pointer items-center justify-center rounded-full bg-bg font-mono text-sm leading-none text-fg-3 transition-colors hover:bg-surface-3 hover:text-fg focus-visible:bg-surface-3 focus-visible:text-fg focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35",
+  exampleRegenerateTooltip:
+    "pointer-events-none invisible absolute bottom-[calc(100%+0.5rem)] left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-md bg-surface-3 px-2.5 py-1.5 font-mono text-[8px] text-fg-2 opacity-0 shadow-card transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100",
+  composerActions: "flex shrink-0 items-center gap-1.5",
+  toolPill: "group relative",
+  toolSummaryTrigger:
+    "inline-flex min-h-9 cursor-help items-center rounded-pill bg-bg px-3 py-2 font-mono text-[10px] text-fg-3 transition-colors hover:bg-surface-3 hover:text-fg focus-visible:bg-surface-3 focus-visible:text-fg focus-visible:outline-none",
+  toolSummaryTooltip:
+    "pointer-events-none invisible absolute right-0 bottom-[calc(100%+0.65rem)] z-50 w-[min(380px,calc(100vw-2rem))] overflow-hidden rounded-xl bg-surface-3 p-2 opacity-0 shadow-2xl transition-[opacity,transform] duration-150 group-hover:pointer-events-auto group-hover:visible group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:visible group-focus-within:opacity-100",
+  toolSummaryHeader: "flex items-baseline justify-between gap-3 px-3 py-2.5",
+  toolSummaryTitle: "font-sans text-[12px] font-medium text-fg",
+  toolSummaryCount:
+    "shrink-0 font-mono text-[8px] uppercase tracking-[0.08em] text-fg-4",
+  toolSummaryEmpty: "m-0 px-3 py-4 text-[11px] leading-relaxed text-fg-3",
+  toolSummaryList:
+    "grid max-h-[min(420px,60svh)] list-none gap-1 overflow-y-auto p-0 [scrollbar-width:thin]",
+  toolSummaryItem: "grid gap-1 rounded-md px-3 py-2.5 hover:bg-surface-2",
+  toolSummaryItemHeader: "flex min-w-0 items-center justify-between gap-2",
+  toolSummaryName: "min-w-0 truncate font-mono text-[10px] text-fg-2",
+  toolSummaryTags: "flex shrink-0 items-center gap-1",
+  toolSummaryTag:
+    "rounded-pill bg-bg px-1.5 py-0.5 font-mono text-[7px] uppercase text-fg-4",
+  toolSummaryTagDanger:
+    "rounded-pill bg-[color-mix(in_oklch,var(--color-err)_10%,transparent)] px-1.5 py-0.5 font-mono text-[7px] uppercase text-err",
+  toolSummaryDescription:
+    "m-0 line-clamp-2 text-[10px] leading-[1.45] text-fg-4",
+  sendButton:
+    "inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-accent font-sans text-lg font-medium text-brand-dark transition-[background-color,transform] hover:bg-accent-bright active:scale-95 motion-reduce:transform-none disabled:cursor-not-allowed disabled:opacity-45",
+  stopButton:
+    "inline-flex min-h-9 cursor-pointer items-center justify-center rounded-pill bg-[color-mix(in_oklch,var(--color-err)_12%,transparent)] px-3 py-2 font-mono text-[10px] font-semibold text-err transition-colors hover:bg-[color-mix(in_oklch,var(--color-err)_20%,transparent)]",
+  workspace:
+    "ml-auto flex h-full w-[340px] shrink-0 flex-col overflow-hidden bg-transparent transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity] motion-reduce:transition-none max-[760px]:w-full",
+  workspaceSlot:
+    "absolute inset-y-0 right-0 z-50 min-w-0 w-[min(340px,100%)] translate-x-0 overflow-hidden max-[1180px]:bg-bg max-[1180px]:opacity-100 max-[1180px]:shadow-card max-[1180px]:transition-[opacity,transform] max-[1180px]:duration-300 max-[1180px]:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+  workspaceSlotClosed:
+    "pointer-events-none max-[1180px]:translate-x-full max-[1180px]:opacity-0 max-[1180px]:shadow-none",
+  workspaceClosed: "pointer-events-none opacity-0",
+  workspaceHeader: "flex h-12 shrink-0 items-center justify-end gap-2 px-3",
+  workspaceHeading: "grid min-w-0 gap-0.5",
+  workspaceTitle:
+    "m-0 font-display text-sm font-medium leading-none tracking-[-0.02em] text-fg",
+  workspaceCount: "font-mono text-[8px] uppercase tracking-[0.06em] text-fg-4",
+  workspaceBody:
+    "flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-3 pb-3 [scrollbar-width:thin]",
+  workspacePane:
+    "min-w-0 max-h-64 overflow-y-auto rounded-lg bg-surface [scrollbar-width:thin]",
+  workspaceNotes: "mt-auto grid gap-1.5 pt-3",
+  workspaceFootnote: "pb-0.5 font-mono text-[8px] leading-relaxed text-fg-4",
+  workspaceAdvice: "font-sans text-[10px] leading-relaxed text-fg-4",
+  empty:
+    "px-4 py-5 text-center font-mono text-[10px] leading-relaxed text-fg-4",
+  emptyConversation:
+    "grid min-h-full place-content-center gap-2 px-6 py-12 text-center",
+  emptyConversationTitle:
+    "font-display text-xl font-semibold leading-tight tracking-[-0.025em] text-fg",
+  emptyConversationText:
+    "m-0 max-w-md font-sans text-[13px] leading-relaxed text-fg-4",
+  activity: "grid list-none divide-y divide-hairline p-0",
+  activityItem:
+    "grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 px-3 py-2.5 font-mono text-[8px] leading-relaxed",
+  activityMeta: "grid shrink-0 justify-items-end gap-0.5",
+  activityTime: "text-fg-4 tabular-nums",
+  activityKind: "whitespace-nowrap uppercase text-fg-3",
+  activityCheckState:
+    "shrink-0 whitespace-nowrap uppercase text-fg-3 data-[tone=ready]:text-ok data-[tone=download]:text-warn data-[tone=downloading]:text-warn data-[tone=unavailable]:text-err",
+  activityMain: "grid min-w-0 gap-0.5",
+  activityMessage: "truncate text-fg-2",
+  activityDetail: "truncate text-fg-4",
+  threadTranscript: "grid gap-8 max-[640px]:gap-6",
+  threadTurn: `${playgroundThreadTurnBase} motion-safe:animate-[playground-enter_180ms_ease-out_both]`,
+  threadTurnStatic: playgroundThreadTurnBase,
+  userBubble: `${playgroundUserBubbleBase} motion-safe:animate-[playground-enter_160ms_ease-out_both]`,
+  userBubbleStatic: playgroundUserBubbleBase,
+  transcript: "grid gap-3",
+  turn: "grid gap-3",
+  answerMarkdown:
+    "min-w-0 text-[13px] leading-7 text-fg-2 [&_a]:text-fg [&_a]:underline [&_a]:decoration-hairline-2 [&_a]:underline-offset-3 [&_blockquote]:border-l-2 [&_blockquote]:border-hairline-2 [&_blockquote]:pl-4 [&_code]:font-mono [&_h1]:font-display [&_h1]:text-xl [&_h1]:text-fg [&_h2]:font-display [&_h2]:text-lg [&_h2]:text-fg [&_h3]:font-display [&_h3]:text-base [&_h3]:text-fg [&_li]:my-0.5 [&_li]:pl-1 [&_li]:marker:text-fg-4 [&_li>p]:my-0 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol_ol]:my-1 [&_p]:my-2 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-sm [&_pre]:border [&_pre]:border-hairline [&_pre]:bg-bg [&_pre]:p-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ul_ul]:my-1 [&_ul_ul]:list-[circle]",
+  bootMessage: "m-0 whitespace-pre-wrap",
+  markdownInlineCode:
+    "rounded bg-surface-3 px-1.5 py-0.5 font-mono text-[0.88em] text-fg",
+  working:
+    "inline-flex w-fit items-center gap-2 rounded-pill border border-hairline bg-bg px-3 py-1.5 font-mono text-[10px] text-fg-3 motion-safe:animate-[playground-fade_140ms_ease-out_both]",
+  workingDots: "inline-flex items-center gap-1",
+  workingDot: "size-1 rounded-full bg-fg-3 motion-safe:animate-pulse",
+  workingTimer: "text-fg-4 tabular-nums",
+  answerBlock: `${playgroundAnswerBlockBase} motion-safe:animate-[playground-fade_160ms_ease-out_both]`,
+  answerBlockStatic: playgroundAnswerBlockBase,
+  answerBlockWarn: `${playgroundAnswerBlockWarnBase} motion-safe:animate-[playground-enter_180ms_ease-out_both]`,
+  answerBlockWarnStatic: playgroundAnswerBlockWarnBase,
+  answerBlockError: `${playgroundAnswerBlockErrorBase} motion-safe:animate-[playground-enter_180ms_ease-out_both]`,
+  answerBlockErrorStatic: playgroundAnswerBlockErrorBase,
+  answerHead: "flex items-center justify-between",
+  answerLabel: "font-mono text-[9px] uppercase tracking-[0.12em] text-fg-4",
+  answerPlaceholder: "font-mono text-[10px] leading-relaxed text-fg-4",
+  failureDetails: "mt-1 font-mono text-[9px] text-fg-4",
+  failureSummary:
+    "w-fit cursor-pointer select-none transition-colors hover:text-fg-2",
+  failureCode:
+    "mt-2 block overflow-x-auto rounded-sm bg-bg px-2.5 py-2 leading-relaxed text-fg-3",
+  stop: "font-mono text-[9px] uppercase tracking-[0.08em] text-fg-4",
+  stopWarn: "font-mono text-[9px] uppercase tracking-[0.08em] text-warn",
+  stopError: "font-mono text-[9px] uppercase tracking-[0.08em] text-err",
+  toolCards: "grid list-none gap-2 p-0",
+  toolCard: `${playgroundToolCardBase} motion-safe:animate-[playground-enter_160ms_ease-out_both]`,
+  toolCardStatic: playgroundToolCardBase,
+  toolCardCalling:
+    "overflow-hidden rounded-sm border border-accent-line bg-bg transition-colors motion-safe:animate-[playground-enter_160ms_ease-out_both]",
+  toolCardWarn: playgroundToolCardWarnBase,
+  toolCardWarnStatic: playgroundToolCardWarnBase,
+  toolCardError: playgroundToolCardErrorBase,
+  toolCardErrorStatic: playgroundToolCardErrorBase,
+  toolCardDisclosure: "group",
+  toolCardHead:
+    "flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 font-mono text-[10px] [&::-webkit-details-marker]:hidden",
+  toolCardIdentity: "flex min-w-0 items-center gap-2",
+  toolCardChevron:
+    "shrink-0 text-sm leading-none text-fg-4 transition-transform group-open:rotate-90",
+  toolCardName: "truncate text-fg-2",
+  toolStatus: "shrink-0 uppercase tracking-[0.06em] text-fg-4",
+  toolStatusCalling: "shrink-0 uppercase text-accent motion-safe:animate-pulse",
+  toolStatusWarn: "shrink-0 uppercase text-warn",
+  toolStatusError: "shrink-0 uppercase text-err",
+  toolProgress: "grid list-none gap-1 border-t border-hairline px-3 py-2",
+  toolProgressItem:
+    "flex min-w-0 items-center gap-2 font-mono text-[9px] text-fg-4",
+  toolProgressDot: "size-1 shrink-0 rounded-full bg-accent",
+  toolDetails: "border-t border-hairline",
+  toolSummary:
+    "cursor-pointer truncate px-3 py-2 font-mono text-[9px] text-fg-4 hover:text-fg-2",
+  toolJson:
+    "max-h-48 overflow-auto border-t border-hairline bg-surface px-3 py-2 font-mono text-[9px] leading-relaxed text-fg-3",
+  toolItem: "grid gap-1 rounded-sm border border-hairline bg-bg px-3 py-2",
+  toolItemHead: "flex items-center justify-between gap-3",
+  toolItemName: "font-mono text-[10px] text-fg-2",
+  toolItemStatus: "font-mono text-[9px] uppercase text-fg-4",
+  toolItemBody: "truncate font-mono text-[9px] text-fg-4",
+  responseActions: "mt-1 flex w-fit items-center gap-0.5",
+  responseAction: "group relative",
+  responseActionTrigger:
+    "inline-flex size-6 cursor-pointer items-center justify-center rounded-full bg-transparent text-fg-4 transition-colors hover:bg-surface-2 hover:text-fg-2 focus-visible:bg-surface-2 focus-visible:text-fg focus-visible:outline-none",
+  responseActionIcon: "size-3.5",
+  responseActionTooltip:
+    "pointer-events-none invisible absolute bottom-[calc(100%+0.5rem)] left-0 z-50 whitespace-nowrap rounded-md bg-surface-3 px-2.5 py-1.5 font-mono text-[8px] text-fg-3 opacity-0 shadow-card transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100",
+  streamStats: "group relative w-fit",
+  streamStatsTrigger:
+    "inline-flex size-6 cursor-help items-center justify-center rounded-full bg-transparent text-fg-4 transition-colors hover:bg-surface-2 hover:text-fg-2 focus-visible:bg-surface-2 focus-visible:text-fg focus-visible:outline-none",
+  streamStatsIcon: "size-3.5",
+  streamStatsTooltip:
+    "pointer-events-none invisible absolute bottom-[calc(100%+0.5rem)] left-0 z-50 flex items-center gap-2 whitespace-nowrap rounded-md bg-surface-3 px-2.5 py-1.5 font-mono text-[8px] uppercase tracking-[0.06em] text-fg-3 opacity-0 shadow-card",
+  streamStatsTooltipVisible: "visible opacity-100",
+  thinking: "inline-flex items-center gap-2 font-mono text-[10px] text-fg-3",
+  thinkingVerb: "min-w-16",
+  thinkingDots: "inline-flex gap-1",
+  thinkingDot: "size-1 rounded-full bg-fg-3 motion-safe:animate-pulse",
+} as const;

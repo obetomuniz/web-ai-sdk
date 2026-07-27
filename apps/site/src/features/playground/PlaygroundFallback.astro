@@ -1,0 +1,809 @@
+---
+import markedRuntime from "../../../node_modules/marked/lib/marked.umd.js?raw";
+import { playground as ui } from "../../shared/ui.js";
+import { MODES } from "./experimental/playground/presets.js";
+import { STORAGE_KEY } from "./lib/agentThreads.js";
+
+const modeMetadata = JSON.stringify(
+  Object.fromEntries(
+    MODES.map((mode) => [
+      mode.id,
+      {
+        name: mode.name,
+        accent: mode.accent,
+        tools: mode.tools.length,
+        examples: mode.examples.slice(0, 3),
+      },
+    ]),
+  ),
+);
+const defaultMode = MODES.find((mode) => mode.id === "platform") ?? MODES[0];
+const truncateExample = (value: string, limit = 60) =>
+  value.length <= limit ? value : `${value.slice(0, limit - 1)}...`;
+---
+
+<div
+  class:list={[ui.shell, "invisible"]}
+  data-playground-fallback
+  data-storage-key={STORAGE_KEY}
+  data-sidebar-storage-key="web-ai-sdk:playground:sidebar-width"
+  data-mode-metadata={modeMetadata}
+  data-thread-class={ui.threadItem}
+  data-thread-active-class={ui.threadItemActive}
+  data-thread-transcript-class={ui.threadTranscript}
+  data-step-class={ui.turn}
+  data-tool-cards-class={ui.toolCards}
+  data-answer-markdown-class={ui.answerMarkdown}
+  data-markdown-inline-code-class={ui.markdownInlineCode}
+  data-boot-message-class={ui.bootMessage}
+  data-main-header-scrolled-class={ui.mainHeaderScrolled}
+  data-workspace-slot-closed-class={ui.workspaceSlotClosed}
+  data-workspace-closed-class={ui.workspaceClosed}
+  data-example-class={ui.example}
+  aria-hidden="true"
+  inert
+>
+  <div class:list={[ui.layoutGrid, ui.shellMobileWithSidebar]}>
+    <div class:list={[ui.sidebarSlot, ui.panelSlotOpen]}>
+      <aside class:list={[ui.sidebar, ui.panelOpen]}>
+        <header class={ui.sidebarHeader}>
+          <h2 class={ui.sectionTitle}>Conversations</h2>
+          <span class={ui.panelToggle}>
+            <svg
+              class={ui.panelToggleIcon}
+              viewBox="0 0 18 18"
+              fill="none"
+              aria-hidden="true"
+            >
+              <rect
+                x="2.25"
+                y="2.75"
+                width="13.5"
+                height="12.5"
+                rx="2.25"
+                stroke="currentColor"
+                stroke-width="1.25"></rect>
+              <path
+                d="M6.5 3.25v11.5"
+                stroke="currentColor"
+                stroke-width="1.25"></path>
+            </svg>
+          </span>
+        </header>
+        <div class={ui.sidebarBody}>
+          <section class={ui.sidebarSection}>
+            <span class={ui.wideButton}>
+              <span class={ui.wideButtonIcon}>+</span>
+              <span class={ui.wideButtonLabel}>New conversation</span>
+            </span>
+            <div class={ui.presets} data-playground-conversations>
+              <div class={ui.threadItemActive}>
+                <span class={ui.threadSelect}>
+                  <span class={ui.threadTitleRow}>
+                    <span class={ui.presetName}>New conversation</span>
+                  </span>
+                  <span class={ui.presetDesc}>Platform reach · 0 turns</span>
+                </span>
+              </div>
+            </div>
+          </section>
+        </div>
+      </aside>
+    </div>
+
+    <div class={ui.main}>
+      <header
+        class:list={[ui.mainHeader, ui.mainHeaderBoot]}
+        data-playground-main-header
+      >
+        <h2 class={ui.title} data-playground-title>New conversation</h2>
+      </header>
+
+      <div class={ui.mainBody}>
+        <section class={ui.transcriptPanel}>
+          <div class={ui.answer} data-playground-transcript>
+            <div class={ui.emptyConversation}>
+              <h2 class={ui.emptyConversationTitle}>Start a conversation</h2>
+              <p class={ui.emptyConversationText}>
+                Messages, tool calls, and answers will appear here.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <div class={ui.composerDock}>
+          <div class={ui.composer}>
+            <div class:list={[ui.composerInput, ui.fallbackMuted]}>
+              Ask anything
+            </div>
+            <div class={ui.composerRow}>
+              <div class={ui.composerLeading}>
+                <span class={ui.modeTrigger} data-playground-mode-trigger data-accent="warn">
+                  <span
+                    class={ui.modeTriggerName}
+                    data-playground-mode-name
+                    data-accent="warn"
+                  >
+                    Platform reach
+                  </span>
+                  <svg
+                    class={ui.modeTriggerChevron}
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="m4.5 6 3.5 3.5L11.5 6"
+                      stroke="currentColor"
+                      stroke-width="1.4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"></path>
+                  </svg>
+                </span>
+                <div class={ui.exampleRail}>
+                  <div class={ui.examples} data-playground-examples>
+                    {
+                      defaultMode.examples.slice(0, 3).map((example) => (
+                        <span class={ui.example} title={example}>
+                          {truncateExample(example)}
+                        </span>
+                      ))
+                    }
+                  </div>
+                  <span class={ui.exampleRegenerateWrap}>
+                    <span class={ui.exampleRegenerate} aria-hidden="true">+</span>
+                  </span>
+                </div>
+              </div>
+              <div class={ui.composerActions}>
+                <span class={ui.toolSummaryTrigger} data-playground-tool-count>
+                  5 tools
+                </span>
+                <button
+                  type="button"
+                  class={ui.sendButton}
+                  aria-label="Send message"
+                  disabled
+                >
+                  ↑
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class:list={[ui.workspaceSlot, ui.panelSlotOpen]}
+      data-playground-workspace-slot
+    >
+      <section
+        class:list={[ui.workspace, ui.panelOpen]}
+        data-playground-workspace
+      >
+        <header class={ui.workspaceHeader}>
+          <span class={ui.panelToggle}>
+            <svg
+              class={ui.panelToggleIcon}
+              viewBox="0 0 18 18"
+              fill="none"
+              aria-hidden="true"
+            >
+              <rect
+                x="2.25"
+                y="2.75"
+                width="13.5"
+                height="12.5"
+                rx="2.25"
+                stroke="currentColor"
+                stroke-width="1.25"></rect>
+              <path
+                d="M11.5 3.25v11.5"
+                stroke="currentColor"
+                stroke-width="1.25"></path>
+            </svg>
+          </span>
+        </header>
+        <div class={ui.workspaceBody}>
+          <div class={ui.workspaceHeading}>
+            <h2 class={ui.workspaceTitle}>Recent activities</h2>
+            <div class={ui.workspaceCount}>3 checks · 0 events</div>
+          </div>
+          <div class={ui.workspacePane}>
+            <ul class={ui.activity}>
+              <li class={ui.activityItem}>
+                <span class={ui.activityMain}>
+                  <span class={ui.activityMessage}>Prompt API</span>
+                  <span class={ui.activityDetail}>Conversation responses</span>
+                </span>
+                <span class={ui.activityMeta}>
+                  <span class={ui.activityCheckState} data-tone="checking">
+                    checking
+                  </span>
+                </span>
+              </li>
+              <li class={ui.activityItem}>
+                <span class={ui.activityMain}>
+                  <span class={ui.activityMessage}>Summarizer API</span>
+                  <span class={ui.activityDetail}>
+                    Text summaries and conversation titles
+                  </span>
+                </span>
+                <span class={ui.activityMeta}>
+                  <span class={ui.activityCheckState} data-tone="ready">
+                    ready
+                  </span>
+                </span>
+              </li>
+              <li class={ui.activityItem}>
+                <span class={ui.activityMain}>
+                  <span class={ui.activityMessage}>WebMCP</span>
+                  <span class={ui.activityDetail}>
+                    Conversation controls for browser agents
+                  </span>
+                </span>
+                <span class={ui.activityMeta}>
+                  <span class={ui.activityCheckState} data-tone="ready">
+                    ready
+                  </span>
+                </span>
+              </li>
+            </ul>
+          </div>
+          <div class={ui.workspaceNotes}>
+            <div class={ui.workspaceFootnote}>
+              Conversations stored in this browser
+            </div>
+            <div class={ui.workspaceAdvice}>
+              On-device AI can make mistakes. Verify important answers.
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <template data-playground-conversation-template>
+    <div class={ui.threadItem}>
+      <span class={ui.threadSelect}>
+        <span class={ui.threadTitleRow}>
+          <span class={ui.presetName} data-playground-conversation-name></span>
+        </span>
+        <span class={ui.presetDesc} data-playground-conversation-meta></span>
+      </span>
+      <span class={ui.threadClose}>
+        <svg
+          class={ui.threadCloseIcon}
+          viewBox="0 0 16 16"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M4 4l8 8M12 4l-8 8"
+            stroke="currentColor"
+            stroke-width="1.35"
+            stroke-linecap="round"></path>
+        </svg>
+      </span>
+    </div>
+  </template>
+
+  <template data-playground-turn-template>
+    <section class={ui.threadTurnStatic}>
+      <div class={ui.userBubbleStatic} data-playground-user-message></div>
+      <div class={ui.transcript}>
+        <div data-playground-step-list></div>
+        <article class={ui.answerBlockStatic} data-playground-answer-block>
+          <div class={ui.answerMarkdown}>
+            <div data-playground-assistant-message></div>
+            <div class={ui.responseActions}>
+              <span class={ui.responseAction}>
+                <span class={ui.responseActionTrigger}>
+                  <svg
+                    class={ui.responseActionIcon}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <rect
+                      x="8"
+                      y="8"
+                      width="10"
+                      height="11"
+                      rx="2"
+                      stroke="currentColor"
+                      stroke-width="1.6"></rect>
+                    <path
+                      d="M15 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linecap="round"></path>
+                  </svg>
+                </span>
+                <span class={ui.responseActionTooltip}>Copy response</span>
+              </span>
+              <span class={ui.streamStats}>
+                <span class={ui.streamStatsTrigger}>
+                  <svg
+                    class={ui.streamStatsIcon}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      cx="12"
+                      cy="13.5"
+                      r="7.5"
+                      stroke="currentColor"
+                      stroke-width="1.6"></circle>
+                    <path
+                      d="M9.5 3h5M12 3v3M12 13.5l3-2"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linecap="round"></path>
+                    <circle
+                      cx="12"
+                      cy="13.5"
+                      r="0.9"
+                      fill="currentColor"></circle>
+                  </svg>
+                </span>
+                <span class={ui.streamStatsTooltip}>
+                  <span data-playground-stats-seconds></span>
+                  <span data-playground-stats-words></span>
+                  <span data-playground-stats-chars></span>
+                  <span data-playground-stats-chars-rate></span>
+                  <span data-playground-stats-words-rate></span>
+                  <span>done</span>
+                </span>
+              </span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </template>
+
+  <template data-playground-tool-template>
+    <li class={ui.toolCardStatic}>
+      <details class={ui.toolCardDisclosure}>
+        <summary class={ui.toolCardHead}>
+          <span class={ui.toolCardIdentity}>
+            <span class={ui.toolCardChevron} aria-hidden="true">›</span>
+            <code class={ui.toolCardName} data-playground-tool-name></code>
+          </span>
+          <span class={ui.toolStatus} data-playground-tool-duration></span>
+        </summary>
+      </details>
+    </li>
+  </template>
+
+  <script is:inline set:html={markedRuntime}></script>
+  <script is:inline>
+    const isRecord = (value) =>
+      typeof value === "object" && value !== null;
+
+    const isPersistedTurn = (value) =>
+      isRecord(value) &&
+      typeof value.id === "string" &&
+      typeof value.createdAt === "number" &&
+      typeof value.userInput === "string" &&
+      typeof value.assistantText === "string" &&
+      Array.isArray(value.steps);
+
+    const isPersistedThread = (value) =>
+      isRecord(value) &&
+      typeof value.id === "string" &&
+      typeof value.name === "string" &&
+      typeof value.createdAt === "number" &&
+      (typeof value.modeId === "string" ||
+        typeof value.skillId === "string") &&
+      Array.isArray(value.turns);
+
+    const safeMarkdownTags = new Set([
+      "A",
+      "BLOCKQUOTE",
+      "BR",
+      "CODE",
+      "DEL",
+      "EM",
+      "H1",
+      "H2",
+      "H3",
+      "HR",
+      "LI",
+      "OL",
+      "P",
+      "PRE",
+      "STRONG",
+      "TABLE",
+      "TBODY",
+      "TD",
+      "TH",
+      "THEAD",
+      "TR",
+      "UL",
+    ]);
+    const fallbackRoot = document.querySelector("[data-playground-fallback]");
+    const markdownInlineCodeClass =
+      fallbackRoot instanceof HTMLElement
+        ? fallbackRoot.dataset.markdownInlineCodeClass ?? ""
+        : "";
+
+    const renderMarkdown = (container, markdown) => {
+      const template = document.createElement("template");
+      template.innerHTML = globalThis.marked.parse(markdown, {
+        async: false,
+        gfm: true,
+      });
+
+      for (const element of template.content.querySelectorAll("*")) {
+        if (!safeMarkdownTags.has(element.tagName)) {
+          element.replaceWith(
+            document.createTextNode(element.textContent ?? ""),
+          );
+          continue;
+        }
+
+        for (const attribute of [...element.attributes]) {
+          const keepCodeLanguage =
+            element.tagName === "CODE" &&
+            attribute.name === "class" &&
+            /^language-[\w-]+$/.test(attribute.value);
+          const keepLinkAttribute =
+            element.tagName === "A" &&
+            (attribute.name === "href" || attribute.name === "title");
+          if (!keepCodeLanguage && !keepLinkAttribute) {
+            element.removeAttribute(attribute.name);
+          }
+        }
+
+        if (element instanceof HTMLAnchorElement) {
+          const href = element.getAttribute("href");
+          if (href) {
+            try {
+              const url = new URL(href, window.location.href);
+              if (!["http:", "https:", "mailto:"].includes(url.protocol)) {
+                element.removeAttribute("href");
+              }
+            } catch {
+              element.removeAttribute("href");
+            }
+          }
+          element.target = "_blank";
+          element.rel = "noreferrer noopener";
+        }
+
+        if (
+          element.tagName === "CODE" &&
+          element.parentElement?.tagName !== "PRE"
+        ) {
+          element.className = markdownInlineCodeClass;
+        }
+      }
+
+      container.replaceChildren(template.content);
+    };
+
+    (() => {
+      const fallback = document.querySelector("[data-playground-fallback]");
+      if (!(fallback instanceof HTMLElement)) return;
+      let restoredTranscript;
+
+      try {
+        const sidebarWidth = Number(
+          localStorage.getItem(fallback.dataset.sidebarStorageKey ?? ""),
+        );
+        if (Number.isFinite(sidebarWidth) && sidebarWidth >= 200 && sidebarWidth <= 400) {
+          fallback.style.setProperty(
+            "--playground-sidebar-width",
+            `${Math.round(sidebarWidth)}px`,
+          );
+          fallback.style.setProperty(
+            "--playground-left-column",
+            `${Math.round(sidebarWidth)}px`,
+          );
+        }
+
+        if (!matchMedia("(min-width: 1181px)").matches) {
+          fallback.style.setProperty("--playground-right-column", "0px");
+          const workspaceSlot = fallback.querySelector(
+            "[data-playground-workspace-slot]",
+          );
+          const workspace = fallback.querySelector("[data-playground-workspace]");
+          workspaceSlot?.classList.add(
+            ...(fallback.dataset.workspaceSlotClosedClass ?? "").split(" ").filter(Boolean),
+          );
+          workspace?.classList.add(
+            ...(fallback.dataset.workspaceClosedClass ?? "").split(" ").filter(Boolean),
+          );
+        }
+
+        const raw = localStorage.getItem(fallback.dataset.storageKey ?? "");
+        if (!raw) return;
+        const state = JSON.parse(raw);
+        if (!state || !Array.isArray(state.threads) || state.threads.length === 0) {
+          return;
+        }
+
+        const threads = state.threads
+          .filter(isPersistedThread)
+          .map((thread) => ({
+            ...thread,
+            turns: thread.turns.filter(isPersistedTurn),
+          }))
+          .sort(
+            (left, right) =>
+              (Number(right.updatedAt) || Number(right.createdAt) || 0) -
+              (Number(left.updatedAt) || Number(left.createdAt) || 0),
+          );
+        if (threads.length === 0) return;
+
+        const active =
+          threads.find((thread) => thread.id === state.activeId) ?? threads[0];
+        if (!active) return;
+
+        const modes = JSON.parse(fallback.dataset.modeMetadata ?? "{}");
+        const modeId =
+          typeof active.modeId === "string"
+            ? active.modeId
+            : typeof active.skillId === "string"
+              ? active.skillId
+              : "platform";
+        const mode = modes[modeId] ?? modes.platform;
+        if (!mode) return;
+
+        const title = fallback.querySelector("[data-playground-title]");
+        if (title) title.textContent = active.name;
+
+        const modeTrigger = fallback.querySelector(
+          "[data-playground-mode-trigger]",
+        );
+        const modeName = fallback.querySelector("[data-playground-mode-name]");
+        const toolCount = fallback.querySelector("[data-playground-tool-count]");
+        if (modeTrigger instanceof HTMLElement) {
+          modeTrigger.dataset.accent = mode.accent;
+        }
+        if (modeName instanceof HTMLElement) {
+          modeName.textContent = mode.name;
+          modeName.dataset.accent = mode.accent;
+        }
+        if (toolCount) {
+          toolCount.textContent =
+            mode.tools === 0
+              ? "No tools"
+              : `${mode.tools} ${mode.tools === 1 ? "tool" : "tools"}`;
+        }
+
+        const examples = fallback.querySelector("[data-playground-examples]");
+        if (examples instanceof HTMLElement) {
+          examples.replaceChildren();
+          for (const value of Array.isArray(mode.examples)
+            ? mode.examples.slice(0, 3)
+            : []) {
+            if (typeof value !== "string") continue;
+            const example = document.createElement("span");
+            example.className = fallback.dataset.exampleClass ?? "";
+            example.title = value;
+            example.textContent =
+              value.length <= 60 ? value : `${value.slice(0, 59)}...`;
+            examples.append(example);
+          }
+        }
+
+        const conversationList = fallback.querySelector(
+          "[data-playground-conversations]",
+        );
+        const conversationTemplate = fallback.querySelector(
+          "[data-playground-conversation-template]",
+        );
+        if (
+          conversationList instanceof HTMLElement &&
+          conversationTemplate instanceof HTMLTemplateElement
+        ) {
+          conversationList.replaceChildren();
+          for (const thread of threads) {
+            const item = conversationTemplate.content.firstElementChild?.cloneNode(true);
+            if (!(item instanceof HTMLElement)) continue;
+            item.className =
+              thread.id === active.id
+                ? fallback.dataset.threadActiveClass ?? ""
+                : fallback.dataset.threadClass ?? "";
+            const name = item.querySelector(
+              "[data-playground-conversation-name]",
+            );
+            const meta = item.querySelector(
+              "[data-playground-conversation-meta]",
+            );
+            if (name) name.textContent = thread.name;
+            if (meta) {
+              const threadModeId =
+                typeof thread.modeId === "string"
+                  ? thread.modeId
+                  : typeof thread.skillId === "string"
+                    ? thread.skillId
+                    : "platform";
+              const threadMode = modes[threadModeId] ?? modes.platform;
+              if (!threadMode) continue;
+              const turnCount = thread.turns.length;
+              meta.textContent = `${threadMode.name} · ${turnCount} ${
+                turnCount === 1 ? "turn" : "turns"
+              }`;
+            }
+            conversationList.append(item);
+          }
+        }
+
+        const transcript = fallback.querySelector("[data-playground-transcript]");
+        const turnTemplate = fallback.querySelector(
+          "[data-playground-turn-template]",
+        );
+        const toolTemplate = fallback.querySelector(
+          "[data-playground-tool-template]",
+        );
+        if (
+          !(transcript instanceof HTMLElement) ||
+          !(turnTemplate instanceof HTMLTemplateElement) ||
+          !(toolTemplate instanceof HTMLTemplateElement) ||
+          active.turns.length === 0
+        ) {
+          return;
+        }
+
+        const transcriptThread = document.createElement("div");
+        transcriptThread.className =
+          fallback.dataset.threadTranscriptClass ?? "";
+
+        for (const turn of active.turns) {
+          if (
+            !turn ||
+            typeof turn.userInput !== "string" ||
+            typeof turn.assistantText !== "string"
+          ) {
+            continue;
+          }
+          const turnElement =
+            turnTemplate.content.firstElementChild?.cloneNode(true);
+          if (!(turnElement instanceof HTMLElement)) continue;
+
+          const userMessage = turnElement.querySelector(
+            "[data-playground-user-message]",
+          );
+          const assistantMessage = turnElement.querySelector(
+            "[data-playground-assistant-message]",
+          );
+          const answerBlock = turnElement.querySelector(
+            "[data-playground-answer-block]",
+          );
+          const stepList = turnElement.querySelector(
+            "[data-playground-step-list]",
+          );
+          if (userMessage) userMessage.textContent = turn.userInput;
+          if (assistantMessage) {
+            renderMarkdown(assistantMessage, turn.assistantText);
+          }
+          if (answerBlock instanceof HTMLElement && !turn.assistantText) {
+            answerBlock.hidden = true;
+          }
+          const durationMs = Number(turn.durationMs) || 0;
+          const seconds = durationMs / 1000;
+          const chars = turn.assistantText.length;
+          const trimmedAnswer = turn.assistantText.trim();
+          const words = trimmedAnswer ? trimmedAnswer.split(/\s+/).length : 0;
+          const stats = [
+            ["[data-playground-stats-seconds]", `${seconds.toFixed(1)}s`],
+            ["[data-playground-stats-words]", `${words} words`],
+            ["[data-playground-stats-chars]", `${chars} chars`],
+            [
+              "[data-playground-stats-chars-rate]",
+              `${seconds > 0 ? (chars / seconds).toFixed(0) : "0"} ch/s`,
+            ],
+            [
+              "[data-playground-stats-words-rate]",
+              `${seconds > 0 ? (words / seconds).toFixed(1) : "0.0"} w/s`,
+            ],
+          ];
+          for (const [selector, value] of stats) {
+            const stat = turnElement.querySelector(selector);
+            if (stat) stat.textContent = value;
+          }
+
+          if (stepList instanceof HTMLElement && Array.isArray(turn.steps)) {
+            for (const stepValue of turn.steps) {
+              const step = isRecord(stepValue) ? stepValue : {};
+              const thought =
+                typeof step?.plan?.thought === "string"
+                  ? step.plan.thought
+                  : "";
+              const toolCalls = Array.isArray(step?.toolCalls)
+                ? step.toolCalls
+                : [];
+              if (!thought && toolCalls.length === 0) continue;
+
+              const stepElement = document.createElement("article");
+              stepElement.className = fallback.dataset.stepClass ?? "";
+              if (thought) {
+                const thoughtBlock = document.createElement("div");
+                thoughtBlock.className =
+                  fallback.dataset.answerMarkdownClass ?? "";
+                renderMarkdown(thoughtBlock, thought);
+                stepElement.append(thoughtBlock);
+              }
+              if (toolCalls.length > 0) {
+                const tools = document.createElement("ul");
+                tools.className = fallback.dataset.toolCardsClass ?? "";
+                for (const toolValue of toolCalls) {
+                  const tool = isRecord(toolValue) ? toolValue : {};
+                  if (typeof tool.name !== "string") continue;
+                  const toolElement =
+                    toolTemplate.content.firstElementChild?.cloneNode(true);
+                  if (!(toolElement instanceof HTMLElement)) continue;
+                  const toolName = toolElement.querySelector(
+                    "[data-playground-tool-name]",
+                  );
+                  const duration = toolElement.querySelector(
+                    "[data-playground-tool-duration]",
+                  );
+                  if (toolName) toolName.textContent = tool.name;
+                  if (duration) {
+                    duration.textContent = `${Math.round(
+                      Number(tool.durationMs) || 0,
+                    )}ms`;
+                  }
+                  tools.append(toolElement);
+                }
+                stepElement.append(tools);
+              }
+              stepList.append(stepElement);
+            }
+          }
+          if (stepList instanceof HTMLElement) {
+            // React renders each step directly in the transcript grid. Flatten
+            // the boot-time placeholder too so an empty wrapper cannot add an
+            // extra grid gap and shift a long conversation during handoff.
+            stepList.replaceWith(...stepList.childNodes);
+          }
+
+          transcriptThread.append(turnElement);
+        }
+
+        if (transcriptThread.childElementCount > 0) {
+          transcript.replaceChildren(transcriptThread);
+          restoredTranscript = transcript;
+        }
+      } catch {
+        // A missing, disabled, or corrupt store falls back to the static shell.
+      } finally {
+        // Local conversations are the initial UI, not a loading placeholder.
+        // Reveal them synchronously so offline and cold-cache reloads are not
+        // gated by remote fonts. Scroll anchoring is corrected before React
+        // takes over without delaying the first paint.
+        if (restoredTranscript instanceof HTMLElement) {
+          restoredTranscript.scrollTop = restoredTranscript.scrollHeight;
+          const transcriptScrolled = restoredTranscript.scrollTop > 1;
+          const bootLayer = fallback.closest("[data-playground-boot]");
+          if (bootLayer instanceof HTMLElement) {
+            bootLayer.dataset.playgroundTranscriptScrolled =
+              String(transcriptScrolled);
+          }
+          const restoredHeader = fallback.querySelector(
+            "[data-playground-main-header]",
+          );
+          const scrolledClasses = (
+            fallback.dataset.mainHeaderScrolledClass ?? ""
+          )
+            .split(" ")
+            .filter(Boolean);
+          for (const className of scrolledClasses) {
+            restoredHeader?.classList.toggle(
+              className,
+              transcriptScrolled,
+            );
+          }
+        }
+        fallback.classList.remove("invisible");
+      }
+    })();
+  </script>
+</div>

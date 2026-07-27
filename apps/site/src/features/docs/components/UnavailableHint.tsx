@@ -1,12 +1,5 @@
 import type { ReactNode } from "react";
-
-const detectBrowser = (): "chrome" | "edge" | "other" => {
-  if (typeof navigator === "undefined") return "other";
-  const ua = navigator.userAgent;
-  if (/\bEdg\//.test(ua)) return "edge";
-  if (/\bChrome\//.test(ua)) return "chrome";
-  return "other";
-};
+import { detectBrowser } from "../../../shared/browser.js";
 
 /**
  * Hint shown when a demo's underlying Web AI API is unavailable.
