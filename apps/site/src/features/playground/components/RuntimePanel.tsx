@@ -5,6 +5,7 @@ import { PanelToggle } from "./PanelToggle.js";
 
 interface Props {
   open: boolean;
+  conversationsOpen: boolean;
   promptReadiness: PromptReadiness;
   summarizerOn: boolean;
   webmcpAvailable: boolean;
@@ -14,6 +15,7 @@ interface Props {
 
 export function RuntimePanel({
   open,
+  conversationsOpen,
   promptReadiness,
   summarizerOn,
   webmcpAvailable,
@@ -24,7 +26,7 @@ export function RuntimePanel({
     <div
       className={`${ui.workspaceSlot} ${
         open ? ui.panelSlotOpen : ui.workspaceSlotClosed
-      }`}
+      } ${conversationsOpen ? ui.workspaceSlotBelowMobileSidebar : ""}`}
       aria-hidden={!open}
       inert={!open}
     >

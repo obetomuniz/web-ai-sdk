@@ -31,13 +31,27 @@ const {
 
     <div class={ui.navActions}>
       <a
-        class={`${ui.navCtaPrimary} ${
-          activePage === "playground" ? ui.navCtaCurrent : ""
-        }`}
+        class={ui.navCtaPrimary}
         href={playgroundHref}
         aria-current={activePage === "playground" ? "page" : undefined}
+        aria-label="Open Playground"
+        title="Playground"
       >
-        Playground
+        <span class={ui.navPlaygroundLabel}>Playground</span>
+        <svg
+          class={ui.navPlaygroundMark}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+          <path d="m7 9 3 3-3 3"></path>
+          <path d="M13 15h4"></path>
+        </svg>
       </a>
       <a
         class={ui.navIcon}

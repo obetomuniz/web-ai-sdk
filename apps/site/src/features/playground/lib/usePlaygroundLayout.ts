@@ -7,6 +7,10 @@ import {
   useState,
 } from "react";
 import { playground as ui } from "../../../shared/ui.js";
+import {
+  loadPlaygroundLayoutState,
+  updatePlaygroundLayoutState,
+} from "./playgroundLayoutStorage.js";
 
 const DEFAULT_SIDEBAR_WIDTH = 260;
 const COLLAPSED_SIDEBAR_WIDTH = 52;
@@ -17,11 +21,16 @@ const SIDEBAR_WIDTH_STORAGE_KEY = "web-ai-sdk:playground:sidebar-width";
 
 export function usePlaygroundLayout() {
   const shellRef = useRef<HTMLDivElement>(null);
+  const [initialLayoutState] = useState(loadPlaygroundLayoutState);
   const [sidebarWidth, setSidebarWidth] = useState(loadSidebarWidth);
   const [sidebarResizing, setSidebarResizing] = useState(false);
-  const [conversationsOpen, setConversationsOpen] = useState(true);
+  const [conversationsOpen, setConversationsOpen] = useState(
+    initialLayoutState.conversationsOpen ?? true,
+  );
   const [runtimeOpen, setRuntimeOpen] = useState(
-    () => window.matchMedia("(min-width: 1181px)").matches,
+    () =>
+      initialLayoutState.runtimeOpen ??
+      window.matchMedia("(min-width: 1181px)").matches,
   );
   const sidebarResizeRef = useRef<{
     pointerId: number;
@@ -114,6 +123,16 @@ export function usePlaygroundLayout() {
     updateSidebarWidth(nextWidth);
   };
 
+  const setConversationsVisibility = useCallback((open: boolean) => {
+    setConversationsOpen(open);
+    updatePlaygroundLayoutState({ conversationsOpen: open });
+  }, []);
+
+  const setRuntimeVisibility = useCallback((open: boolean) => {
+    setRuntimeOpen(open);
+    updatePlaygroundLayoutState({ runtimeOpen: open });
+  }, []);
+
   const shellStyle = {
     "--playground-sidebar-width": `${sidebarWidth}px`,
     "--playground-left-column": conversationsOpen
@@ -135,10 +154,10 @@ export function usePlaygroundLayout() {
     sidebarWidth,
     conversationsOpen,
     runtimeOpen,
-    showConversations: () => setConversationsOpen(true),
-    hideConversations: () => setConversationsOpen(false),
-    showRuntime: () => setRuntimeOpen(true),
-    hideRuntime: () => setRuntimeOpen(false),
+    showConversations: () => setConversationsVisibility(true),
+    hideConversations: () => setConversationsVisibility(false),
+    showRuntime: () => setRuntimeVisibility(true),
+    hideRuntime: () => setRuntimeVisibility(false),
     startSidebarResize,
     resizeSidebar,
     finishSidebarResize,

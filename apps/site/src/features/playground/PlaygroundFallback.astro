@@ -3,6 +3,7 @@ import markedRuntime from "../../../node_modules/marked/lib/marked.umd.js?raw";
 import { playground as ui } from "../../shared/ui.js";
 import { MODES } from "./experimental/playground/presets.js";
 import { STORAGE_KEY } from "./lib/agentThreads.js";
+import { PLAYGROUND_LAYOUT_STORAGE_KEY } from "./lib/playgroundLayoutStorage.js";
 
 const modeMetadata = JSON.stringify(
   Object.fromEntries(
@@ -23,9 +24,10 @@ const truncateExample = (value: string, limit = 60) =>
 ---
 
 <div
-  class:list={[ui.shell, "invisible"]}
+  class:list={[ui.shell, ui.bootMotionless, "invisible"]}
   data-playground-fallback
   data-storage-key={STORAGE_KEY}
+  data-layout-storage-key={PLAYGROUND_LAYOUT_STORAGE_KEY}
   data-sidebar-storage-key="web-ai-sdk:playground:sidebar-width"
   data-mode-metadata={modeMetadata}
   data-thread-class={ui.threadItem}
@@ -37,15 +39,32 @@ const truncateExample = (value: string, limit = 60) =>
   data-markdown-inline-code-class={ui.markdownInlineCode}
   data-boot-message-class={ui.bootMessage}
   data-main-header-scrolled-class={ui.mainHeaderScrolled}
+  data-main-header-left-restore-class={ui.mainHeaderWithLeftRestore}
+  data-layout-mobile-with-sidebar-class={ui.shellMobileWithSidebar}
+  data-layout-mobile-without-sidebar-class={ui.shellMobileWithoutSidebar}
+  data-panel-slot-open-class={ui.panelSlotOpen}
+  data-sidebar-slot-closed-class={ui.sidebarSlotClosed}
+  data-sidebar-closed-class={ui.sidebarClosed}
+  data-panel-open-class={ui.panelOpen}
+  data-workspace-below-mobile-sidebar-class={ui.workspaceSlotBelowMobileSidebar}
   data-workspace-slot-closed-class={ui.workspaceSlotClosed}
   data-workspace-closed-class={ui.workspaceClosed}
   data-example-class={ui.example}
   aria-hidden="true"
   inert
 >
-  <div class:list={[ui.layoutGrid, ui.shellMobileWithSidebar]}>
-    <div class:list={[ui.sidebarSlot, ui.panelSlotOpen]}>
-      <aside class:list={[ui.sidebar, ui.panelOpen]}>
+  <div
+    class:list={[ui.layoutGrid, ui.shellMobileWithSidebar]}
+    data-playground-layout-grid
+  >
+    <div
+      class:list={[ui.sidebarSlot, ui.panelSlotOpen]}
+      data-playground-sidebar-slot
+    >
+      <aside
+        class:list={[ui.sidebar, ui.panelOpen]}
+        data-playground-sidebar
+      >
         <header class={ui.sidebarHeader}>
           <h2 class={ui.sectionTitle}>Conversations</h2>
           <span class={ui.panelToggle}>
@@ -91,12 +110,89 @@ const truncateExample = (value: string, limit = 60) =>
       </aside>
     </div>
 
+    <span class={ui.panelRestoreLeft} data-playground-left-restore hidden>
+      <span class={ui.panelToggle}>
+        <svg
+          class={ui.panelToggleIcon}
+          viewBox="0 0 18 18"
+          fill="none"
+          aria-hidden="true"
+        >
+          <rect
+            x="2.25"
+            y="2.75"
+            width="13.5"
+            height="12.5"
+            rx="2.25"
+            stroke="currentColor"
+            stroke-width="1.25"></rect>
+          <path
+            d="M6.5 3.25v11.5"
+            stroke="currentColor"
+            stroke-width="1.25"></path>
+        </svg>
+      </span>
+    </span>
+
+    <span class={ui.panelRestoreRight} data-playground-right-restore hidden>
+      <span class={ui.panelToggle}>
+        <svg
+          class={ui.panelToggleIcon}
+          viewBox="0 0 18 18"
+          fill="none"
+          aria-hidden="true"
+        >
+          <rect
+            x="2.25"
+            y="2.75"
+            width="13.5"
+            height="12.5"
+            rx="2.25"
+            stroke="currentColor"
+            stroke-width="1.25"></rect>
+          <path
+            d="M11.5 3.25v11.5"
+            stroke="currentColor"
+            stroke-width="1.25"></path>
+        </svg>
+      </span>
+    </span>
+
     <div class={ui.main}>
       <header
         class:list={[ui.mainHeader, ui.mainHeaderBoot]}
         data-playground-main-header
       >
-        <h2 class={ui.title} data-playground-title>New conversation</h2>
+        <div class={ui.mainHeaderInner}>
+          <h2 class={ui.title} data-playground-title>New conversation</h2>
+          <span
+            class={ui.panelRestoreRightMobile}
+            data-playground-right-restore-mobile
+            hidden
+          >
+            <span class={ui.panelToggle}>
+              <svg
+                class={ui.panelToggleIcon}
+                viewBox="0 0 18 18"
+                fill="none"
+                aria-hidden="true"
+              >
+                <rect
+                  x="2.25"
+                  y="2.75"
+                  width="13.5"
+                  height="12.5"
+                  rx="2.25"
+                  stroke="currentColor"
+                  stroke-width="1.25"></rect>
+                <path
+                  d="M11.5 3.25v11.5"
+                  stroke="currentColor"
+                  stroke-width="1.25"></path>
+              </svg>
+            </span>
+          </span>
+        </div>
       </header>
 
       <div class={ui.mainBody}>
@@ -175,7 +271,11 @@ const truncateExample = (value: string, limit = 60) =>
     </div>
 
     <div
-      class:list={[ui.workspaceSlot, ui.panelSlotOpen]}
+      class:list={[
+        ui.workspaceSlot,
+        ui.workspaceSlotBelowMobileSidebar,
+        ui.panelSlotOpen,
+      ]}
       data-playground-workspace-slot
     >
       <section
@@ -430,13 +530,46 @@ const truncateExample = (value: string, limit = 60) =>
       fallbackRoot instanceof HTMLElement
         ? fallbackRoot.dataset.markdownInlineCodeClass ?? ""
         : "";
+    const listMarkerWithExtraSpacing =
+      /^(\s*(?:[-+*]|\d+[.)]))[ \t]{2,}(?=\S)/;
+    const fencedCodeBoundary = /^\s*(`{3,}|~{3,})/;
+
+    const normalizeListMarkerSpacing = (content) => {
+      let fence;
+      return content
+        .split("\n")
+        .map((line) => {
+          const boundary = line.match(fencedCodeBoundary)?.[1];
+          if (boundary) {
+            if (!fence) {
+              fence = {
+                character: boundary[0] ?? "",
+                length: boundary.length,
+              };
+            } else if (
+              boundary[0] === fence.character &&
+              boundary.length >= fence.length
+            ) {
+              fence = undefined;
+            }
+            return line;
+          }
+          return fence
+            ? line
+            : line.replace(listMarkerWithExtraSpacing, "$1 ");
+        })
+        .join("\n");
+    };
 
     const renderMarkdown = (container, markdown) => {
       const template = document.createElement("template");
-      template.innerHTML = globalThis.marked.parse(markdown, {
-        async: false,
-        gfm: true,
-      });
+      template.innerHTML = globalThis.marked.parse(
+        normalizeListMarkerSpacing(markdown),
+        {
+          async: false,
+          gfm: true,
+        },
+      );
 
       for (const element of template.content.querySelectorAll("*")) {
         if (!safeMarkdownTags.has(element.tagName)) {
@@ -492,6 +625,26 @@ const truncateExample = (value: string, limit = 60) =>
       let restoredTranscript;
 
       try {
+        const desktopRuntime = matchMedia("(min-width: 1181px)").matches;
+        let conversationsOpen = true;
+        let runtimeOpen = desktopRuntime;
+        try {
+          const storedLayout = JSON.parse(
+            localStorage.getItem(fallback.dataset.layoutStorageKey ?? "") ??
+              "null",
+          );
+          if (isRecord(storedLayout)) {
+            if (typeof storedLayout.conversationsOpen === "boolean") {
+              conversationsOpen = storedLayout.conversationsOpen;
+            }
+            if (typeof storedLayout.runtimeOpen === "boolean") {
+              runtimeOpen = storedLayout.runtimeOpen;
+            }
+          }
+        } catch {
+          // Invalid layout state falls back to the responsive defaults.
+        }
+
         const sidebarWidth = Number(
           localStorage.getItem(fallback.dataset.sidebarStorageKey ?? ""),
         );
@@ -506,18 +659,102 @@ const truncateExample = (value: string, limit = 60) =>
           );
         }
 
-        if (!matchMedia("(min-width: 1181px)").matches) {
-          fallback.style.setProperty("--playground-right-column", "0px");
+        if (!conversationsOpen) {
+          fallback.style.setProperty("--playground-left-column", "52px");
+          const layoutGrid = fallback.querySelector(
+            "[data-playground-layout-grid]",
+          );
+          const sidebarSlot = fallback.querySelector(
+            "[data-playground-sidebar-slot]",
+          );
+          const sidebar = fallback.querySelector("[data-playground-sidebar]");
+          const workspaceSlot = fallback.querySelector(
+            "[data-playground-workspace-slot]",
+          );
+          const mainHeader = fallback.querySelector(
+            "[data-playground-main-header]",
+          );
+          layoutGrid?.classList.remove(
+            ...(fallback.dataset.layoutMobileWithSidebarClass ?? "")
+              .split(" ")
+              .filter(Boolean),
+          );
+          layoutGrid?.classList.add(
+            ...(fallback.dataset.layoutMobileWithoutSidebarClass ?? "")
+              .split(" ")
+              .filter(Boolean),
+          );
+          sidebarSlot?.classList.remove(
+            ...(fallback.dataset.panelSlotOpenClass ?? "")
+              .split(" ")
+              .filter(Boolean),
+          );
+          sidebarSlot?.classList.add(
+            ...(fallback.dataset.sidebarSlotClosedClass ?? "")
+              .split(" ")
+              .filter(Boolean),
+          );
+          sidebar?.classList.add(
+            ...(fallback.dataset.sidebarClosedClass ?? "")
+              .split(" ")
+              .filter(Boolean),
+          );
+          sidebar?.classList.remove(
+            ...(fallback.dataset.panelOpenClass ?? "")
+              .split(" ")
+              .filter(Boolean),
+          );
+          workspaceSlot?.classList.remove(
+            ...(fallback.dataset.workspaceBelowMobileSidebarClass ?? "")
+              .split(" ")
+              .filter(Boolean),
+          );
+          mainHeader?.classList.add(
+            ...(fallback.dataset.mainHeaderLeftRestoreClass ?? "")
+              .split(" ")
+              .filter(Boolean),
+          );
+          const leftRestore = fallback.querySelector(
+            "[data-playground-left-restore]",
+          );
+          if (leftRestore instanceof HTMLElement) leftRestore.hidden = false;
+        }
+
+        fallback.style.setProperty(
+          "--playground-right-column",
+          runtimeOpen && desktopRuntime ? "340px" : "0px",
+        );
+        if (!runtimeOpen) {
           const workspaceSlot = fallback.querySelector(
             "[data-playground-workspace-slot]",
           );
           const workspace = fallback.querySelector("[data-playground-workspace]");
+          workspaceSlot?.classList.remove(
+            ...(fallback.dataset.panelSlotOpenClass ?? "")
+              .split(" ")
+              .filter(Boolean),
+          );
           workspaceSlot?.classList.add(
             ...(fallback.dataset.workspaceSlotClosedClass ?? "").split(" ").filter(Boolean),
           );
           workspace?.classList.add(
             ...(fallback.dataset.workspaceClosedClass ?? "").split(" ").filter(Boolean),
           );
+          workspace?.classList.remove(
+            ...(fallback.dataset.panelOpenClass ?? "")
+              .split(" ")
+              .filter(Boolean),
+          );
+          const rightRestore = fallback.querySelector(
+            "[data-playground-right-restore]",
+          );
+          const rightRestoreMobile = fallback.querySelector(
+            "[data-playground-right-restore-mobile]",
+          );
+          if (rightRestore instanceof HTMLElement) rightRestore.hidden = false;
+          if (rightRestoreMobile instanceof HTMLElement) {
+            rightRestoreMobile.hidden = false;
+          }
         }
 
         const raw = localStorage.getItem(fallback.dataset.storageKey ?? "");

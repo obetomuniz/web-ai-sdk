@@ -13,7 +13,10 @@ export function PanelToggle({ side, open, onClick }: Props) {
     <button
       type="button"
       className={ui.panelToggle}
-      onClick={onClick}
+      onClick={(event) => {
+        if (open) event.currentTarget.blur();
+        onClick();
+      }}
       aria-label={`${action} ${panel} panel`}
       title={`${action} ${panel} panel`}
     >
