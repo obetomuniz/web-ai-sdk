@@ -54,12 +54,11 @@
     "pages:build:docs": "pnpm pages:build:site",
     "pages:assemble": "mkdir -p _site && cp -R apps/site/dist/. _site/",
     "pages:build": "pnpm pages:clean && pnpm build:packages && pnpm pages:build:site && pnpm pages:assemble",
-    "pages:preview": "pnpm pages:build && serve _site -p 4173"
+    "pages:preview": "pnpm pages:build && pnpm preview:site"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.5",
     "@changesets/cli": "^2.31.1",
-    "serve": "14.2.6",
     "typescript": "^6.0.3"
   }
 }
