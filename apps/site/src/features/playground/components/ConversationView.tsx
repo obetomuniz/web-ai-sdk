@@ -80,12 +80,14 @@ export function ConversationView({
         } ${conversationsOpen ? "" : ui.mainHeaderWithLeftRestore}`}
         data-playground-main-header
       >
-        <h2 className={ui.title}>{thread.name}</h2>
-        {!runtimeOpen && (
-          <span className={ui.panelRestoreRightMobile}>
-            <PanelToggle side="right" open={false} onClick={onShowRuntime} />
-          </span>
-        )}
+        <div className={ui.mainHeaderInner}>
+          <h2 className={ui.title}>{thread.name}</h2>
+          {!runtimeOpen && (
+            <span className={ui.panelRestoreRightMobile}>
+              <PanelToggle side="right" open={false} onClick={onShowRuntime} />
+            </span>
+          )}
+        </div>
       </header>
 
       <div className={ui.mainBody}>

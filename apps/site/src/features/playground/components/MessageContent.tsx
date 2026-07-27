@@ -34,6 +34,32 @@ const components: Components = {
 };
 
 const trailingMarkdownSyntax = /(?:^|\n)(?:\s|[-+*>#_~`[\]()])+$/;
+const listMarkerWithExtraSpacing = /^(\s*(?:[-+*]|\d+[.)]))[ \t]{2,}(?=\S)/;
+const fencedCodeBoundary = /^\s*(`{3,}|~{3,})/;
+
+function normalizeListMarkerSpacing(content: string): string {
+  let fence: { character: string; length: number } | undefined;
+
+  return content
+    .split("\n")
+    .map((line) => {
+      const boundary = line.match(fencedCodeBoundary)?.[1];
+      if (boundary) {
+        if (!fence) {
+          fence = { character: boundary[0] ?? "", length: boundary.length };
+        } else if (
+          boundary[0] === fence.character &&
+          boundary.length >= fence.length
+        ) {
+          fence = undefined;
+        }
+        return line;
+      }
+
+      return fence ? line : line.replace(listMarkerWithExtraSpacing, "$1 ");
+    })
+    .join("\n");
+}
 
 function stabilizeMarkdown(content: string): string {
   // A streamed list item or emphasis marker can briefly look like a thematic
@@ -45,17 +71,20 @@ function stabilizeMarkdown(content: string): string {
 
   // Complete unterminated inline syntax so the same semantic element remains
   // mounted as its text grows instead of changing from plain text to Markdown.
-  // Run complete responses through the same idempotent normalization too. That
-  // prevents the parser input from changing pipelines at the exact moment a
-  // streamed response becomes persisted.
-  return remend(stableContent, { linkMode: "text-only" });
+  // Persisted responses bypass this repair step because they already contain
+  // complete Markdown, and repairing valid nested lists can change their tree.
+  return remend(normalizeListMarkerSpacing(stableContent), {
+    linkMode: "text-only",
+  });
 }
 
 function MessageContentImpl({ content, streaming }: Props) {
   if (!content) {
     return streaming ? <ThinkingIndicator /> : null;
   }
-  const renderedContent = stabilizeMarkdown(content);
+  const renderedContent = streaming
+    ? stabilizeMarkdown(content)
+    : normalizeListMarkerSpacing(content);
 
   return (
     <div className={ui.answerMarkdown}>

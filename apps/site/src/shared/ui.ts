@@ -234,10 +234,12 @@ export const navCta = `${navCtaBase} border-hairline-2 text-fg-2 hover:border-ac
 
 export const navCtaPrimary = `${navCtaBase} border-accent bg-accent font-semibold text-brand-dark hover:border-accent-bright hover:bg-accent-bright`;
 
-export const navCtaCurrent = "max-[640px]:hidden";
-
 // Right-aligned nav action group: the icon-only Docs link plus the GitHub CTA.
 export const navActions = "flex items-center justify-self-end gap-2";
+
+export const navPlaygroundLabel = "max-[640px]:hidden";
+
+export const navPlaygroundMark = "hidden size-4 max-[640px]:block";
 
 // Borderless, icon-only nav button. Sits next to the GitHub CTA; a micro
 // scale + color lift on hover gives it a tactile affordance without a box.
@@ -529,8 +531,9 @@ export const playground = {
   bootStack:
     "grid h-[calc(100svh-var(--nav-height))] min-h-0 [&>*]:col-start-1 [&>*]:row-start-1",
   bootLayer: "h-full min-h-0",
+  bootMotionless: "[&_*]:!animate-none [&_*]:!transition-none",
   shell:
-    "flex h-[calc(100svh-var(--nav-height))] min-h-0 flex-col [--playground-sidebar-width:260px] [--playground-left-column:260px] [--playground-right-column:340px] overflow-hidden bg-bg text-fg",
+    "flex h-[calc(100svh-var(--nav-height))] min-h-0 flex-col [--playground-sidebar-width:260px] [--playground-left-column:260px] [--playground-right-column:340px] [--playground-mobile-sidebar-height:57px] overflow-hidden bg-bg text-fg",
   layoutGrid:
     "relative grid min-h-0 flex-1 grid-cols-[minmax(0,var(--playground-left-column))_minmax(0,1fr)_minmax(0,var(--playground-right-column))] transition-[grid-template-columns] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none max-[1180px]:grid-cols-[minmax(0,var(--playground-left-column))_minmax(0,1fr)_minmax(0,0px)] max-[760px]:grid-cols-1",
   layoutGridResizing: "!transition-none",
@@ -549,7 +552,7 @@ export const playground = {
   sidebarResizeHandle:
     "absolute top-0 left-[var(--playground-sidebar-width)] z-30 m-0 h-full w-3 -translate-x-1/2 cursor-col-resize touch-none border-0 bg-transparent p-0 outline-none before:pointer-events-none before:absolute before:top-1/2 before:left-1/2 before:h-10 before:w-0.5 before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full before:bg-transparent before:transition-[height,background-color] before:content-[''] hover:before:h-14 hover:before:bg-fg-4 focus-visible:before:h-14 focus-visible:before:bg-accent active:before:h-16 active:before:bg-accent max-[760px]:hidden",
   sidebarBody:
-    "grid min-h-0 flex-1 content-start gap-7 overflow-y-auto px-3 py-4 [scrollbar-width:thin] max-[760px]:block max-[760px]:flex-none max-[760px]:overflow-x-auto max-[760px]:overflow-y-hidden max-[760px]:py-2.5",
+    "grid min-h-0 flex-1 content-start gap-7 overflow-y-auto px-3 py-4 [scrollbar-width:thin] max-[760px]:block max-[760px]:h-[var(--playground-mobile-sidebar-height)] max-[760px]:flex-none max-[760px]:overflow-x-auto max-[760px]:overflow-y-hidden max-[760px]:py-2.5",
   sidebarSection:
     "grid min-w-0 content-start gap-2 max-[760px]:flex max-[760px]:w-max max-[760px]:items-center",
   sectionTitle:
@@ -575,12 +578,14 @@ export const playground = {
     "inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-pill bg-accent px-3 font-mono text-[10px] font-semibold text-brand-dark transition-[background-color,transform] hover:bg-accent-bright active:scale-95 disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transform-none max-[760px]:size-9 max-[760px]:shrink-0 max-[760px]:rounded-full max-[760px]:p-0",
   wideButtonIcon: "text-sm leading-none",
   wideButtonLabel: "max-[760px]:hidden",
-  main: "flex h-full w-full max-w-[960px] min-w-0 justify-self-center flex-col overflow-hidden bg-bg max-[760px]:h-auto max-[760px]:max-w-none",
+  main: "flex h-full w-full min-w-0 flex-col overflow-hidden bg-bg max-[760px]:h-auto",
   mainHeader:
-    "relative z-20 flex h-12 min-w-0 shrink-0 items-center gap-2.5 bg-bg px-3 after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-9 after:bg-[linear-gradient(to_bottom,var(--color-bg)_0%,color-mix(in_oklch,var(--color-bg)_78%,transparent)_48%,transparent_100%)] after:opacity-0 after:transition-opacity after:duration-200 after:ease-out after:content-[''] max-[640px]:h-11 max-[640px]:px-4",
+    "relative z-20 flex h-12 w-full min-w-0 shrink-0 bg-bg after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-9 after:bg-[linear-gradient(to_bottom,var(--color-bg)_0%,color-mix(in_oklch,var(--color-bg)_78%,transparent)_48%,transparent_100%)] after:opacity-0 after:transition-opacity after:duration-200 after:ease-out after:content-[''] max-[640px]:h-11",
+  mainHeaderInner:
+    "mx-auto flex h-full w-full max-w-[960px] min-w-0 items-center gap-2.5 px-3 max-[640px]:max-w-none max-[640px]:px-4",
   mainHeaderBoot: "after:transition-none",
   mainHeaderScrolled: "after:opacity-100",
-  mainHeaderWithLeftRestore: "max-[760px]:!pl-12",
+  mainHeaderWithLeftRestore: "max-[760px]:pl-8",
   title:
     "m-0 min-w-0 flex-1 truncate font-display text-base font-medium leading-none tracking-[-0.02em] text-fg",
   panelRestoreLeft:
@@ -590,11 +595,11 @@ export const playground = {
   panelRestoreRightMobile:
     "hidden shrink-0 motion-safe:animate-[playground-fade_180ms_ease-out_100ms_both] max-[760px]:inline-flex",
   panelToggle:
-    "inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-sm bg-transparent text-fg-4 transition-[color,background-color,transform] hover:bg-surface hover:text-fg-2 active:scale-95 focus-visible:bg-surface focus-visible:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent motion-reduce:transform-none",
+    "inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-sm bg-transparent text-fg-4 transition-[color,background-color,transform] hover:bg-surface hover:text-fg-2 active:scale-95 focus-visible:bg-surface focus-visible:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent motion-reduce:transform-none max-[760px]:size-9",
   panelToggleIcon: "size-4",
   modeSelector: "relative shrink-0",
   modeTrigger:
-    "inline-flex min-h-9 max-w-52 cursor-pointer items-center gap-2 rounded-pill bg-bg px-3 py-2 text-left transition-colors data-[accent=info]:bg-[color-mix(in_oklch,var(--color-info)_9%,var(--color-bg))] data-[accent=ok]:bg-[color-mix(in_oklch,var(--color-ok)_9%,var(--color-bg))] data-[accent=warn]:bg-[color-mix(in_oklch,var(--color-warn)_9%,var(--color-bg))] data-[accent=violet]:bg-[color-mix(in_oklch,var(--color-info)_5%,color-mix(in_oklch,var(--color-err)_5%,var(--color-bg)))] hover:data-[accent=info]:bg-[color-mix(in_oklch,var(--color-info)_14%,var(--color-bg))] hover:data-[accent=ok]:bg-[color-mix(in_oklch,var(--color-ok)_14%,var(--color-bg))] hover:data-[accent=warn]:bg-[color-mix(in_oklch,var(--color-warn)_14%,var(--color-bg))] hover:data-[accent=violet]:bg-[color-mix(in_oklch,var(--color-info)_8%,color-mix(in_oklch,var(--color-err)_8%,var(--color-bg)))] focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 data-[accent=info]:focus-visible:outline-info data-[accent=ok]:focus-visible:outline-ok data-[accent=warn]:focus-visible:outline-warn data-[accent=violet]:focus-visible:outline-[color-mix(in_oklch,var(--color-info)_45%,var(--color-err))] disabled:cursor-not-allowed disabled:opacity-45",
+    "inline-flex min-h-9 max-w-52 cursor-pointer items-center gap-2 rounded-pill bg-bg px-3 py-2 text-left transition-colors data-[accent=info]:bg-[color-mix(in_oklch,var(--color-info)_9%,var(--color-bg))] data-[accent=ok]:bg-[color-mix(in_oklch,var(--color-ok)_9%,var(--color-bg))] data-[accent=warn]:bg-[color-mix(in_oklch,var(--color-warn)_9%,var(--color-bg))] data-[accent=violet]:bg-[color-mix(in_oklch,var(--color-info)_5%,color-mix(in_oklch,var(--color-err)_5%,var(--color-bg)))] hover:data-[accent=info]:bg-[color-mix(in_oklch,var(--color-info)_14%,var(--color-bg))] hover:data-[accent=ok]:bg-[color-mix(in_oklch,var(--color-ok)_14%,var(--color-bg))] hover:data-[accent=warn]:bg-[color-mix(in_oklch,var(--color-warn)_14%,var(--color-bg))] hover:data-[accent=violet]:bg-[color-mix(in_oklch,var(--color-info)_8%,color-mix(in_oklch,var(--color-err)_8%,var(--color-bg)))] focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 data-[accent=info]:focus-visible:outline-info data-[accent=ok]:focus-visible:outline-ok data-[accent=warn]:focus-visible:outline-warn data-[accent=violet]:focus-visible:outline-[color-mix(in_oklch,var(--color-info)_45%,var(--color-err))] disabled:cursor-not-allowed disabled:opacity-45 max-[640px]:min-h-8 max-[640px]:max-w-40 max-[640px]:gap-1.5 max-[640px]:px-2.5 max-[640px]:py-1.5",
   modeTriggerName:
     "truncate font-mono text-[10px] data-[accent=info]:text-info data-[accent=ok]:text-ok data-[accent=warn]:text-warn data-[accent=violet]:text-[color-mix(in_oklch,var(--color-info)_45%,var(--color-err))]",
   modeTriggerChevron:
@@ -602,15 +607,15 @@ export const playground = {
   modeTriggerChevronOpen:
     "size-3.5 shrink-0 rotate-180 text-fg-4 transition-transform duration-150",
   modeMenu:
-    "absolute bottom-[calc(100%+0.65rem)] left-0 z-50 w-[min(440px,calc(100vw-2rem))] overflow-x-hidden rounded-xl bg-surface-3 p-2 shadow-2xl max-[640px]:fixed max-[640px]:top-[calc(var(--nav-height)+0.75rem)] max-[640px]:right-3 max-[640px]:bottom-3 max-[640px]:left-3 max-[640px]:w-auto max-[640px]:overflow-y-auto",
-  modeMenuHeader: "grid gap-1 px-3 py-3",
+    "absolute bottom-[calc(100%+0.65rem)] left-0 z-50 w-[min(440px,calc(100vw-2rem))] overflow-x-hidden rounded-xl bg-surface-3 p-2 shadow-2xl max-[640px]:fixed max-[640px]:top-auto max-[640px]:right-3 max-[640px]:bottom-3 max-[640px]:left-3 max-[640px]:max-h-[calc(100svh-var(--nav-height)-1.5rem)] max-[640px]:w-auto max-[640px]:overflow-y-auto",
+  modeMenuHeader: "grid gap-1 px-3 py-3 max-[640px]:pt-2.5 max-[640px]:pb-2",
   modeMenuTitle: "font-sans text-[13px] font-medium text-fg",
   modeMenuDescription: "text-[11px] leading-relaxed text-fg-4",
-  modeOptions: "grid gap-1 py-2",
+  modeOptions: "grid gap-1 py-2 max-[640px]:gap-0.5 max-[640px]:py-1",
   modeOption:
-    "grid w-full cursor-pointer rounded-lg bg-transparent px-3 py-3 text-left transition-colors hover:bg-surface-2",
+    "grid w-full cursor-pointer rounded-lg bg-transparent px-3 py-3 text-left transition-colors hover:bg-surface-2 max-[640px]:py-2.5",
   modeOptionActive:
-    "grid w-full cursor-pointer rounded-lg bg-surface-2 px-3 py-3 text-left",
+    "grid w-full cursor-pointer rounded-lg bg-surface-2 px-3 py-3 text-left max-[640px]:py-2.5",
   modeOptionCopy: "grid min-w-0 gap-1",
   modeOptionTitleRow: "flex min-w-0 items-center justify-between gap-3",
   modeOptionIdentity: "flex min-w-0 items-center gap-2.5",
@@ -624,7 +629,7 @@ export const playground = {
   modeMenuNote:
     "rounded-md bg-bg px-3 py-2.5 font-mono text-[8px] leading-relaxed text-fg-4",
   mainBody:
-    "grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto] gap-0 px-3 pb-4 max-[640px]:px-3 max-[640px]:pb-2",
+    "grid min-h-0 w-full max-w-[960px] flex-1 self-center grid-rows-[minmax(0,1fr)_auto] gap-0 px-3 pb-4 max-[640px]:max-w-none max-[640px]:px-3 max-[640px]:pb-2",
   transcriptPanel: "relative min-h-0 overflow-hidden",
   answer:
     "h-full min-h-0 overflow-y-auto px-6 pt-5 pb-6 [scrollbar-width:thin] max-[640px]:px-4 max-[640px]:pt-4 max-[640px]:pb-5",
@@ -693,19 +698,23 @@ export const playground = {
   stopButton:
     "inline-flex min-h-9 cursor-pointer items-center justify-center rounded-pill bg-[color-mix(in_oklch,var(--color-err)_12%,transparent)] px-3 py-2 font-mono text-[10px] font-semibold text-err transition-colors hover:bg-[color-mix(in_oklch,var(--color-err)_20%,transparent)]",
   workspace:
-    "ml-auto flex h-full w-[340px] shrink-0 flex-col overflow-hidden bg-transparent transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity] motion-reduce:transition-none max-[760px]:w-full",
+    "ml-auto flex h-full w-[340px] shrink-0 flex-col overflow-hidden bg-bg transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity] motion-reduce:transition-none max-[760px]:w-full",
   workspaceSlot:
-    "absolute inset-y-0 right-0 z-50 min-w-0 w-[min(340px,100%)] translate-x-0 overflow-hidden max-[1180px]:bg-bg max-[1180px]:opacity-100 max-[1180px]:shadow-card max-[1180px]:transition-[opacity,transform] max-[1180px]:duration-300 max-[1180px]:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+    "absolute inset-y-0 right-0 z-50 min-w-0 w-[min(340px,100%)] translate-x-0 overflow-hidden max-[1180px]:bg-bg max-[1180px]:opacity-100 max-[1180px]:transition-[opacity,transform] max-[1180px]:duration-300 max-[1180px]:ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none max-[760px]:w-full",
+  workspaceSlotBelowMobileSidebar:
+    "max-[760px]:top-[var(--playground-mobile-sidebar-height)]",
   workspaceSlotClosed:
-    "pointer-events-none max-[1180px]:translate-x-full max-[1180px]:opacity-0 max-[1180px]:shadow-none",
+    "pointer-events-none max-[1180px]:translate-x-full max-[1180px]:opacity-0",
   workspaceClosed: "pointer-events-none opacity-0",
-  workspaceHeader: "flex h-12 shrink-0 items-center justify-end gap-2 px-3",
-  workspaceHeading: "grid min-w-0 gap-0.5",
+  workspaceHeader:
+    "flex h-12 shrink-0 items-center justify-end gap-2 px-3 max-[760px]:absolute max-[760px]:top-2 max-[760px]:right-4 max-[760px]:z-10 max-[760px]:h-9 max-[760px]:p-0",
+  workspaceHeading:
+    "grid min-w-0 gap-0.5 max-[760px]:min-h-9 max-[760px]:content-center max-[760px]:pr-12",
   workspaceTitle:
     "m-0 font-display text-sm font-medium leading-none tracking-[-0.02em] text-fg",
   workspaceCount: "font-mono text-[8px] uppercase tracking-[0.06em] text-fg-4",
   workspaceBody:
-    "flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-3 pb-3 [scrollbar-width:thin]",
+    "flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-3 pb-3 [scrollbar-width:thin] max-[760px]:gap-3 max-[760px]:px-4 max-[760px]:pt-3 max-[760px]:pb-[max(1rem,env(safe-area-inset-bottom))]",
   workspacePane:
     "min-w-0 max-h-64 overflow-y-auto rounded-lg bg-surface [scrollbar-width:thin]",
   workspaceNotes: "mt-auto grid gap-1.5 pt-3",
