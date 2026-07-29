@@ -29,6 +29,30 @@ This is forced by shape, not just taste. The specialized built-ins carry option 
 
 No SDK package imports from another published SDK package. Composition across capabilities (running a Prompt session over a tool registered with WebMCP, for example) is something you write in your application code.
 
+## When a capability enters the SDK
+
+Capabilities enter the SDK according to public evidence and wrapper value, not a calendar date:
+
+| Stage | SDK treatment |
+| --- | --- |
+| **Tracked** | An authoritative proposal exists, but the capability cannot yet be responsibly implemented and documented from public information. Track it in an issue; do not publish a package. |
+| **Preview** | Public instructions expose a runnable, coherent capability with a material lifecycle or ergonomics gap. An experimental `0.x` package may ship, even when a preview browser or flag is required. |
+| **Trial** | A public developer or origin trial is available. Keep the package `0.x` while expanding browser coverage and demos. |
+| **Stable** | A stable browser exposes the capability without a flag or trial token. Mark support stable; package `1.0` is a separate API-stability decision. |
+| **Retired** | The proposal is withdrawn or replaced. Deprecate the package and document migration rather than repurposing it. |
+
+Moving from Tracked to Preview requires all of the following:
+
+- an authoritative public explainer, specification, or browser-vendor document and enough public information to test the capability;
+- one cohesive package boundary;
+- meaningful lifecycle value beyond types, such as feature detection, availability, session reuse, cleanup, abort handling, or stream normalization;
+- zero runtime dependencies, deterministic tests, and a deliberate unsupported-browser behavior;
+- a narrow surface that does not pull persistence, cross-capability composition, or unrelated algorithms into the wrapper.
+
+Public packages and their issues, PRs, docs, demos, changelogs, and release notes must be supportable entirely from public sources. Confidential or restricted preview material is never published or used to reveal non-public versions, flags, behavior, or timelines. When public evidence is insufficient, the capability stays Tracked.
+
+Preview and Trial describe browser maturity, not lower quality expectations. Experimental packages still ship the standard vanilla API, React adapter, tests, status documentation, and meta-package integration. The complete contributor checklist lives in [CONTRIBUTING.md](https://github.com/obetomuniz/web-ai-sdk/blob/main/CONTRIBUTING.md#capability-adoption-policy).
+
 ## Zero-dependency policy
 
 Every `@web-ai-sdk/*` package ships with **no runtime dependencies and no peer dependencies**. The one exception is `react`, which is declared as an *optional* peer for the `/react` subpath adapter only.
