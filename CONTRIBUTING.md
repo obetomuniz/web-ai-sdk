@@ -44,14 +44,65 @@ These rules define what belongs in `@web-ai-sdk/*` and what doesn't. They're the
 
 For the time being these rules are enforced by review, not by CI. If you open a PR that adds `dependencies` or non-`react` `peerDependencies` to a `@web-ai-sdk/*` wrapper, expect to be asked to remove them or to land the work in the future kit instead. Shared infrastructure across packages (feature detection, stream normalization, error classes) will live in a private `@web-ai-sdk/internal` package the first time it's actually needed; until then, copy small helpers between packages rather than designing the shared layer upfront.
 
+## Capability adoption policy
+
+New browser capabilities enter the SDK according to evidence, not a target date. Classify a proposal before scaffolding a package:
+
+| Stage | Evidence | Repository treatment |
+| --- | --- | --- |
+| **Tracked** | An authoritative public proposal exists, but there is no publicly documentable implementation or the API shape is too incomplete to wrap responsibly. | Track the capability in an issue. Do not scaffold or publish a package. |
+| **Preview** | Maintainers can run the capability from public instructions, the execution and lifecycle shape is coherent, and a wrapper adds material value. Flags and preview browsers are acceptable. | An experimental `0.x` package may ship with a prominent status notice and exact public setup requirements. |
+| **Trial** | The capability is available through a public developer or origin trial. | Keep the package `0.x`, expand real-browser coverage and demos, and document trial constraints. |
+| **Stable** | At least one stable browser exposes the capability without an opt-in flag or trial token. | Mark browser support stable. A `1.0` package release remains a separate decision based on the wrapper's own API stability. |
+| **Retired** | The proposal is withdrawn, replaced, or no longer implementable. | Deprecate instead of silently repurposing the package, and publish migration guidance when a successor exists. |
+
+### Admission gates
+
+A capability must satisfy every gate before it moves from Tracked to Preview:
+
+1. **Public evidence:** an authoritative explainer, specification, or browser-vendor document describes the capability, and public instructions are sufficient to test and document it.
+2. **Cohesive boundary:** it maps to one browser capability and fits the one-package rule.
+3. **Material wrapper value:** the package owns a real lifecycle or ergonomics gap such as feature detection, availability, session reuse, cleanup, abort handling, error normalization, or stream normalization. Types alone are not enough.
+4. **Contract fit:** it can remain framework-agnostic, zero-runtime-dependency, testable without the real browser implementation, and independently usable without importing another SDK package.
+5. **Progressive enhancement:** unsupported environments have a deliberate, documented behavior.
+6. **Honest scope:** result caching, persistence, DOM traversal, cross-capability composition, and helper algorithms are included only when they independently satisfy the SDK's scope rules.
+
+Published artifacts must stand entirely on public sources. Confidential, restricted, or private-preview material may inform an internal go/no-go discussion, but it must never be linked, quoted, paraphrased, or used to disclose non-public versions, flags, behavior, or timelines in issues, PRs, READMEs, docs, demos, changelogs, or release notes. If public evidence is insufficient, the capability remains Tracked.
+
+### Integration contract
+
+An admitted wrapper normally includes:
+
+- `src/api.ts`: native types, global lookup, `isAvailable()`, `checkAvailability()`, and native instance ownership.
+- `src/index.ts`: the vanilla high-level operation, public result types, and package-specific errors.
+- `src/react/index.ts`: a thin hook over the vanilla operation with honest effect dependencies.
+- Vanilla and React lifecycle tests, a package README, site guides and demo, browser-support documentation, meta-package exports, and a changeset.
+
+Unavailability behavior is consistent by entry-point role:
+
+- Detection and probe helpers do not throw: `isAvailable()` returns `false`, and `checkAvailability()` returns `null`, when the native API cannot be used.
+- High-level vanilla execution may throw a package-specific typed unavailability error so callers can branch explicitly.
+- React hooks absorb that error and expose an `"unavailable"` state.
+- Registration-style APIs may instead return an idempotent no-op cleanup when that preserves their natural call shape.
+
+Capability-specific ergonomics are not copied mechanically from the nearest package:
+
+- Cache native sessions only when reuse is safe. Bound or explicitly clear the cache, destroy evicted instances, and remove rejected creation promises so later calls can retry.
+- Add result caching only when every output-shaping input can be keyed, the output has a lossless serialization, and serving a stored result remains semantically valid. Include a version or compatibility discriminator when the capability's outputs depend on one.
+- Preserve structured native results when their metadata carries compatibility or lifecycle meaning.
+- Add download monitoring, streaming, or abort forwarding only when the native capability supports it or the wrapper can describe its weaker semantics precisely.
+
+Promotion between stages is a documentation and support decision, not automatically a breaking release. Breaking wrapper changes still follow Changesets and the package's current semantic-versioning contract.
+
 ## Adding a new package
 
-1. Copy an existing package whose shape matches what you need (`prompt` if you want streaming + session cache + opt-in result cache, `webmcp` if you want an AbortSignal registry, `translator` if you want DOM-walking).
-2. Mirror the file layout: `src/api.ts` (adapter over the global, feature-detected), `src/index.ts` (public API + typed unavailability error), `src/react/index.ts` (thin hook adapter), `src/*.test.ts` (vanilla tests), `src/react/index.test.tsx` (React hook tests). Optional: `src/cache.ts` if the package has a result cache.
-3. Add the package to the Pages docs (`apps/site/src/content/docs/guides/<name>.mdx`, `apps/site/src/content/docs/react/use-<name>.mdx`, plus a demo component) and to the home page's package row.
-4. Add a changeset.
-5. Run `pnpm gate`.
-6. **Publish the first version locally.** A brand-new package can't be created by CI (OIDC Trusted Publishing needs the package to already exist, and a CI token can't create new `@web-ai-sdk` packages — npm returns a masked `404`). Do the initial publish by hand: `npm login`, `pnpm build:packages`, then `cd packages/<new> && npm publish --access public --provenance=false`. After that, set up a Trusted Publisher for it on npm and CI handles every later version.
+1. Confirm the capability has reached Preview, Trial, or Stable under the adoption policy above. A Tracked capability stays as an issue.
+2. Copy an existing package whose shape matches what you need (`prompt` if you want streaming + session cache + opt-in result cache, `webmcp` if you want an AbortSignal registry, `translator` if you want DOM-walking).
+3. Mirror the file layout: `src/api.ts` (adapter over the global, feature-detected), `src/index.ts` (public API + typed unavailability error), `src/react/index.ts` (thin hook adapter), `src/*.test.ts` (vanilla tests), `src/react/index.test.tsx` (React hook tests). Optional: `src/cache.ts` only when the capability meets the result-cache gate above.
+4. Add the package to the Pages docs (`apps/site/src/content/docs/guides/<name>.mdx`, `apps/site/src/content/docs/react/use-<name>.mdx`, plus a demo component) and to the home page's package row.
+5. Add a changeset.
+6. Run `pnpm gate`.
+7. **Publish the first version locally.** A brand-new package can't be created by CI (OIDC Trusted Publishing needs the package to already exist, and a CI token can't create new `@web-ai-sdk` packages — npm returns a masked `404`). Do the initial publish by hand: `npm login`, `pnpm build:packages`, then `cd packages/<new> && npm publish --access public --provenance=false`. After that, set up a Trusted Publisher for it on npm and CI handles every later version.
 
 See [`.agents/agents.md` § "Add a new tool / wrapper package"](./.agents/agents.md#add-a-new-tool--wrapper-package) and [§ "Cut a release"](./.agents/agents.md#cut-a-release) for the full conventions.
 

@@ -144,12 +144,23 @@ All workflow commands are pnpm scripts in `package.json`.
 - **No relative imports across package boundaries.** Each package is self-contained; cross-package usage goes through `@web-ai-sdk/*` published exports.
 - **Subpath imports inside a package** use `.js` suffix (`from "../index.js"`); required by ESM resolution under `moduleResolution: "Bundler"` for the published shape.
 
+### Capability adoption gate
+
+Before scaffolding a wrapper, classify it as Tracked, Preview, Trial, Stable, or Retired using [`CONTRIBUTING.md` § Capability adoption policy](../CONTRIBUTING.md#capability-adoption-policy).
+
+- Tracked capabilities stay as issues. Only Preview, Trial, or Stable capabilities may become packages.
+- Preview requires an authoritative public source, public instructions sufficient to run and document the implementation, a cohesive capability boundary, material lifecycle value beyond types, zero runtime dependencies, deterministic tests, and deliberate unsupported-browser behavior.
+- Published issues, PRs, READMEs, docs, demos, changelogs, and release notes must rely entirely on public sources. Never link, quote, paraphrase, or disclose versions, flags, behavior, or timelines learned only from confidential, restricted, or private-preview material. If the public evidence is insufficient, keep the capability Tracked.
+- Record the stage and exact public setup requirements in the package README and browser-support docs. Preview and Trial packages remain `0.x`; Stable browser support does not automatically make the package `1.0`.
+- Do not copy capability-specific conveniences mechanically. Session reuse must be safe and clearable; rejected creation promises must be evicted. Result caching requires a complete key, lossless serialization, and semantically valid reuse, including a compatibility discriminator when outputs depend on one. Preserve structured native results when their metadata matters.
+- When a capability is withdrawn or replaced, deprecate it with migration guidance instead of silently repurposing the package.
+
 ### Core package contract
 
 These rules apply to the API-wrapper packages (`@web-ai-sdk/prompt`, `webmcp`, `summarizer`, `translator`, `detector`, `writer`, `rewriter`, `proofreader`). Future packages with a different role (UI primitives, polyfills, etc.) sit at different layers and get their own rules.
 
 - **No UI components in the core wrappers.** A core package may never render DOM. The React adapter is a hook, not a component. UI primitives would ship as a separate `@web-ai-sdk/ui` package, not bolted into a wrapper.
-- **Feature detect, never throw.** If the underlying browser API is missing, the package is a no-op (return a no-op cleanup, return `undefined`, etc.) so consumers can ship the same code to all browsers.
+- **Feature-detection helpers never throw.** `isAvailable()` returns `false` and `checkAvailability()` returns `null` when the native API cannot be used. High-level vanilla execution may throw a package-specific typed unavailability error; React hooks absorb it into an `"unavailable"` state. Registration-style APIs may instead return an idempotent no-op cleanup when that preserves their natural call shape.
 - **Configurable selectors / roots.** Don't hardcode page-specific assumptions; every selector or root element an SDK helper accepts must be overridable via the API.
 - **Cleanup must be idempotent.** Returning a cleanup function from `register*` / `start*` is the universal lifecycle. Calling it twice must not throw.
 
@@ -193,14 +204,15 @@ The marketing site uses **Tailwind CSS v4**. Full guardrails: [`apps/site/README
 
 ### Add a new tool / wrapper package
 
-1. `cp -r packages/<closest-template> packages/<new>` and rename in `package.json`, `tsup.config.ts`, `tsconfig.json`.
-2. Replace `src/index.ts` / `src/api.ts` / `src/react/index.ts` with the real wrapper. Keep the core package contract (§ 5).
-3. Add Vitest tests next to each source file.
-4. Write `README.md` matching the existing structure (status / install / vanilla / React / API / errors / license).
-5. Add the new package's docs MDX pages under `apps/site/src/content/docs/guides/<name>.mdx` and `apps/site/src/content/docs/react/use-<name>.mdx`, plus a docs demo component under `apps/site/src/features/docs/components/`, plus a sidebar entry in `apps/site/astro.config.mjs`. Add a corresponding static row and React demo island to `apps/site/src/pages/index.astro`.
-6. `pnpm install` at the repo root (picks up the new workspace package).
-7. `pnpm changeset` to record the new package for the next release.
-8. `pnpm gate` to verify everything is wired up.
+1. Confirm the capability has reached Preview, Trial, or Stable under the capability adoption gate. Keep Tracked capabilities as issues.
+2. `cp -r packages/<closest-template> packages/<new>` and rename in `package.json`, `tsup.config.ts`, `tsconfig.json`.
+3. Replace `src/index.ts` / `src/api.ts` / `src/react/index.ts` with the real wrapper. Keep the core package contract (§ 5).
+4. Add Vitest tests next to each source file.
+5. Write `README.md` matching the existing structure (status / install / vanilla / React / API / errors / license).
+6. Add the new package's docs MDX pages under `apps/site/src/content/docs/guides/<name>.mdx` and `apps/site/src/content/docs/react/use-<name>.mdx`, plus a docs demo component under `apps/site/src/features/docs/components/`, plus a sidebar entry in `apps/site/astro.config.mjs`. Add a corresponding static row and React demo island to `apps/site/src/pages/index.astro`.
+7. `pnpm install` at the repo root (picks up the new workspace package).
+8. `pnpm changeset` to record the new package for the next release.
+9. `pnpm gate` to verify everything is wired up.
 
 Note: a brand-new package's **first** publish must be done locally; CI can't create it. See [Cut a release](#cut-a-release).
 
