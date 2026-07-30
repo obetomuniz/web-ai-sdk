@@ -118,6 +118,8 @@ The wrapper is intentionally thin. It handles cross-browser smoothing every cons
 
 `createSession()` never touches the `ask()` session cache. Two sessions with identical options get two independent instances with isolated history, system prompt, sampling, and lifecycle — `abort()` / `destroy()` on one session never touch another. Concurrent `send` / `sendStreaming` calls on the **same** session are NOT queued — the underlying `LanguageModel` is sequential per instance and will reject the overlapping call with `InvalidStateError`. Either `await` the previous send or call `session.abort()` before issuing a new turn.
 
+Calling `createSession()` starts `LanguageModel.create()` immediately. The first `send`, `sendStreaming`, or `clone` only awaits that already-started creation, so creating a base as soon as the user's intent is clear is a valid prewarming primitive. Finalize the initial instructions at that point; the native session is already being created when the synchronous wrapper returns.
+
 **Concurrency note.** Each session is an independent `LanguageModel` instance, but the underlying on-device model is single-instance. Chrome 148 / Edge 138 currently schedule `sendStreaming` calls across sessions FIFO: overlapping sends do not interleave token-by-token — the second send waits for the first to drain. This is a constraint of the runtime, not of the API; code written against `createSession()` becomes faster automatically if a future release exposes parallel inference.
 
 ## Session resilience: base + per-task `clone()`
@@ -125,10 +127,11 @@ The wrapper is intentionally thin. It handles cross-browser smoothing every cons
 For agents and multi-task flows there's a lose-lose with naive session handling: reuse one long-lived session and history accumulates (later runs start echoing earlier ones, and you eventually hit `QuotaExceededError`); recreate a session per task and you pay the cold start and can trip Chrome's single-instance degradation. Chrome's [session management guidance](https://developer.chrome.com/docs/ai/session-management) recommends a third way: keep one warm **base** session (system prompt only) and `clone()` it per task. The clone inherits the system prompt and history without re-parsing instructions or paying another `create()`, then gets its own independent history and lifecycle.
 
 ```ts
-const base = createSession({ systemPrompt }); // create once; keep warm
+// As soon as the workflow is chosen, begin native creation with final instructions.
+const base = createSession({ systemPrompt }); // eager prewarm; keep this base
 const outputElement = document.querySelector<HTMLElement>("#output");
 // per task / run:
-const turn = await base.clone();              // fresh history, no re-parse
+const turn = await base.clone();              // awaits base readiness, then fresh history
 let response = "";
 try {
   for await (const delta of turn.sendStreaming(input)) {
@@ -200,11 +203,11 @@ They compose: prefill the opening brace, set `responseConstraint` for the full s
 - `session.contextWindow` — max input tokens for the session (the context window).
 - `session.contextUsage` — input tokens used so far. On a fresh base-clone this reflects the inherited history (≈ the system prompt), the right baseline to budget a turn against.
 
-These mirror the Prompt API's [`contextWindow` / `contextUsage`](https://developer.chrome.com/docs/ai/prompt-api#session_management) (the renamed successors of `inputQuota` / `inputUsage`); the wrapper reads the new names and falls back to the deprecated ones on older Chrome builds. Both are `undefined` until the underlying instance exists. The instance is created lazily on the first `send` / `sendStreaming`, so read them after a `send` or — cleaner — on a session from `clone()`, whose instance is live the moment `clone()` resolves.
+These mirror the Prompt API's [`contextWindow` / `contextUsage`](https://developer.chrome.com/docs/ai/prompt-api#session_management) (the renamed successors of `inputQuota` / `inputUsage`); the wrapper reads the new names and falls back to the deprecated ones on older Chrome builds. Calling `createSession()` starts native creation eagerly, but the wrapper returns synchronously, so both getters remain `undefined` while that promise is in flight. The first `send` awaits the already-started creation; alternatively, read the getters on a session from `clone()`, whose native instance is live the moment `clone()` resolves. React's `useSession` similarly stays `"loading"` until creation resolves.
 
 ```ts
-const base = createSession({ systemPrompt }); // keep warm
-const turn = await base.clone();               // instance is live here
+const base = createSession({ systemPrompt }); // native creation starts here
+const turn = await base.clone();               // awaits readiness; clone is live here
 const quota = turn.contextWindow;              // e.g. 4096 / 6144 tokens
 const used = turn.contextUsage ?? 0;           // ≈ system prompt
 if (quota) {
@@ -240,6 +243,8 @@ The two cache-shaped items above are *ergonomic defaults scoped to `ask()`*, not
 ## System prompt + sampling
 
 `systemPrompt` is folded into the session's `initialPrompts` as a `system` role. Prefer `samplingMode` for output variety: the browser maps the semantic mode to model-appropriate sampling parameters. Legacy `temperature` and `topK` are still passed through where browsers expose them, but they are mutually exclusive with `samplingMode`.
+
+For `createSession`, use either the `systemPrompt` shorthand or `createOptions.initialPrompts` for restored multi-turn context. If both are provided, the advanced `initialPrompts` value is authoritative and the SDK warns once per loaded module instance that `systemPrompt` was ignored.
 
 ```ts
 ask({
@@ -361,4 +366,4 @@ try {
 }
 ```
 
-`createSession()` returns a `Session` synchronously even when creation fails; the error surfaces on the first `send` / `sendStreaming`.
+`createSession()` starts native creation immediately and returns a `Session` wrapper synchronously. If creation fails, the error surfaces when the first `send`, `sendStreaming`, or `clone` awaits that already-started work.

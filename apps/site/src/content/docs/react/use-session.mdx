@@ -7,6 +7,8 @@ Lifecycle-only React adapter for the chat-shaped [`createSession()`](/docs/guide
 
 For ask-and-display flows (embeds, widgets, single-question UIs) prefer [`usePrompt`](/docs/react/use-prompt/); it uses isolated one-shot prompts and may keep a warm base session for same-shape calls.
 
+When enabled, mounting `useSession` starts `LanguageModel.create()` in the hook's lifecycle effect; it does not wait for a call to `send`. This makes mounting an intent-driven workflow a valid prewarm. The hook stays `"loading"` and keeps `session` null until that eagerly started native creation resolves.
+
 ## Usage
 
 ```tsx
@@ -82,7 +84,8 @@ const [response, setResponse] = useState("");
 
 const runTask = async (input: string) => {
   if (!session) return;
-  const turn = await session.clone(); // fresh history, base stays warm
+  // Native base creation started when the hook mounted; clone from the ready base.
+  const turn = await session.clone();
   let nextResponse = "";
   try {
     for await (const delta of turn.sendStreaming(input)) {
@@ -137,7 +140,6 @@ Pass `createOptions.initialPrompts` to restore a prior conversation:
 
 ```tsx
 const { status, session } = useSession({
-  systemPrompt: "You are a helpful assistant.",
   createOptions: {
     initialPrompts: [
       { role: "system", content: "You are a helpful assistant." },
@@ -150,7 +152,7 @@ const { status, session } = useSession({
 if (status !== "ready" || !session) return null;
 ```
 
-The seeded turns become real context for the model. UI history lives in your own component state.
+The seeded turns become real context for the model. UI history lives in your own component state. Use either the `systemPrompt` shorthand or `createOptions.initialPrompts`, without duplicating the instruction. If both are supplied, `initialPrompts` is authoritative and the SDK warns once per loaded module instance that `systemPrompt` was ignored.
 
 ## Reference
 

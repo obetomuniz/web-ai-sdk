@@ -238,6 +238,27 @@ describe("useSession", () => {
     expect(api.create).toHaveBeenCalledTimes(2);
   });
 
+  it("does not repeat the initial-prompt conflict warning across recreations", () => {
+    const api = installFakeLanguageModel();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const createOptions = {
+      initialPrompts: [
+        { role: "system" as const, content: "Use restored instructions." },
+      ],
+    };
+    const { rerender } = renderHook(
+      ({ p }: { p: string }) => useSession({ systemPrompt: p, createOptions }),
+      { initialProps: { p: "Ignored A" } },
+    );
+
+    expect(api.create).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledTimes(1);
+    rerender({ p: "Ignored B" });
+    expect(api.create).toHaveBeenCalledTimes(2);
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
   it("recreates the session when samplingMode changes", () => {
     const api = installFakeLanguageModel();
     type SamplingModeProps = { samplingMode: "predictable" | "creative" };

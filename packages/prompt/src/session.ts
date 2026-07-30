@@ -190,7 +190,9 @@ export interface CreateSessionOptions {
   /**
    * Override `LanguageModel.create()` options entirely. Merged on top of
    * defaults. Pass `initialPrompts` here to seed multi-turn context (e.g.
-   * restoring a conversation from storage).
+   * restoring a conversation from storage). When both `systemPrompt` and
+   * `createOptions.initialPrompts` are provided, `initialPrompts` wins and
+   * the SDK warns once per module instance.
    */
   createOptions?: Partial<LanguageModelCreateOptions>;
 }
@@ -262,10 +264,10 @@ export interface Session {
   /**
    * Max input tokens for this session (the context window), as reported by
    * the underlying instance — mirrors the native `contextWindow`. `undefined`
-   * until the instance is created — the instance is created lazily on the
-   * first `send` / `sendStreaming`, so read it after a `send` or (preferably)
-   * on a session from `clone()`, whose instance is live the moment `clone()`
-   * resolves.
+   * until the eager native creation started by `createSession()` resolves.
+   * The synchronous wrapper has no readiness event, so read it after a `send`
+   * or (preferably) on a session from `clone()`, whose instance is live the
+   * moment `clone()` resolves.
    */
   readonly contextWindow?: number;
   /**
@@ -295,10 +297,32 @@ export interface SessionWithReady {
   ready: Promise<void>;
 }
 
+let didWarnAboutInitialPromptConflict = false;
+
+const warnAboutInitialPromptConflict = (
+  options: CreateSessionOptions,
+): void => {
+  if (
+    didWarnAboutInitialPromptConflict ||
+    options.systemPrompt === undefined ||
+    options.createOptions?.initialPrompts === undefined
+  ) {
+    return;
+  }
+
+  didWarnAboutInitialPromptConflict = true;
+  if (typeof console !== "undefined") {
+    console.warn(
+      "[@web-ai-sdk/prompt] `systemPrompt` was ignored because `createOptions.initialPrompts` was also provided; `createOptions.initialPrompts` takes precedence.",
+    );
+  }
+};
+
 const buildCreateOptions = (
   options: CreateSessionOptions,
 ): LanguageModelCreateOptions => {
   assertValidSamplingOptions(options);
+  warnAboutInitialPromptConflict(options);
   const initialPrompts = options.systemPrompt
     ? [{ role: "system" as const, content: options.systemPrompt }]
     : [];
@@ -345,7 +369,7 @@ const wrapInstance = (
   // Synchronous handle on the live instance so the `inputQuota` / `inputUsage`
   // getters can read it without awaiting. Seeded eagerly for clones (whose
   // instance already exists when `clone()` resolves) and otherwise populated
-  // once the lazy `create()` settles.
+  // once the eagerly started `create()` settles.
   let liveInstance: LanguageModelInstance | null = resolvedInstance ?? null;
 
   // Wrap the create-failure promise once so awaiters get the typed error.
@@ -500,8 +524,8 @@ const wrapInstance = (
   const onContextOverflow = (listener: () => void): (() => void) => {
     let cancelled = false;
     let detach: (() => void) | null = null;
-    // The instance may not exist yet (lazy create), so wait for `ready` and
-    // attach then — unless cleanup ran first.
+    // Eager creation may still be in flight, so wait for `ready` and attach
+    // then — unless cleanup ran first.
     ready
       .then(({ instance }) => {
         if (cancelled) return;
@@ -637,9 +661,11 @@ const wrapInstance = (
  * reject the second call with an `InvalidStateError`. Either `await` the
  * previous call or `session.abort()` before issuing a new turn.
  *
- * The returned `Session` is usable synchronously; the first `send` /
- * `sendStreaming` awaits the underlying `LanguageModel.create()` internally
- * and surfaces creation errors as `PromptUnavailableError`.
+ * Calling `createSession()` starts `LanguageModel.create()` immediately, so it
+ * can intentionally prewarm a session as soon as user intent is known. The
+ * returned `Session` wrapper is available synchronously; its first `send` /
+ * `sendStreaming` only awaits the already-started creation and surfaces
+ * creation errors as `PromptUnavailableError`.
  */
 export const createSession = (options: CreateSessionOptions = {}): Session => {
   return createSessionWithReady(options).session;
