@@ -10,7 +10,7 @@ import { ask } from "@web-ai-sdk/prompt";
 const { output } = await ask({ input: "Summarize this page in one sentence." });
 ```
 
-A small, focused monorepo of framework-agnostic packages that smooth over the gnarly bits of the new `document.modelContext`, `Translator`, `Summarizer`, `LanguageModel`, `LanguageDetector`, `Writer`, `Rewriter`, and `Proofreader` browser APIs (feature detection, session caching, streaming, lifecycle, safe DOM rebuild) without bringing any UI along.
+A small, focused monorepo of framework-agnostic packages that smooth over the gnarly bits of the new `document.modelContext`, `Translator`, `Summarizer`, `LanguageModel`, `LanguageDetector`, `Writer`, `Rewriter`, and `Proofreader` browser APIs (feature detection, session caching, streaming, lifecycle, and control-character cleanup) without bringing any UI along.
 
 > If you're exploring AI in the browser, a [star on GitHub](https://github.com/obetomuniz/web-ai-sdk) helps others find web-ai-sdk.
 
@@ -23,6 +23,8 @@ The SDK is per-capability because the Web ships more than one AI surface. Six sp
 ## What it is
 
 **`web-ai-sdk`** ships one package per browser capability. Zero runtime dependencies. Written in TypeScript. That's it. The SDK tracks a moving browser spec and intentionally stays out of the way of *how* you build an app.
+
+All model output is untrusted. The SDK strips selected non-printing control characters; that cleanup does **not** make HTML or Markdown safe. Use React interpolation or `textContent` for plain text. If you convert model Markdown or HTML into rendered HTML, keep raw HTML disabled and sanitize the complete accumulated output before inserting it into the DOM—never sanitize and concatenate individual stream chunks, because malicious syntax can span updates.
 
 Compositions that bond multiple primitives (block-level DOM translation,
 article-aware summarization, detect-then-summarize chains) are

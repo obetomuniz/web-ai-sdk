@@ -40,6 +40,7 @@ import {
   assertValidSamplingOptions,
   buildLangHints,
   type CreateSessionOptions,
+  cleanResponse,
   createSession,
   mergeStreamChunk,
   PromptAbortError,
@@ -47,7 +48,6 @@ import {
   type Session,
   SessionDestroyedError,
   type SessionSendOptions,
-  sanitizeResponse,
 } from "./session.js";
 
 export type {
@@ -341,7 +341,7 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
       options.onUpdate?.(finalText);
     }
 
-    const cleaned = sanitizeResponse(finalText);
+    const cleaned = cleanResponse(finalText);
     if (cleaned && cache) cache.set(cacheKey, cleaned);
     return { output: cleaned || null, cached: false };
   } catch (err) {

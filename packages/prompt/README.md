@@ -1,6 +1,6 @@
 # @web-ai-sdk/prompt
 
-web-ai-sdk building block for the Web's Built-in [Prompt API](https://developer.chrome.com/docs/extensions/ai/prompt-api) (`LanguageModel`). One-shot `ask()` for embeds and widgets, plus a thin `createSession()` primitive (and React `useSession`) for chat-shaped apps that need independent per-conversation sessions and delta-shaped streaming. The wrapper smooths cross-browser quirks (delta-vs-cumulative chunks, output sanitization, abort wiring); UI state and conversation history are the consumer's concern.
+web-ai-sdk building block for the Web's Built-in [Prompt API](https://developer.chrome.com/docs/extensions/ai/prompt-api) (`LanguageModel`). One-shot `ask()` for embeds and widgets, plus a thin `createSession()` primitive (and React `useSession`) for chat-shaped apps that need independent per-conversation sessions and delta-shaped streaming. The wrapper smooths cross-browser quirks (delta-vs-cumulative chunks, control-character cleanup, abort wiring); UI state and conversation history are the consumer's concern.
 
 **Docs:** <https://web-ai-sdk.dev/docs/guides/prompt/> · **React:** [`usePrompt`](https://web-ai-sdk.dev/docs/react/use-prompt/) · [`useSession`](https://web-ai-sdk.dev/docs/react/use-session/)
 
@@ -59,6 +59,8 @@ session.destroy();
 ```
 
 Every `createSession()` call returns an independent `LanguageModelInstance` with its own history, system prompt, sampling, and lifecycle — `abort()` / `destroy()` on one session never touch another. Concurrent `send` / `sendStreaming` calls on the **same** session are NOT queued — the underlying `LanguageModel` is sequential per instance and will reject the overlapping call with `InvalidStateError`. Either `await` the previous send or call `session.abort()` before issuing a new turn. Multi-turn conversation context is tracked by the native instance itself; UI message lists are your data model.
+
+Calling `createSession()` starts `LanguageModel.create()` immediately. The first `send`, `sendStreaming`, or `clone` only awaits that already-started creation, so creating a base session as soon as the user's intent is clear is a valid prewarming primitive. The synchronous `Session` wrapper is returned before native creation necessarily resolves; see [Context-window introspection](#context-window-introspection) for the resulting getter-readiness distinction.
 
 **Concurrency note.** Each session is an independent `LanguageModel` instance: independent history, system prompt, sampling, and lifecycle. The underlying on-device model is single-instance, so the browser currently schedules `sendStreaming` calls across sessions FIFO. Overlapping sends do not interleave token-by-token in Chrome 148 / Edge 138 — the second send waits for the first to drain. This is a constraint of the runtime, not of the API; code written against `createSession()` becomes faster automatically if a future release exposes parallel inference.
 
@@ -166,6 +168,12 @@ interface AskResult {
 
 `onUpdate` receives the cumulative text so far, not deltas. For delta-shaped streaming use `createSession().sendStreaming()`.
 
+### Treat model output as untrusted
+
+The Prompt wrapper removes selected non-printing control characters from model responses. This is control-character cleanup, **not** HTML or Markdown sanitization. Treat every final response and streaming update as untrusted.
+
+React interpolation (`<p>{output}</p>`) and DOM `textContent` are appropriate for plain text. If you convert model Markdown or HTML into rendered HTML, keep raw HTML disabled and sanitize the complete accumulated buffer before DOM insertion. Do not sanitize and concatenate individual deltas: a malicious construct can be split across stream updates.
+
 If `systemPrompt` is passed alongside `createOptions.initialPrompts`, the SDK emits a one-shot `console.warn` because `initialPrompts` overrides the synthesized system prompt and the persona is silently lost.
 
 ### `createSession(options?): Session`
@@ -196,8 +204,8 @@ interface SessionSendOptions {
 
 interface Session {
   readonly destroyed: boolean;
-  readonly contextWindow?: number; // context window in tokens; undefined pre-creation
-  readonly contextUsage?: number;  // tokens used so far; undefined pre-creation
+  readonly contextWindow?: number; // context window in tokens; undefined until eager creation resolves
+  readonly contextUsage?: number;  // tokens used so far; undefined until eager creation resolves
   send(input: string | LanguageModelMessage[], options?: SessionSendOptions): Promise<string | null>;
   sendStreaming(input: string | LanguageModelMessage[], options?: SessionSendOptions): AsyncIterable<string>;
   abort(): void;
@@ -207,6 +215,8 @@ interface Session {
   destroy(): void;
 }
 ```
+
+`createOptions` is merged last for advanced native control. If both `systemPrompt` and `createOptions.initialPrompts` are provided, `createOptions.initialPrompts` remains authoritative and the SDK emits a clear `console.warn` once per loaded module instance. Use one instruction surface: `systemPrompt` for the shorthand, or `initialPrompts` when restoring richer context.
 
 `Session.sendStreaming()` yields **deltas** (each chunk is the new text since the last yield, never cumulative). The wrapper does no extra bookkeeping: no history tracking, no concurrent-send queue, no usage telemetry. Always destroy sessions you no longer need.
 
@@ -249,11 +259,17 @@ To declare the native tool modalities, pass them through the advanced `expectedI
 For agents and multi-task flows, reusing one long-lived session lets history accumulate (later runs "echo" earlier ones, and you eventually hit `QuotaExceededError`), while recreating a session per task pays the cold start and can hit Chrome's single-instance degradation. The spec's [recommended pattern](https://developer.chrome.com/docs/ai/session-management) is to keep one warm **base** session (system prompt only) and `clone()` it per task: the clone inherits the system prompt and history without re-parsing or another `create()`, then gets independent history and lifecycle.
 
 ```ts
-const base = createSession({ systemPrompt }); // once; keep warm
+// As soon as the workflow is chosen, begin native creation with final instructions.
+const base = createSession({ systemPrompt }); // eager prewarm; keep this base
+const outputElement = document.querySelector<HTMLElement>("#output");
 // per task / run:
-const turn = await base.clone();              // fresh history, no re-parse
+const turn = await base.clone();              // awaits base readiness, then fresh history
+let response = "";
 try {
-  for await (const delta of turn.sendStreaming(input)) render(delta);
+  for await (const delta of turn.sendStreaming(input)) {
+    response += delta;
+    if (outputElement) outputElement.textContent = response;
+  }
 } finally {
   turn.destroy();                             // free the clone, keep base
 }
@@ -314,7 +330,7 @@ They compose: prefill the opening brace, set `responseConstraint` for the full s
 
 ### Context-window introspection
 
-`Session` surfaces the live token budget the native instance reports, so consumers can size work to the actual context window instead of hardcoding a char cap. Both are `undefined` until the underlying instance exists — the instance is created lazily on the first `send` / `sendStreaming`, so read them after a `send` or (cleaner) on a session from `clone()`, whose instance is live the moment `clone()` resolves.
+`Session` surfaces the live token budget the native instance reports, so consumers can size work to the actual context window instead of hardcoding a char cap. Calling `createSession()` starts native creation eagerly, but the wrapper returns synchronously: both getters remain `undefined` while that creation promise is in flight. The first `send` awaits the already-started creation; alternatively, read the getters on a session from `clone()`, whose instance is live the moment `clone()` resolves. In React, `useSession` does not report `"ready"` until the same native creation has resolved.
 
 - `session.contextWindow` — max input tokens for the session (the context window).
 - `session.contextUsage` — input tokens used so far. On a fresh base-clone this reflects the inherited history (≈ the system prompt), the right baseline to budget a turn against.
@@ -322,8 +338,8 @@ They compose: prefill the opening brace, set `responseConstraint` for the full s
 These mirror the Prompt API's `contextWindow` / `contextUsage` (the renamed successors of `inputQuota` / `inputUsage`); the wrapper reads the new names and falls back to the deprecated ones on older Chrome builds.
 
 ```ts
-const base = createSession({ systemPrompt }); // keep warm
-const turn = await base.clone();               // instance is live here
+const base = createSession({ systemPrompt }); // native creation starts here
+const turn = await base.clone();               // awaits readiness; clone is live here
 const quota = turn.contextWindow;              // e.g. 4096 / 6144 tokens
 const used = turn.contextUsage ?? 0;           // ≈ system prompt
 if (quota) {
@@ -390,7 +406,7 @@ ask({ input: "hi", cache: myMap, cacheKey: "greeting" });
 
 The vanilla `ask()` throws `PromptUnavailableError` when the API is missing or reports `availability: "unavailable"`. The React hook absorbs this and returns `status: "unavailable"` instead.
 
-`createSession()` returns a `Session` synchronously even if the underlying `create()` rejects; the error surfaces on the first `send` / `sendStreaming`. In React, `useSession()` waits for native creation before reporting `"ready"` and reports `"unavailable"` with `error` if creation fails.
+`createSession()` starts native creation immediately and returns a `Session` wrapper synchronously. If the underlying `create()` rejects, the error surfaces when the first `send`, `sendStreaming`, or `clone` awaits that already-started work. In React, `useSession()` waits for native creation before reporting `"ready"` and reports `"unavailable"` with `error` if creation fails.
 
 `AbortSignal` is supported on every surface. Aborting mid-stream resolves cleanly; the result cache is not written for aborted runs. Aborts reject with `PromptAbortError` (exported; `instanceof PromptAbortError` works, and its `name` is `"AbortError"`), thrown by both `ask()` and sessions.
 
