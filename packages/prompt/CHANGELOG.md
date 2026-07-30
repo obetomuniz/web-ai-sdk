@@ -1,5 +1,11 @@
 # @web-ai-sdk/prompt
 
+## 0.9.1
+
+### Patch Changes
+
+- e04e6d9: Warn once when createOptions.initialPrompts overrides systemPrompt, and document eager session creation and readiness.
+
 ## 0.9.0
 
 ### Minor Changes
