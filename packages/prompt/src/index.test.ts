@@ -793,14 +793,59 @@ describe("ask", () => {
 });
 
 describe("createSession", () => {
+  it("keeps createOptions.initialPrompts authoritative and warns once about conflicts", () => {
+    const fake = installFakeLanguageModel();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const advancedPrompts = [
+      { role: "system" as const, content: "Use the restored persona." },
+      { role: "user" as const, content: "A restored turn." },
+    ];
+
+    const systemOnly = createSession({ systemPrompt: "Use the shorthand." });
+    const advancedOnly = createSession({
+      createOptions: { initialPrompts: advancedPrompts },
+    });
+
+    expect(warn).not.toHaveBeenCalled();
+    expect(fake.create.mock.calls[0]?.[0]).toMatchObject({
+      initialPrompts: [{ role: "system", content: "Use the shorthand." }],
+    });
+    expect(fake.create.mock.calls[1]?.[0]).toMatchObject({
+      initialPrompts: advancedPrompts,
+    });
+
+    const firstConflict = createSession({
+      systemPrompt: "This must be ignored.",
+      createOptions: { initialPrompts: advancedPrompts },
+    });
+    const repeatedConflict = createSession({
+      systemPrompt: "This must also be ignored.",
+      createOptions: { initialPrompts: advancedPrompts },
+    });
+
+    expect(fake.create.mock.calls[2]?.[0]).toMatchObject({
+      initialPrompts: advancedPrompts,
+    });
+    expect(fake.create.mock.calls[3]?.[0]).toMatchObject({
+      initialPrompts: advancedPrompts,
+    });
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      "[@web-ai-sdk/prompt] `systemPrompt` was ignored because `createOptions.initialPrompts` was also provided; `createOptions.initialPrompts` takes precedence.",
+    );
+
+    systemOnly.destroy();
+    advancedOnly.destroy();
+    firstConflict.destroy();
+    repeatedConflict.destroy();
+    warn.mockRestore();
+  });
+
   it("never shares an instance across calls (parallel chats stream concurrently)", async () => {
     const fake = installFakeLanguageModel();
     const a = createSession({ systemPrompt: "X" });
     const b = createSession({ systemPrompt: "X" });
-    // Trigger creation by issuing an empty send (returns null without
-    // touching the model, but awaits the underlying create()).
-    await Promise.resolve();
-    await Promise.resolve();
+    // Creation starts eagerly; no send is needed to trigger it.
     expect(fake.create).toHaveBeenCalledTimes(2);
     a.destroy();
     b.destroy();
@@ -1297,7 +1342,7 @@ describe("Session.append", () => {
 });
 
 describe("Session context introspection", () => {
-  it("contextWindow / contextUsage are undefined before the instance is created", () => {
+  it("contextWindow / contextUsage are undefined while eager creation is in flight", () => {
     installFakeLanguageModel({ response: "ok" });
     const session = createSession({ systemPrompt: "S" });
     expect(session.contextWindow).toBeUndefined();
@@ -1395,7 +1440,7 @@ describe("Session.onContextOverflow", () => {
       }),
     });
     const session = createSession({ systemPrompt: "S" });
-    await session.send("warm"); // force create() so the listener attaches
+    await session.send("warm"); // await eager creation before attaching
     const onOverflow = vi.fn();
     const stop = session.onContextOverflow(onOverflow);
     await Promise.resolve();
@@ -1413,7 +1458,7 @@ describe("Session.onContextOverflow", () => {
     session.destroy();
   });
 
-  it("never attaches when cleanup runs before the instance is created", async () => {
+  it("never attaches when cleanup runs before eager creation resolves", async () => {
     const emitter = makeEmitter();
     installFakeLanguageModel({
       sessionFactory: () => ({
@@ -1425,7 +1470,7 @@ describe("Session.onContextOverflow", () => {
     });
     const session = createSession({ systemPrompt: "S" });
     const stop = session.onContextOverflow(vi.fn());
-    stop(); // before any send → instance not created yet
+    stop(); // synchronously, while eager creation is still in flight
     await session.send("warm");
     await Promise.resolve();
     expect(emitter.addEventListener).not.toHaveBeenCalled();
