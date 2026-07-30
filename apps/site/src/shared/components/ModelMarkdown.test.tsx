@@ -72,6 +72,19 @@ describe("ModelMarkdown", () => {
     }
   });
 
+  it("drops remote images and task-list form controls", () => {
+    const container = render(
+      [
+        "![tracking pixel](https://tracker.example/pixel.gif)",
+        "- [ ] Keep the task text",
+      ].join("\n\n"),
+    );
+
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector("input")).toBeNull();
+    expect(container.textContent).toContain("Keep the task text");
+  });
+
   it("stabilizes partial fences, lists, links, and emphasis", () => {
     let container = render("**important", true);
     expect(container.querySelector("strong")?.textContent).toBe("important");

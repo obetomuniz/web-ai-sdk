@@ -15,6 +15,32 @@ const listMarkerWithExtraSpacing = /^(\s*(?:[-+*]|\d+[.)]))[ \t]{2,}(?=\S)/;
 const fencedCodeBoundary = /^\s*(`{3,}|~{3,})/;
 const safeLinkProtocols = new Set(["http:", "https:", "mailto:"]);
 const linkUrlBase = "https://model-output.invalid";
+// Keep this default-deny set aligned with `safeMarkdownTags` in
+// `features/playground/PlaygroundFallback.astro`.
+const allowedModelMarkdownElements = [
+  "a",
+  "blockquote",
+  "br",
+  "code",
+  "del",
+  "em",
+  "h1",
+  "h2",
+  "h3",
+  "hr",
+  "li",
+  "ol",
+  "p",
+  "pre",
+  "strong",
+  "table",
+  "tbody",
+  "td",
+  "th",
+  "thead",
+  "tr",
+  "ul",
+] as const;
 
 function normalizeListMarkerSpacing(content: string): string {
   let fence: { character: string; length: number } | undefined;
@@ -122,6 +148,7 @@ export function ModelMarkdown({
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={components}
+        allowedElements={allowedModelMarkdownElements}
         skipHtml
         urlTransform={secureModelUrl}
       >
