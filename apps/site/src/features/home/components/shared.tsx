@@ -1,9 +1,9 @@
-import { marked } from "marked";
-import { type ReactNode, useCallback, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useRef, useState } from "react";
 import {
   detectBrowser,
   isDesktopWebAIBrowser,
 } from "../../../shared/browser.js";
+import { ModelMarkdown } from "../../../shared/components/ModelMarkdown.js";
 import {
   caret,
   markdownProse,
@@ -205,8 +205,6 @@ export const Output = ({
   </div>
 );
 
-marked.use({ gfm: true, breaks: true });
-
 const normalizeBullets = (text: string): string => {
   if (!/^[*-]\s/.test(text)) return text;
   return text.replace(/([^\n])\s+[*-]\s+/g, "$1\n* ");
@@ -223,11 +221,6 @@ export const MarkdownOutput = ({
   placeholder: string;
   className?: string;
 }) => {
-  const html = useMemo(() => {
-    if (!text) return "";
-    return marked.parse(normalizeBullets(text)) as string;
-  }, [text]);
-
   const cursor = streaming ? <span className={`${caret} ml-[0.15em]`} /> : null;
 
   if (!text) {
@@ -242,10 +235,10 @@ export const MarkdownOutput = ({
   }
   return (
     <div className={`${outputBase} ${markdownProse} ${className}`}>
-      <div
+      <ModelMarkdown
+        content={normalizeBullets(text)}
+        streaming={streaming}
         className="whitespace-normal"
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: model output, demo only
-        dangerouslySetInnerHTML={{ __html: html }}
       />
       {cursor}
     </div>

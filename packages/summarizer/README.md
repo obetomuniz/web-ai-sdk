@@ -27,7 +27,7 @@ const result = await summarize({
   language: "en",
   type: "key-points",
   length: "short",
-  onUpdate: (text) => render(text),
+  onUpdate: (text) => console.log("partial", text),
 });
 
 console.log(result.output, result.cached);

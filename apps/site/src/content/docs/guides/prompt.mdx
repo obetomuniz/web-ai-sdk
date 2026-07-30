@@ -12,19 +12,28 @@ The package's [README](https://github.com/obetomuniz/web-ai-sdk/tree/main/packag
 ```ts
 import { ask } from "@web-ai-sdk/prompt";
 
+const outputElement = document.querySelector<HTMLElement>("#prompt-output");
 const result = await ask({
   input: "Summarize this in one sentence: WebMCP lets pages expose tools to agents.",
   systemPrompt: "You are concise. Reply with a single sentence.",
   samplingMode: "predictable",
-  onUpdate: (text) => render(text),
+  onUpdate: (text) => {
+    if (outputElement) outputElement.textContent = text;
+  },
 });
 
 console.log(result.output, result.cached);
 ```
 
-Pass `onUpdate` to render partial text as it streams. `result.output` is the final cleaned text; `result.cached` tells you whether the response came back without invoking the model.
+Pass `onUpdate` to render partial text as it streams. `result.output` is the final control-character-cleaned text; `result.cached` tells you whether the response came back without invoking the model.
 
 `onUpdate` receives the **cumulative** buffer, not deltas. For delta-shaped streaming use `createSession().sendStreaming()`.
+
+### Treat model output as untrusted
+
+The Prompt wrapper removes selected non-printing control characters from model responses. This is control-character cleanup, **not** HTML or Markdown sanitization. Treat every final response and streaming update as untrusted.
+
+React interpolation and DOM `textContent`, as shown above, are appropriate for plain text. If you convert model Markdown or HTML into rendered HTML, keep raw HTML disabled and sanitize the complete accumulated buffer before DOM insertion. Do not sanitize and concatenate individual deltas: a malicious construct can be split across stream updates.
 
 ## Options
 
@@ -105,7 +114,7 @@ const text = await session.send("And what about the Prompt API?");
 session.destroy();
 ```
 
-The wrapper is intentionally thin. It handles cross-browser smoothing every consumer would otherwise reimplement (delta-vs-cumulative chunk detection, output sanitization, abort wiring, typed unavailability) and forwards everything else to the native instance. It does **not** track conversation history or queue concurrent sends; those are your data model and UI concerns. It does surface `clone()`, since forking a warm base session is the spec's recommended way to start a fresh task (see [Session resilience](#session-resilience-base--per-task-clone) below).
+The wrapper is intentionally thin. It handles cross-browser smoothing every consumer would otherwise reimplement (delta-vs-cumulative chunk detection, control-character cleanup, abort wiring, typed unavailability) and forwards everything else to the native instance. It does **not** track conversation history or queue concurrent sends; those are your data model and UI concerns. It does surface `clone()`, since forking a warm base session is the spec's recommended way to start a fresh task (see [Session resilience](#session-resilience-base--per-task-clone) below).
 
 `createSession()` never touches the `ask()` session cache. Two sessions with identical options get two independent instances with isolated history, system prompt, sampling, and lifecycle — `abort()` / `destroy()` on one session never touch another. Concurrent `send` / `sendStreaming` calls on the **same** session are NOT queued — the underlying `LanguageModel` is sequential per instance and will reject the overlapping call with `InvalidStateError`. Either `await` the previous send or call `session.abort()` before issuing a new turn.
 
@@ -117,10 +126,15 @@ For agents and multi-task flows there's a lose-lose with naive session handling:
 
 ```ts
 const base = createSession({ systemPrompt }); // create once; keep warm
+const outputElement = document.querySelector<HTMLElement>("#output");
 // per task / run:
 const turn = await base.clone();              // fresh history, no re-parse
+let response = "";
 try {
-  for await (const delta of turn.sendStreaming(input)) render(delta);
+  for await (const delta of turn.sendStreaming(input)) {
+    response += delta;
+    if (outputElement) outputElement.textContent = response;
+  }
 } finally {
   turn.destroy();                             // free the clone, keep the base warm
 }

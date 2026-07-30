@@ -78,16 +78,23 @@ function ChatPane({ agent }: { agent: Agent }) {
 
 ```tsx
 const { session } = useSession({ systemPrompt });
+const [response, setResponse] = useState("");
 
 const runTask = async (input: string) => {
   if (!session) return;
   const turn = await session.clone(); // fresh history, base stays warm
+  let nextResponse = "";
   try {
-    for await (const delta of turn.sendStreaming(input)) render(delta);
+    for await (const delta of turn.sendStreaming(input)) {
+      nextResponse += delta;
+      setResponse(nextResponse);
+    }
   } finally {
     turn.destroy();
   }
 };
+
+return <p>{response}</p>;
 ```
 
 Destroying a clone never affects the base session. The hook still owns the base session's lifecycle (destroyed on unmount / option change); clones you create are yours to destroy.

@@ -8,7 +8,7 @@
  *
  * The wrapper is intentionally thin. It handles cross-browser smoothing that
  * every consumer would otherwise reimplement (delta-vs-cumulative chunk
- * detection, output sanitization, abort composition, typed unavailability)
+ * detection, control-character cleanup, abort composition, typed unavailability)
  * and forwards everything else to the native instance. It does NOT track
  * conversation history or queue concurrent sends; those are the consumer's
  * data model and UI concerns. It does surface `clone()`, since forking a warm
@@ -107,10 +107,10 @@ export const stripNonPrinting = (raw: string): string =>
   raw.replace(NON_PRINTING, "");
 
 /**
- * Full sanitization for a final response: strip non-printing characters and
- * trim leading/trailing whitespace. Apply at the end of a turn, not per delta.
+ * Final response cleanup: strip non-printing characters and trim
+ * leading/trailing whitespace. Apply at the end of a turn, not per delta.
  */
-export const sanitizeResponse = (raw: string): string =>
+export const cleanResponse = (raw: string): string =>
   stripNonPrinting(raw).trim();
 
 /**
@@ -422,7 +422,7 @@ const wrapInstance = (
     try {
       const raw = await instance.prompt(input, promptOpts);
       if (controller.signal.aborted) throw new PromptAbortError();
-      const cleaned = sanitizeResponse(raw);
+      const cleaned = cleanResponse(raw);
       return cleaned || null;
     } catch (err) {
       if ((err as { name?: string })?.name === "AbortError") {
@@ -479,7 +479,7 @@ const wrapInstance = (
         } else {
           const raw = await instance.prompt(input, promptOpts);
           if (controller.signal.aborted) throw new PromptAbortError();
-          const cleaned = sanitizeResponse(raw);
+          const cleaned = cleanResponse(raw);
           if (cleaned) yield cleaned;
         }
       } catch (err) {

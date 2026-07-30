@@ -1,6 +1,6 @@
 ---
 title: "@web-ai-sdk/prompt"
-description: "web-ai-sdk building block for the Web's Built-in Prompt API (LanguageModel). One-shot ask() for embeds and widgets, plus a thin createSession() primitive (and React useSession) for chat-shaped apps that need independent per-conversation sessions and delta-shaped streaming. The wrapper smooths cross-browser quirks (delta-vs-cumulative chunks, output sanitization, abort wiring); UI state and conversation history are the consumer's concern."
+description: "web-ai-sdk building block for the Web's Built-in Prompt API (LanguageModel). One-shot ask() for embeds and widgets, plus a thin createSession() primitive (and React useSession) for chat-shaped apps that need independent per-conversation sessions and delta-shaped streaming. The wrapper smooths cross-browser quirks (delta-vs-cumulative chunks, control-character cleanup, abort wiring); UI state and conversation history are the consumer's concern."
 editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/prompt/README.md
 ---
 
@@ -8,7 +8,7 @@ editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/prompt/READ
 This page is synced from [`packages/prompt/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/prompt/README.md) by `pnpm --filter @web-ai-sdk-apps/site docs:sync`. Edits should go to the README.
 :::
 
-web-ai-sdk building block for the Web's Built-in [Prompt API](https://developer.chrome.com/docs/extensions/ai/prompt-api) (`LanguageModel`). One-shot `ask()` for embeds and widgets, plus a thin `createSession()` primitive (and React `useSession`) for chat-shaped apps that need independent per-conversation sessions and delta-shaped streaming. The wrapper smooths cross-browser quirks (delta-vs-cumulative chunks, output sanitization, abort wiring); UI state and conversation history are the consumer's concern.
+web-ai-sdk building block for the Web's Built-in [Prompt API](https://developer.chrome.com/docs/extensions/ai/prompt-api) (`LanguageModel`). One-shot `ask()` for embeds and widgets, plus a thin `createSession()` primitive (and React `useSession`) for chat-shaped apps that need independent per-conversation sessions and delta-shaped streaming. The wrapper smooths cross-browser quirks (delta-vs-cumulative chunks, control-character cleanup, abort wiring); UI state and conversation history are the consumer's concern.
 
 
 ## Status
@@ -173,6 +173,12 @@ interface AskResult {
 
 `onUpdate` receives the cumulative text so far, not deltas. For delta-shaped streaming use `createSession().sendStreaming()`.
 
+### Treat model output as untrusted
+
+The Prompt wrapper removes selected non-printing control characters from model responses. This is control-character cleanup, **not** HTML or Markdown sanitization. Treat every final response and streaming update as untrusted.
+
+React interpolation (`<p>{output}</p>`) and DOM `textContent` are appropriate for plain text. If you convert model Markdown or HTML into rendered HTML, keep raw HTML disabled and sanitize the complete accumulated buffer before DOM insertion. Do not sanitize and concatenate individual deltas: a malicious construct can be split across stream updates.
+
 If `systemPrompt` is passed alongside `createOptions.initialPrompts`, the SDK emits a one-shot `console.warn` because `initialPrompts` overrides the synthesized system prompt and the persona is silently lost.
 
 ### `createSession(options?): Session`
@@ -257,10 +263,15 @@ For agents and multi-task flows, reusing one long-lived session lets history acc
 
 ```ts
 const base = createSession({ systemPrompt }); // once; keep warm
+const outputElement = document.querySelector<HTMLElement>("#output");
 // per task / run:
 const turn = await base.clone();              // fresh history, no re-parse
+let response = "";
 try {
-  for await (const delta of turn.sendStreaming(input)) render(delta);
+  for await (const delta of turn.sendStreaming(input)) {
+    response += delta;
+    if (outputElement) outputElement.textContent = response;
+  }
 } finally {
   turn.destroy();                             // free the clone, keep base
 }
