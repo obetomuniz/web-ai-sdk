@@ -245,6 +245,11 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
     const inputUrls = resolveContextualUrls(input, [...knownFetchUrls]);
     const userUrls = new Set(inputUrls.map(normUrl));
     const fetchTool = urlFetchingTool;
+    const explicitlyRequestedToolNames = collectExplicitToolRequests(
+      input,
+      tools,
+      fetchTool,
+    );
 
     let session: Session;
     try {
@@ -304,6 +309,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
     // skipped (it often fetches only the first of several) and flag failures.
     const fetchedOk = new Set<string>();
     const fetchTried = new Set<string>();
+    const toolCallRecords: AgentToolCallRecord[] = [];
     /** Extracted bodies from successful fetches - provenance for summarize_text. */
     const fetchedSources: string[] = [];
     const runCtx: AgentRunContext = {
@@ -315,6 +321,9 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
     let autoFetchDone = false;
     // Guards the one-time "answer directly, no tools" self-heal below.
     let directRetryDone = false;
+    // Guards the one-time correction when eager fetches are followed by a
+    // premature final answer that skips explicitly requested tool work.
+    let remainingToolRetryDone = false;
     const recordFetches = (records: AgentToolCallRecord[]) => {
       for (const r of records) {
         const src = extractFetchSourceText(r);
@@ -333,6 +342,21 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
         }
       }
     };
+    const recordToolResults = (records: AgentToolCallRecord[]) => {
+      toolCallRecords.push(...records);
+      recordFetches(records);
+    };
+    const uncompletedRequestedTools = () =>
+      explicitlyRequestedToolNames.filter(
+        (name) =>
+          !toolCallRecords.some(
+            (record) => record.name === name && !record.error,
+          ),
+      );
+    const unattemptedRequestedTools = () =>
+      explicitlyRequestedToolNames.filter(
+        (name) => !toolCallRecords.some((record) => record.name === name),
+      );
 
     let stepIndex = 0;
     try {
@@ -366,14 +390,16 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
           toolCalls: records,
         });
         yield { type: "step_end", index: stepIndex };
-        recordFetches(records);
+        recordToolResults(records);
         // The URLs are already fetched; don't let the reactive backstop
         // re-fetch (a CORS failure here would just fail again).
         autoFetchDone = true;
-        const closer =
+        const closer = [
           inputUrls.length > 1
-            ? "Answer the user's request now in ONE reply that covers every URL."
-            : "Answer the user's request now.";
+            ? "Continue the user's request now and cover every URL in ONE reply."
+            : "Continue the user's request now.",
+          "The URL fetches are complete, but call any other tools needed for the remaining requested work before answering. Only answer after every requested task is completed or reported as unavailable.",
+        ].join(" ");
         // Fold the user's original message INTO this turn. Because we fetched
         // eagerly we skipped the model's planning turn - which means the user's
         // message was never sent on its own. Without it here, the model only
@@ -463,10 +489,29 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
               toolCalls: records,
             });
             yield { type: "step_end", index: stepIndex };
-            recordFetches(records);
+            recordToolResults(records);
             const noun =
               missing.length === 1 ? "the URL" : `${missing.length} URLs`;
             turnInput = `${buildToolResultTurn(records, perResultMaxChars)}\n\nYou had not fetched ${noun} the user asked about; the real content is above. Address EACH one in your answer - don't drop any.`;
+            continue;
+          }
+
+          // Eager URL fetching skips the model's initial planning turn. A
+          // small model can therefore treat the fetch results as the entire
+          // task and finalize before an explicitly requested second tool
+          // (for example `clock_now`) has run. Reject that premature answer
+          // once and make the outstanding call requirement unambiguous. The
+          // retry still consumes a normal loop iteration, preserving
+          // `maxSteps`; a second miss falls through to deterministic
+          // incomplete-work reporting below.
+          const unattempted = unattemptedRequestedTools();
+          if (unattempted.length > 0 && !remainingToolRetryDone) {
+            remainingToolRetryDone = true;
+            if (streamedAnswerText) {
+              yield { type: "step_reset", index: stepIndex };
+            }
+            yield { type: "step_end", index: stepIndex };
+            turnInput = buildRemainingToolTurn(unattempted);
             continue;
           }
 
@@ -505,12 +550,16 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
           const unfetched = fetchTool
             ? inputUrls.filter((u) => !fetchedOk.has(normUrl(u)))
             : [];
-          finalText = maybeFlagUnverifiedUrl(answer, {
-            hasFetchTool: !!fetchTool,
-            totalUrls: inputUrls.length,
-            unfetched,
-            anyTried: fetchTried.size > 0,
-          });
+          finalText = maybeReportIncompleteToolRequests(
+            maybeFlagUnverifiedUrl(answer, {
+              hasFetchTool: !!fetchTool,
+              totalUrls: inputUrls.length,
+              unfetched,
+              anyTried: fetchTried.size > 0,
+            }),
+            explicitlyRequestedToolNames,
+            toolCallRecords,
+          );
           yield {
             type: "plan",
             index: stepIndex,
@@ -557,6 +606,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
           stepIndex,
           signal,
         });
+        recordToolResults(records);
 
         // Summarizer returned `{ summary: "" }` (availability race). The next
         // model turn will summarize in prose - drop the empty tool card so the
@@ -581,7 +631,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
           tools,
           runCtx,
         );
-        if (directText !== null) {
+        if (directText !== null && uncompletedRequestedTools().length === 0) {
           finalText = directText;
           steps.push({
             index: stepIndex,
@@ -600,7 +650,6 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
             plan: { final: true, message: finalText },
           };
           yield { type: "step_end", index: stepIndex };
-          recordFetches(records);
           stopReason = "done";
           yield { type: "message", text: finalText };
           break;
@@ -611,9 +660,6 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
           toolCalls: records,
         });
         yield { type: "step_end", index: stepIndex };
-
-        // Track which URLs the model actually fetched (per-URL).
-        recordFetches(records);
 
         const fatal = records.find((r) => r.error);
         if (fatal && onToolError !== "report") {
@@ -630,7 +676,22 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
         turnInput = buildToolResultTurn(records, perResultMaxChars);
       }
 
-      if (stopReason === null) stopReason = "budget_exhausted";
+      if (stopReason === null) {
+        stopReason = "budget_exhausted";
+        const incomplete = uncompletedRequestedTools();
+        if (incomplete.length > 0) {
+          finalText = maybeReportIncompleteToolRequests(
+            "",
+            explicitlyRequestedToolNames,
+            toolCallRecords,
+          );
+          failure = {
+            name: "AgentIncompleteToolRequestError",
+            message: `The run ended before completing: ${incomplete.join(", ")}.`,
+          };
+          yield { type: "message", text: finalText };
+        }
+      }
     } finally {
       if (currentController === controller) currentController = null;
       if (sessionMode === "run-isolated") {
@@ -946,6 +1007,88 @@ function buildToolResultTurn(
     // they fit the small context together.
     "Use these results to answer. If the user mentioned other URLs you haven't fetched yet, fetch those first; once you have them all, write ONE reply that covers every one of them.",
   ].join("\n");
+}
+
+/**
+ * Find tool work the user requested by exact name. This is deliberately
+ * narrower than natural-language intent detection: the model still decides
+ * which tools a normal request needs, while the loop can deterministically
+ * enforce explicit instructions such as "then call clock_now".
+ *
+ * The URL-fetching tool is excluded because eager fetching and its failure
+ * notices already have dedicated per-URL handling.
+ */
+function collectExplicitToolRequests(
+  input: string,
+  tools: readonly AgentTool[],
+  fetchTool: AgentTool | undefined,
+): string[] {
+  return tools
+    .filter((tool) => tool.name !== fetchTool?.name)
+    .filter((tool) => {
+      const name = escapeRegExp(tool.name);
+      const exactCall = new RegExp(
+        `(^|[^\\w.])(?:[A-Za-z_]\\w*\\.)?${name}\\s*\\(`,
+        "i",
+      ).test(input);
+      const imperative = new RegExp(
+        `\\b(?:call|run|use|invoke|execute)\\b[^.!?\\n]{0,64}(?:^|[^\\w])${name}(?=$|[^\\w])`,
+        "i",
+      ).test(input);
+      const namedInstrument = new RegExp(
+        `\\b(?:with|via)\\s+[\`'"]?${name}(?=$|[^\\w])`,
+        "i",
+      ).test(input);
+      return exactCall || imperative || namedInstrument;
+    })
+    .map((tool) => tool.name);
+}
+
+function buildRemainingToolTurn(names: readonly string[]): string {
+  const formatted = names.map((name) => `\`${name}\``).join(", ");
+  const noun = names.length === 1 ? "tool has" : "tools have";
+  return [
+    `The user explicitly requested ${formatted}, but the ${noun} not been called yet.`,
+    "Emit ONLY a tool_code block that calls the remaining tool work now.",
+    "Do not answer the user until that work has completed; if a call fails, report the failure instead of silently skipping it.",
+  ].join(" ");
+}
+
+function maybeReportIncompleteToolRequests(
+  answer: string,
+  requestedNames: readonly string[],
+  records: readonly AgentToolCallRecord[],
+): string {
+  const missing = requestedNames.filter(
+    (name) => !records.some((record) => record.name === name),
+  );
+  const failed = requestedNames.filter((name) => {
+    const attempts = records.filter((record) => record.name === name);
+    return (
+      attempts.length > 0 && attempts.every((record) => Boolean(record.error))
+    );
+  });
+  if (missing.length === 0 && failed.length === 0) return answer;
+
+  const details: string[] = [];
+  if (missing.length > 0) {
+    details.push(
+      `${missing.join(", ")} ${missing.length === 1 ? "was" : "were"} not called`,
+    );
+  }
+  for (const name of failed) {
+    const lastError = records.filter((record) => record.name === name).at(-1)
+      ?.error?.message;
+    details.push(
+      lastError
+        ? `${name} failed: ${truncate(lastError, 300)}`
+        : `${name} failed`,
+    );
+  }
+
+  const notice = `> ⚠ I couldn't complete all requested tool work: ${details.join("; ")}.`;
+  const trimmed = answer.trim();
+  return trimmed ? `${notice}\n\n${trimmed}` : notice;
 }
 
 /**
