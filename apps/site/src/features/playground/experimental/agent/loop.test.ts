@@ -45,7 +45,7 @@ describe("buildNativePrompt", () => {
 });
 
 describe("createAgentLoop", () => {
-  it("continues a mixed request after eager URL fetches until clock_now executes", async () => {
+  it("continues a mixed request until a prefixed clock_now call executes", async () => {
     const fixture = createSessionFixture([
       "Both URLs were fetched successfully.",
       "```tool_code\nclock_now()\n```",
@@ -60,7 +60,7 @@ describe("createAgentLoop", () => {
     const agent = createAgentLoop({ tools });
 
     const result = await agent.run(
-      "Fetch https://one.test and https://two.test, then call clock_now to give me the current time.",
+      "Fetch https://one.test and https://two.test, then default_api.clock_now().",
     );
     agent.destroy();
 

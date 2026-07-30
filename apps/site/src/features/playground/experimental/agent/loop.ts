@@ -1027,9 +1027,10 @@ function collectExplicitToolRequests(
     .filter((tool) => tool.name !== fetchTool?.name)
     .filter((tool) => {
       const name = escapeRegExp(tool.name);
-      const exactCall = new RegExp(`(^|[^\\w.])${name}\\s*\\(`, "i").test(
-        input,
-      );
+      const exactCall = new RegExp(
+        `(^|[^\\w.])(?:[A-Za-z_]\\w*\\.)?${name}\\s*\\(`,
+        "i",
+      ).test(input);
       const imperative = new RegExp(
         `\\b(?:call|run|use|invoke|execute)\\b[^.!?\\n]{0,64}(?:^|[^\\w])${name}(?=$|[^\\w])`,
         "i",
