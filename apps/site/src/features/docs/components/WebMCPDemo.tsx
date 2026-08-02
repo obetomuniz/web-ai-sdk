@@ -1,19 +1,19 @@
-import { isAvailable, type Tool } from "@web-ai-sdk/webmcp";
+import { defineTool, isAvailable, type Tool } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import * as v from "valibot";
 import { UnavailableHint } from "./UnavailableHint.js";
 
-interface ListedTool {
-  name: string;
-  description: string;
-  inputSchema: string;
-}
-
 interface ModelContextTesting {
-  listTools(): ListedTool[];
   // Native Chrome serializes the result to a JSON string before returning.
   executeTool(name: string, input?: string): Promise<string>;
 }
+
+const ListDemoItemsOutput = v.object({ items: v.array(v.string()) });
+const EchoMessageInput = v.object({
+  message: v.pipe(v.string(), v.minLength(1), v.maxLength(200)),
+});
+const EchoMessageOutput = v.object({ echoed: v.string() });
 
 const getTesting = (): ModelContextTesting | undefined => {
   if (typeof navigator === "undefined") return undefined;
@@ -26,44 +26,48 @@ export const WebMCPDemo = () => {
   const [available, setAvailable] = useState<boolean>(() => isAvailable());
   const [echoInput, setEchoInput] = useState("hello world");
 
-  // `useCallback` so the reference stays stable and the tools memo below
-  // doesn't have to re-run on every render.
-  const append = useCallback((line: string) => {
+  const append = (line: string) => {
     setLog((prev) => [...prev, `${new Date().toLocaleTimeString()} ${line}`]);
-  }, []);
+  };
 
-  const tools = useMemo<Tool[]>(
-    () => [
-      {
-        name: "list_demo_items",
-        description:
-          "List demo items. Use when the user asks for the demo catalog.",
-        readOnly: true,
-        execute: async () => {
-          append("list_demo_items invoked");
-          return { items: ["alpha", "beta", "gamma"] };
-        },
+  // The hook compares discoverable metadata while keeping execute callbacks
+  // current, so these definitions can read the latest render without a ref or
+  // callback memoization bridge.
+  const tools = [
+    defineTool({
+      name: "list_demo_items",
+      title: "List demo items",
+      description:
+        "List demo items. Use when the user asks for the demo catalog.",
+      readOnly: true,
+      output: ListDemoItemsOutput,
+      execute: async () => {
+        append("list_demo_items invoked");
+        return { items: ["alpha", "beta", "gamma"] };
       },
-      {
-        name: "echo_message",
-        description: "Echo a message back. Demonstrates input schema.",
-        readOnly: true,
-        inputSchema: {
-          type: "object",
-          properties: {
-            message: { type: "string", minLength: 1, maxLength: 200 },
-          },
-          required: ["message"],
+    }),
+    defineTool({
+      name: "echo_message",
+      title: "Echo a message",
+      description: "Echo a message back. Demonstrates input schema.",
+      readOnly: true,
+      input: EchoMessageInput,
+      validate: true,
+      output: EchoMessageOutput,
+      inputSchema: {
+        type: "object",
+        properties: {
+          message: { type: "string", minLength: 1, maxLength: 200 },
         },
-        execute: async (input) => {
-          const { message } = input as { message: string };
-          append(`echo_message called with "${message}"`);
-          return { echoed: message };
-        },
+        required: ["message"],
+        additionalProperties: false,
       },
-    ],
-    [append],
-  );
+      execute: async ({ message }) => {
+        append(`echo_message called with "${message}"`);
+        return { echoed: message };
+      },
+    }),
+  ] as unknown as Tool[];
 
   useWebMCP(tools);
 
@@ -72,7 +76,7 @@ export const WebMCPDemo = () => {
   // separate `listTools()` read. Avoids races between the registration effect
   // and a one-shot list read, and behaves identically whether this story
   // mounts inside the docs Canvas or as a standalone story.
-  const registered = useMemo(() => tools.map((t) => t.name), [tools]);
+  const registered = tools.map(({ name, title }) => ({ name, title }));
 
   useEffect(() => {
     setAvailable(isAvailable());
@@ -103,9 +107,9 @@ export const WebMCPDemo = () => {
   return (
     <div className="demo-card demo-card--narrow">
       <p className="demo-muted">
-        Two tools registered against <code>document.modelContext</code>:{" "}
-        <code>list_demo_items</code> (read-only) and <code>echo_message</code>{" "}
-        (with input schema).
+        Two titled, read-only tools registered against{" "}
+        <code>document.modelContext</code>. The echo tool validates its input,
+        and both tools validate their output.
       </p>
       <p className="demo-muted">
         WebMCP available: <strong>{available ? "yes" : "no"}</strong>
@@ -133,9 +137,9 @@ export const WebMCPDemo = () => {
           <em className="demo-muted">(none)</em>
         ) : (
           <ul style={{ margin: 0, paddingLeft: 20 }}>
-            {registered.map((name) => (
+            {registered.map(({ name, title }) => (
               <li key={name}>
-                <code>{name}</code>
+                {title}: <code>{name}</code>
               </li>
             ))}
           </ul>
