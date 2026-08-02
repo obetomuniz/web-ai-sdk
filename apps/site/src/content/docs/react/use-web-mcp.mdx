@@ -148,13 +148,26 @@ interface Tool {
   inputSchema?: object;            // JSON Schema
 }
 
-interface ToolDefinition<InputSchema, TOutput, OutputSchema> {
-  name: string;
-  description: string;
+interface ToolDefinition<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  TOutput = unknown,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
+> extends Omit<Tool, "execute"> {
   input?: InputSchema;
   output?: OutputSchema;
-  inputSchema?: object;
-  execute: (input: StandardSchemaV1.InferOutput<InputSchema>) => TOutput;
+  execute: (
+    input: InputSchema extends StandardSchemaV1
+      ? StandardSchemaV1.InferOutput<InputSchema>
+      : unknown,
+  ) =>
+    | Promise<
+        OutputSchema extends StandardSchemaV1
+          ? StandardSchemaV1.InferInput<OutputSchema>
+          : TOutput
+      >
+    | (OutputSchema extends StandardSchemaV1
+        ? StandardSchemaV1.InferInput<OutputSchema>
+        : TOutput);
 }
 
 interface ToolAnnotations {

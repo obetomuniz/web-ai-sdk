@@ -65,13 +65,26 @@ transformed output. `output` validates the resolved result and returns its
 parsed or transformed output.
 
 ```ts
-interface ToolDefinition<InputSchema, TOutput, OutputSchema> {
-  // Same metadata fields as Tool
-  name: string;
-  description: string;
-  input?: InputSchema;   // Standard Schema; SDK-only
+interface ToolDefinition<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  TOutput = unknown,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
+> extends Omit<Tool, "execute"> {
+  input?: InputSchema; // Standard Schema; SDK-only
   output?: OutputSchema; // Standard Schema; SDK-only
-  execute: (input: StandardSchemaV1.InferOutput<InputSchema>) => TOutput;
+  execute: (
+    input: InputSchema extends StandardSchemaV1
+      ? StandardSchemaV1.InferOutput<InputSchema>
+      : unknown,
+  ) =>
+    | Promise<
+        OutputSchema extends StandardSchemaV1
+          ? StandardSchemaV1.InferInput<OutputSchema>
+          : TOutput
+      >
+    | (OutputSchema extends StandardSchemaV1
+        ? StandardSchemaV1.InferInput<OutputSchema>
+        : TOutput);
 }
 ```
 
