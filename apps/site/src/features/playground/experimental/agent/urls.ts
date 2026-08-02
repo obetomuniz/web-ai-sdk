@@ -1,7 +1,49 @@
 /** Extract HTTP(S) URLs from free-text input. Conservative on purpose. */
 export function extractUrls(text: string): string[] {
   const matches = text.match(/https?:\/\/[^\s<>'"`]+/g);
-  return matches ? Array.from(new Set(matches)) : [];
+  return matches
+    ? Array.from(new Set(matches.map(stripTrailingProsePunctuation)))
+    : [];
+}
+
+/**
+ * Remove delimiters captured from surrounding prose without damaging URL
+ * punctuation. A closing parenthesis is part of the URL when it balances an
+ * opening parenthesis, as in many wiki paths; otherwise it belongs to prose.
+ * Percent-encoded delimiters are untouched because they do not end in the raw
+ * punctuation character.
+ */
+function stripTrailingProsePunctuation(value: string): string {
+  let result = value.trim();
+
+  while (result) {
+    const withoutDelimiters = result.replace(/[.,;]+$/, "");
+    if (withoutDelimiters !== result) {
+      result = withoutDelimiters;
+      continue;
+    }
+
+    if (
+      result.endsWith(")") &&
+      !hasUnmatchedOpeningParenthesis(result.slice(0, -1))
+    ) {
+      result = result.slice(0, -1);
+      continue;
+    }
+
+    return result;
+  }
+
+  return result;
+}
+
+function hasUnmatchedOpeningParenthesis(value: string): boolean {
+  let depth = 0;
+  for (const character of value) {
+    if (character === "(") depth++;
+    if (character === ")" && depth > 0) depth--;
+  }
+  return depth > 0;
 }
 
 /**
@@ -41,10 +83,7 @@ export function resolveContextualUrls(
 
 /** Normalize a URL for matching (trailing slash / trailing punctuation). */
 export function normUrl(u: string): string {
-  return u
-    .trim()
-    .replace(/[).,;]+$/, "")
-    .replace(/\/+$/, "");
+  return stripTrailingProsePunctuation(u).replace(/\/+$/, "");
 }
 
 export function userUrlSet(input: string): ReadonlySet<string> {

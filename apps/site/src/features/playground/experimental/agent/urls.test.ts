@@ -1,9 +1,55 @@
 import { describe, expect, it } from "vitest";
 import {
+  extractUrls,
   isContextuallyGroundedUrl,
   normUrl,
   resolveContextualUrls,
 } from "./urls.js";
+
+describe("extractUrls", () => {
+  it("strips prose punctuation and unmatched closing parentheses", () => {
+    expect(
+      extractUrls(
+        "Fetch https://example.test/one, https://example.test/two.; and (https://example.test/three).",
+      ),
+    ).toEqual([
+      "https://example.test/one",
+      "https://example.test/two",
+      "https://example.test/three",
+    ]);
+  });
+
+  it("preserves URL punctuation, balanced parentheses, and percent encoding", () => {
+    expect(
+      extractUrls(
+        "Compare https://example.test/a;b,c?items=1,2#part;two with https://example.test/wiki/Function_(mathematics). Keep https://example.test/encoded%29.",
+      ),
+    ).toEqual([
+      "https://example.test/a;b,c?items=1,2#part;two",
+      "https://example.test/wiki/Function_(mathematics)",
+      "https://example.test/encoded%29",
+    ]);
+  });
+
+  it("deduplicates canonical URLs", () => {
+    expect(
+      extractUrls(
+        "Fetch https://example.test/item, then https://example.test/item.",
+      ),
+    ).toEqual(["https://example.test/item"]);
+  });
+});
+
+describe("normUrl", () => {
+  it("uses the same punctuation rules as direct URL extraction", () => {
+    expect(normUrl("https://example.test/wiki/Function_(mathematics).")).toBe(
+      "https://example.test/wiki/Function_(mathematics)",
+    );
+    expect(normUrl("https://example.test/item);")).toBe(
+      "https://example.test/item",
+    );
+  });
+});
 
 describe("resolveContextualUrls", () => {
   it("uses a direct URL without applying conversational inference", () => {
