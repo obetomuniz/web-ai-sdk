@@ -1,25 +1,18 @@
-import { isAvailable, type ToolDefinition } from "@web-ai-sdk/webmcp";
+import {
+  executeTool,
+  isAvailable,
+  type ToolDefinition,
+} from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { UnavailableHint } from "./UnavailableHint.js";
-
-interface ModelContextTesting {
-  // Native Chrome serializes the result to a JSON string before returning.
-  executeTool(name: string, input?: string): Promise<string>;
-}
 
 const ListDemoItemsOutput = z.object({ items: z.array(z.string()) });
 const EchoMessageInput = z.strictObject({
   message: z.string().min(1).max(200),
 });
 const EchoMessageOutput = z.object({ echoed: z.string() });
-
-const getTesting = (): ModelContextTesting | undefined => {
-  if (typeof navigator === "undefined") return undefined;
-  return (navigator as unknown as { modelContextTesting?: ModelContextTesting })
-    .modelContextTesting;
-};
 
 export const WebMCPDemo = () => {
   const [log, setLog] = useState<string[]>([]);
@@ -68,34 +61,34 @@ export const WebMCPDemo = () => {
     >,
   ] as const;
 
-  useWebMCP(tools);
-
-  // The demo registers the `tools` array above via `useWebMCP`, so the
-  // names displayed here are derived directly from what we register, with no
-  // separate `listTools()` read. Avoids races between the registration effect
-  // and a one-shot list read, and behaves identically whether this story
-  // mounts inside the docs Canvas or as a standalone story.
-  const registered = tools.map(({ name, title }) => ({ name, title }));
+  const { tools: discovered, status, error } = useWebMCP(tools);
+  const registered = discovered.filter((tool) =>
+    tools.some((candidate) => candidate.name === tool.name),
+  );
 
   useEffect(() => {
     setAvailable(isAvailable());
   }, []);
 
-  const invoke = async (name: string, input?: string) => {
-    const testing = getTesting();
-    if (!testing) {
-      append(`(no testing surface; cannot invoke ${name})`);
+  const invoke = async (name: string, input: unknown = {}) => {
+    const tool = registered.find((candidate) => candidate.name === name);
+    if (!tool) {
+      append(`(tool is not registered; cannot invoke ${name})`);
       return;
     }
     try {
-      const raw = await testing.executeTool(name, input);
+      const raw = await executeTool(tool, input);
       // executeTool returns a JSON string; re-parse so the rendered output is
       // human-readable instead of double-encoded.
       let pretty: string;
-      try {
-        pretty = JSON.stringify(JSON.parse(raw));
-      } catch {
-        pretty = String(raw);
+      if (raw === null) {
+        pretty = "navigation triggered";
+      } else {
+        try {
+          pretty = JSON.stringify(JSON.parse(raw));
+        } catch {
+          pretty = raw;
+        }
       }
       append(`→ result: ${pretty}`);
     } catch (err) {
@@ -113,6 +106,7 @@ export const WebMCPDemo = () => {
       <p className="demo-muted">
         WebMCP available: <strong>{available ? "yes" : "no"}</strong>
       </p>
+      {error && <p className="demo-muted">Discovery error: {error.message}</p>}
       {!available && (
         <UnavailableHint
           api="WebMCP"
@@ -149,8 +143,8 @@ export const WebMCPDemo = () => {
         <div className="demo-row">
           <button
             type="button"
-            disabled={!getTesting()}
-            onClick={() => invoke("list_demo_items", "{}")}
+            disabled={status !== "ready"}
+            onClick={() => invoke("list_demo_items")}
             className="demo-button demo-button--small"
           >
             list_demo_items
@@ -165,10 +159,8 @@ export const WebMCPDemo = () => {
           />
           <button
             type="button"
-            disabled={!getTesting()}
-            onClick={() =>
-              invoke("echo_message", JSON.stringify({ message: echoInput }))
-            }
+            disabled={status !== "ready"}
+            onClick={() => invoke("echo_message", { message: echoInput })}
             className="demo-button demo-button--small"
           >
             echo_message

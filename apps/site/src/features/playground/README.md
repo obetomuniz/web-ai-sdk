@@ -51,7 +51,7 @@ feature.
 | `lib/useConversationAgent.ts` | Active model session, run ownership, turn completion, and generated titles |
 | `lib/usePlaygroundLayout.ts` | Responsive panel state, sidebar geometry, and resize behavior |
 | `lib/usePromptReadiness.ts` | Optimistic Prompt API capability probing and download polling |
-| `lib/useWebMCPTools.ts` | WebMCP tools that control the Playground |
+| `lib/usePlaygroundWebMCPTools.ts` | WebMCP tools that control the Playground |
 | `lib/useStickToBottom.ts` | User-aware transcript following |
 | `experimental/agent/` | Agent planning and execution runtime |
 | `experimental/playground/` | Modes, tool catalog, low-level renderers, and contextual examples |

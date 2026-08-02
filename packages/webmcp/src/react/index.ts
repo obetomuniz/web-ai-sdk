@@ -1,16 +1,46 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   normalizeToolDefinition,
   type RegistrableTool,
   type StandardSchemaV1,
   type ToolDefinition,
 } from "../definition.js";
-import { type RegisterToolOptions, registerTool } from "../index.js";
+import {
+  type GetToolsOptions,
+  getTools,
+  isAvailable,
+  type RegisteredTool,
+  type RegisterToolOptions,
+  registerTool,
+  subscribeToToolChanges,
+} from "../index.js";
 import { type Tool, toRegisteredToolMetadata } from "../tool.js";
 
-export interface UseWebMCPOptions extends RegisterToolOptions {
-  /** Whether the tools should currently be registered. Defaults to `true`. */
+export interface UseWebMCPOptions extends RegisterToolOptions, GetToolsOptions {
+  /** Whether registration and discovery are active. Defaults to `true`. */
   enabled?: boolean;
+}
+
+export type WebMCPStatus =
+  | "idle"
+  | "loading"
+  | "ready"
+  | "unavailable"
+  | "error";
+
+export interface UseWebMCPReturn {
+  status: WebMCPStatus;
+  /** Every tool exposed to the document, not only definitions passed in. */
+  tools: readonly RegisteredTool[];
+  error: Error | null;
+  /** Re-read the currently exposed tools and return the fresh list. */
+  refresh: () => Promise<readonly RegisteredTool[]>;
 }
 
 interface ActiveRegistration {
@@ -97,6 +127,16 @@ const wrapTools = (
     return tool;
   });
 
+const isToolInput = (
+  value: unknown,
+): value is RegistrableTool | readonly RegistrableTool[] =>
+  Array.isArray(value) ||
+  (typeof value === "object" &&
+    value !== null &&
+    "name" in value &&
+    "description" in value &&
+    "execute" in value);
+
 /** Register one direct schema-aware tool definition. */
 export function useWebMCP<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
@@ -105,60 +145,91 @@ export function useWebMCP<
 >(
   tool: ToolDefinition<InputSchema, TOutput, OutputSchema>,
   options?: UseWebMCPOptions,
-): void;
+): UseWebMCPReturn;
 /** Register one existing plain Tool. */
 export function useWebMCP<TInput, TOutput>(
   tool: Tool<TInput, TOutput>,
   options?: UseWebMCPOptions,
-): void;
+): UseWebMCPReturn;
 /** Register an existing readonly collection of compatible tools. */
 export function useWebMCP<const Tools extends readonly RegistrableTool[]>(
   tools: Tools,
   options?: UseWebMCPOptions,
-): void;
+): UseWebMCPReturn;
+/** Retrieve exposed tools without registering definitions. */
+export function useWebMCP(options?: UseWebMCPOptions): UseWebMCPReturn;
 
 /**
- * React hook that registers one or more WebMCP tools on mount and unregisters
- * them on unmount. Registration changes only when discoverable metadata,
- * `enabled`, or `exposedTo` values change; schemas and execute callbacks always
- * use the latest committed render.
+ * Register WebMCP tools with React lifecycle cleanup and retrieve every tool
+ * exposed to the current document. Registration changes only when discoverable
+ * metadata, `enabled`, or `exposedTo` values change; schemas and execute
+ * callbacks always use the latest committed render. Discovery refreshes after
+ * native `toolchange` events and can also be triggered with `refresh()`.
  *
- * On browsers that don't expose `document.modelContext` (or the legacy
- * `navigator.modelContext`), the hook is a no-op.
+ * Call with options only to retrieve tools without registering definitions.
+ * Discovery restarts when `fromOrigins` values change, not when an equivalent
+ * array is recreated during render.
  */
 export function useWebMCP(
-  toolOrTools: RegistrableTool | readonly RegistrableTool[],
-  options?: UseWebMCPOptions,
-): void {
+  toolOrToolsOrOptions?:
+    | RegistrableTool
+    | readonly RegistrableTool[]
+    | UseWebMCPOptions,
+  maybeOptions?: UseWebMCPOptions,
+): UseWebMCPReturn {
+  const hasToolInput = isToolInput(toolOrToolsOrOptions);
+  const options = hasToolInput
+    ? maybeOptions
+    : (toolOrToolsOrOptions as UseWebMCPOptions | undefined);
   const enabled = options?.enabled ?? true;
   const exposedTo = options?.exposedTo;
-  const tools: readonly RegistrableTool[] = Array.isArray(toolOrTools)
-    ? toolOrTools
-    : [toolOrTools as RegistrableTool];
+  const fromOrigins = options?.fromOrigins;
+  const definitions: readonly RegistrableTool[] = hasToolInput
+    ? Array.isArray(toolOrToolsOrOptions)
+      ? toolOrToolsOrOptions
+      : [toolOrToolsOrOptions as RegistrableTool]
+    : [];
   const latestTools = useRef<readonly Tool[]>(
-    tools.map((tool) => normalizeToolDefinition(tool)),
+    definitions.map((tool) => normalizeToolDefinition(tool)),
   );
+  const latestFromOrigins = useRef(fromOrigins);
+  const fromOriginsKey = stableStringify(fromOrigins);
+  const registrationKey = enabled
+    ? getRegistrationKey(definitions, exposedTo)
+    : "disabled";
   const activeRegistration = useRef<ActiveRegistration | undefined>(undefined);
+  const requestId = useRef(0);
+  const [state, setState] = useState<{
+    status: WebMCPStatus;
+    tools: readonly RegisteredTool[];
+    error: Error | null;
+  }>(() => ({
+    status: !enabled ? "idle" : isAvailable() ? "loading" : "unavailable",
+    tools: [],
+    error: null,
+  }));
 
   useCommitEffect(() => {
-    latestTools.current = tools.map((tool) => normalizeToolDefinition(tool));
+    latestTools.current = definitions.map((tool) =>
+      normalizeToolDefinition(tool),
+    );
+    latestFromOrigins.current = fromOrigins;
   });
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || definitions.length === 0) {
       activeRegistration.current?.cleanup();
       activeRegistration.current = undefined;
       return;
     }
 
-    const registrationKey = getRegistrationKey(tools, exposedTo);
     if (activeRegistration.current?.key === registrationKey) return;
 
     activeRegistration.current?.cleanup();
 
     const registerOptions: RegisterToolOptions | undefined =
       exposedTo === undefined ? undefined : { exposedTo };
-    const cleanups = wrapTools(tools, latestTools).map((tool) =>
+    const cleanups = wrapTools(definitions, latestTools).map((tool) =>
       registerTool(tool, registerOptions),
     );
     activeRegistration.current = {
@@ -176,10 +247,65 @@ export function useWebMCP(
     },
     [],
   );
+
+  const refresh = useCallback(async (): Promise<readonly RegisteredTool[]> => {
+    const currentRequest = ++requestId.current;
+    if (!enabled) {
+      setState({ status: "idle", tools: [], error: null });
+      return [];
+    }
+    if (!isAvailable()) {
+      setState({ status: "unavailable", tools: [], error: null });
+      return [];
+    }
+
+    setState((current) => ({ ...current, status: "loading", error: null }));
+    try {
+      const currentFromOrigins =
+        fromOriginsKey === "" ? undefined : latestFromOrigins.current;
+      const tools = await getTools(
+        currentFromOrigins === undefined
+          ? undefined
+          : { fromOrigins: currentFromOrigins },
+      );
+      if (requestId.current === currentRequest) {
+        setState({ status: "ready", tools, error: null });
+      }
+      return tools;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      if (requestId.current === currentRequest) {
+        setState({ status: "error", tools: [], error });
+      }
+      return [];
+    }
+  }, [enabled, fromOriginsKey]);
+
+  useEffect(() => {
+    void refresh();
+    if (!enabled || !isAvailable()) {
+      return () => {
+        requestId.current += 1;
+      };
+    }
+
+    const unsubscribe = subscribeToToolChanges(() => {
+      void refresh();
+    });
+    return () => {
+      requestId.current += 1;
+      unsubscribe();
+    };
+  }, [enabled, refresh]);
+
+  return { ...state, refresh };
 }
 
 export type {
   DefineToolOptions,
+  ExecuteToolOptions,
+  GetToolsOptions,
+  RegisteredTool,
   RegisterToolOptions,
   StandardSchemaV1,
   Tool,
@@ -188,6 +314,10 @@ export type {
 } from "../index.js";
 export {
   defineTool,
+  executeTool,
+  getTools,
+  subscribeToToolChanges,
   ToolOutputValidationError,
   ToolValidationError,
+  WebMCPUnavailableError,
 } from "../index.js";

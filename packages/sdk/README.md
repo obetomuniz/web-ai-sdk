@@ -40,7 +40,7 @@ import { detect } from "@web-ai-sdk/all/detector";
 import { write } from "@web-ai-sdk/all/writer";
 import { rewrite } from "@web-ai-sdk/all/rewriter";
 import { proofread } from "@web-ai-sdk/all/proofreader";
-import { registerTool } from "@web-ai-sdk/all/webmcp";
+import { executeTool, getTools, registerTool } from "@web-ai-sdk/all/webmcp";
 ```
 
 ```tsx
@@ -55,6 +55,7 @@ import { prompt, summarizer, translator, detector, writer, rewriter, proofreader
 
 await prompt.ask({ input: "Hello" });
 await summarizer.summarize({ language: "en", input: document.body.innerText });
+const tools = await webmcp.getTools();
 ```
 
 The root entry namespaces each scoped package because several exports (e.g. `checkAvailability`, `isAvailable`, `defaultCacheKey`) appear in more than one package and would collide on a flat re-export.

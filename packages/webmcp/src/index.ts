@@ -34,7 +34,7 @@ export {
 } from "./definition.js";
 export type { Tool, ToolAnnotations } from "./tool.js";
 
-interface RegisteredTool extends RegisteredToolMetadata {
+interface NativeToolDefinition extends RegisteredToolMetadata {
   execute: (input: unknown) => Promise<unknown> | unknown;
 }
 
@@ -51,11 +51,43 @@ interface NativeRegisterToolOptions extends RegisterToolOptions {
   signal?: AbortSignal;
 }
 
+/** Origins whose descendant documents should be queried for exposed tools. */
+export interface GetToolsOptions {
+  fromOrigins?: readonly string[];
+}
+
+/** Metadata returned by the native WebMCP discovery surface. */
+export interface RegisteredTool {
+  name: string;
+  title?: string;
+  description: string;
+  /** The browser returns the registered JSON Schema as a serialized string. */
+  inputSchema?: string;
+  /** Window belonging to the document that registered the tool. */
+  window: Window;
+  /** Serialized origin of the document that registered the tool. */
+  origin: string;
+  annotations?: import("./tool.js").ToolAnnotations;
+}
+
+/** Options forwarded to native tool execution. */
+export interface ExecuteToolOptions {
+  signal?: AbortSignal;
+}
+
 interface ModelContext {
   registerTool: (
-    def: RegisteredTool,
+    def: NativeToolDefinition,
     options?: NativeRegisterToolOptions,
   ) => Promise<void> | void;
+  getTools?: (options?: GetToolsOptions) => Promise<RegisteredTool[]>;
+  executeTool?: (
+    tool: RegisteredTool,
+    inputArguments: string,
+    options?: ExecuteToolOptions,
+  ) => Promise<string | null>;
+  addEventListener?: EventTarget["addEventListener"];
+  removeEventListener?: EventTarget["removeEventListener"];
 }
 
 interface HostWithModelContext {
@@ -80,10 +112,77 @@ const getModelContext = (): ModelContext | undefined => {
 /** Whether the current environment exposes the WebMCP API. */
 export const isAvailable = (): boolean => getModelContext() !== undefined;
 
-const toRegistered = (tool: Tool): RegisteredTool => {
+const toRegistered = (tool: Tool): NativeToolDefinition => {
   return {
     ...toRegisteredToolMetadata(tool),
-    execute: tool.execute as RegisteredTool["execute"],
+    execute: tool.execute as NativeToolDefinition["execute"],
+  };
+};
+
+/**
+ * Discover the tools exposed to the current document.
+ *
+ * Returns an empty array when WebMCP discovery is unavailable. Native
+ * permission, origin-validation, and document-state failures are preserved.
+ */
+export const getTools = async (
+  options?: GetToolsOptions,
+): Promise<RegisteredTool[]> => {
+  const mc = getModelContext();
+  if (!mc?.getTools) return [];
+  return mc.getTools(options);
+};
+
+/** Raised when the current host cannot execute discovered WebMCP tools. */
+export class WebMCPUnavailableError extends Error {
+  override readonly name = "WebMCPUnavailableError";
+}
+
+/**
+ * Execute a tool returned by `getTools()`.
+ *
+ * The SDK accepts the JavaScript input value and serializes it to the JSON
+ * string required by the native API. The native serialized result is returned
+ * unchanged; `null` means execution triggered a navigation.
+ *
+ * @experimental Tool execution is implemented and publicly documented by
+ * Chromium but is not yet present in the published WebMCP community draft.
+ */
+export const executeTool = async (
+  tool: RegisteredTool,
+  input: unknown = {},
+  options?: ExecuteToolOptions,
+): Promise<string | null> => {
+  const mc = getModelContext();
+  if (!mc?.executeTool) {
+    throw new WebMCPUnavailableError(
+      "WebMCP tool execution is unavailable in this browser.",
+    );
+  }
+
+  const inputArguments = JSON.stringify(input);
+  if (inputArguments === undefined) {
+    throw new TypeError("WebMCP tool input must be JSON-serializable.");
+  }
+  return mc.executeTool(tool, inputArguments, options);
+};
+
+/**
+ * Subscribe to changes in the tools exposed to the current document.
+ * Returns an idempotent no-op cleanup when the event surface is unavailable.
+ */
+export const subscribeToToolChanges = (
+  listener: (event: Event) => void,
+): (() => void) => {
+  const mc = getModelContext();
+  if (!mc?.addEventListener || !mc.removeEventListener) return () => {};
+
+  mc.addEventListener("toolchange", listener);
+  let disposed = false;
+  return () => {
+    if (disposed) return;
+    disposed = true;
+    mc.removeEventListener?.("toolchange", listener);
   };
 };
 
@@ -120,7 +219,7 @@ const trackOwnership = (controller: AbortController, name: string): void => {
  */
 const callRegister = (
   mc: ModelContext,
-  registered: RegisteredTool,
+  registered: NativeToolDefinition,
   controller: AbortController,
   options?: RegisterToolOptions,
 ): Promise<void> => {
@@ -156,7 +255,7 @@ const callRegister = (
  */
 const registerOne = async (
   mc: ModelContext,
-  registered: RegisteredTool,
+  registered: NativeToolDefinition,
   controller: AbortController,
   options?: RegisterToolOptions,
 ): Promise<boolean> => {

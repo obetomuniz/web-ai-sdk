@@ -1,9 +1,9 @@
 ---
 title: WebMCP
-description: web-ai-sdk wrapper to register agent-callable tools on the W3C WebMCP surface (document.modelContext) with AbortSignal-based cleanup.
+description: Register, discover, and execute agent-callable tools on the W3C WebMCP surface through typed vanilla and React SDK APIs.
 ---
 
-Building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `document.modelContext`. (For backward compatibility with the previous shape of the API, this package also reads from `navigator.modelContext`.) Register agent-callable tools from any framework; the package is vanilla TypeScript / DOM with an optional React adapter shipped as a subpath export. See [useWebMCP](/docs/react/use-web-mcp/) for React.
+Building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `document.modelContext`. (For backward compatibility with the previous shape of the API, this package also reads from `navigator.modelContext`.) Register, discover, and execute agent-callable tools from any framework; the package is vanilla TypeScript / DOM with an optional React adapter shipped as a subpath export. See [useWebMCP](/docs/react/use-web-mcp/) for React.
 
 Where the Built-in AI APIs make the browser an AI runtime, WebMCP makes your page an agent surface: instead of a visiting agent guessing what your interface elements do, the page declares structured tools the agent can discover and call.
 
@@ -43,6 +43,34 @@ To register many at once, map over the array and combine the cleanups:
 const cleanups = tools.map(registerTool);
 const cleanup = () => cleanups.forEach((c) => c());
 ```
+
+## Discover and execute tools
+
+Use SDK primitives rather than reaching through `document.modelContext` directly. `getTools()` returns the browser-facing metadata for tools exposed to the current document; `executeTool()` accepts one of those returned objects and serializes the JavaScript input value for the native call.
+
+```ts
+import {
+  executeTool,
+  getTools,
+  subscribeToToolChanges,
+} from "@web-ai-sdk/webmcp";
+
+const tools = await getTools();
+const echo = tools.find((tool) => tool.name === "echo_message");
+
+if (echo) {
+  const result = await executeTool(echo, { message: "hello" });
+  console.log(result);
+}
+
+const unsubscribe = subscribeToToolChanges(() => {
+  void getTools().then(renderToolList);
+});
+```
+
+`getTools({ fromOrigins })` can additionally request tools from descendant documents at listed secure origins. Cross-origin tools are returned only when the registering document also exposed them to the caller's origin. The browser returns each `inputSchema` as a serialized JSON string and includes the registering `window` and `origin`.
+
+`executeTool()` returns the native serialized string unchanged; `null` means the tool triggered navigation. It is implemented and publicly documented by Chromium but is not yet in the published WebMCP community-draft IDL, so the SDK marks it experimental.
 
 ## Tool
 
@@ -112,7 +140,7 @@ maintaining a second handwritten definition.
 
 </div>
 
-## Returns
+## Registration cleanup
 
 `registerTool(tool, options?)` returns a cleanup function: `() => void`. Calling it unregisters the tool. Calling it twice is a no-op. On browsers without `document.modelContext` (or the legacy `navigator.modelContext`), the cleanup is itself a no-op.
 
@@ -120,7 +148,7 @@ maintaining a second handwritten definition.
 
 `document.modelContext.registerTool({...}, { signal, exposedTo })` is the spec entry point. (For backward compatibility with the previous shape of the API, this package also reads from `navigator.modelContext`.) The wrapper sits on top with these quality-of-life additions:
 
-- **Feature detection.** On browsers without `document.modelContext` (or the legacy `navigator.modelContext`), every entry point is a no-op so consumer code ships unchanged. `isAvailable()` returns `false`.
+- **Feature detection.** On browsers without `document.modelContext` (or the legacy `navigator.modelContext`), registration and subscriptions are no-ops, discovery resolves to `[]`, and `isAvailable()` returns `false`. Execution rejects with `WebMCPUnavailableError` so missing support is distinct from a `null` navigation result.
 - **Last-writer-wins on duplicate names.** React effect cleanup is asynchronous; a fast re-render can attempt to register `"foo"` before Chrome processed the prior `abort()`. The wrapper detects the resulting duplicate-name error, queues a microtask retry, and tracks ownership so a stale registration can't squat the name.
 - **One AbortController per call.** `registerTool` returns a cleanup function that aborts the underlying controller and unregisters the tool.
 - **Library-neutral validation.** Direct definitions may carry Standard Schema input and output validators. The SDK validates and transforms around `execute`, then strips those SDK-only fields before native registration.
@@ -136,6 +164,14 @@ const cleanup = registerTool(tool, {
 ```
 
 The SDK forwards the array unchanged alongside its internally owned `AbortSignal`. The browser validates each origin and rejects invalid or untrustworthy values. Those asynchronous failures follow the package's existing non-throwing registration posture: they are logged without creating an unhandled rejection. Grant access only to origins that genuinely need it; `exposedTo` is exposure configuration, not an authorization layer.
+
+An in-page agent or inspector requests those cross-origin tools with the complementary discovery option:
+
+```ts
+const tools = await getTools({
+  fromOrigins: ["https://tool-provider.example"],
+});
+```
 
 ## Annotations
 
@@ -171,7 +207,7 @@ A tool is a semantic interface, not just a function: the agent selects tools by 
 
 ## Errors and unavailability
 
-The wrapper never throws on missing API; it's a no-op. The vanilla functions return a no-op cleanup, so consumer code stays declarative:
+Registration and event subscription never throw for a missing API; they return no-op cleanups. Discovery returns an empty list. Tool execution is different because `null` already means that execution triggered a navigation, so missing support rejects with the typed `WebMCPUnavailableError`:
 
 ```ts
 import { registerTool, isAvailable } from "@web-ai-sdk/webmcp";
@@ -183,6 +219,8 @@ if (!isAvailable()) {
 
 registerTool({ ... });
 ```
+
+Native `getTools()` errors remain observable, including invalid or untrustworthy `fromOrigins`, denied permissions policy, and detached-document failures. `executeTool()` also preserves native execution and cancellation failures.
 
 When a direct definition includes `input`, invalid input rejects with
 `ToolValidationError` before `execute` runs. When it includes `output`, an

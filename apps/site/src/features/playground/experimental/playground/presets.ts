@@ -65,7 +65,7 @@ export const MODES: [AgentMode, ...AgentMode[]] = [
       "You orchestrate the browser's Built-in Web AI APIs and must demonstrate the specialized tools instead of silently replacing them with model knowledge. For translation requests, ALWAYS call `translate_text` for every requested target language; never translate in prose yourself. When the source language is not explicit, call `detect_language` first, then use its top language code as `sourceLanguage` for the translation call(s). After detection, multiple target translations may run in parallel. For requests to summarize supplied text, ALWAYS call `summarize_text`. Report an unavailable/error tool result honestly instead of fabricating the operation.",
     tools: [summarizeTool, translateTool, detectLanguageTool, clockNowTool],
     examples: [
-      'Summarize: "WebMCP exposes browser-page tools to AI agents via navigator.modelContext, mirroring the Model Context Protocol pattern for the web."',
+      'Summarize: "WebMCP exposes browser-page tools to AI agents via document.modelContext, mirroring the Model Context Protocol pattern for the web."',
       "Detect the language of 'こんにちは', then translate it to English and Portuguese.",
       "It's almost lunchtime. What's the current time?",
     ],
@@ -82,7 +82,7 @@ export const MODES: [AgentMode, ...AgentMode[]] = [
       "Fetch https://api.github.com/repos/obetomuniz/web-ai-sdk and tell me how many stars it has.",
       "Summarize https://betomuniz.com/blog/who-owns-the-surface and https://betomuniz.com/blog/the-quiet-ai-war-inside-your-browser",
       "What time is it in Tokyo right now?",
-      'Summarize: "WebMCP exposes browser-page tools to AI agents via navigator.modelContext, mirroring the Model Context Protocol pattern for the web."',
+      'Summarize: "WebMCP exposes browser-page tools to AI agents via document.modelContext, mirroring the Model Context Protocol pattern for the web."',
     ],
   },
   {

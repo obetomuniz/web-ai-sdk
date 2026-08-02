@@ -81,7 +81,10 @@ const PACKAGE_ROWS: PackageInfo[] = [
         "Last writer wins.",
         "Re-registers on hot reload without duplicate errors.",
       ],
-      ["Spec aligned.", "Wraps document.modelContext verbatim."],
+      [
+        "SDK-first surface.",
+        "Register, discover, and execute without raw browser globals.",
+      ],
     ],
   },
   {

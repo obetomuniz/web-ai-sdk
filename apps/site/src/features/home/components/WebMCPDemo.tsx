@@ -4,6 +4,8 @@ import {
   PromptUnavailableError,
 } from "@web-ai-sdk/prompt";
 import {
+  executeTool,
+  getTools,
   isAvailable as isWebMcpAvailable,
   type StandardSchemaV1,
 } from "@web-ai-sdk/webmcp";
@@ -58,7 +60,7 @@ interface ToolSpec {
 
 const AddToCartInput = z.strictObject({
   sku: z.string().min(1).describe("The product SKU to add"),
-  qty: z.number().int().min(1).describe("Units to add").optional(),
+  quantity: z.number().int().min(1).describe("Units to add").optional(),
 });
 
 const TOOL_SPECS: readonly ToolSpec[] = [
@@ -126,19 +128,6 @@ type TraceEvent =
   | { kind: "result"; text: string }
   | { kind: "call"; tool: string; args: unknown; reason: string };
 
-interface ToolTestingSurface {
-  listTools: () => Array<{ name: string }>;
-  executeTool: (name: string, input?: string) => Promise<string>;
-}
-
-const getTestingSurface = (): ToolTestingSurface | null => {
-  if (typeof navigator === "undefined") return null;
-  return (
-    (navigator as unknown as { modelContextTesting?: ToolTestingSurface })
-      .modelContextTesting ?? null
-  );
-};
-
 export const WebMCPDemo = () => {
   const [enabledIds, setEnabledIds] = useState<Set<string>>(
     () => new Set(TOOL_SPECS.filter((t) => t.on).map((t) => t.id)),
@@ -168,23 +157,31 @@ export const WebMCPDemo = () => {
       ...(spec.destructive ? { destructive: true } : {}),
       execute:
         spec.id === "open_settings"
-          ? async () => ({
-              ok: true,
-              // Only the actually-registered tools. A disabled tool is not
-              // in the model context at all, so listing it here would be
-              // inaccurate.
-              registered: TOOL_SPECS.filter((t) => enabledIds.has(t.id)).map(
-                (t) => ({
-                  name: t.name,
-                  title: t.title,
-                  description: t.desc,
-                }),
-              ),
-            })
+          ? async () => {
+              const registered = await getTools();
+              return {
+                ok: true,
+                registered: registered
+                  .filter((tool) =>
+                    TOOL_SPECS.some(
+                      (candidate) => candidate.name === tool.name,
+                    ),
+                  )
+                  .map(({ name, title, description }) => ({
+                    name,
+                    title,
+                    description,
+                  })),
+              };
+            }
           : spec.execute,
     }));
   }, [enabledIds]);
-  useWebMCP(tools);
+  const {
+    tools: discoveredTools,
+    status: discoveryStatus,
+    refresh: refreshDiscoveredTools,
+  } = useWebMCP(tools);
 
   const toggle = (id: string) =>
     setEnabledIds((prev) => {
@@ -214,12 +211,22 @@ export const WebMCPDemo = () => {
       await new Promise((r) => setTimeout(r, delay));
     };
 
-    const enabledCount = enabledIds.size;
-    const enabledSpecs = TOOL_SPECS.filter((t) => enabledIds.has(t.id));
+    const discovered = await refreshDiscoveredTools();
+    const discoveredDemoTools = discovered.filter((tool) =>
+      TOOL_SPECS.some((candidate) => candidate.name === tool.name),
+    );
+    const discoveredNames = new Set(
+      discoveredDemoTools.map(({ name }) => name),
+    );
+    const discoveredCount = discovered.length;
+    const demoToolCount = discoveredDemoTools.length;
+    const enabledSpecs = TOOL_SPECS.filter((tool) =>
+      discoveredNames.has(tool.name),
+    );
     await push(
       {
         kind: "step",
-        text: `document.modelContext.listTools() → ${enabledCount} tool${enabledCount === 1 ? "" : "s"}`,
+        text: `getTools() → ${discoveredCount} tool${discoveredCount === 1 ? "" : "s"} (${demoToolCount} in this demo)`,
       },
       200,
     );
@@ -244,7 +251,12 @@ export const WebMCPDemo = () => {
         260,
       );
       const toolBlock = enabledSpecs
-        .map((t) => `- ${t.name}: ${t.desc}`)
+        .map((tool) => {
+          const schema = tool.inputSchema
+            ? JSON.stringify(tool.inputSchema)
+            : "no input schema";
+          return `- ${tool.name}: ${tool.desc}\n  input schema: ${schema}`;
+        })
         .join("\n");
       const agentInput = `Registered tools:
 ${toolBlock}
@@ -335,7 +347,7 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
       candidate = matched;
       chosenArgs =
         matched.id === "add_to_cart"
-          ? { sku: "MX-200", qty: 2 }
+          ? { sku: "MX-200", quantity: 2 }
           : matched.id === "search_orders"
             ? { since: "last-tuesday" }
             : matched.id === "open_settings"
@@ -364,26 +376,19 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
       280,
     );
 
-    // Invoke the tool via the testing surface when available, otherwise
-    // synthesize the result locally so the trace still resolves.
-    let resultText = "{ ok: true }";
-    const testing = getTestingSurface();
-    if (testing) {
+    let resultText = "null";
+    const registeredTool = discoveredDemoTools.find(
+      (tool) => tool.name === candidate.name,
+    );
+    if (!registeredTool) {
+      resultText = `error: ${candidate.name} is no longer registered`;
+    } else {
       try {
-        const raw = await testing.executeTool(
-          candidate.name,
-          JSON.stringify(chosenArgs),
-        );
-        resultText = typeof raw === "string" ? raw : JSON.stringify(raw);
+        const raw = await executeTool(registeredTool, chosenArgs);
+        resultText = raw ?? "navigation triggered";
       } catch (err) {
         resultText = `error: ${(err as Error)?.message ?? "unknown"}`;
       }
-    } else {
-      // No testing surface; fall back to invoking the *live* registered
-      // execute so open_settings still reports the real registration state.
-      const live = tools.find((t) => t.name === candidate.name);
-      const exec = live?.execute ?? candidate.execute;
-      resultText = JSON.stringify(await exec(chosenArgs));
     }
     await push(
       { kind: "result", text: `↳ ${candidate.name}(...) → ${resultText}` },
@@ -393,7 +398,9 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
     setRunning(false);
   };
 
-  const registeredCount = enabledIds.size;
+  const registeredCount = discoveredTools.filter((tool) =>
+    TOOL_SPECS.some((candidate) => candidate.name === tool.name),
+  ).length;
 
   return (
     <div className={card}>
@@ -403,7 +410,8 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
           registerTool() · agentic
         </span>
         <span>
-          {registeredCount} tool{registeredCount === 1 ? "" : "s"} registered
+          {discoveryStatus === "loading" ? "…" : registeredCount} demo tool
+          {registeredCount === 1 ? "" : "s"} registered
         </span>
       </div>
       <div className={cardBody}>
@@ -412,7 +420,7 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
         )}
         <DownloadNotice progress={progress} />
         <fieldset className={fieldset}>
-          <legend className={fieldLegend}>registered tools</legend>
+          <legend className={fieldLegend}>demo tools</legend>
           <ul className={toolList}>
             {TOOL_SPECS.map((t) => {
               const on = enabledIds.has(t.id);

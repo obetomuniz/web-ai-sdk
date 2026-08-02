@@ -10,8 +10,8 @@ import { useActivityLog } from "./lib/useActivityLog.js";
 import { useAgentThreads } from "./lib/useAgentThreads.js";
 import { useConversationAgent } from "./lib/useConversationAgent.js";
 import { usePlaygroundLayout } from "./lib/usePlaygroundLayout.js";
+import { usePlaygroundWebMCPTools } from "./lib/usePlaygroundWebMCPTools.js";
 import { usePromptReadiness } from "./lib/usePromptReadiness.js";
-import { useWebMCPTools } from "./lib/useWebMCPTools.js";
 
 export function Playground() {
   const layout = usePlaygroundLayout();
@@ -96,15 +96,16 @@ export function Playground() {
     };
   }, [modeMenuOpen]);
 
-  const { available: webmcpAvailable } = useWebMCPTools({
-    threads,
-    activeThread,
-    ops,
-    send,
-    newSession,
-    busy,
-    pushActivity,
-  });
+  const { available: webmcpAvailable, registeredTools: webmcpTools } =
+    usePlaygroundWebMCPTools({
+      threads,
+      activeThread,
+      ops,
+      send,
+      newSession,
+      busy,
+      pushActivity,
+    });
 
   const submitDraft = () => {
     if (!draft.trim() || busy) return;
@@ -233,6 +234,7 @@ export function Playground() {
           promptReadiness={promptReadiness}
           summarizerOn={summarizerOn}
           webmcpAvailable={webmcpAvailable}
+          webmcpToolCount={webmcpTools.length}
           events={eventsLog}
           onHide={layout.hideRuntime}
         />
