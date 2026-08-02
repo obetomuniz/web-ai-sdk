@@ -6,10 +6,9 @@ export interface UseWebMCPOptions extends RegisterToolOptions {
   enabled?: boolean;
 }
 
-interface Registration {
+interface ActiveRegistration {
   key: string;
-  exposedTo: readonly string[] | undefined;
-  tools: readonly Tool[];
+  cleanup: () => void;
 }
 
 const getRegistrationKey = (
@@ -58,25 +57,20 @@ const getRegistrationKey = (
 const useCommitEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 
-const createRegistration = (
-  key: string,
+const wrapTools = (
   tools: readonly Tool[],
-  exposedTo: readonly string[] | undefined,
   latestExecutors: {
     readonly current: ReadonlyMap<string, Tool["execute"]>;
   },
-): Registration => ({
-  key,
-  exposedTo,
-  tools: tools.map((tool) => {
+): readonly Tool[] =>
+  tools.map((tool) => {
     const initialExecute = tool.execute;
     return {
       ...tool,
       execute: (input: unknown) =>
         (latestExecutors.current.get(tool.name) ?? initialExecute)(input),
     };
-  }),
-});
+  });
 
 /**
  * React hook that registers one or more WebMCP tools on mount and unregisters
@@ -99,8 +93,7 @@ export const useWebMCP = (
   const latestExecutors = useRef<ReadonlyMap<string, Tool["execute"]>>(
     new Map(tools.map((tool) => [tool.name, tool.execute])),
   );
-  const registrationRef = useRef<Registration | undefined>(undefined);
-  const registrationKey = getRegistrationKey(tools, exposedTo);
+  const activeRegistration = useRef<ActiveRegistration | undefined>(undefined);
 
   useCommitEffect(() => {
     latestExecutors.current = new Map(
@@ -108,27 +101,38 @@ export const useWebMCP = (
     );
   });
 
-  const previous = registrationRef.current;
-  const registration =
-    previous?.key === registrationKey
-      ? previous
-      : createRegistration(registrationKey, tools, exposedTo, latestExecutors);
-  registrationRef.current = registration;
-
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      activeRegistration.current?.cleanup();
+      activeRegistration.current = undefined;
+      return;
+    }
+
+    const registrationKey = getRegistrationKey(tools, exposedTo);
+    if (activeRegistration.current?.key === registrationKey) return;
+
+    activeRegistration.current?.cleanup();
 
     const registerOptions: RegisterToolOptions | undefined =
-      registration.exposedTo === undefined
-        ? undefined
-        : { exposedTo: registration.exposedTo };
-    const cleanups = registration.tools.map((tool) =>
+      exposedTo === undefined ? undefined : { exposedTo };
+    const cleanups = wrapTools(tools, latestExecutors).map((tool) =>
       registerTool(tool, registerOptions),
     );
-    return () => {
-      for (const cleanup of cleanups) cleanup();
+    activeRegistration.current = {
+      key: registrationKey,
+      cleanup: () => {
+        for (const cleanup of cleanups) cleanup();
+      },
     };
-  }, [enabled, registration]);
+  });
+
+  useEffect(
+    () => () => {
+      activeRegistration.current?.cleanup();
+      activeRegistration.current = undefined;
+    },
+    [],
+  );
 };
 
 export type {

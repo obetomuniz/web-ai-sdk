@@ -130,6 +130,33 @@ describe("useWebMCP", () => {
     unmount();
   });
 
+  it("does not inspect registration metadata while disabled", () => {
+    const { registerTool } = installFakeModelContext();
+    const toJSON = vi.fn(() => ({ type: "object" }));
+
+    const { rerender, unmount } = renderHook(
+      ({ enabled }: { enabled: boolean }) =>
+        useWebMCP(
+          {
+            name: "disabled-metadata",
+            description: "Stay inert while disabled",
+            inputSchema: { toJSON },
+            execute: async () => ({}),
+          },
+          { enabled },
+        ),
+      { initialProps: { enabled: false } },
+    );
+
+    expect(toJSON).not.toHaveBeenCalled();
+    expect(registerTool).not.toHaveBeenCalled();
+
+    rerender({ enabled: true });
+    expect(toJSON).toHaveBeenCalledOnce();
+    expect(registerTool).toHaveBeenCalledOnce();
+    unmount();
+  });
+
   it("forwards exposedTo and re-registers when it changes", () => {
     const { registered, registerTool } = installFakeModelContext();
     const tool: Tool = {
