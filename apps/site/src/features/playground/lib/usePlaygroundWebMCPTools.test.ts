@@ -1,11 +1,11 @@
 import { registerTool } from "@web-ai-sdk/webmcp";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MODES } from "../experimental/playground/presets.js";
 import type { AgentThread } from "./agentThreads.js";
 import {
   createPlaygroundWebMCPTools,
   type PlaygroundWebMCPContext,
-} from "./useWebMCPTools.js";
+} from "./usePlaygroundWebMCPTools.js";
 
 const conversation: AgentThread = {
   id: "conversation-1",
@@ -50,9 +50,13 @@ type PlaygroundToolDefinition = ReturnType<
 
 const pendingCleanups: Array<() => void> = [];
 
+beforeEach(() => {
+  vi.stubGlobal("document", {});
+});
+
 function registerPlaygroundTools(context: PlaygroundWebMCPContext) {
   const registered = new Map<string, RegisteredTool>();
-  Object.defineProperty(navigator, "modelContext", {
+  Object.defineProperty(document, "modelContext", {
     value: {
       registerTool: (tool: RegisteredTool) => {
         registered.set(tool.name, tool);
@@ -83,10 +87,11 @@ function findDefinition(
 
 afterEach(() => {
   for (const cleanup of pendingCleanups.splice(0)) cleanup();
-  Object.defineProperty(navigator, "modelContext", {
+  Object.defineProperty(document, "modelContext", {
     value: undefined,
     configurable: true,
   });
+  vi.unstubAllGlobals();
 });
 
 describe("createPlaygroundWebMCPTools", () => {

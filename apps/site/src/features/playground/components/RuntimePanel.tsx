@@ -9,6 +9,7 @@ interface Props {
   promptReadiness: PromptReadiness;
   summarizerOn: boolean;
   webmcpAvailable: boolean;
+  webmcpToolCount: number;
   events: ActivityEvent[];
   onHide: () => void;
 }
@@ -19,6 +20,7 @@ export function RuntimePanel({
   promptReadiness,
   summarizerOn,
   webmcpAvailable,
+  webmcpToolCount,
   events,
   onHide,
 }: Props) {
@@ -58,7 +60,7 @@ export function RuntimePanel({
                 },
                 {
                   label: "WebMCP",
-                  detail: "Conversation controls for browser agents",
+                  detail: `${webmcpToolCount} conversation control${webmcpToolCount === 1 ? "" : "s"} exposed to browser agents`,
                   state: webmcpAvailable ? "ready" : "unavailable",
                 },
               ]}

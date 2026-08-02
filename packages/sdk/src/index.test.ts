@@ -21,6 +21,8 @@ describe("web-ai-sdk root namespace", () => {
     expect(typeof sdk.prompt.ask).toBe("function");
     expect(typeof sdk.prompt.createSession).toBe("function");
     expect(typeof sdk.webmcp.registerTool).toBe("function");
+    expect(typeof sdk.webmcp.getTools).toBe("function");
+    expect(typeof sdk.webmcp.executeTool).toBe("function");
     expect(typeof sdk.webmcp.defineTool).toBe("function");
     expect(typeof sdk.summarizer.summarize).toBe("function");
     expect(typeof sdk.translator.translate).toBe("function");
@@ -36,6 +38,8 @@ describe("web-ai-sdk per-package subpaths", () => {
     expect(typeof promptSubpath.ask).toBe("function");
     expect(typeof promptSubpath.createSession).toBe("function");
     expect(typeof webmcpSubpath.registerTool).toBe("function");
+    expect(typeof webmcpSubpath.getTools).toBe("function");
+    expect(typeof webmcpSubpath.executeTool).toBe("function");
     expect(typeof webmcpSubpath.defineTool).toBe("function");
     expect(typeof summarizerSubpath.summarize).toBe("function");
     expect(typeof translatorSubpath.translate).toBe("function");

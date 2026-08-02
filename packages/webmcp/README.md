@@ -2,13 +2,13 @@
 
 web-ai-sdk building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `document.modelContext`. (For backward compatibility with the previous shape of the API, this package also reads from `navigator.modelContext`.)
 
-An ergonomic, framework-agnostic adapter over the native browser API, with safe register/unregister cleanup and a feature-detected no-op fallback for non-supporting browsers.
+An ergonomic, framework-agnostic adapter over the native browser API, with safe register/unregister cleanup, typed tool discovery and execution, and progressive fallback behavior for non-supporting browsers.
 
 **Docs:** <https://web-ai-sdk.dev/docs/guides/webmcp/> · **React:** [`useWebMCP`](https://web-ai-sdk.dev/docs/react/use-web-mcp/)
 
 ## Status
 
-WebMCP shipped as an early preview in Chrome 146+ behind `chrome://flags/#enable-webmcp-testing`; a public [origin trial](https://developer.chrome.com/docs/ai/webmcp) opens in Chrome 149. Edge added support in 147+ behind the matching `edge://flags/` toggle. On any browser that doesn't expose `document.modelContext` (or the legacy `navigator.modelContext`), this library is a no-op. Your app stays callable, and no tools get registered. A WebMCP spec update changed `registerTool` to return a Promise (cross-origin iframe tool sharing made registration asynchronous); this adapter normalizes both the legacy synchronous shape and the async shape, so consumer code is unchanged.
+WebMCP shipped as an early preview in Chrome 146+ behind `chrome://flags/#enable-webmcp-testing`; a public [origin trial](https://developer.chrome.com/docs/ai/webmcp) opens in Chrome 149. Edge added support in 147+ behind the matching `edge://flags/` toggle. On browsers without WebMCP, registration is a no-op and discovery returns an empty list; execution rejects with `WebMCPUnavailableError` so a missing capability cannot be confused with a navigation result. A WebMCP spec update changed `registerTool` to return a Promise (cross-origin iframe tool sharing made registration asynchronous); this adapter normalizes both the legacy synchronous shape and the async shape, so consumer code is unchanged.
 
 ## Install
 
@@ -81,7 +81,7 @@ import { z } from "zod"; // Zod 4; other Standard Schema libraries work too
 const SearchPostsInput = z.object({ query: z.string().min(1) });
 
 export function WebMCP({ isSignedIn }: { isSignedIn: boolean }) {
-  useWebMCP(
+  const { tools, status } = useWebMCP(
     {
       name: "search_blog_posts",
       description: "Search published blog posts.",
@@ -98,11 +98,14 @@ export function WebMCP({ isSignedIn }: { isSignedIn: boolean }) {
     },
     { enabled: isSignedIn },
   );
-  return null;
+
+  return <p>{status === "ready" ? `${tools.length} tools` : status}</p>;
 }
 ```
 
-The hook accepts one tool or a readonly array. It registers on mount, unregisters on unmount, and cleans up immediately when `enabled` changes to `false`. Registration follows discoverable metadata and `exposedTo` values rather than object identity, while `execute` always uses the latest committed callback. Inline tool objects, arrays, and options are safe: changing React state alone does not rebuild the registration, but changing a tool's name, title, description, schema, annotations, or exposure does. Memoize tool arrays and large schemas when practical to avoid rebuilding and comparing their metadata on every render; correctness does not depend on memoization.
+`useWebMCP` accepts one tool or a readonly array. It registers on mount, unregisters on unmount, and cleans up immediately when `enabled` changes to `false`. Registration follows discoverable metadata and `exposedTo` values rather than object identity, while `execute` always uses the latest committed callback. Inline tool objects, arrays, and options are safe: changing React state alone does not rebuild the registration, but changing a tool's name, title, description, schema, annotations, or exposure does. Memoize tool arrays and large schemas when practical to avoid rebuilding and comparing their metadata on every render; correctness does not depend on memoization.
+
+The same hook retrieves every tool exposed to the current document and refreshes the returned list after native `toolchange` events. Its `refresh()` method performs an explicit fresh read. Call `useWebMCP({ fromOrigins })` without definitions for retrieval-only use. Memoize `fromOrigins` arrays passed to the hook because they participate in its effect dependencies by reference.
 
 ## API
 
@@ -128,6 +131,66 @@ const cleanup = registerTool(tool, {
 ```
 
 The SDK forwards the array unchanged alongside its internally owned `AbortSignal`. The browser validates each origin and rejects invalid or untrustworthy values; the wrapper preserves its non-throwing registration posture and logs that failure. Exposure is unnecessary for the owning document and should be limited to origins that genuinely need access.
+
+### `getTools(options?): Promise<RegisteredTool[]>`
+
+Discover tools exposed to the current document. The returned metadata is sorted by the browser and includes the registering `window` and `origin`. `inputSchema`, when present, is the browser's serialized JSON Schema string.
+
+```ts
+import { getTools } from "@web-ai-sdk/webmcp";
+
+const sameOriginTools = await getTools();
+const toolsAcrossFrames = await getTools({
+  fromOrigins: ["https://agent.example"],
+});
+```
+
+The browser always includes eligible same-origin tools. `fromOrigins` additionally requests tools from listed secure origins; those tools must also have exposed themselves to the caller's origin. Unsupported browsers resolve to `[]`. Native permission, origin-validation, and document-state errors remain observable as rejected promises.
+
+### `executeTool(tool, input?, options?): Promise<string | null>`
+
+Execute a `RegisteredTool` returned by `getTools()`. Pass the JavaScript input value; the SDK serializes it to the JSON argument string expected by the browser.
+
+```ts
+import { executeTool, getTools } from "@web-ai-sdk/webmcp";
+
+const tools = await getTools();
+const echo = tools.find((tool) => tool.name === "echo_message");
+if (echo) {
+  const result = await executeTool(echo, { message: "hello" });
+  console.log(result);
+}
+```
+
+The native serialized string is returned unchanged. `null` means tool execution triggered a navigation. Pass `{ signal }` to cancel an in-flight call. Unsupported browsers reject with `WebMCPUnavailableError`.
+
+`executeTool()` is experimental: Chromium implements and publicly documents it, but it is not yet present in the published WebMCP community-draft IDL.
+
+### `subscribeToToolChanges(listener): () => void`
+
+Listen for native `toolchange` events and return an idempotent cleanup function:
+
+```ts
+const unsubscribe = subscribeToToolChanges(() => {
+  void getTools().then(renderTools);
+});
+```
+
+On unsupported browsers, subscription and cleanup are no-ops.
+
+### `RegisteredTool`
+
+```ts
+interface RegisteredTool {
+  name: string;
+  title?: string;
+  description: string;
+  inputSchema?: string;
+  window: Window;
+  origin: string;
+  annotations?: ToolAnnotations;
+}
+```
 
 ### `isAvailable(): boolean`
 

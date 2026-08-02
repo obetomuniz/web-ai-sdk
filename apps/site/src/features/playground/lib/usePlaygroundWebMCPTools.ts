@@ -303,11 +303,16 @@ export function createPlaygroundWebMCPTools(args: PlaygroundWebMCPContext) {
   ] as const;
 }
 
-export function useWebMCPTools(args: PlaygroundWebMCPContext) {
+export function usePlaygroundWebMCPTools(args: PlaygroundWebMCPContext) {
   const available = isWebMCPAvailable();
   const tools = createPlaygroundWebMCPTools(args);
 
-  useWebMCP(tools);
+  const discovery = useWebMCP(tools);
 
-  return { available };
+  return {
+    available,
+    registeredTools: discovery.tools.filter((registered) =>
+      tools.some((definition) => definition.name === registered.name),
+    ),
+  };
 }

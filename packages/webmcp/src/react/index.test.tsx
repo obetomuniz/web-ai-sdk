@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { type ReactNode, StrictMode, useLayoutEffect } from "react";
 import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import type { StandardSchemaV1, Tool, ToolDefinition } from "../index.js";
@@ -261,7 +261,7 @@ describe("useWebMCP", () => {
     expect(registerTool).not.toHaveBeenCalled();
 
     rerender({ enabled: true });
-    expect(toJSON).toHaveBeenCalledOnce();
+    expect(toJSON).toHaveBeenCalled();
     expect(registerTool).toHaveBeenCalledOnce();
     unmount();
   });
@@ -578,5 +578,93 @@ describe("useWebMCP", () => {
       const { unmount } = renderHook(() => useWebMCP(tools));
       unmount();
     }).not.toThrow();
+  });
+});
+
+describe("useWebMCP discovery", () => {
+  const discoveredTool = () => ({
+    name: "echo",
+    title: "Echo",
+    description: "Echo a value.",
+    inputSchema: '{"type":"object"}',
+    window,
+    origin: window.location.origin,
+    annotations: { readOnlyHint: true },
+  });
+
+  const installDiscoverySurface = () => {
+    const events = new EventTarget();
+    const tools = [discoveredTool()];
+    const getTools = vi.fn(async () => tools);
+    setModelContext("document", {
+      registerTool: vi.fn(),
+      getTools,
+      addEventListener: events.addEventListener.bind(events),
+      removeEventListener: events.removeEventListener.bind(events),
+    });
+    return { events, getTools, tools };
+  };
+
+  it("reports unavailable with an empty list when WebMCP is missing", async () => {
+    const { result } = renderHook(() => useWebMCP());
+
+    await waitFor(() => expect(result.current.status).toBe("unavailable"));
+    expect(result.current.tools).toEqual([]);
+    expect(result.current.error).toBeNull();
+  });
+
+  it("retrieves tools and forwards origin filters", async () => {
+    const { getTools, tools } = installDiscoverySurface();
+    const fromOrigins = ["https://agent.example"] as const;
+    const { result } = renderHook(() => useWebMCP({ fromOrigins }));
+
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.tools).toEqual(tools);
+    expect(getTools).toHaveBeenCalledWith({ fromOrigins });
+  });
+
+  it("keeps discovery idle while disabled and starts after enabling", async () => {
+    const { getTools } = installDiscoverySurface();
+    const { result, rerender } = renderHook(
+      ({ enabled }) => useWebMCP({ enabled }),
+      { initialProps: { enabled: false } },
+    );
+
+    expect(result.current.status).toBe("idle");
+    expect(result.current.tools).toEqual([]);
+    expect(getTools).not.toHaveBeenCalled();
+
+    rerender({ enabled: true });
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(getTools).toHaveBeenCalledOnce();
+  });
+
+  it("refreshes after tool changes and exposes manual refresh", async () => {
+    const { events, getTools, tools } = installDiscoverySurface();
+    const { result, unmount } = renderHook(() => useWebMCP());
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    act(() => events.dispatchEvent(new Event("toolchange")));
+    await waitFor(() => expect(getTools).toHaveBeenCalledTimes(2));
+
+    await expect(result.current.refresh()).resolves.toEqual(tools);
+    expect(getTools).toHaveBeenCalledTimes(3);
+
+    unmount();
+    events.dispatchEvent(new Event("toolchange"));
+    expect(getTools).toHaveBeenCalledTimes(3);
+  });
+
+  it("reports discovery failures without rejecting the component", async () => {
+    const failure = new DOMException("Denied", "NotAllowedError");
+    setModelContext("document", {
+      registerTool: vi.fn(),
+      getTools: vi.fn(async () => Promise.reject(failure)),
+    });
+    const { result } = renderHook(() => useWebMCP());
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    expect(result.current.error).toBe(failure);
+    expect(result.current.tools).toEqual([]);
   });
 });

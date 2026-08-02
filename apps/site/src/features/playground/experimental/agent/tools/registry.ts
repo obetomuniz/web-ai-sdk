@@ -2,18 +2,12 @@
  * Kit-side tool registry. Doubles as the bridge to `@web-ai-sdk/webmcp`:
  * an app can register a tool once with `registerAgentTool(...)` and the
  * registry will optionally also surface it to external agents through
- * WebMCP (`navigator.modelContext`).
+ * WebMCP (`document.modelContext`).
  *
- * The native WebMCP API does NOT expose enumeration, so this registry is
- * the only source of truth for "all tools available to the in-page agent
- * AND visible to external agents." If you need a fan-out to extensions
- * like Cursor / Claude / the Chrome agent, register through this layer.
- *
- * SDK FOLLOW-UP (sdk/.ideas/agent-prototype-followups.md, Phase 7a):
- * `@web-ai-sdk/webmcp` already owns every registration that flows
- * through `registerTool`. The plan adds `getRegisteredTools()` +
- * `subscribeRegisteredTools()` so this `ToolRegistry` becomes a thin
- * re-export instead of a parallel source of truth.
+ * `@web-ai-sdk/webmcp` exposes native discovery through `getTools()` and the
+ * `useWebMCP()` return value. This registry remains the source of executable
+ * `AgentTool` instances for the playground's in-page planner; WebMCP discovery
+ * returns browser-facing metadata, not the planner's application callbacks.
  */
 
 import {

@@ -2,14 +2,19 @@ import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import {
   type DefineToolOptions,
   defineTool,
+  executeTool,
+  getTools,
   isAvailable,
+  type RegisteredTool,
   type RegisterToolOptions,
   registerTool,
   type StandardSchemaV1,
+  subscribeToToolChanges,
   type Tool,
   type ToolDefinition,
   ToolOutputValidationError,
   ToolValidationError,
+  WebMCPUnavailableError,
 } from "./index.js";
 
 interface RegisteredCall {
@@ -125,6 +130,82 @@ describe("feature detection", () => {
 
     expect(onDoc.registerTool).toHaveBeenCalledTimes(1);
     expect(onNav.registerTool).not.toHaveBeenCalled();
+  });
+});
+
+describe("tool discovery and execution", () => {
+  const discoveredTool = (): RegisteredTool => ({
+    name: "echo",
+    title: "Echo",
+    description: "Echo a value.",
+    inputSchema: '{"type":"object"}',
+    window,
+    origin: window.location.origin,
+    annotations: { readOnlyHint: true },
+  });
+
+  it("returns an empty list when discovery is unavailable", async () => {
+    await expect(getTools()).resolves.toEqual([]);
+  });
+
+  it("forwards discovery options and preserves native metadata", async () => {
+    const tool = discoveredTool();
+    const getNativeTools = vi.fn(async () => [tool]);
+    setModelContext("document", {
+      registerTool: vi.fn(),
+      getTools: getNativeTools,
+    });
+
+    await expect(
+      getTools({ fromOrigins: ["https://agent.example"] }),
+    ).resolves.toEqual([tool]);
+    expect(getNativeTools).toHaveBeenCalledWith({
+      fromOrigins: ["https://agent.example"],
+    });
+  });
+
+  it("serializes input and forwards execution options", async () => {
+    const tool = discoveredTool();
+    const executeNativeTool = vi.fn(async () => '{"echoed":"hello"}');
+    setModelContext("document", {
+      registerTool: vi.fn(),
+      executeTool: executeNativeTool,
+    });
+    const controller = new AbortController();
+
+    await expect(
+      executeTool(tool, { message: "hello" }, { signal: controller.signal }),
+    ).resolves.toBe('{"echoed":"hello"}');
+    expect(executeNativeTool).toHaveBeenCalledWith(
+      tool,
+      '{"message":"hello"}',
+      { signal: controller.signal },
+    );
+  });
+
+  it("rejects execution when the native capability is unavailable", async () => {
+    await expect(executeTool(discoveredTool())).rejects.toBeInstanceOf(
+      WebMCPUnavailableError,
+    );
+  });
+
+  it("subscribes to tool changes and returns idempotent cleanup", () => {
+    const events = new EventTarget();
+    setModelContext("document", {
+      registerTool: vi.fn(),
+      addEventListener: events.addEventListener.bind(events),
+      removeEventListener: events.removeEventListener.bind(events),
+    });
+    const listener = vi.fn();
+    const cleanup = subscribeToToolChanges(listener);
+
+    events.dispatchEvent(new Event("toolchange"));
+    expect(listener).toHaveBeenCalledOnce();
+
+    cleanup();
+    cleanup();
+    events.dispatchEvent(new Event("toolchange"));
+    expect(listener).toHaveBeenCalledOnce();
   });
 });
 
