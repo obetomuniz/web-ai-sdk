@@ -1,22 +1,28 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import {
+  type DefineToolOptions,
   defineTool,
   isAvailable,
+  type RegisterToolOptions,
   registerTool,
   type StandardSchemaV1,
+  type Tool,
+  ToolOutputValidationError,
   ToolValidationError,
 } from "./index.js";
 
 interface RegisteredCall {
   name: string;
+  title?: string;
   description: string;
   inputSchema?: object;
   annotations?: Record<string, boolean>;
   execute: (input: unknown) => unknown;
 }
 
-interface RegisterOptions {
+interface NativeRegisterOptions {
   signal?: AbortSignal;
+  exposedTo?: readonly string[];
 }
 
 type Host = "document" | "navigator";
@@ -54,7 +60,7 @@ const installFakeModelContext = (
     new Error(
       "Failed to execute 'registerTool' on 'ModelContext': Duplicate tool name",
     );
-  const apply = (def: RegisteredCall, options?: RegisterOptions) => {
+  const apply = (def: RegisteredCall, options?: NativeRegisterOptions) => {
     if (registered.has(def.name)) throw dup();
     registered.set(def.name, def);
     options?.signal?.addEventListener("abort", () => {
@@ -62,7 +68,7 @@ const installFakeModelContext = (
     });
   };
   const registerTool = vi.fn(
-    (def: RegisteredCall, options?: RegisterOptions) => {
+    (def: RegisteredCall, options?: NativeRegisterOptions) => {
       if (sync) {
         apply(def, options); // legacy: throws synchronously, returns undefined
         return undefined;
@@ -143,8 +149,28 @@ describe("registerTool", () => {
     expect(spy).toHaveBeenCalledTimes(1);
     const def = registered.get("ping");
     expect(def?.name).toBe("ping");
+    expect(def).not.toHaveProperty("title");
     expect(def?.description).toBe("Returns pong.");
     await expect(def?.execute(undefined)).resolves.toEqual({ result: "pong" });
+  });
+
+  it("forwards title when present", () => {
+    const { registerTool: spy } = installFakeModelContext();
+    const execute = async () => ({ result: "pong" });
+
+    registerTool({
+      name: "ping",
+      title: "Ping the server",
+      description: "Returns pong.",
+      execute,
+    });
+
+    expect(spy.mock.calls[0]?.[0]).toEqual({
+      name: "ping",
+      title: "Ping the server",
+      description: "Returns pong.",
+      execute,
+    });
   });
 
   it("passes an AbortSignal through to registerTool", () => {
@@ -155,9 +181,47 @@ describe("registerTool", () => {
       execute: async () => ({}),
     });
     expect(spy).toHaveBeenCalledTimes(1);
-    const options = spy.mock.calls[0]?.[1] as RegisterOptions | undefined;
+    const options = spy.mock.calls[0]?.[1] as NativeRegisterOptions | undefined;
     expect(options?.signal).toBeInstanceOf(AbortSignal);
     expect(options?.signal?.aborted).toBe(false);
+    expect(options).not.toHaveProperty("exposedTo");
+  });
+
+  it("forwards exposedTo unchanged alongside the owned signal", () => {
+    const { registerTool: spy } = installFakeModelContext();
+    const exposedTo = ["https://agent.example"] as const;
+
+    registerTool(
+      {
+        name: "shared",
+        description: "Shared with an embedded agent.",
+        execute: async () => ({}),
+      },
+      { exposedTo },
+    );
+
+    const options = spy.mock.calls[0]?.[1] as NativeRegisterOptions | undefined;
+    expect(options).toEqual({
+      signal: expect.any(AbortSignal),
+      exposedTo,
+    });
+    expect(options?.exposedTo).toBe(exposedTo);
+  });
+
+  it("remains compatible with tools.map(registerTool)", () => {
+    const { registered, registerTool: spy } = installFakeModelContext();
+    const tools = [
+      { name: "first", description: "First", execute: async () => ({}) },
+      { name: "second", description: "Second", execute: async () => ({}) },
+    ];
+
+    const cleanups: Array<() => void> = tools.map(registerTool);
+
+    expect(registered.size).toBe(2);
+    expect(spy.mock.calls[0]?.[1]).not.toHaveProperty("exposedTo");
+    expect(spy.mock.calls[1]?.[1]).not.toHaveProperty("exposedTo");
+    for (const cleanup of cleanups) cleanup();
+    expect(registered.size).toBe(0);
   });
 
   it("translates the readOnly shorthand to annotations.readOnlyHint", () => {
@@ -197,6 +261,19 @@ describe("registerTool", () => {
       readOnlyHint: true,
       idempotentHint: true,
       openWorldHint: false,
+    });
+  });
+
+  it("forwards an explicit false untrustedContentHint", () => {
+    const { registered } = installFakeModelContext();
+    registerTool({
+      name: "external-search",
+      description: "Searches an external source.",
+      annotations: { untrustedContentHint: false },
+      execute: async () => ({}),
+    });
+    expect(registered.get("external-search")?.annotations).toEqual({
+      untrustedContentHint: false,
     });
   });
 
@@ -433,7 +510,7 @@ describe("registerTool", () => {
 
   it("treats abort-during-pending registration as a clean cancellation (no error/warn)", async () => {
     const registerTool_ = vi.fn(
-      (_def: RegisteredCall, options?: RegisterOptions) =>
+      (_def: RegisteredCall, options?: NativeRegisterOptions) =>
         new Promise<void>((_resolve, reject) => {
           // Never resolves on its own; only rejects when aborted.
           options?.signal?.addEventListener("abort", () => {
@@ -498,17 +575,57 @@ describe("defineTool", () => {
     },
   });
 
+  const numericStringSchema: StandardSchemaV1<string, number> = {
+    "~standard": {
+      version: 1,
+      vendor: "test",
+      validate: (value: unknown) => {
+        if (typeof value === "string" && /^\d+$/.test(value)) {
+          return { value: Number(value) };
+        }
+        return {
+          issues: [
+            {
+              message: "output must be a numeric string",
+              path: ["value"],
+            },
+          ],
+        };
+      },
+      types: { input: "" as string, output: 0 as number },
+    },
+  };
+
   it("returns a Tool that registers via the existing surface", () => {
     const { registered } = installFakeModelContext();
     const tool = defineTool({
       name: "echo",
+      title: "Echo text",
       description: "echoes",
       input: stringSchema("input"),
       inputSchema: { type: "string" },
       execute: (text) => ({ text }),
     });
     registerTool(tool);
+    expect(registered.get("echo")?.title).toBe("Echo text");
     expect(registered.get("echo")?.inputSchema).toEqual({ type: "string" });
+  });
+
+  it("preserves the public metadata and registration option types", () => {
+    const tool = defineTool({
+      name: "external-search",
+      title: "External search",
+      description: "Searches an external source.",
+      annotations: { untrustedContentHint: true },
+      execute: () => ({ results: [] }),
+    });
+    const exposedTo = ["https://agent.example"] as const;
+    const options = { exposedTo } satisfies RegisterToolOptions;
+
+    expectTypeOf(tool.title).toEqualTypeOf<string | undefined>();
+    expectTypeOf(options.exposedTo).toEqualTypeOf<
+      readonly ["https://agent.example"]
+    >();
   });
 
   it("does NOT validate by default (purely additive type narrowing)", async () => {
@@ -522,6 +639,21 @@ describe("defineTool", () => {
     // verbatim (here sync, since the user's execute is sync).
     const out = await (tool.execute as (i: unknown) => unknown)(123);
     expect(out).toEqual({ text: 123 });
+  });
+
+  it("preserves the existing explicit DefineToolOptions generic order", () => {
+    type InputSchema = StandardSchemaV1<string, string>;
+    type Output = { text: string };
+    const options: DefineToolOptions<InputSchema, Output> = {
+      name: "echo",
+      description: "echoes",
+      input: stringSchema("input"),
+      execute: (text) => ({ text }),
+    };
+    const tool = defineTool<InputSchema, Output>(options);
+    const acceptsExistingTool = (_tool: Tool<string, Output>): void => {};
+
+    acceptsExistingTool(tool);
   });
 
   it("validates and throws ToolValidationError when validate:true and input fails", async () => {
@@ -550,6 +682,119 @@ describe("defineTool", () => {
     ).resolves.toEqual({ text: "hi" });
   });
 
+  it("validates a synchronous result with a synchronous output schema", async () => {
+    const validate = vi.fn((value: unknown) => {
+      if (typeof value === "string") return { value: value.toUpperCase() };
+      return { issues: [{ message: "output must be a string" }] };
+    });
+    const output: StandardSchemaV1<string, string> = {
+      "~standard": { version: 1, vendor: "test", validate },
+    };
+    const tool = defineTool({
+      name: "greet",
+      description: "greets",
+      output,
+      execute: () => "hello",
+    });
+
+    await expect(tool.execute(undefined)).resolves.toBe("HELLO");
+    expect(validate).toHaveBeenCalledWith("hello");
+  });
+
+  it("supports asynchronous results and asynchronous output validators", async () => {
+    const output: StandardSchemaV1<string, string> = {
+      "~standard": {
+        version: 1,
+        vendor: "test",
+        validate: async (value: unknown) => {
+          await Promise.resolve();
+          return typeof value === "string"
+            ? { value: `${value}!` }
+            : { issues: [{ message: "output must be a string" }] };
+        },
+      },
+    };
+    const tool = defineTool({
+      name: "async-greet",
+      description: "greets asynchronously",
+      output,
+      execute: async () => {
+        await Promise.resolve();
+        return "hello";
+      },
+    });
+
+    await expect(tool.execute(undefined)).resolves.toBe("hello!");
+  });
+
+  it("returns schema transformations with the inferred output type", async () => {
+    const tool = defineTool({
+      name: "count",
+      description: "returns a count",
+      output: numericStringSchema,
+      execute: () => "42",
+    });
+
+    const result = await tool.execute(undefined);
+    expect(result).toBe(42);
+    expectTypeOf(result).toEqualTypeOf<number>();
+  });
+
+  it("throws ToolOutputValidationError with the tool name and issues", async () => {
+    const tool = defineTool({
+      name: "count",
+      description: "returns a count",
+      output: numericStringSchema,
+      execute: () => "not-a-number",
+    });
+
+    await expect(tool.execute(undefined)).rejects.toMatchObject({
+      name: "ToolOutputValidationError",
+      toolName: "count",
+      issues: [
+        {
+          message: "output must be a numeric string",
+          path: ["value"],
+        },
+      ],
+    });
+    await expect(tool.execute(undefined)).rejects.toBeInstanceOf(
+      ToolOutputValidationError,
+    );
+  });
+
+  it("passes execute rejections through without running output validation", async () => {
+    const failure = new Error("request failed");
+    const validate = vi.fn((value: unknown) => ({ value: String(value) }));
+    const output: StandardSchemaV1<string, string> = {
+      "~standard": { version: 1, vendor: "test", validate },
+    };
+    const tool = defineTool({
+      name: "failing",
+      description: "fails",
+      output,
+      execute: async () => {
+        throw failure;
+      },
+    });
+
+    await expect(tool.execute(undefined)).rejects.toBe(failure);
+    expect(validate).not.toHaveBeenCalled();
+  });
+
+  it("does not forward an outputSchema field to WebMCP", () => {
+    const { registered } = installFakeModelContext();
+    const tool = defineTool({
+      name: "count",
+      description: "returns a count",
+      output: numericStringSchema,
+      execute: () => "42",
+    });
+    registerTool(tool);
+
+    expect(registered.get("count")).not.toHaveProperty("outputSchema");
+  });
+
   it("forwards readOnly / destructive shorthands to the resulting Tool", () => {
     const tool = defineTool({
       name: "list",
@@ -571,5 +816,20 @@ describe("defineTool", () => {
     });
     registerTool(tool);
     expect(registered.get("plain")?.inputSchema).toEqual({ type: "object" });
+  });
+
+  it("preserves synchronous results and output inference without output", () => {
+    const tool = defineTool({
+      name: "plain",
+      description: "plain",
+      execute: () => ({ ok: true as const }),
+    });
+    const acceptsInferredTool = (
+      _tool: Tool<unknown, { readonly ok: true }>,
+    ): void => {};
+
+    acceptsInferredTool(tool);
+    expect(tool.execute(undefined)).toEqual({ ok: true });
+    expect(tool.execute(undefined)).not.toBeInstanceOf(Promise);
   });
 });

@@ -11,19 +11,27 @@
  */
 
 export interface ToolAnnotations {
+  /** Defined by the current WebMCP draft. */
   readOnlyHint?: boolean;
+  /** Marks external or user-generated tool output as untrusted. */
+  untrustedContentHint?: boolean;
+  /** Compatibility passthrough for MCP-shaped and earlier WebMCP hosts. */
   destructiveHint?: boolean;
+  /** Compatibility passthrough for MCP-shaped and earlier WebMCP hosts. */
   idempotentHint?: boolean;
+  /** Compatibility passthrough for MCP-shaped and earlier WebMCP hosts. */
   openWorldHint?: boolean;
 }
 
 export interface Tool<TInput = unknown, TOutput = unknown> {
   name: string;
+  /** Optional human-readable title for display in host user interfaces. */
+  title?: string;
   description: string;
   inputSchema?: object;
   /** Shorthand for `annotations.readOnlyHint = true`. */
   readOnly?: boolean;
-  /** Shorthand for `annotations.destructiveHint = true`. */
+  /** Compatibility shorthand for `annotations.destructiveHint = true`. */
   destructive?: boolean;
   /** Raw passthrough; merged on top of the shorthand flags. */
   annotations?: ToolAnnotations;
@@ -68,10 +76,14 @@ export namespace StandardSchemaV1 {
 
   export type InferInput<S> =
     S extends StandardSchemaV1<infer In, unknown> ? In : unknown;
+
+  export type InferOutput<S> =
+    S extends StandardSchemaV1<unknown, infer Out> ? Out : unknown;
 }
 
 export class ToolValidationError extends Error {
   override readonly name = "ToolValidationError";
+  readonly toolName: string;
   readonly issues: ReadonlyArray<StandardSchemaV1.Issue>;
   constructor(toolName: string, issues: ReadonlyArray<StandardSchemaV1.Issue>) {
     const summary = issues
@@ -79,15 +91,34 @@ export class ToolValidationError extends Error {
       .map((i) => i.message)
       .join("; ");
     super(`Tool "${toolName}" input validation failed: ${summary}`);
+    this.toolName = toolName;
+    this.issues = issues;
+  }
+}
+
+export class ToolOutputValidationError extends Error {
+  override readonly name = "ToolOutputValidationError";
+  readonly toolName: string;
+  readonly issues: ReadonlyArray<StandardSchemaV1.Issue>;
+  constructor(toolName: string, issues: ReadonlyArray<StandardSchemaV1.Issue>) {
+    const summary = issues
+      .slice(0, 3)
+      .map((i) => i.message)
+      .join("; ");
+    super(`Tool "${toolName}" output validation failed: ${summary}`);
+    this.toolName = toolName;
     this.issues = issues;
   }
 }
 
 export interface DefineToolOptions<
-  Schema extends StandardSchemaV1 | undefined = undefined,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
   TOutput = unknown,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
 > {
   name: string;
+  /** Optional human-readable title for display in host user interfaces. */
+  title?: string;
   description: string;
   /**
    * Optional Standard Schema (Zod / Valibot / ArkType / etc.) used purely to
@@ -95,7 +126,13 @@ export interface DefineToolOptions<
    * `validate: true`. Standard Schema doesn't emit JSON Schema, so pass
    * `inputSchema` explicitly when the host needs it for tool dispatch.
    */
-  input?: Schema;
+  input?: InputSchema;
+  /**
+   * Optional Standard Schema for the resolved `execute` result. When present,
+   * the SDK always validates the result and returns the schema's parsed output.
+   * This is SDK-only and is never forwarded to the WebMCP host.
+   */
+  output?: OutputSchema;
   /** Raw JSON Schema for the host. Stays explicit; the SDK does not derive it from `input`. */
   inputSchema?: object;
   readOnly?: boolean;
@@ -108,20 +145,30 @@ export interface DefineToolOptions<
    */
   validate?: boolean;
   execute: (
-    input: Schema extends StandardSchemaV1
-      ? StandardSchemaV1.InferInput<Schema>
+    input: InputSchema extends StandardSchemaV1
+      ? StandardSchemaV1.InferInput<InputSchema>
       : unknown,
-  ) => Promise<TOutput> | TOutput;
+  ) =>
+    | Promise<
+        OutputSchema extends StandardSchemaV1
+          ? StandardSchemaV1.InferInput<OutputSchema>
+          : TOutput
+      >
+    | (OutputSchema extends StandardSchemaV1
+        ? StandardSchemaV1.InferInput<OutputSchema>
+        : TOutput);
 }
 
-const validateInput = async <Output>(
+const validateWithSchema = async <Output>(
   schema: StandardSchemaV1<unknown, Output>,
   value: unknown,
-  toolName: string,
+  onFailure: (
+    issues: ReadonlyArray<StandardSchemaV1.Issue>,
+  ) => ToolValidationError | ToolOutputValidationError,
 ): Promise<Output> => {
   const result = await schema["~standard"].validate(value);
   if ("issues" in result && result.issues) {
-    throw new ToolValidationError(toolName, result.issues);
+    throw onFailure(result.issues);
   }
   return (result as { value: Output }).value;
 };
@@ -130,46 +177,69 @@ const validateInput = async <Output>(
  * Build a `Tool` whose `execute` is typed against an optional Standard Schema
  * (Zod / Valibot / ArkType / etc.) without forcing the SDK to take a dep on
  * any specific library. Pass `validate: true` to also run the schema at
- * runtime; otherwise the schema is type-only and `execute` runs verbatim.
+ * runtime; otherwise the input schema is type-only. Supplying `output` always
+ * validates the resolved result and returns the schema's parsed output.
  *
  * The returned object is a plain `Tool` and can be passed to `registerTool`
  * or the React `useWebMCP` hook unchanged.
  */
 export const defineTool = <
-  Schema extends StandardSchemaV1 | undefined = undefined,
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
   TOutput = unknown,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
 >(
-  options: DefineToolOptions<Schema, TOutput>,
+  options: DefineToolOptions<InputSchema, TOutput, OutputSchema>,
 ): Tool<
-  Schema extends StandardSchemaV1
-    ? StandardSchemaV1.InferInput<Schema>
+  InputSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferInput<InputSchema>
     : unknown,
-  TOutput
+  OutputSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<OutputSchema>
+    : TOutput
 > => {
-  type Input = Schema extends StandardSchemaV1
-    ? StandardSchemaV1.InferInput<Schema>
+  type Input = InputSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferInput<InputSchema>
     : unknown;
+  type RawOutput = OutputSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferInput<OutputSchema>
+    : TOutput;
+  type Output = OutputSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<OutputSchema>
+    : TOutput;
 
   const baseExecute = options.execute as (
     input: Input,
-  ) => Promise<TOutput> | TOutput;
-  const execute: (input: Input) => Promise<TOutput> | TOutput =
-    options.validate && options.input
+  ) => Promise<RawOutput> | RawOutput;
+  const inputSchema = options.validate ? options.input : undefined;
+  const outputSchema = options.output;
+  const execute: (input: Input) => Promise<Output> | Output =
+    inputSchema || outputSchema
       ? async (input: Input) => {
-          const validated = (await validateInput(
-            options.input as StandardSchemaV1<unknown, Input>,
-            input,
-            options.name,
-          )) as Input;
-          return baseExecute(validated);
+          const executeInput = inputSchema
+            ? ((await validateWithSchema(
+                inputSchema as StandardSchemaV1<unknown, Input>,
+                input,
+                (issues) => new ToolValidationError(options.name, issues),
+              )) as Input)
+            : input;
+          const result = await baseExecute(executeInput);
+          if (outputSchema) {
+            return validateWithSchema(
+              outputSchema as StandardSchemaV1<unknown, Output>,
+              result,
+              (issues) => new ToolOutputValidationError(options.name, issues),
+            );
+          }
+          return result as Output;
         }
-      : baseExecute;
+      : (baseExecute as (input: Input) => Promise<Output> | Output);
 
-  const tool: Tool<Input, TOutput> = {
+  const tool: Tool<Input, Output> = {
     name: options.name,
     description: options.description,
     execute,
   };
+  if (options.title !== undefined) tool.title = options.title;
   if (options.inputSchema !== undefined) tool.inputSchema = options.inputSchema;
   if (options.readOnly) tool.readOnly = true;
   if (options.destructive) tool.destructive = true;
@@ -179,20 +249,30 @@ export const defineTool = <
 
 interface RegisteredTool {
   name: string;
+  title?: string;
   description: string;
   inputSchema?: object;
   annotations?: ToolAnnotations;
   execute: (input: unknown) => Promise<unknown> | unknown;
 }
 
-interface RegisterToolOptions {
+/** Options forwarded to the native WebMCP registration. */
+export interface RegisterToolOptions {
+  /**
+   * Origins of descendant documents that may discover this tool. The browser
+   * validates these values; the SDK forwards the array unchanged.
+   */
+  exposedTo?: readonly string[];
+}
+
+interface NativeRegisterToolOptions extends RegisterToolOptions {
   signal?: AbortSignal;
 }
 
 interface ModelContext {
   registerTool: (
     def: RegisteredTool,
-    options?: RegisterToolOptions,
+    options?: NativeRegisterToolOptions,
   ) => Promise<void> | void;
 }
 
@@ -230,6 +310,7 @@ const toRegistered = (tool: Tool): RegisteredTool => {
     description: tool.description,
     execute: tool.execute as RegisteredTool["execute"],
   };
+  if (tool.title !== undefined) registered.title = tool.title;
   if (tool.inputSchema !== undefined) registered.inputSchema = tool.inputSchema;
   if (Object.keys(annotations).length > 0) registered.annotations = annotations;
   return registered;
@@ -270,11 +351,17 @@ const callRegister = (
   mc: ModelContext,
   registered: RegisteredTool,
   controller: AbortController,
+  options?: RegisterToolOptions,
 ): Promise<void> => {
+  const nativeOptions: NativeRegisterToolOptions = {
+    signal: controller.signal,
+  };
+  if (options?.exposedTo !== undefined) {
+    nativeOptions.exposedTo = options.exposedTo;
+  }
+
   try {
-    return Promise.resolve(
-      mc.registerTool(registered, { signal: controller.signal }),
-    );
+    return Promise.resolve(mc.registerTool(registered, nativeOptions));
   } catch (err) {
     return Promise.reject(err);
   }
@@ -300,6 +387,7 @@ const registerOne = async (
   mc: ModelContext,
   registered: RegisteredTool,
   controller: AbortController,
+  options?: RegisterToolOptions,
 ): Promise<boolean> => {
   // If we still hold a live controller for this name, evict it before the
   // native register call so Chrome doesn't reject with InvalidStateError.
@@ -309,7 +397,7 @@ const registerOne = async (
   }
 
   try {
-    await callRegister(mc, registered, controller);
+    await callRegister(mc, registered, controller, options);
   } catch (err) {
     // If our own controller was aborted (a later caller evicted us, or our
     // cleanup fired, while registration was still pending), treat it as a
@@ -333,7 +421,7 @@ const registerOne = async (
     await Promise.resolve();
     if (controller.signal.aborted) return false;
     try {
-      await callRegister(mc, registered, controller);
+      await callRegister(mc, registered, controller, options);
     } catch (retryErr) {
       if (controller.signal.aborted) return false;
       if (isDuplicateNameError(retryErr)) {
@@ -357,6 +445,17 @@ const registerOne = async (
   return true;
 };
 
+/** Register a tool with optional native registration options. */
+export function registerTool<TInput, TOutput>(
+  tool: Tool<TInput, TOutput>,
+  options?: RegisterToolOptions,
+): () => void;
+/** Preserve the documented `tools.map(registerTool)` callback shape. */
+export function registerTool<TInput, TOutput>(
+  tool: Tool<TInput, TOutput>,
+  index: number,
+  tools: readonly Tool<TInput, TOutput>[],
+): () => void;
 /**
  * Register a single tool. Returns a cleanup function that unregisters it.
  *
@@ -366,9 +465,13 @@ const registerOne = async (
  *
  * If WebMCP is unavailable, the call is a no-op and the cleanup is a no-op.
  */
-export const registerTool = <TInput, TOutput>(
+export function registerTool<TInput, TOutput>(
   tool: Tool<TInput, TOutput>,
-): (() => void) => {
+  optionsOrIndex?: RegisterToolOptions | number,
+  _tools?: readonly Tool<TInput, TOutput>[],
+): () => void {
+  const options =
+    typeof optionsOrIndex === "number" ? undefined : optionsOrIndex;
   const mc = getModelContext();
   if (!mc) return () => {};
 
@@ -378,7 +481,7 @@ export const registerTool = <TInput, TOutput>(
   // so there is no unhandled-rejection risk. The sync cleanup below aborts the
   // controller; if registration is still pending, the abort propagates to the
   // host and registerOne treats it as a clean cancellation.
-  void registerOne(mc, registered, controller);
+  void registerOne(mc, registered, controller, options);
 
   let disposed = false;
   return () => {
@@ -386,4 +489,4 @@ export const registerTool = <TInput, TOutput>(
     disposed = true;
     controller.abort();
   };
-};
+}

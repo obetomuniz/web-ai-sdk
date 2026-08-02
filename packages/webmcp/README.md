@@ -27,8 +27,10 @@ import { registerTool } from "@web-ai-sdk/webmcp";
 const tools = [
   {
     name: "list_blog_posts",
+    title: "List blog posts",
     description: "List published blog posts.",
     readOnly: true,
+    annotations: { untrustedContentHint: true },
     execute: async () => {
       const res = await fetch("/api/posts.json");
       return { results: await res.json() };
@@ -68,40 +70,36 @@ const cleanup = () => cleanups.forEach((c) => c());
 cleanup();
 ```
 
-`registerTool(tool)` registers a single tool and returns the cleanup. Re-registering a tool with the same name is safe; the previous registration is dropped first.
+`registerTool(tool, options?)` registers a single tool and returns the cleanup. Re-registering a tool with the same name is safe; the previous registration is dropped first.
 
 ## React
 
 ```tsx
 import { useWebMCP, type Tool } from "@web-ai-sdk/webmcp/react";
-import { useMemo } from "react";
 
-const TOOLS: Tool[] = [
-  {
-    name: "list_blog_posts",
-    description: "List published blog posts.",
-    readOnly: true,
-    execute: async () => {
-      const res = await fetch("/api/posts.json");
-      return { results: await res.json() };
-    },
+const LIST_POSTS: Tool = {
+  name: "list_blog_posts",
+  title: "List blog posts",
+  description: "List published blog posts.",
+  readOnly: true,
+  annotations: { untrustedContentHint: true },
+  execute: async () => {
+    const res = await fetch("/api/posts.json");
+    return { results: await res.json() };
   },
-];
+};
 
-export function WebMCP() {
-  // Stable reference: keep tools outside the component or wrap in useMemo,
-  // otherwise the hook will unregister/re-register on every render.
-  const tools = useMemo(() => TOOLS, []);
-  useWebMCP(tools);
+export function WebMCP({ isSignedIn }: { isSignedIn: boolean }) {
+  useWebMCP(LIST_POSTS, { enabled: isSignedIn });
   return null;
 }
 ```
 
-The hook registers on mount, unregisters on unmount, and re-registers when the array reference changes.
+The hook accepts one tool or a readonly array. It registers on mount, unregisters on unmount, and cleans up immediately when `enabled` changes to `false`. Registration follows discoverable metadata and `exposedTo` values rather than object identity, while `execute` always uses the latest committed callback. Inline tool objects, arrays, and options are safe: changing React state alone does not rebuild the registration, but changing a tool's name, title, description, schema, annotations, or exposure does.
 
 ## API
 
-### `registerTool(tool): () => void`
+### `registerTool(tool, options?): () => void`
 
 Register a single tool. Returns a cleanup function. No-op on unsupported browsers.
 
@@ -114,6 +112,16 @@ const cleanups = tools.map(registerTool);
 const cleanup = () => cleanups.forEach((c) => c());
 ```
 
+Use `exposedTo` to let descendant documents at specific origins discover the tool:
+
+```ts
+const cleanup = registerTool(tool, {
+  exposedTo: ["https://agent.example"],
+});
+```
+
+The SDK forwards the array unchanged alongside its internally owned `AbortSignal`. The browser validates each origin and rejects invalid or untrustworthy values; the wrapper preserves its non-throwing registration posture and logs that failure. Exposure is unnecessary for the owning document and should be limited to origins that genuinely need access.
+
 ### `isAvailable(): boolean`
 
 Feature-detect helper.
@@ -123,6 +131,7 @@ Feature-detect helper.
 ```ts
 interface Tool<TInput = unknown, TOutput = unknown> {
   name: string;
+  title?: string; // human-readable host UI label
   description: string;
   inputSchema?: object; // JSON Schema
   readOnly?: boolean; // shorthand for annotations.readOnlyHint
@@ -132,7 +141,19 @@ interface Tool<TInput = unknown, TOutput = unknown> {
 }
 ```
 
-`description` is consumed by the agent host (Cursor / Claude / Chrome agent / etc.). Write it as an instruction to an LLM about when to call the tool.
+`title` is for human-facing host UI. `description` is consumed by the agent host (Cursor / Claude / Chrome agent / etc.); write it as an instruction to an LLM about when to call the tool.
+
+The current WebMCP draft defines `readOnlyHint` and `untrustedContentHint`. The SDK also retains `destructiveHint`, `idempotentHint`, `openWorldHint`, and the `destructive` shorthand as source-compatible passthroughs for MCP-shaped and earlier WebMCP hosts; current-draft browsers may ignore those compatibility fields.
+
+```ts
+interface ToolAnnotations {
+  readOnlyHint?: boolean;
+  untrustedContentHint?: boolean;
+  destructiveHint?: boolean; // compatibility
+  idempotentHint?: boolean; // compatibility
+  openWorldHint?: boolean; // compatibility
+}
+```
 
 ### `defineTool({...}): Tool` — typed schema adapter (Standard Schema)
 
@@ -142,6 +163,7 @@ import { z } from "zod"; // or valibot, arktype, effect, …
 
 const sendEmail = defineTool({
   name: "send_contact_email",
+  title: "Send contact email",
   description: "Send a contact email on behalf of the visitor.",
   destructive: true,
   // Standard Schema (https://standardschema.dev): used to narrow execute's
@@ -152,6 +174,9 @@ const sendEmail = defineTool({
     subject: z.string().min(1),
     message: z.string().min(1),
   }),
+  // Output schemas validate every resolved result and may transform it.
+  // They stay inside the SDK and are not forwarded to WebMCP.
+  output: z.object({ ok: z.literal(true) }),
   // The host still wants raw JSON Schema for tool dispatch; pass it explicitly.
   // Standard Schema does not emit JSON Schema, so we don't bridge between
   // them — keeping both lets you choose your validator without coupling.
@@ -182,11 +207,17 @@ const sendEmail = defineTool({
 
 `defineTool` accepts any [Standard Schema](https://standardschema.dev) V1 validator (Zod 3.24+, Valibot, ArkType, Effect, …) — no SDK dependency on any specific library. The returned object is a plain `Tool`, so it composes with the rest of the API unchanged.
 
-**Validation:** off by default (`validate: false`). Most WebMCP hosts validate against `inputSchema` themselves; running the Standard Schema validator on top is opt-in via `validate: true`, which throws `ToolValidationError` on bad input. With `validate: false` the schema is type-only.
+**Input validation:** off by default (`validate: false`). Most WebMCP hosts validate against `inputSchema` themselves; running the Standard Schema input validator on top is opt-in via `validate: true`, which throws `ToolValidationError` on bad input. With `validate: false`, `input` is type-only.
+
+**Output validation:** supplying `output` always validates the resolved sync or async `execute` result and returns the schema's parsed value, including transformations. Invalid output throws `ToolOutputValidationError`; its `toolName` and `issues` fields identify the tool and preserve the Standard Schema issues. The output schema is SDK-only because WebMCP has no `outputSchema` field.
+
+Output validation only checks the rules encoded in the schema. It does not prove that a result is fresh, trustworthy, or factually correct.
 
 ## Safety
 
-Mark mutating tools `destructive: true`. The host (browser, agent) is responsible for gating destructive tools on explicit user approval; `@web-ai-sdk/webmcp` only forwards the annotation. For sensitive operations also defend server-side (origin allowlist, rate limit, validation).
+Set `annotations.untrustedContentHint: true` when results contain external, user-generated, or otherwise untrusted content. It is a trust-boundary signal for the host, not validation of the result's shape, truth, freshness, or safety.
+
+The compatibility shorthand `destructive: true` still communicates mutating intent to hosts that understand `destructiveHint`, but an annotation is not authorization. Confirm consequential actions with the user and defend sensitive operations server-side with authentication, authorization, validation, origin controls, and rate limits.
 
 ## Troubleshooting
 

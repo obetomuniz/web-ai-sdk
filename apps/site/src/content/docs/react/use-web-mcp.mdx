@@ -11,56 +11,67 @@ React adapter for `@web-ai-sdk/webmcp`. Registers WebMCP tools on mount and unre
 
 <WebMCPDemo client:only="react" />
 
-Toggle the tools on or off, then click "Run agent". On browsers with WebMCP enabled the demo asks Chrome's testing surface (`navigator.modelContextTesting.executeTool`) to dispatch one of the live tools.
+Use the invoke controls below to call a registered tool. On browsers with WebMCP enabled the demo asks Chrome's testing surface (`navigator.modelContextTesting.executeTool`) to dispatch the selected live tool.
 
 ## Usage
 
 ```tsx
-import { useWebMCP } from "@web-ai-sdk/webmcp/react";
-import { useMemo } from "react";
+import { useWebMCP, type Tool } from "@web-ai-sdk/webmcp/react";
 
-export function AgentTools() {
-  const tools = useMemo(
-    () => [
-      {
-        name: "add_to_cart",
-        description: "Add a SKU to the user's cart",
-        execute: async (input) => ({ ok: true, ...input }),
-      },
-    ],
-    [],
-  );
+const ADD_TO_CART: Tool = {
+  name: "add_to_cart",
+  title: "Add to cart",
+  description: "Add a SKU to the user's cart",
+  execute: async (input) => ({ ok: true, ...input }),
+};
 
-  useWebMCP(tools);
+export function AgentTools({ isSignedIn }: { isSignedIn: boolean }) {
+  useWebMCP(ADD_TO_CART, { enabled: isSignedIn });
   return null; // pure logic; render whatever UI you want elsewhere
 }
 ```
 
-The hook re-registers whenever the `tools` array reference changes. Pass a stable reference (memoized or module-level) so the hook doesn't tear down and rebuild on every render.
+The hook accepts a single `Tool` or a readonly array. It registers on mount, cleans up on unmount, and cleans up whenever `enabled` changes to `false`.
+
+Multiple tools can be passed directly:
+
+```tsx
+useWebMCP([listItems, addToCart]);
+```
+
+The hook compares discoverable metadata and `exposedTo` values rather than object identity. Recreating an equivalent tool, tool array, or options object does not tear down its registration. Changing a name, title, description, schema, annotation, exposure value, or `enabled` state does update the registration.
+
+## Cross-document exposure
+
+Pass `exposedTo` through the hook when descendant documents at other origins should discover the tool:
+
+```tsx
+const EXPOSED_TO = ["https://agent.example"] as const;
+
+useWebMCP(ADD_TO_CART, {
+  enabled: isSignedIn,
+  exposedTo: EXPOSED_TO,
+});
+```
+
+The browser validates the origins. The SDK owns the registration's `AbortSignal`; callers cannot replace it.
 
 ## State + reactivity
 
-Tool `execute` closures capture whatever they read at definition time. If your tool needs to read live React state, use a `useRef`:
+The registered tool always delegates to the latest committed `execute` callback, so it can read live props and state without a manual ref bridge:
 
 ```tsx
-const stateRef = useRef(state);
-stateRef.current = state;
-
-const tools = useMemo(
-  () => [
-    {
-      name: "open_settings",
-      description: "...",
-      execute: async () => ({ pane: stateRef.current.pane }),
-    },
-  ],
-  [],
-);
-
-useWebMCP(tools);
+export function SettingsTool({ pane }: { pane: string }) {
+  useWebMCP({
+    name: "open_settings",
+    description: "Read the currently open settings pane",
+    execute: async () => ({ pane }),
+  });
+  return null;
+}
 ```
 
-This is necessary because Chrome's `AbortSignal`-driven unregister is asynchronous; a same-tick re-register can be silently skipped on a duplicate-name race, leaving the old closure in place. Reading from a ref guarantees the latest state regardless of which closure Chrome holds.
+Rerendering `SettingsTool` with a new `pane` updates execution immediately without unregistering and re-registering the tool. This avoids duplicate-name races while keeping registration changes tied to the fields an agent host can discover.
 
 ## Cleanup
 
@@ -70,32 +81,67 @@ The hook returns nothing; cleanup is automatic on unmount via `useEffect`'s retu
 
 On browsers without `document.modelContext` (or the legacy `navigator.modelContext`), the hook is a no-op. Render whatever fallback UI you want; nothing breaks.
 
+Tools created with `defineTool` can reject with `ToolValidationError` for opt-in input validation or `ToolOutputValidationError` when an `output` schema rejects the resolved result. Output schemas are SDK-only and are not forwarded to WebMCP.
+
 ## Reference
 
 ```ts
-import type { Tool, ToolAnnotations, DefineToolOptions } from "@web-ai-sdk/webmcp/react";
+import type {
+  DefineToolOptions,
+  RegisterToolOptions,
+  StandardSchemaV1,
+  Tool,
+  ToolAnnotations,
+  UseWebMCPOptions,
+} from "@web-ai-sdk/webmcp/react";
 
 interface Tool {
   name: string;
+  title?: string;
   description: string;
   execute: (input: unknown) => Promise<unknown> | unknown;
   readOnly?: boolean;              // → annotations.readOnlyHint
-  destructive?: boolean;           // → annotations.destructiveHint
+  destructive?: boolean;           // compatibility shorthand
   annotations?: ToolAnnotations;   // raw passthrough; merges on top of shorthand
-  inputSchema?: object;            // JSON Schema or Standard Schema v1
+  inputSchema?: object;            // JSON Schema
 }
 
 interface ToolAnnotations {
   readOnlyHint?: boolean;
-  destructiveHint?: boolean;
-  idempotentHint?: boolean;
-  openWorldHint?: boolean;
+  untrustedContentHint?: boolean;
+  destructiveHint?: boolean;       // compatibility
+  idempotentHint?: boolean;        // compatibility
+  openWorldHint?: boolean;         // compatibility
 }
 
-declare const useWebMCP: (tools: readonly Tool[]) => void;
+interface RegisterToolOptions {
+  exposedTo?: readonly string[];
+}
+
+interface UseWebMCPOptions extends RegisterToolOptions {
+  enabled?: boolean;
+}
+
+declare const useWebMCP: (
+  toolOrTools: Tool | readonly Tool[],
+  options?: UseWebMCPOptions,
+) => void;
 
 // Helper for type-safe tool definitions with a Standard Schema.
-declare function defineTool<T extends StandardSchemaV1>(options: DefineToolOptions<T>): Tool;
+declare function defineTool<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  TOutput = unknown,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
+>(
+  options: DefineToolOptions<InputSchema, TOutput, OutputSchema>,
+): Tool<
+  InputSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferInput<InputSchema>
+    : unknown,
+  OutputSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<OutputSchema>
+    : TOutput
+>;
 ```
 
 Source: [`packages/webmcp/src/react/index.ts`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/webmcp/src/react/index.ts).
