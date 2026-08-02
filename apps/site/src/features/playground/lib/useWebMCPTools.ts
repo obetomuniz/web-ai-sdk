@@ -1,7 +1,6 @@
 import {
-  defineTool,
   isAvailable as isWebMCPAvailable,
-  type Tool,
+  type ToolDefinition,
 } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
 import { useMemo, useRef } from "react";
@@ -36,7 +35,7 @@ const SendMessageInput = v.object({
 
 export function createPlaygroundWebMCPTools(
   argsRef: Current<PlaygroundWebMCPContext>,
-): Tool[] {
+) {
   const report = (name: string, detail?: string) => {
     argsRef.current.pushActivity({
       kind: "tool_invoked",
@@ -52,7 +51,7 @@ export function createPlaygroundWebMCPTools(
     };
   };
 
-  const listModes = defineTool({
+  const listModes: ToolDefinition = {
     name: "list_modes",
     description:
       "List the agent modes available in Playground. Each mode configures the system prompt, tools, examples, and renderers.",
@@ -68,9 +67,9 @@ export function createPlaygroundWebMCPTools(
         })),
       };
     },
-  });
+  };
 
-  const listConversations = defineTool({
+  const listConversations: ToolDefinition = {
     name: "list_conversations",
     description:
       "List persisted agent conversations, with mode ids and turn counts. Use this before switching, deleting, or sending.",
@@ -91,14 +90,13 @@ export function createPlaygroundWebMCPTools(
         })),
       };
     },
-  });
+  };
 
-  const newConversation = defineTool({
+  const newConversation: ToolDefinition<typeof NewConversationInput> = {
     name: "new_conversation",
     description:
       "Create and select a new agent conversation. Optionally pass a modeId from list_modes.",
     input: NewConversationInput,
-    validate: true,
     inputSchema: {
       type: "object",
       properties: { modeId: { type: "string" } },
@@ -111,13 +109,12 @@ export function createPlaygroundWebMCPTools(
       report("new_conversation", `-> ${thread.id}`);
       return { id: thread.id, modeId: thread.modeId };
     },
-  });
+  };
 
-  const switchConversation = defineTool({
+  const switchConversation: ToolDefinition<typeof ConversationIdInput> = {
     name: "switch_conversation",
     description: "Switch the active agent conversation by id.",
     input: ConversationIdInput,
-    validate: true,
     inputSchema: {
       type: "object",
       properties: { id: { type: "string", minLength: 1 } },
@@ -135,15 +132,14 @@ export function createPlaygroundWebMCPTools(
       report("switch_conversation", `-> ${match.name}`);
       return { ok: true, activeConversationId: id };
     },
-  });
+  };
 
-  const deleteConversation = defineTool({
+  const deleteConversation: ToolDefinition<typeof ConversationIdInput> = {
     name: "delete_conversation",
     description:
       "Delete an agent conversation by id. Destructive: persisted turns cannot be recovered.",
     destructive: true,
     input: ConversationIdInput,
-    validate: true,
     inputSchema: {
       type: "object",
       properties: { id: { type: "string", minLength: 1 } },
@@ -163,14 +159,13 @@ export function createPlaygroundWebMCPTools(
       report("delete_conversation", `x ${match.name}`);
       return { ok: true };
     },
-  });
+  };
 
-  const setMode = defineTool({
+  const setMode: ToolDefinition<typeof SetModeInput> = {
     name: "set_mode",
     description:
       "Set the active conversation mode while keeping its existing turns.",
     input: SetModeInput,
-    validate: true,
     inputSchema: {
       type: "object",
       properties: { modeId: { type: "string", minLength: 1 } },
@@ -189,14 +184,13 @@ export function createPlaygroundWebMCPTools(
       report("set_mode", `-> ${mode.name}`);
       return { ok: true, modeId: mode.id };
     },
-  });
+  };
 
-  const sendMessage = defineTool({
+  const sendMessage: ToolDefinition<typeof SendMessageInput> = {
     name: "send_message",
     description:
       "Send a message to the active agent conversation. The reply streams into the conversation.",
     input: SendMessageInput,
-    validate: true,
     inputSchema: {
       type: "object",
       properties: { text: { type: "string", minLength: 1 } },
@@ -213,7 +207,7 @@ export function createPlaygroundWebMCPTools(
             error: "Message was empty or the on-device model is unavailable.",
           };
     },
-  });
+  };
 
   return [
     listModes,
@@ -223,7 +217,7 @@ export function createPlaygroundWebMCPTools(
     deleteConversation,
     setMode,
     sendMessage,
-  ] as unknown as Tool[];
+  ] as const;
 }
 
 export function useWebMCPTools(args: PlaygroundWebMCPContext) {

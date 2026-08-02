@@ -16,28 +16,60 @@ Use the invoke controls below to call a registered tool. On browsers with WebMCP
 ## Usage
 
 ```tsx
-import { useWebMCP, type Tool } from "@web-ai-sdk/webmcp/react";
+import { useWebMCP } from "@web-ai-sdk/webmcp/react";
+import { z } from "zod"; // or valibot, arktype, effect, …
 
-const ADD_TO_CART: Tool = {
-  name: "add_to_cart",
-  title: "Add to cart",
-  description: "Add a SKU to the user's cart",
-  execute: async (input) => ({ ok: true, ...input }),
-};
+const AddToCartInput = z.object({ sku: z.string().min(1) });
 
 export function AgentTools({ isSignedIn }: { isSignedIn: boolean }) {
-  useWebMCP(ADD_TO_CART, { enabled: isSignedIn });
+  useWebMCP(
+    {
+      name: "add_to_cart",
+      title: "Add to cart",
+      description: "Add a SKU to the user's cart",
+      input: AddToCartInput,
+      inputSchema: {
+        type: "object",
+        properties: { sku: { type: "string", minLength: 1 } },
+        required: ["sku"],
+      },
+      execute: async ({ sku }) => ({ ok: true, sku }),
+    },
+    { enabled: isSignedIn },
+  );
   return null; // pure logic; render whatever UI you want elsewhere
 }
 ```
 
-The hook accepts a single `Tool` or a readonly array. It registers on mount, cleans up on unmount, and cleans up whenever `enabled` changes to `false`.
+The hook accepts a single plain tool or schema-aware definition, plus readonly arrays containing either shape. It registers on mount, cleans up on unmount, and cleans up whenever `enabled` changes to `false`.
 
 Multiple tools can be passed directly:
 
 ```tsx
-useWebMCP([listItems, addToCart]);
+import type { ToolDefinition } from "@web-ai-sdk/webmcp/react";
+
+const findItemTool = {
+  name: "find_item",
+  description: "Find an item by SKU",
+  input: FindItemInput,
+  inputSchema: findItemJsonSchema,
+  execute: ({ sku }) => findItem(sku),
+} satisfies ToolDefinition<typeof FindItemInput>;
+
+const addToCartTool = {
+  name: "add_to_cart",
+  description: "Add an item to the cart",
+  input: AddToCartInput,
+  inputSchema: addToCartJsonSchema,
+  execute: ({ sku }) => addToCart(sku),
+} satisfies ToolDefinition<typeof AddToCartInput>;
+
+useWebMCP([findItemTool, addToCartTool] as const);
 ```
+
+Typing or checking each definition at its definition site preserves its own
+schema-derived `execute` input type; the heterogeneous readonly array needs no
+`as unknown as Tool[]` cast.
 
 The hook compares discoverable metadata and `exposedTo` values rather than object identity. Recreating an equivalent tool, tool array, or options object does not tear down its registration. Changing a name, title, description, schema, annotation, exposure value, or `enabled` state does update the registration.
 
@@ -50,7 +82,7 @@ Pass `exposedTo` through the hook when descendant documents at other origins sho
 ```tsx
 const EXPOSED_TO = ["https://agent.example"] as const;
 
-useWebMCP(ADD_TO_CART, {
+useWebMCP(addToCartTool, {
   enabled: isSignedIn,
   exposedTo: EXPOSED_TO,
 });
@@ -83,7 +115,9 @@ The hook returns nothing; cleanup is automatic on unmount via `useEffect`'s retu
 
 On browsers without `document.modelContext` (or the legacy `navigator.modelContext`), the hook is a no-op. Render whatever fallback UI you want; nothing breaks.
 
-Tools created with `defineTool` can reject with `ToolValidationError` for opt-in input validation or `ToolOutputValidationError` when an `output` schema rejects the resolved result. Output schemas are SDK-only and are not forwarded to WebMCP.
+Direct definitions with `input` reject with `ToolValidationError` before application code runs when validation fails. Definitions with `output` reject with `ToolOutputValidationError` when the resolved result fails validation. Both schemas may transform values and may validate synchronously or asynchronously. The SDK-only `input` and `output` fields are never forwarded to WebMCP.
+
+`defineTool()` remains as a deprecated compatibility wrapper with its historical `validate: true` input-validation opt-in. New code should pass definitions directly to the hook.
 
 ## Reference
 
@@ -94,6 +128,7 @@ import type {
   StandardSchemaV1,
   Tool,
   ToolAnnotations,
+  ToolDefinition,
   UseWebMCPOptions,
 } from "@web-ai-sdk/webmcp/react";
 
@@ -106,6 +141,15 @@ interface Tool {
   destructive?: boolean;           // compatibility shorthand
   annotations?: ToolAnnotations;   // raw passthrough; merges on top of shorthand
   inputSchema?: object;            // JSON Schema
+}
+
+interface ToolDefinition<InputSchema, TOutput, OutputSchema> {
+  name: string;
+  description: string;
+  input?: InputSchema;
+  output?: OutputSchema;
+  inputSchema?: object;
+  execute: (input: StandardSchemaV1.InferOutput<InputSchema>) => TOutput;
 }
 
 interface ToolAnnotations {
@@ -124,12 +168,16 @@ interface UseWebMCPOptions extends RegisterToolOptions {
   enabled?: boolean;
 }
 
-declare const useWebMCP: (
-  toolOrTools: Tool | readonly Tool[],
+declare function useWebMCP(
+  toolOrTools:
+    | Tool
+    | ToolDefinition
+    | readonly (Tool | ToolDefinition)[],
   options?: UseWebMCPOptions,
 ) => void;
 
-// Helper for type-safe tool definitions with a Standard Schema.
+// Deprecated compatibility helper. Direct definitions are the primary API.
+/** @deprecated */
 declare function defineTool<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   TOutput = unknown,

@@ -82,22 +82,30 @@ cleanup();
 ## React
 
 ```tsx
-import { useWebMCP, type Tool } from "@web-ai-sdk/webmcp/react";
+import { useWebMCP } from "@web-ai-sdk/webmcp/react";
+import { z } from "zod"; // or valibot, arktype, effect, …
 
-const LIST_POSTS: Tool = {
-  name: "list_blog_posts",
-  title: "List blog posts",
-  description: "List published blog posts.",
-  readOnly: true,
-  annotations: { untrustedContentHint: true },
-  execute: async () => {
-    const res = await fetch("/api/posts.json");
-    return { results: await res.json() };
-  },
-};
+const SearchPostsInput = z.object({ query: z.string().min(1) });
 
 export function WebMCP({ isSignedIn }: { isSignedIn: boolean }) {
-  useWebMCP(LIST_POSTS, { enabled: isSignedIn });
+  useWebMCP(
+    {
+      name: "search_blog_posts",
+      description: "Search published blog posts.",
+      readOnly: true,
+      input: SearchPostsInput,
+      inputSchema: {
+        type: "object",
+        properties: { query: { type: "string", minLength: 1 } },
+        required: ["query"],
+      },
+      execute: async ({ query }) => {
+        const res = await fetch(`/api/posts.json?q=${encodeURIComponent(query)}`);
+        return { results: await res.json() };
+      },
+    },
+    { enabled: isSignedIn },
+  );
   return null;
 }
 ```
@@ -148,6 +156,40 @@ interface Tool<TInput = unknown, TOutput = unknown> {
 }
 ```
 
+Plain `Tool` objects remain supported. Use `ToolDefinition` when declaring a
+schema-aware tool separately from its registration call.
+
+```ts
+interface ToolDefinition<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  TOutput = unknown,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
+> {
+  name: string;
+  title?: string;
+  description: string;
+  input?: InputSchema;
+  output?: OutputSchema;
+  inputSchema?: object;
+  readOnly?: boolean;
+  destructive?: boolean;
+  annotations?: ToolAnnotations;
+  execute: (
+    input: InputSchema extends StandardSchemaV1
+      ? StandardSchemaV1.InferOutput<InputSchema>
+      : unknown,
+  ) =>
+    | Promise<
+        OutputSchema extends StandardSchemaV1
+          ? StandardSchemaV1.InferInput<OutputSchema>
+          : TOutput
+      >
+    | (OutputSchema extends StandardSchemaV1
+        ? StandardSchemaV1.InferInput<OutputSchema>
+        : TOutput);
+}
+```
+
 `title` is for human-facing host UI. `description` is consumed by the agent host (Cursor / Claude / Chrome agent / etc.); write it as an instruction to an LLM about when to call the tool.
 
 The current WebMCP draft defines `readOnlyHint` and `untrustedContentHint`. The SDK also retains `destructiveHint`, `idempotentHint`, `openWorldHint`, and the `destructive` shorthand as source-compatible passthroughs for MCP-shaped and earlier WebMCP hosts; current-draft browsers may ignore those compatibility fields.
@@ -162,19 +204,19 @@ interface ToolAnnotations {
 }
 ```
 
-### `defineTool({...}): Tool` — typed schema adapter (Standard Schema)
+### Standard Schema definitions
 
 ```ts
-import { defineTool } from "@web-ai-sdk/webmcp";
+import { registerTool } from "@web-ai-sdk/webmcp";
 import { z } from "zod"; // or valibot, arktype, effect, …
 
-const sendEmail = defineTool({
+const cleanup = registerTool({
   name: "send_contact_email",
   title: "Send contact email",
   description: "Send a contact email on behalf of the visitor.",
   destructive: true,
-  // Standard Schema (https://standardschema.dev): used to narrow execute's
-  // input type. Validation at runtime is opt-in via `validate: true`.
+  // Standard Schema validates input before application code runs. execute
+  // receives the schema's parsed or transformed output type.
   input: z.object({
     name: z.string().min(1),
     email: z.string().email(),
@@ -182,11 +224,9 @@ const sendEmail = defineTool({
     message: z.string().min(1),
   }),
   // Output schemas validate every resolved result and may transform it.
-  // They stay inside the SDK and are not forwarded to WebMCP.
   output: z.object({ ok: z.literal(true) }),
-  // The host still wants raw JSON Schema for tool dispatch; pass it explicitly.
-  // Standard Schema does not emit JSON Schema, so we don't bridge between
-  // them — keeping both lets you choose your validator without coupling.
+  // Keep browser-facing JSON Schema explicit. Standard Schema has no universal
+  // JSON Schema conversion contract, so the SDK does not derive this field.
   inputSchema: {
     type: "object",
     properties: {
@@ -208,17 +248,26 @@ const sendEmail = defineTool({
     return { ok: true };
   },
 });
-
-// `sendEmail` is a plain Tool and can be passed to registerTool or useWebMCP.
 ```
 
-`defineTool` accepts any [Standard Schema](https://standardschema.dev) V1 validator (Zod 3.24+, Valibot, ArkType, Effect, …) — no SDK dependency on any specific library. The returned object is a plain `Tool`, so it composes with the rest of the API unchanged.
+`registerTool` and `useWebMCP` accept any [Standard Schema](https://standardschema.dev) V1 validator (Zod 3.24+, Valibot, ArkType, Effect, …) directly, with no SDK dependency on a validation library. Heterogeneous readonly arrays are supported without casting them to `Tool[]`.
 
-**Input validation:** off by default (`validate: false`). Most WebMCP hosts validate against `inputSchema` themselves; running the Standard Schema input validator on top is opt-in via `validate: true`, which throws `ToolValidationError` on bad input. With `validate: false`, `input` is type-only.
+**Input validation:** supplying `input` validates before application code runs and passes the schema's parsed or transformed value to `execute`. Invalid input throws `ToolValidationError`; its `toolName` and `issues` fields identify the tool and preserve the Standard Schema issues.
 
 **Output validation:** supplying `output` always validates the resolved sync or async `execute` result and returns the schema's parsed value, including transformations. Invalid output throws `ToolOutputValidationError`; its `toolName` and `issues` fields identify the tool and preserve the Standard Schema issues. The output schema is SDK-only because WebMCP has no `outputSchema` field.
 
 Output validation only checks the rules encoded in the schema. It does not prove that a result is fresh, trustworthy, or factually correct.
+
+The SDK-only `input` and `output` fields are never forwarded to the native
+WebMCP host. `inputSchema`, metadata, annotations, and registration options keep
+their native forwarding behavior.
+
+### `defineTool({...}): Tool` — deprecated compatibility wrapper
+
+`defineTool()` remains available for migration compatibility, including its
+historical opt-in input validation through `validate: true`. New code should
+pass schema-aware definitions directly to `registerTool()` or `useWebMCP()`.
+The wrapper will only be removed in a documented breaking release.
 
 ## Safety
 

@@ -1,6 +1,7 @@
-import { isAvailable, type Tool } from "@web-ai-sdk/webmcp";
+import { isAvailable } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import * as v from "valibot";
 import { UnavailableHint } from "./UnavailableHint.js";
 
 interface ListedTool {
@@ -21,6 +22,10 @@ const getTesting = (): ModelContextTesting | undefined => {
     .modelContextTesting;
 };
 
+const EchoMessageInput = v.object({
+  message: v.pipe(v.string(), v.minLength(1), v.maxLength(200)),
+});
+
 export const WebMCPDemo = () => {
   const [log, setLog] = useState<string[]>([]);
   const [available, setAvailable] = useState<boolean>(() => isAvailable());
@@ -32,7 +37,7 @@ export const WebMCPDemo = () => {
     setLog((prev) => [...prev, `${new Date().toLocaleTimeString()} ${line}`]);
   }, []);
 
-  const tools = useMemo<Tool[]>(
+  const tools = useMemo(
     () => [
       {
         name: "list_demo_items",
@@ -48,6 +53,7 @@ export const WebMCPDemo = () => {
         name: "echo_message",
         description: "Echo a message back. Demonstrates input schema.",
         readOnly: true,
+        input: EchoMessageInput,
         inputSchema: {
           type: "object",
           properties: {
@@ -55,8 +61,9 @@ export const WebMCPDemo = () => {
           },
           required: ["message"],
         },
-        execute: async (input) => {
-          const { message } = input as { message: string };
+        execute: async ({
+          message,
+        }: v.InferOutput<typeof EchoMessageInput>) => {
           append(`echo_message called with "${message}"`);
           return { echoed: message };
         },

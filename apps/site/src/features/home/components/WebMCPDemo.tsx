@@ -5,10 +5,11 @@ import {
 } from "@web-ai-sdk/prompt";
 import {
   isAvailable as isWebMcpAvailable,
-  type Tool,
+  type StandardSchemaV1,
 } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import * as v from "valibot";
 import {
   btnSm,
   card,
@@ -49,9 +50,15 @@ interface ToolSpec {
   match: RegExp;
   readOnly?: boolean;
   destructive?: boolean;
+  input?: StandardSchemaV1;
   inputSchema?: object;
-  execute: (input: unknown) => Promise<unknown>;
+  execute(input: unknown): Promise<unknown>;
 }
+
+const AddToCartInput = v.object({
+  sku: v.pipe(v.string(), v.minLength(1)),
+  qty: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+});
 
 const TOOL_SPECS: readonly ToolSpec[] = [
   {
@@ -60,6 +67,7 @@ const TOOL_SPECS: readonly ToolSpec[] = [
     desc: "Add a SKU to the user's cart",
     on: true,
     match: /\bcart\b|\badd\b|MX-\d+/i,
+    input: AddToCartInput,
     inputSchema: {
       type: "object",
       properties: {
@@ -68,11 +76,9 @@ const TOOL_SPECS: readonly ToolSpec[] = [
       },
       required: ["sku"],
     },
-    execute: async (input) => ({
+    execute: async (input: v.InferOutput<typeof AddToCartInput>) => ({
       ok: true,
-      // Manual invocations (DevTools, testing surface) can pass primitives;
-      // only spread real objects so the payload stays well-formed.
-      ...(typeof input === "object" && input !== null ? input : {}),
+      ...input,
     }),
   },
   {
@@ -160,14 +166,15 @@ export const WebMCPDemo = () => {
   const enabledIdsRef = useRef(enabledIds);
   enabledIdsRef.current = enabledIds;
 
-  // Build the live Tool[] from the toggle state. Stable per (enabledIds set)
+  // Build the live definitions from the toggle state. Stable per enabled set
   // so the hook only re-registers when toggles change.
   // `open_settings` gets a closure that reports the live registration state,
   // turning it into a self-describing tool the agent can introspect.
-  const tools = useMemo<Tool[]>(() => {
+  const tools = useMemo(() => {
     return TOOL_SPECS.filter((t) => enabledIds.has(t.id)).map((spec) => ({
       name: spec.name,
       description: spec.desc,
+      ...(spec.input ? { input: spec.input } : {}),
       ...(spec.inputSchema ? { inputSchema: spec.inputSchema } : {}),
       ...(spec.readOnly ? { readOnly: true } : {}),
       ...(spec.destructive ? { destructive: true } : {}),

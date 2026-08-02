@@ -1,4 +1,10 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
+import {
+  normalizeToolDefinition,
+  type RegistrableTool,
+  type StandardSchemaV1,
+  type ToolDefinition,
+} from "../definition.js";
 import { type RegisterToolOptions, registerTool } from "../index.js";
 import { type Tool, toRegisteredToolMetadata } from "../tool.js";
 
@@ -13,7 +19,7 @@ interface ActiveRegistration {
 }
 
 const getRegistrationKey = (
-  tools: readonly Tool[],
+  tools: readonly RegistrableTool[],
   exposedTo: readonly string[] | undefined,
 ): string => {
   try {
@@ -68,45 +74,74 @@ const useCommitEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 const wrapTools = (
-  tools: readonly Tool[],
-  latestExecutors: {
-    readonly current: readonly Tool["execute"][];
+  tools: readonly RegistrableTool[],
+  latestTools: {
+    readonly current: readonly Tool[];
   },
 ): readonly Tool[] =>
-  tools.map((tool, index) => {
-    const initialExecute = tool.execute;
-    return {
-      ...tool,
+  tools.map((definition, index) => {
+    const initialTool = latestTools.current[index];
+    const tool: Tool = {
+      name: definition.name,
+      description: definition.description,
       execute: (input: unknown) =>
-        (latestExecutors.current[index] ?? initialExecute)(input),
+        (latestTools.current[index] ?? initialTool)?.execute(input),
     };
+    if (definition.title !== undefined) tool.title = definition.title;
+    if (definition.inputSchema !== undefined) {
+      tool.inputSchema = definition.inputSchema;
+    }
+    if (definition.readOnly) tool.readOnly = true;
+    if (definition.destructive) tool.destructive = true;
+    if (definition.annotations) tool.annotations = definition.annotations;
+    return tool;
   });
+
+/** Register one direct schema-aware tool definition. */
+export function useWebMCP<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  TOutput = unknown,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
+>(
+  tool: ToolDefinition<InputSchema, TOutput, OutputSchema>,
+  options?: UseWebMCPOptions,
+): void;
+/** Register one existing plain Tool. */
+export function useWebMCP<TInput, TOutput>(
+  tool: Tool<TInput, TOutput>,
+  options?: UseWebMCPOptions,
+): void;
+/** Register an existing readonly collection of compatible tools. */
+export function useWebMCP<const Tools extends readonly RegistrableTool[]>(
+  tools: Tools,
+  options?: UseWebMCPOptions,
+): void;
 
 /**
  * React hook that registers one or more WebMCP tools on mount and unregisters
  * them on unmount. Registration changes only when discoverable metadata,
- * `enabled`, or `exposedTo` values change; execute callbacks always use the
- * latest committed render.
+ * `enabled`, or `exposedTo` values change; schemas and execute callbacks always
+ * use the latest committed render.
  *
  * On browsers that don't expose `document.modelContext` (or the legacy
  * `navigator.modelContext`), the hook is a no-op.
  */
-export const useWebMCP = (
-  toolOrTools: Tool | readonly Tool[],
+export function useWebMCP(
+  toolOrTools: RegistrableTool | readonly RegistrableTool[],
   options?: UseWebMCPOptions,
-): void => {
+): void {
   const enabled = options?.enabled ?? true;
   const exposedTo = options?.exposedTo;
-  const tools: readonly Tool[] = Array.isArray(toolOrTools)
+  const tools: readonly RegistrableTool[] = Array.isArray(toolOrTools)
     ? toolOrTools
-    : [toolOrTools];
-  const latestExecutors = useRef<readonly Tool["execute"][]>(
-    tools.map((tool) => tool.execute),
+    : [toolOrTools as RegistrableTool];
+  const latestTools = useRef<readonly Tool[]>(
+    tools.map((tool) => normalizeToolDefinition(tool)),
   );
   const activeRegistration = useRef<ActiveRegistration | undefined>(undefined);
 
   useCommitEffect(() => {
-    latestExecutors.current = tools.map((tool) => tool.execute);
+    latestTools.current = tools.map((tool) => normalizeToolDefinition(tool));
   });
 
   useEffect(() => {
@@ -123,7 +158,7 @@ export const useWebMCP = (
 
     const registerOptions: RegisterToolOptions | undefined =
       exposedTo === undefined ? undefined : { exposedTo };
-    const cleanups = wrapTools(tools, latestExecutors).map((tool) =>
+    const cleanups = wrapTools(tools, latestTools).map((tool) =>
       registerTool(tool, registerOptions),
     );
     activeRegistration.current = {
@@ -141,7 +176,7 @@ export const useWebMCP = (
     },
     [],
   );
-};
+}
 
 export type {
   DefineToolOptions,
@@ -149,6 +184,7 @@ export type {
   StandardSchemaV1,
   Tool,
   ToolAnnotations,
+  ToolDefinition,
 } from "../index.js";
 export {
   defineTool,
