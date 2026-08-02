@@ -1,5 +1,15 @@
 # @web-ai-sdk/webmcp
 
+## 0.7.0
+
+### Minor Changes
+
+- d9ff528: Align tool metadata and registration options with the current WebMCP draft, including title, untrustedContentHint, exposedTo, single-tool or conditional React registration, and fresh execute callbacks without registration churn.
+
+### Patch Changes
+
+- d9ff528: Add Standard Schema output validation to defineTool, including transformed output inference and typed failures.
+
 ## 0.6.2
 
 ### Patch Changes
