@@ -88,6 +88,51 @@ describe("createAgentLoop", () => {
     });
   });
 
+  it("dispatches a direct URL without trailing prose punctuation", async () => {
+    const fixture = createSessionFixture(["Fetch-only answer."]);
+    createSessionMock.mockReturnValue(fixture.base);
+    const calls: string[] = [];
+    const fetchedUrls: string[] = [];
+    const agent = createAgentLoop({
+      tools: [
+        createFetchFixtureTool(calls, fetchedUrls),
+        createClockFixtureTool(calls),
+      ],
+    });
+
+    await agent.run(
+      "Fetch https://github.com/obetomuniz/web-ai-sdk/issues/160, then summarize it.",
+    );
+    agent.destroy();
+
+    expect(fetchedUrls).toEqual([
+      "https://github.com/obetomuniz/web-ai-sdk/issues/160",
+    ]);
+  });
+
+  it("dispatches canonical URLs for punctuated multi-URL prompts", async () => {
+    const fixture = createSessionFixture(["Fetch-only answer."]);
+    createSessionMock.mockReturnValue(fixture.base);
+    const calls: string[] = [];
+    const fetchedUrls: string[] = [];
+    const agent = createAgentLoop({
+      tools: [
+        createFetchFixtureTool(calls, fetchedUrls),
+        createClockFixtureTool(calls),
+      ],
+    });
+
+    await agent.run(
+      "Compare https://one.test/items/1; with https://two.test/wiki/Function_(mathematics).",
+    );
+    agent.destroy();
+
+    expect(fetchedUrls).toEqual([
+      "https://one.test/items/1",
+      "https://two.test/wiki/Function_(mathematics)",
+    ]);
+  });
+
   it("reports explicitly requested tool work that remains uncalled", async () => {
     const fixture = createSessionFixture([
       "The URLs are done.",
@@ -157,6 +202,7 @@ describe("createAgentLoop", () => {
 
 function createFetchFixtureTool(
   calls: string[],
+  fetchedUrls?: string[],
 ): AgentTool<{ url: string }, { status: number; url: string; text: string }> {
   return {
     name: "fetch_url",
@@ -168,6 +214,7 @@ function createFetchFixtureTool(
     },
     async execute({ url }) {
       calls.push("fetch_url");
+      fetchedUrls?.push(url);
       return { status: 200, url, text: `Content from ${url}` };
     },
   };
