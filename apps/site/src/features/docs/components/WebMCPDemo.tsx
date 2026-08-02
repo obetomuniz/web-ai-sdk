@@ -1,7 +1,7 @@
 import { isAvailable } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import * as v from "valibot";
+import { z } from "zod";
 import { UnavailableHint } from "./UnavailableHint.js";
 
 interface ListedTool {
@@ -22,8 +22,8 @@ const getTesting = (): ModelContextTesting | undefined => {
     .modelContextTesting;
 };
 
-const EchoMessageInput = v.object({
-  message: v.pipe(v.string(), v.minLength(1), v.maxLength(200)),
+const EchoMessageInput = z.object({
+  message: z.string().min(1).max(200),
 });
 
 export const WebMCPDemo = () => {
@@ -54,16 +54,11 @@ export const WebMCPDemo = () => {
         description: "Echo a message back. Demonstrates input schema.",
         readOnly: true,
         input: EchoMessageInput,
-        inputSchema: {
-          type: "object",
-          properties: {
-            message: { type: "string", minLength: 1, maxLength: 200 },
-          },
-          required: ["message"],
-        },
-        execute: async ({
-          message,
-        }: v.InferOutput<typeof EchoMessageInput>) => {
+        inputSchema: z.toJSONSchema(EchoMessageInput, {
+          io: "input",
+          target: "draft-2020-12",
+        }),
+        execute: async ({ message }: z.output<typeof EchoMessageInput>) => {
           append(`echo_message called with "${message}"`);
           return { echoed: message };
         },

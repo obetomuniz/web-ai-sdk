@@ -15,7 +15,7 @@ WebMCP is a proposed standard in early preview: behind flags and an origin trial
 
 ```ts
 import { registerTool } from "@web-ai-sdk/webmcp";
-import { z } from "zod"; // or valibot, arktype, effect, …
+import { z } from "zod"; // Zod 4; other Standard Schema libraries work too
 
 const AddToCartInput = z.object({
   sku: z.string().min(1),
@@ -26,14 +26,10 @@ const cleanup = registerTool({
   name: "add_to_cart",
   description: "Add a SKU to the user's cart",
   input: AddToCartInput,
-  inputSchema: {
-    type: "object",
-    properties: {
-      sku: { type: "string", minLength: 1 },
-      quantity: { type: "integer", minimum: 1, default: 1 },
-    },
-    required: ["sku"],
-  },
+  inputSchema: z.toJSONSchema(AddToCartInput, {
+    io: "input",
+    target: "draft-2020-12",
+  }),
   execute: async ({ sku, quantity }) => addToCart(sku, quantity),
 });
 
@@ -80,8 +76,11 @@ interface ToolDefinition<InputSchema, TOutput, OutputSchema> {
 ```
 
 Standard Schema is library-neutral and adds no runtime dependency to the SDK.
-The browser-facing `inputSchema` remains explicit because Standard Schema has
-no universal JSON Schema conversion contract.
+Standard Schema validation and [Standard JSON Schema](https://standardschema.dev/json-schema)
+conversion are orthogonal capabilities. The browser-facing `inputSchema`
+remains explicit so consumers choose the converter and JSON Schema dialect.
+When a library supports conversion, derive it from the same schema rather than
+maintaining a second handwritten definition.
 
 <div class="options-table">
 

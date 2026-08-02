@@ -76,7 +76,7 @@ cleanup();
 
 ```tsx
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
-import { z } from "zod"; // or valibot, arktype, effect, …
+import { z } from "zod"; // Zod 4; other Standard Schema libraries work too
 
 const SearchPostsInput = z.object({ query: z.string().min(1) });
 
@@ -87,11 +87,10 @@ export function WebMCP({ isSignedIn }: { isSignedIn: boolean }) {
       description: "Search published blog posts.",
       readOnly: true,
       input: SearchPostsInput,
-      inputSchema: {
-        type: "object",
-        properties: { query: { type: "string", minLength: 1 } },
-        required: ["query"],
-      },
+      inputSchema: z.toJSONSchema(SearchPostsInput, {
+        io: "input",
+        target: "draft-2020-12",
+      }),
       execute: async ({ query }) => {
         const res = await fetch(`/api/posts.json?q=${encodeURIComponent(query)}`);
         return { results: await res.json() };
@@ -201,7 +200,14 @@ interface ToolAnnotations {
 
 ```ts
 import { registerTool } from "@web-ai-sdk/webmcp";
-import { z } from "zod"; // or valibot, arktype, effect, …
+import { z } from "zod";
+
+const SendContactEmailInput = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  subject: z.string().min(1),
+  message: z.string().min(1),
+});
 
 const cleanup = registerTool({
   name: "send_contact_email",
@@ -210,26 +216,14 @@ const cleanup = registerTool({
   destructive: true,
   // Standard Schema validates input before application code runs. execute
   // receives the schema's parsed or transformed output type.
-  input: z.object({
-    name: z.string().min(1),
-    email: z.string().email(),
-    subject: z.string().min(1),
-    message: z.string().min(1),
-  }),
+  input: SendContactEmailInput,
   // Output schemas validate every resolved result and may transform it.
   output: z.object({ ok: z.literal(true) }),
-  // Keep browser-facing JSON Schema explicit. Standard Schema has no universal
-  // JSON Schema conversion contract, so the SDK does not derive this field.
-  inputSchema: {
-    type: "object",
-    properties: {
-      name: { type: "string", minLength: 1 },
-      email: { type: "string", format: "email" },
-      subject: { type: "string", minLength: 1 },
-      message: { type: "string", minLength: 1 },
-    },
-    required: ["name", "email", "subject", "message"],
-  },
+  // Derive the browser-facing JSON Schema from the same source of truth.
+  inputSchema: z.toJSONSchema(SendContactEmailInput, {
+    io: "input",
+    target: "draft-2020-12",
+  }),
   async execute({ name, email, subject, message }) {
     // `name`, `email`, etc. are typed from the Zod schema.
     const res = await fetch("/api/send-email", {
@@ -244,6 +238,8 @@ const cleanup = registerTool({
 ```
 
 `registerTool` and `useWebMCP` accept any [Standard Schema](https://standardschema.dev) V1 validator (Zod 3.24+, Valibot, ArkType, Effect, …) directly, with no SDK dependency on a validation library. Heterogeneous readonly arrays are supported without casting them to `Tool[]`.
+
+Standard Schema validation and [Standard JSON Schema](https://standardschema.dev/json-schema) conversion are orthogonal capabilities. The SDK keeps `inputSchema` explicit so consumers choose the converter and JSON Schema dialect. The example uses Zod 4's converter; other libraries can provide a Standard JSON Schema converter or pass an explicit JSON Schema object.
 
 **Input validation:** supplying `input` validates before application code runs and passes the schema's parsed or transformed value to `execute`. Invalid input throws `ToolValidationError`; its `toolName` and `issues` fields identify the tool and preserve the Standard Schema issues.
 

@@ -9,7 +9,7 @@ import {
 } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import * as v from "valibot";
+import { z } from "zod";
 import {
   btnSm,
   card,
@@ -55,9 +55,9 @@ interface ToolSpec {
   execute(input: unknown): Promise<unknown>;
 }
 
-const AddToCartInput = v.object({
-  sku: v.pipe(v.string(), v.minLength(1)),
-  qty: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+const AddToCartInput = z.object({
+  sku: z.string().min(1).describe("The product SKU to add"),
+  qty: z.number().int().min(1).describe("Units to add").optional(),
 });
 
 const TOOL_SPECS: readonly ToolSpec[] = [
@@ -68,15 +68,11 @@ const TOOL_SPECS: readonly ToolSpec[] = [
     on: true,
     match: /\bcart\b|\badd\b|MX-\d+/i,
     input: AddToCartInput,
-    inputSchema: {
-      type: "object",
-      properties: {
-        sku: { type: "string", description: "The product SKU to add" },
-        qty: { type: "integer", minimum: 1, description: "Units to add" },
-      },
-      required: ["sku"],
-    },
-    execute: async (input: v.InferOutput<typeof AddToCartInput>) => ({
+    inputSchema: z.toJSONSchema(AddToCartInput, {
+      io: "input",
+      target: "draft-2020-12",
+    }),
+    execute: async (input: z.output<typeof AddToCartInput>) => ({
       ok: true,
       ...input,
     }),

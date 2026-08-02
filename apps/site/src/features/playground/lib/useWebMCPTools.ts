@@ -4,7 +4,7 @@ import {
 } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
 import { useMemo, useRef } from "react";
-import * as v from "valibot";
+import { z } from "zod";
 import { MODES } from "../experimental/playground/presets.js";
 import { type AgentThread, findMode } from "./agentThreads.js";
 import type { ActivityEvent } from "./types.js";
@@ -24,13 +24,13 @@ interface Current<T> {
   current: T;
 }
 
-const ConversationIdInput = v.object({
-  id: v.pipe(v.string(), v.minLength(1)),
+const ConversationIdInput = z.object({
+  id: z.string().min(1),
 });
-const NewConversationInput = v.object({ modeId: v.optional(v.string()) });
-const SetModeInput = v.object({ modeId: v.pipe(v.string(), v.minLength(1)) });
-const SendMessageInput = v.object({
-  text: v.pipe(v.string(), v.minLength(1)),
+const NewConversationInput = z.object({ modeId: z.string().optional() });
+const SetModeInput = z.object({ modeId: z.string().min(1) });
+const SendMessageInput = z.object({
+  text: z.string().min(1),
 });
 
 export function createPlaygroundWebMCPTools(
@@ -97,10 +97,10 @@ export function createPlaygroundWebMCPTools(
     description:
       "Create and select a new agent conversation. Optionally pass a modeId from list_modes.",
     input: NewConversationInput,
-    inputSchema: {
-      type: "object",
-      properties: { modeId: { type: "string" } },
-    },
+    inputSchema: z.toJSONSchema(NewConversationInput, {
+      io: "input",
+      target: "draft-2020-12",
+    }),
     execute: async ({ modeId }) => {
       if (argsRef.current.busy) return rejectBusy("new_conversation");
       const target = modeId ? findMode(modeId).id : undefined;
@@ -115,11 +115,10 @@ export function createPlaygroundWebMCPTools(
     name: "switch_conversation",
     description: "Switch the active agent conversation by id.",
     input: ConversationIdInput,
-    inputSchema: {
-      type: "object",
-      properties: { id: { type: "string", minLength: 1 } },
-      required: ["id"],
-    },
+    inputSchema: z.toJSONSchema(ConversationIdInput, {
+      io: "input",
+      target: "draft-2020-12",
+    }),
     execute: async ({ id }) => {
       if (argsRef.current.busy) return rejectBusy("switch_conversation");
       const match = argsRef.current.threads.find((thread) => thread.id === id);
@@ -140,11 +139,10 @@ export function createPlaygroundWebMCPTools(
       "Delete an agent conversation by id. Destructive: persisted turns cannot be recovered.",
     destructive: true,
     input: ConversationIdInput,
-    inputSchema: {
-      type: "object",
-      properties: { id: { type: "string", minLength: 1 } },
-      required: ["id"],
-    },
+    inputSchema: z.toJSONSchema(ConversationIdInput, {
+      io: "input",
+      target: "draft-2020-12",
+    }),
     execute: async ({ id }) => {
       if (argsRef.current.busy) return rejectBusy("delete_conversation");
       const match = argsRef.current.threads.find((thread) => thread.id === id);
@@ -166,11 +164,10 @@ export function createPlaygroundWebMCPTools(
     description:
       "Set the active conversation mode while keeping its existing turns.",
     input: SetModeInput,
-    inputSchema: {
-      type: "object",
-      properties: { modeId: { type: "string", minLength: 1 } },
-      required: ["modeId"],
-    },
+    inputSchema: z.toJSONSchema(SetModeInput, {
+      io: "input",
+      target: "draft-2020-12",
+    }),
     execute: async ({ modeId }) => {
       if (argsRef.current.busy) return rejectBusy("set_mode");
       const mode = MODES.find((candidate) => candidate.id === modeId);
@@ -191,11 +188,10 @@ export function createPlaygroundWebMCPTools(
     description:
       "Send a message to the active agent conversation. The reply streams into the conversation.",
     input: SendMessageInput,
-    inputSchema: {
-      type: "object",
-      properties: { text: { type: "string", minLength: 1 } },
-      required: ["text"],
-    },
+    inputSchema: z.toJSONSchema(SendMessageInput, {
+      io: "input",
+      target: "draft-2020-12",
+    }),
     execute: async ({ text }) => {
       if (argsRef.current.busy) return rejectBusy("send_message");
       report("send_message", text);

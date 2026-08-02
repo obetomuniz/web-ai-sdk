@@ -17,7 +17,7 @@ Use the invoke controls below to call a registered tool. On browsers with WebMCP
 
 ```tsx
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
-import { z } from "zod"; // or valibot, arktype, effect, …
+import { z } from "zod"; // Zod 4; other Standard Schema libraries work too
 
 const AddToCartInput = z.object({ sku: z.string().min(1) });
 
@@ -28,11 +28,10 @@ export function AgentTools({ isSignedIn }: { isSignedIn: boolean }) {
       title: "Add to cart",
       description: "Add a SKU to the user's cart",
       input: AddToCartInput,
-      inputSchema: {
-        type: "object",
-        properties: { sku: { type: "string", minLength: 1 } },
-        required: ["sku"],
-      },
+      inputSchema: z.toJSONSchema(AddToCartInput, {
+        io: "input",
+        target: "draft-2020-12",
+      }),
       execute: async ({ sku }) => ({ ok: true, sku }),
     },
     { enabled: isSignedIn },
@@ -52,7 +51,10 @@ const findItemTool = {
   name: "find_item",
   description: "Find an item by SKU",
   input: FindItemInput,
-  inputSchema: findItemJsonSchema,
+  inputSchema: z.toJSONSchema(FindItemInput, {
+    io: "input",
+    target: "draft-2020-12",
+  }),
   execute: ({ sku }) => findItem(sku),
 } satisfies ToolDefinition<typeof FindItemInput>;
 
@@ -60,7 +62,10 @@ const addToCartTool = {
   name: "add_to_cart",
   description: "Add an item to the cart",
   input: AddToCartInput,
-  inputSchema: addToCartJsonSchema,
+  inputSchema: z.toJSONSchema(AddToCartInput, {
+    io: "input",
+    target: "draft-2020-12",
+  }),
   execute: ({ sku }) => addToCart(sku),
 } satisfies ToolDefinition<typeof AddToCartInput>;
 
