@@ -60,7 +60,7 @@ interface ToolSpec {
 
 const AddToCartInput = z.strictObject({
   sku: z.string().min(1).describe("The product SKU to add"),
-  qty: z.number().int().min(1).describe("Units to add").optional(),
+  quantity: z.number().int().min(1).describe("Units to add").optional(),
 });
 
 const TOOL_SPECS: readonly ToolSpec[] = [
@@ -218,14 +218,15 @@ export const WebMCPDemo = () => {
     const discoveredNames = new Set(
       discoveredDemoTools.map(({ name }) => name),
     );
-    const enabledCount = discoveredDemoTools.length;
+    const discoveredCount = discovered.length;
+    const demoToolCount = discoveredDemoTools.length;
     const enabledSpecs = TOOL_SPECS.filter((tool) =>
       discoveredNames.has(tool.name),
     );
     await push(
       {
         kind: "step",
-        text: `getTools() → ${enabledCount} tool${enabledCount === 1 ? "" : "s"}`,
+        text: `getTools() → ${discoveredCount} tool${discoveredCount === 1 ? "" : "s"} (${demoToolCount} in this demo)`,
       },
       200,
     );
@@ -250,7 +251,12 @@ export const WebMCPDemo = () => {
         260,
       );
       const toolBlock = enabledSpecs
-        .map((t) => `- ${t.name}: ${t.desc}`)
+        .map((tool) => {
+          const schema = tool.inputSchema
+            ? JSON.stringify(tool.inputSchema)
+            : "no input schema";
+          return `- ${tool.name}: ${tool.desc}\n  input schema: ${schema}`;
+        })
         .join("\n");
       const agentInput = `Registered tools:
 ${toolBlock}
@@ -341,7 +347,7 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
       candidate = matched;
       chosenArgs =
         matched.id === "add_to_cart"
-          ? { sku: "MX-200", qty: 2 }
+          ? { sku: "MX-200", quantity: 2 }
           : matched.id === "search_orders"
             ? { since: "last-tuesday" }
             : matched.id === "open_settings"
@@ -404,7 +410,7 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
           registerTool() · agentic
         </span>
         <span>
-          {discoveryStatus === "loading" ? "…" : registeredCount} tool
+          {discoveryStatus === "loading" ? "…" : registeredCount} demo tool
           {registeredCount === 1 ? "" : "s"} registered
         </span>
       </div>
@@ -414,7 +420,7 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
         )}
         <DownloadNotice progress={progress} />
         <fieldset className={fieldset}>
-          <legend className={fieldLegend}>registered tools</legend>
+          <legend className={fieldLegend}>demo tools</legend>
           <ul className={toolList}>
             {TOOL_SPECS.map((t) => {
               const on = enabledIds.has(t.id);
