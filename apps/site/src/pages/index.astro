@@ -372,6 +372,7 @@ const browserColumns = [
 
       registerTool({
         name: "get_web_ai_sdk_resources",
+        title: "Get web-ai-sdk resources",
         description:
           "List canonical web-ai-sdk packages, documentation, and agent-friendly resources.",
         inputSchema: {
@@ -379,9 +380,8 @@ const browserColumns = [
           properties: {},
           additionalProperties: false,
         },
+        readOnly: true,
         annotations: {
-          readOnlyHint: true,
-          destructiveHint: false,
           idempotentHint: true,
           openWorldHint: false,
         },

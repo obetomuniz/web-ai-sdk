@@ -8,7 +8,7 @@ import {
   type StandardSchemaV1,
 } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import {
   btnSm,
@@ -45,6 +45,7 @@ import {
 interface ToolSpec {
   id: string;
   name: string;
+  title: string;
   desc: string;
   on: boolean;
   match: RegExp;
@@ -55,7 +56,7 @@ interface ToolSpec {
   execute(input: unknown): Promise<unknown>;
 }
 
-const AddToCartInput = z.object({
+const AddToCartInput = z.strictObject({
   sku: z.string().min(1).describe("The product SKU to add"),
   qty: z.number().int().min(1).describe("Units to add").optional(),
 });
@@ -64,6 +65,7 @@ const TOOL_SPECS: readonly ToolSpec[] = [
   {
     id: "add_to_cart",
     name: "add_to_cart",
+    title: "Add to cart",
     desc: "Add a SKU to the user's cart",
     on: true,
     match: /\bcart\b|\badd\b|MX-\d+/i,
@@ -80,6 +82,7 @@ const TOOL_SPECS: readonly ToolSpec[] = [
   {
     id: "search_orders",
     name: "search_orders",
+    title: "Search orders",
     desc: "Search past orders by date or item",
     on: true,
     match: /\border|\btuesday|\bpurchase/i,
@@ -89,6 +92,7 @@ const TOOL_SPECS: readonly ToolSpec[] = [
   {
     id: "open_settings",
     name: "open_settings",
+    title: "Open settings",
     desc: "List the agent's registered tools and their state",
     on: false,
     match: /\bsetting|\bnotification|\bpreference|\btool|\bregister/i,
@@ -100,6 +104,7 @@ const TOOL_SPECS: readonly ToolSpec[] = [
   {
     id: "refund",
     name: "refund",
+    title: "Issue a refund",
     desc: "Issue a refund (requires confirmation)",
     on: false,
     match: /\brefund|\breturn\b/i,
@@ -149,26 +154,13 @@ export const WebMCPDemo = () => {
     setAvailable(isWebMcpAvailable());
   }, []);
 
-  // Keep a live ref to the latest toggle state. The open_settings execute
-  // closure below reads from this ref instead of a captured `enabledIds`
-  // value, because Chrome's WebMCP processes AbortSignal-driven
-  // unregistration asynchronously: a sync re-register fired by useWebMCP's
-  // effect cycle can hit a not-yet-propagated abort and the library's
-  // microtask retry can silently skip on a second duplicate-name error.
-  // When that happens, the OLD execute closure stays registered and would
-  // report stale enabled flags. The ref dodges the problem entirely:
-  // whichever closure Chrome ends up holding, it always reads the latest
-  // state at invocation time.
-  const enabledIdsRef = useRef(enabledIds);
-  enabledIdsRef.current = enabledIds;
-
-  // Build the live definitions from the toggle state. Stable per enabled set
-  // so the hook only re-registers when toggles change.
-  // `open_settings` gets a closure that reports the live registration state,
-  // turning it into a self-describing tool the agent can introspect.
+  // Build the live definitions from the toggle state. `useWebMCP` re-registers only
+  // when discoverable metadata changes and keeps execute callbacks current,
+  // so `open_settings` can read this render's state directly.
   const tools = useMemo(() => {
     return TOOL_SPECS.filter((t) => enabledIds.has(t.id)).map((spec) => ({
       name: spec.name,
+      title: spec.title,
       description: spec.desc,
       ...(spec.input ? { input: spec.input } : {}),
       ...(spec.inputSchema ? { inputSchema: spec.inputSchema } : {}),
@@ -181,12 +173,13 @@ export const WebMCPDemo = () => {
               // Only the actually-registered tools. A disabled tool is not
               // in the model context at all, so listing it here would be
               // inaccurate.
-              registered: TOOL_SPECS.filter((t) =>
-                enabledIdsRef.current.has(t.id),
-              ).map((t) => ({
-                name: t.name,
-                description: t.desc,
-              })),
+              registered: TOOL_SPECS.filter((t) => enabledIds.has(t.id)).map(
+                (t) => ({
+                  name: t.name,
+                  title: t.title,
+                  description: t.desc,
+                }),
+              ),
             })
           : spec.execute,
     }));
