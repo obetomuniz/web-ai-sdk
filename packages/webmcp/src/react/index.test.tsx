@@ -206,6 +206,78 @@ describe("useWebMCP", () => {
     unmount();
   });
 
+  it("compares the effective annotations sent to the host", () => {
+    const { registerTool } = installFakeModelContext();
+
+    const { rerender, unmount } = renderHook(
+      ({ readOnly }: { readOnly: boolean }) =>
+        useWebMCP({
+          name: "annotation-override",
+          description: "Respect raw annotation overrides",
+          readOnly,
+          annotations: { readOnlyHint: false },
+          execute: async () => ({}),
+        }),
+      { initialProps: { readOnly: true } },
+    );
+
+    rerender({ readOnly: false });
+
+    expect(registerTool).toHaveBeenCalledTimes(1);
+    expect(registerTool.mock.calls[0]?.[0].annotations).toEqual({
+      readOnlyHint: false,
+    });
+    unmount();
+  });
+
+  it("re-registers when an effective shorthand annotation changes", () => {
+    const { registerTool } = installFakeModelContext();
+
+    const { rerender, unmount } = renderHook(
+      ({ readOnly }: { readOnly: boolean }) =>
+        useWebMCP({
+          name: "annotation-change",
+          description: "Track effective annotations",
+          readOnly,
+          execute: async () => ({}),
+        }),
+      { initialProps: { readOnly: true } },
+    );
+
+    rerender({ readOnly: false });
+
+    expect(registerTool).toHaveBeenCalledTimes(2);
+    unmount();
+  });
+
+  it("does not re-register equivalent metadata with reordered object keys", () => {
+    const { registerTool } = installFakeModelContext();
+    const firstSchema = {
+      type: "object",
+      properties: { query: { type: "string", minLength: 1 } },
+    };
+    const reorderedSchema = {
+      properties: { query: { minLength: 1, type: "string" } },
+      type: "object",
+    };
+
+    const { rerender, unmount } = renderHook(
+      ({ inputSchema }: { inputSchema: object }) =>
+        useWebMCP({
+          name: "equivalent-schema",
+          description: "Compare metadata by value",
+          inputSchema,
+          execute: async () => ({}),
+        }),
+      { initialProps: { inputSchema: firstSchema } },
+    );
+
+    rerender({ inputSchema: reorderedSchema });
+
+    expect(registerTool).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
   it("compares circular metadata without crashing during render", () => {
     const { registerTool } = installFakeModelContext();
     const createCircularSchema = (type: string) => {
@@ -312,6 +384,33 @@ describe("useWebMCP", () => {
     expect(registerTool).toHaveBeenCalledTimes(2);
     expect(firstTool?.execute(undefined)).toBe("c");
     expect(secondTool?.execute(undefined)).toBe("d");
+    unmount();
+  });
+
+  it("keeps callbacks paired with duplicate-name tool definitions", () => {
+    const { registerTool } = installFakeModelContext();
+
+    const { unmount } = renderHook(() =>
+      useWebMCP([
+        {
+          name: "duplicate",
+          description: "First definition",
+          execute: () => "first",
+        },
+        {
+          name: "duplicate",
+          description: "Second definition",
+          execute: () => "second",
+        },
+      ]),
+    );
+
+    const firstDefinition = registerTool.mock.calls[0]?.[0];
+    const secondDefinition = registerTool.mock.calls[1]?.[0];
+    expect(firstDefinition?.description).toBe("First definition");
+    expect(firstDefinition?.execute(undefined)).toBe("first");
+    expect(secondDefinition?.description).toBe("Second definition");
+    expect(secondDefinition?.execute(undefined)).toBe("second");
     unmount();
   });
 

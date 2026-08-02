@@ -10,33 +10,14 @@
  * Spec: https://webmachinelearning.github.io/webmcp/
  */
 
-export interface ToolAnnotations {
-  /** Defined by the current WebMCP draft. */
-  readOnlyHint?: boolean;
-  /** Marks external or user-generated tool output as untrusted. */
-  untrustedContentHint?: boolean;
-  /** Compatibility passthrough for MCP-shaped and earlier WebMCP hosts. */
-  destructiveHint?: boolean;
-  /** Compatibility passthrough for MCP-shaped and earlier WebMCP hosts. */
-  idempotentHint?: boolean;
-  /** Compatibility passthrough for MCP-shaped and earlier WebMCP hosts. */
-  openWorldHint?: boolean;
-}
+import {
+  type RegisteredToolMetadata,
+  type Tool,
+  type ToolAnnotations,
+  toRegisteredToolMetadata,
+} from "./tool.js";
 
-export interface Tool<TInput = unknown, TOutput = unknown> {
-  name: string;
-  /** Optional human-readable title for display in host user interfaces. */
-  title?: string;
-  description: string;
-  inputSchema?: object;
-  /** Shorthand for `annotations.readOnlyHint = true`. */
-  readOnly?: boolean;
-  /** Compatibility shorthand for `annotations.destructiveHint = true`. */
-  destructive?: boolean;
-  /** Raw passthrough; merged on top of the shorthand flags. */
-  annotations?: ToolAnnotations;
-  execute: (input: TInput) => Promise<TOutput> | TOutput;
-}
+export type { Tool, ToolAnnotations } from "./tool.js";
 
 /**
  * Minimal Standard Schema V1 surface — see https://standardschema.dev. Any
@@ -247,12 +228,7 @@ export const defineTool = <
   return tool;
 };
 
-interface RegisteredTool {
-  name: string;
-  title?: string;
-  description: string;
-  inputSchema?: object;
-  annotations?: ToolAnnotations;
+interface RegisteredTool extends RegisteredToolMetadata {
   execute: (input: unknown) => Promise<unknown> | unknown;
 }
 
@@ -299,21 +275,10 @@ const getModelContext = (): ModelContext | undefined => {
 export const isAvailable = (): boolean => getModelContext() !== undefined;
 
 const toRegistered = (tool: Tool): RegisteredTool => {
-  const annotations: ToolAnnotations = {
-    ...(tool.readOnly ? { readOnlyHint: true } : {}),
-    ...(tool.destructive ? { destructiveHint: true } : {}),
-    ...tool.annotations,
-  };
-
-  const registered: RegisteredTool = {
-    name: tool.name,
-    description: tool.description,
+  return {
+    ...toRegisteredToolMetadata(tool),
     execute: tool.execute as RegisteredTool["execute"],
   };
-  if (tool.title !== undefined) registered.title = tool.title;
-  if (tool.inputSchema !== undefined) registered.inputSchema = tool.inputSchema;
-  if (Object.keys(annotations).length > 0) registered.annotations = annotations;
-  return registered;
 };
 
 /**

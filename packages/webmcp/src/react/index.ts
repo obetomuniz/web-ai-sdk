@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
-import { type RegisterToolOptions, registerTool, type Tool } from "../index.js";
+import { type RegisterToolOptions, registerTool } from "../index.js";
+import { type Tool, toRegisteredToolMetadata } from "../tool.js";
 
 export interface UseWebMCPOptions extends RegisterToolOptions {
   /** Whether the tools should currently be registered. Defaults to `true`. */
@@ -15,43 +16,52 @@ const getRegistrationKey = (
   tools: readonly Tool[],
   exposedTo: readonly string[] | undefined,
 ): string => {
-  const metadata = {
-    tools: tools.map((tool) => ({
-      name: tool.name,
-      title: tool.title,
-      description: tool.description,
-      inputSchema: tool.inputSchema,
-      readOnly: tool.readOnly,
-      destructive: tool.destructive,
-      annotations: tool.annotations,
-    })),
-    exposedTo,
-  };
-  const seen = new WeakSet<object>();
   try {
-    return (
-      JSON.stringify(metadata, (_key, value: unknown) => {
-        if (typeof value === "bigint") return `bigint:${value.toString()}`;
-        if (typeof value !== "object" || value === null) return value;
-        if (seen.has(value)) return "[Circular]";
-        seen.add(value);
-        return value;
-      }) ?? ""
-    );
+    return stableStringify({
+      tools: tools.map(toRegisteredToolMetadata),
+      exposedTo,
+    });
   } catch {
     return JSON.stringify({
-      tools: metadata.tools.map(
-        ({ name, title, description, readOnly, destructive }) => ({
-          name,
-          title,
-          description,
-          readOnly,
-          destructive,
-        }),
-      ),
+      tools: tools.map(({ name, title, description }) => ({
+        name,
+        title,
+        description,
+      })),
       exposedTo,
     });
   }
+};
+
+const stableStringify = (value: unknown): string => {
+  const ancestors = new WeakSet<object>();
+
+  const normalize = (current: unknown): unknown => {
+    if (typeof current === "bigint") return `bigint:${current.toString()}`;
+    if (typeof current !== "object" || current === null) return current;
+    if (ancestors.has(current)) return "[Circular]";
+
+    ancestors.add(current);
+    try {
+      const toJSON = Reflect.get(current, "toJSON");
+      if (typeof toJSON === "function") {
+        const jsonValue: unknown = Reflect.apply(toJSON, current, []);
+        if (jsonValue !== current) return normalize(jsonValue);
+      }
+
+      if (Array.isArray(current)) return current.map(normalize);
+
+      const normalized = Object.create(null) as Record<string, unknown>;
+      for (const key of Object.keys(current).sort()) {
+        normalized[key] = normalize(Reflect.get(current, key));
+      }
+      return normalized;
+    } finally {
+      ancestors.delete(current);
+    }
+  };
+
+  return JSON.stringify(normalize(value)) ?? "";
 };
 
 const useCommitEffect =
@@ -60,15 +70,15 @@ const useCommitEffect =
 const wrapTools = (
   tools: readonly Tool[],
   latestExecutors: {
-    readonly current: ReadonlyMap<string, Tool["execute"]>;
+    readonly current: readonly Tool["execute"][];
   },
 ): readonly Tool[] =>
-  tools.map((tool) => {
+  tools.map((tool, index) => {
     const initialExecute = tool.execute;
     return {
       ...tool,
       execute: (input: unknown) =>
-        (latestExecutors.current.get(tool.name) ?? initialExecute)(input),
+        (latestExecutors.current[index] ?? initialExecute)(input),
     };
   });
 
@@ -90,15 +100,13 @@ export const useWebMCP = (
   const tools: readonly Tool[] = Array.isArray(toolOrTools)
     ? toolOrTools
     : [toolOrTools];
-  const latestExecutors = useRef<ReadonlyMap<string, Tool["execute"]>>(
-    new Map(tools.map((tool) => [tool.name, tool.execute])),
+  const latestExecutors = useRef<readonly Tool["execute"][]>(
+    tools.map((tool) => tool.execute),
   );
   const activeRegistration = useRef<ActiveRegistration | undefined>(undefined);
 
   useCommitEffect(() => {
-    latestExecutors.current = new Map(
-      tools.map((tool) => [tool.name, tool.execute]),
-    );
+    latestExecutors.current = tools.map((tool) => tool.execute);
   });
 
   useEffect(() => {

@@ -41,6 +41,8 @@ useWebMCP([listItems, addToCart]);
 
 The hook compares discoverable metadata and `exposedTo` values rather than object identity. Recreating an equivalent tool, tool array, or options object does not tear down its registration. Changing a name, title, description, schema, annotation, exposure value, or `enabled` state does update the registration.
 
+Memoize tool arrays and large schemas when practical to avoid rebuilding and comparing their metadata on every render. Memoization is a performance optimization here, not a correctness requirement.
+
 ## Cross-document exposure
 
 Pass `exposedTo` through the hook when descendant documents at other origins should discover the tool:
