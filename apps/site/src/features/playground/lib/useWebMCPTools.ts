@@ -91,6 +91,7 @@ export function createPlaygroundWebMCPTools(
       },
     },
     required: ["id"],
+    additionalProperties: false,
   };
   const report = (name: string, detail?: string) => {
     args.pushActivity({
@@ -170,6 +171,7 @@ export function createPlaygroundWebMCPTools(
           enum: ModeIds,
         },
       },
+      additionalProperties: false,
     },
     execute: async ({ modeId }) => {
       if (args.busy) return rejectBusy("new_conversation");
@@ -247,6 +249,7 @@ export function createPlaygroundWebMCPTools(
         },
       },
       required: ["modeId"],
+      additionalProperties: false,
     },
     execute: async ({ modeId }) => {
       if (args.busy) return rejectBusy("set_mode");
@@ -275,6 +278,7 @@ export function createPlaygroundWebMCPTools(
       type: "object",
       properties: { text: { type: "string", minLength: 1 } },
       required: ["text"],
+      additionalProperties: false,
     },
     execute: async ({ text }) => {
       if (args.busy) return rejectBusy("send_message");
@@ -289,6 +293,8 @@ export function createPlaygroundWebMCPTools(
     },
   });
 
+  // Each definition retains its own inferred input type; erase that variance
+  // only at the registration boundary until heterogeneous arrays are native.
   return [
     listModes,
     listConversations,

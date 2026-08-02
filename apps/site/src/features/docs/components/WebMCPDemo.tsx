@@ -33,6 +33,8 @@ export const WebMCPDemo = () => {
   // The hook compares discoverable metadata while keeping execute callbacks
   // current, so these definitions can read the latest render without a ref or
   // callback memoization bridge.
+  // Each definition retains its own inferred input type; erase that variance
+  // only at the registration boundary until heterogeneous arrays are native.
   const tools = [
     defineTool({
       name: "list_demo_items",

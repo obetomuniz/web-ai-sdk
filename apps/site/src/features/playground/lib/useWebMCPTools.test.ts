@@ -143,6 +143,23 @@ describe("createPlaygroundWebMCPTools", () => {
     expect(context.ops.setMode).not.toHaveBeenCalled();
   });
 
+  it("publishes closed object schemas for every tool input", () => {
+    const tools = createPlaygroundWebMCPTools(createContext());
+
+    for (const name of [
+      "new_conversation",
+      "switch_conversation",
+      "delete_conversation",
+      "set_mode",
+      "send_message",
+    ]) {
+      expect(findTool(tools, name).inputSchema).toMatchObject({
+        type: "object",
+        additionalProperties: false,
+      });
+    }
+  });
+
   it("publishes and validates the current conversation ids", async () => {
     const secondConversation = { ...conversation, id: "conversation-2" };
     const context = createContext({
