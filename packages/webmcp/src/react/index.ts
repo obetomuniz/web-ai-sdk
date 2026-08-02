@@ -167,8 +167,8 @@ export function useWebMCP(options?: UseWebMCPOptions): UseWebMCPReturn;
  * native `toolchange` events and can also be triggered with `refresh()`.
  *
  * Call with options only to retrieve tools without registering definitions.
- * `fromOrigins` participates in the discovery effect dependency list by
- * reference; callers should memoize arrays created during render.
+ * Discovery restarts when `fromOrigins` values change, not when an equivalent
+ * array is recreated during render.
  */
 export function useWebMCP(
   toolOrToolsOrOptions?:
@@ -192,6 +192,8 @@ export function useWebMCP(
   const latestTools = useRef<readonly Tool[]>(
     definitions.map((tool) => normalizeToolDefinition(tool)),
   );
+  const latestFromOrigins = useRef(fromOrigins);
+  const fromOriginsKey = stableStringify(fromOrigins);
   const registrationKey = enabled
     ? getRegistrationKey(definitions, exposedTo)
     : "disabled";
@@ -211,6 +213,7 @@ export function useWebMCP(
     latestTools.current = definitions.map((tool) =>
       normalizeToolDefinition(tool),
     );
+    latestFromOrigins.current = fromOrigins;
   });
 
   useEffect(() => {
@@ -258,8 +261,12 @@ export function useWebMCP(
 
     setState((current) => ({ ...current, status: "loading", error: null }));
     try {
+      const currentFromOrigins =
+        fromOriginsKey === "" ? undefined : latestFromOrigins.current;
       const tools = await getTools(
-        fromOrigins === undefined ? undefined : { fromOrigins },
+        currentFromOrigins === undefined
+          ? undefined
+          : { fromOrigins: currentFromOrigins },
       );
       if (requestId.current === currentRequest) {
         setState({ status: "ready", tools, error: null });
@@ -272,7 +279,7 @@ export function useWebMCP(
       }
       return [];
     }
-  }, [enabled, fromOrigins]);
+  }, [enabled, fromOriginsKey]);
 
   useEffect(() => {
     void refresh();

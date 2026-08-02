@@ -623,6 +623,32 @@ describe("useWebMCP discovery", () => {
     expect(getTools).toHaveBeenCalledWith({ fromOrigins });
   });
 
+  it("treats content-equivalent inline origin filters as stable", async () => {
+    const { getTools } = installDiscoverySurface();
+    let renderCount = 0;
+    const { result, rerender } = renderHook(
+      ({ origin }: { origin: string }) => {
+        renderCount += 1;
+        if (renderCount > 10) {
+          throw new Error("inline fromOrigins caused a render loop");
+        }
+        return useWebMCP({ fromOrigins: [origin] });
+      },
+      { initialProps: { origin: "https://agent.example" } },
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("ready"), {
+      timeout: 250,
+    });
+    expect(getTools).toHaveBeenCalledOnce();
+
+    rerender({ origin: "https://other.example" });
+    await waitFor(() => expect(getTools).toHaveBeenCalledTimes(2));
+    expect(getTools).toHaveBeenLastCalledWith({
+      fromOrigins: ["https://other.example"],
+    });
+  });
+
   it("keeps discovery idle while disabled and starts after enabling", async () => {
     const { getTools } = installDiscoverySurface();
     const { result, rerender } = renderHook(

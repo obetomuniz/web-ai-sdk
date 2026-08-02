@@ -105,7 +105,7 @@ export function WebMCP({ isSignedIn }: { isSignedIn: boolean }) {
 
 `useWebMCP` accepts one tool or a readonly array. It registers on mount, unregisters on unmount, and cleans up immediately when `enabled` changes to `false`. Registration follows discoverable metadata and `exposedTo` values rather than object identity, while `execute` always uses the latest committed callback. Inline tool objects, arrays, and options are safe: changing React state alone does not rebuild the registration, but changing a tool's name, title, description, schema, annotations, or exposure does. Memoize tool arrays and large schemas when practical to avoid rebuilding and comparing their metadata on every render; correctness does not depend on memoization.
 
-The same hook retrieves every tool exposed to the current document and refreshes the returned list after native `toolchange` events. Its `refresh()` method performs an explicit fresh read. Call `useWebMCP({ fromOrigins })` without definitions for retrieval-only use. Memoize `fromOrigins` arrays passed to the hook because they participate in its effect dependencies by reference.
+The same hook retrieves every tool exposed to the current document and refreshes the returned list after native `toolchange` events. Its `refresh()` method performs an explicit fresh read. Call `useWebMCP({ fromOrigins })` without definitions for retrieval-only use. Inline `fromOrigins` arrays are safe; discovery restarts only when their values change.
 
 ## API
 

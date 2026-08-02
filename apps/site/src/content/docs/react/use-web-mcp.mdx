@@ -123,7 +123,7 @@ const TRUSTED_ORIGINS = ["https://agent.example"] as const;
 const discovery = useWebMCP({ fromOrigins: TRUSTED_ORIGINS });
 ```
 
-The browser always includes eligible same-origin tools. Cross-origin discovery additionally requires the registering document to include the caller in its `exposedTo` option. Memoize render-created `fromOrigins` arrays because they participate in the hook's effect dependencies by reference.
+The browser always includes eligible same-origin tools. Cross-origin discovery additionally requires the registering document to include the caller in its `exposedTo` option. Inline `fromOrigins` arrays are safe; the hook refreshes discovery only when their values change.
 
 ## Cross-document exposure
 
