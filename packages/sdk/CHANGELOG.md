@@ -1,5 +1,13 @@
 # @web-ai-sdk/all
 
+## 0.7.7
+
+### Patch Changes
+
+- b814342: Accept Standard Schema input and output definitions directly in registerTool and useWebMCP, with automatic input validation, transformed values, typed errors, and a deprecated defineTool compatibility wrapper.
+- Updated dependencies [b814342]
+  - @web-ai-sdk/webmcp@0.8.0
+
 ## 0.7.6
 
 ### Patch Changes
