@@ -183,6 +183,18 @@ describe("tool discovery and execution", () => {
     );
   });
 
+  it("normalizes explicitly undefined input to an empty object", async () => {
+    const tool = discoveredTool();
+    const executeNativeTool = vi.fn(async () => "ok");
+    setModelContext("document", {
+      registerTool: vi.fn(),
+      executeTool: executeNativeTool,
+    });
+
+    await expect(executeTool(tool, undefined)).resolves.toBe("ok");
+    expect(executeNativeTool).toHaveBeenCalledWith(tool, "{}", undefined);
+  });
+
   it("rejects execution when the native capability is unavailable", async () => {
     await expect(executeTool(discoveredTool())).rejects.toBeInstanceOf(
       WebMCPUnavailableError,
