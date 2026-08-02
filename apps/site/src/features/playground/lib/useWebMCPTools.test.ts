@@ -1,5 +1,5 @@
-import type { Tool } from "@web-ai-sdk/webmcp";
-import { describe, expect, it, vi } from "vitest";
+import { registerTool } from "@web-ai-sdk/webmcp";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { MODES } from "../experimental/playground/presets.js";
 import type { AgentThread } from "./agentThreads.js";
 import {
@@ -39,11 +39,55 @@ function createContext(
   };
 }
 
-function findTool(tools: Tool[], name: string): Tool {
+interface RegisteredTool {
+  name: string;
+  execute: (input: unknown) => unknown;
+}
+
+type PlaygroundToolDefinition = ReturnType<
+  typeof createPlaygroundWebMCPTools
+>[number];
+
+const pendingCleanups: Array<() => void> = [];
+
+function registerPlaygroundTools(context: PlaygroundWebMCPContext) {
+  const registered = new Map<string, RegisteredTool>();
+  Object.defineProperty(navigator, "modelContext", {
+    value: {
+      registerTool: (tool: RegisteredTool) => {
+        registered.set(tool.name, tool);
+      },
+    },
+    configurable: true,
+  });
+  pendingCleanups.push(
+    ...createPlaygroundWebMCPTools(context).map(registerTool),
+  );
+  return registered;
+}
+
+function findRegisteredTool(tools: Map<string, RegisteredTool>, name: string) {
+  const tool = tools.get(name);
+  if (!tool) throw new Error(`Missing tool ${name}`);
+  return tool;
+}
+
+function findDefinition(
+  tools: readonly PlaygroundToolDefinition[],
+  name: string,
+) {
   const tool = tools.find((candidate) => candidate.name === name);
   if (!tool) throw new Error(`Missing tool ${name}`);
   return tool;
 }
+
+afterEach(() => {
+  for (const cleanup of pendingCleanups.splice(0)) cleanup();
+  Object.defineProperty(navigator, "modelContext", {
+    value: undefined,
+    configurable: true,
+  });
+});
 
 describe("createPlaygroundWebMCPTools", () => {
   it.each([
@@ -54,8 +98,8 @@ describe("createPlaygroundWebMCPTools", () => {
     ["send_message", { text: "Hello" }],
   ])("rejects %s while a response is running", async (name, input) => {
     const context = createContext({ busy: true });
-    const result = await findTool(
-      createPlaygroundWebMCPTools(context),
+    const result = await findRegisteredTool(
+      registerPlaygroundTools(context),
       name,
     ).execute(input);
 
@@ -69,8 +113,8 @@ describe("createPlaygroundWebMCPTools", () => {
 
   it("reports whether a message was accepted", async () => {
     const context = createContext({ send: vi.fn(async () => false) });
-    const result = await findTool(
-      createPlaygroundWebMCPTools(context),
+    const result = await findRegisteredTool(
+      registerPlaygroundTools(context),
       "send_message",
     ).execute({ text: "Hello" });
 
@@ -79,8 +123,8 @@ describe("createPlaygroundWebMCPTools", () => {
 
   it("validates WebMCP input before invoking application code", async () => {
     const context = createContext();
-    const sendMessage = findTool(
-      createPlaygroundWebMCPTools(context),
+    const sendMessage = findRegisteredTool(
+      registerPlaygroundTools(context),
       "send_message",
     );
 
@@ -92,7 +136,7 @@ describe("createPlaygroundWebMCPTools", () => {
 
   it("executes every registered tool on its happy path", async () => {
     const context = createContext();
-    const tools = createPlaygroundWebMCPTools(context);
+    const tools = registerPlaygroundTools(context);
     const calls: Array<[string, Record<string, unknown>]> = [
       ["list_modes", {}],
       ["list_conversations", {}],
@@ -104,7 +148,9 @@ describe("createPlaygroundWebMCPTools", () => {
     ];
 
     for (const [name, input] of calls) {
-      await expect(findTool(tools, name).execute(input)).resolves.toBeDefined();
+      await expect(
+        findRegisteredTool(tools, name).execute(input),
+      ).resolves.toBeDefined();
     }
 
     expect(tools).toHaveLength(7);
@@ -122,23 +168,27 @@ describe("createPlaygroundWebMCPTools", () => {
     const tools = createPlaygroundWebMCPTools(createContext());
 
     expect(tools.every((tool) => Boolean(tool.title))).toBe(true);
-    expect(findTool(tools, "list_conversations").annotations).toMatchObject({
+    expect(
+      findDefinition(tools, "list_conversations").annotations,
+    ).toMatchObject({
       untrustedContentHint: true,
     });
-    expect(findTool(tools, "list_modes").annotations).toBeUndefined();
+    expect(findDefinition(tools, "list_modes").annotations).toBeUndefined();
   });
 
   it("publishes and validates the supported mode ids", async () => {
     const context = createContext();
-    const setMode = findTool(createPlaygroundWebMCPTools(context), "set_mode");
+    const definitions = createPlaygroundWebMCPTools(context);
 
-    expect(setMode.inputSchema).toMatchObject({
+    expect(findDefinition(definitions, "set_mode").inputSchema).toMatchObject({
       properties: {
         modeId: { enum: MODES.map((mode) => mode.id) },
       },
     });
     await expect(
-      setMode.execute({ modeId: "example_string" }),
+      findRegisteredTool(registerPlaygroundTools(context), "set_mode").execute({
+        modeId: "example_string",
+      }),
     ).rejects.toMatchObject({ name: "ToolValidationError" });
     expect(context.ops.setMode).not.toHaveBeenCalled();
   });
@@ -153,7 +203,7 @@ describe("createPlaygroundWebMCPTools", () => {
       "set_mode",
       "send_message",
     ]) {
-      expect(findTool(tools, name).inputSchema).toMatchObject({
+      expect(findDefinition(tools, name).inputSchema).toMatchObject({
         type: "object",
         additionalProperties: false,
       });
@@ -165,15 +215,18 @@ describe("createPlaygroundWebMCPTools", () => {
     const context = createContext({
       threads: [secondConversation, conversation],
     });
-    const tools = createPlaygroundWebMCPTools(context);
+    const definitions = createPlaygroundWebMCPTools(context);
+    const registered = registerPlaygroundTools(context);
     const expectedIds = [conversation.id, secondConversation.id].sort();
 
     for (const name of ["switch_conversation", "delete_conversation"]) {
-      expect(findTool(tools, name).inputSchema).toMatchObject({
+      expect(findDefinition(definitions, name).inputSchema).toMatchObject({
         properties: { id: { enum: expectedIds } },
       });
       await expect(
-        findTool(tools, name).execute({ id: "example_string" }),
+        findRegisteredTool(registered, name).execute({
+          id: "example_string",
+        }),
       ).rejects.toMatchObject({ name: "ToolValidationError" });
     }
     expect(context.ops.select).not.toHaveBeenCalled();
@@ -189,8 +242,8 @@ describe("createPlaygroundWebMCPTools", () => {
         ),
       },
     });
-    const newConversation = findTool(
-      createPlaygroundWebMCPTools(context),
+    const newConversation = findRegisteredTool(
+      registerPlaygroundTools(context),
       "new_conversation",
     );
 

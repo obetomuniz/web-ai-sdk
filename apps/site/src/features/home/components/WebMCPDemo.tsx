@@ -5,10 +5,11 @@ import {
 } from "@web-ai-sdk/prompt";
 import {
   isAvailable as isWebMcpAvailable,
-  type Tool,
+  type StandardSchemaV1,
 } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
 import { useEffect, useMemo, useState } from "react";
+import { z } from "zod";
 import {
   btnSm,
   card,
@@ -50,9 +51,15 @@ interface ToolSpec {
   match: RegExp;
   readOnly?: boolean;
   destructive?: boolean;
+  input?: StandardSchemaV1;
   inputSchema?: object;
-  execute: (input: unknown) => Promise<unknown>;
+  execute(input: unknown): Promise<unknown>;
 }
+
+const AddToCartInput = z.strictObject({
+  sku: z.string().min(1).describe("The product SKU to add"),
+  qty: z.number().int().min(1).describe("Units to add").optional(),
+});
 
 const TOOL_SPECS: readonly ToolSpec[] = [
   {
@@ -62,19 +69,14 @@ const TOOL_SPECS: readonly ToolSpec[] = [
     desc: "Add a SKU to the user's cart",
     on: true,
     match: /\bcart\b|\badd\b|MX-\d+/i,
-    inputSchema: {
-      type: "object",
-      properties: {
-        sku: { type: "string", description: "The product SKU to add" },
-        qty: { type: "integer", minimum: 1, description: "Units to add" },
-      },
-      required: ["sku"],
-    },
-    execute: async (input) => ({
+    input: AddToCartInput,
+    inputSchema: z.toJSONSchema(AddToCartInput, {
+      io: "input",
+      target: "draft-2020-12",
+    }),
+    execute: async (input: z.output<typeof AddToCartInput>) => ({
       ok: true,
-      // Manual invocations (DevTools, testing surface) can pass primitives;
-      // only spread real objects so the payload stays well-formed.
-      ...(typeof input === "object" && input !== null ? input : {}),
+      ...input,
     }),
   },
   {
@@ -152,14 +154,15 @@ export const WebMCPDemo = () => {
     setAvailable(isWebMcpAvailable());
   }, []);
 
-  // Build the live Tool[] from the toggle state. `useWebMCP` re-registers only
+  // Build the live definitions from the toggle state. `useWebMCP` re-registers only
   // when discoverable metadata changes and keeps execute callbacks current,
   // so `open_settings` can read this render's state directly.
-  const tools = useMemo<Tool[]>(() => {
+  const tools = useMemo(() => {
     return TOOL_SPECS.filter((t) => enabledIds.has(t.id)).map((spec) => ({
       name: spec.name,
       title: spec.title,
       description: spec.desc,
+      ...(spec.input ? { input: spec.input } : {}),
       ...(spec.inputSchema ? { inputSchema: spec.inputSchema } : {}),
       ...(spec.readOnly ? { readOnly: true } : {}),
       ...(spec.destructive ? { destructive: true } : {}),

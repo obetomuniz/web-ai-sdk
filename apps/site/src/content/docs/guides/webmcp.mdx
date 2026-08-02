@@ -15,11 +15,22 @@ WebMCP is a proposed standard in early preview: behind flags and an origin trial
 
 ```ts
 import { registerTool } from "@web-ai-sdk/webmcp";
+import { z } from "zod"; // Zod 4; other Standard Schema libraries work too
+
+const AddToCartInput = z.object({
+  sku: z.string().min(1),
+  quantity: z.number().int().positive().default(1),
+});
 
 const cleanup = registerTool({
   name: "add_to_cart",
   description: "Add a SKU to the user's cart",
-  execute: async (input) => ({ ok: true, ...input }),
+  input: AddToCartInput,
+  inputSchema: z.toJSONSchema(AddToCartInput, {
+    io: "input",
+    target: "draft-2020-12",
+  }),
+  execute: async ({ sku, quantity }) => addToCart(sku, quantity),
 });
 
 // Later, when the tool should no longer be exposed:
@@ -48,6 +59,42 @@ interface Tool<TInput = unknown, TOutput = unknown> {
 }
 ```
 
+Schema-aware definitions add optional Standard Schema fields. `input` is
+validated before application code runs, and `execute` receives its parsed or
+transformed output. `output` validates the resolved result and returns its
+parsed or transformed output.
+
+```ts
+interface ToolDefinition<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  TOutput = unknown,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined,
+> extends Omit<Tool, "execute"> {
+  input?: InputSchema; // Standard Schema; SDK-only
+  output?: OutputSchema; // Standard Schema; SDK-only
+  execute: (
+    input: InputSchema extends StandardSchemaV1
+      ? StandardSchemaV1.InferOutput<InputSchema>
+      : unknown,
+  ) =>
+    | Promise<
+        OutputSchema extends StandardSchemaV1
+          ? StandardSchemaV1.InferInput<OutputSchema>
+          : TOutput
+      >
+    | (OutputSchema extends StandardSchemaV1
+        ? StandardSchemaV1.InferInput<OutputSchema>
+        : TOutput);
+}
+```
+
+Standard Schema is library-neutral and adds no runtime dependency to the SDK.
+Standard Schema validation and [Standard JSON Schema](https://standardschema.dev/json-schema)
+conversion are orthogonal capabilities. The browser-facing `inputSchema`
+remains explicit so consumers choose the converter and JSON Schema dialect.
+When a library supports conversion, derive it from the same schema rather than
+maintaining a second handwritten definition.
+
 <div class="options-table">
 
 | Name | Type | Description |
@@ -56,6 +103,8 @@ interface Tool<TInput = unknown, TOutput = unknown> {
 | `title` | `string` | Human-readable title for host user interfaces. |
 | `description` <sup>required</sup> | `string` | What the tool does. Routed to the agent's tool selector. |
 | `execute` <sup>required</sup> | `(input) => Promise<T> \| T` | The function the agent calls. |
+| `input` | `StandardSchemaV1` | SDK-only input validator. Its parsed or transformed value is passed to `execute`. |
+| `output` | `StandardSchemaV1` | SDK-only resolved-output validator. Its parsed or transformed value is returned. |
 | `inputSchema` | `object` | JSON Schema describing the input shape. Some hosts validate against it before dispatch. |
 | `readOnly` | `boolean` | Shorthand for `annotations.readOnlyHint = true`. |
 | `destructive` | `boolean` | Compatibility shorthand for `annotations.destructiveHint = true`. |
@@ -69,11 +118,12 @@ interface Tool<TInput = unknown, TOutput = unknown> {
 
 ## How it works
 
-`document.modelContext.registerTool({...}, { signal, exposedTo })` is the spec entry point. (For backward compatibility with the previous shape of the API, this package also reads from `navigator.modelContext`.) The wrapper sits on top with three quality-of-life additions:
+`document.modelContext.registerTool({...}, { signal, exposedTo })` is the spec entry point. (For backward compatibility with the previous shape of the API, this package also reads from `navigator.modelContext`.) The wrapper sits on top with these quality-of-life additions:
 
 - **Feature detection.** On browsers without `document.modelContext` (or the legacy `navigator.modelContext`), every entry point is a no-op so consumer code ships unchanged. `isAvailable()` returns `false`.
 - **Last-writer-wins on duplicate names.** React effect cleanup is asynchronous; a fast re-render can attempt to register `"foo"` before Chrome processed the prior `abort()`. The wrapper detects the resulting duplicate-name error, queues a microtask retry, and tracks ownership so a stale registration can't squat the name.
 - **One AbortController per call.** `registerTool` returns a cleanup function that aborts the underlying controller and unregisters the tool.
+- **Library-neutral validation.** Direct definitions may carry Standard Schema input and output validators. The SDK validates and transforms around `execute`, then strips those SDK-only fields before native registration.
 
 ## Cross-document exposure
 
@@ -133,6 +183,16 @@ if (!isAvailable()) {
 
 registerTool({ ... });
 ```
+
+When a direct definition includes `input`, invalid input rejects with
+`ToolValidationError` before `execute` runs. When it includes `output`, an
+invalid resolved result rejects with `ToolOutputValidationError`. Both errors
+preserve the tool name and Standard Schema issues. Synchronous and asynchronous
+validators and schema transformations are supported.
+
+`defineTool()` remains as a deprecated compatibility wrapper. It preserves its
+historical `validate: true` input-validation opt-in, but new code should pass
+definitions directly to `registerTool()` or `useWebMCP()`.
 
 ## Origin trial
 

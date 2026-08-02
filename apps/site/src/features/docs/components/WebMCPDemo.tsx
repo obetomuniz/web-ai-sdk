@@ -1,7 +1,7 @@
-import { defineTool, isAvailable, type Tool } from "@web-ai-sdk/webmcp";
+import { isAvailable, type ToolDefinition } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
 import { useEffect, useState } from "react";
-import * as v from "valibot";
+import { z } from "zod";
 import { UnavailableHint } from "./UnavailableHint.js";
 
 interface ModelContextTesting {
@@ -9,11 +9,11 @@ interface ModelContextTesting {
   executeTool(name: string, input?: string): Promise<string>;
 }
 
-const ListDemoItemsOutput = v.object({ items: v.array(v.string()) });
-const EchoMessageInput = v.object({
-  message: v.pipe(v.string(), v.minLength(1), v.maxLength(200)),
+const ListDemoItemsOutput = z.object({ items: z.array(z.string()) });
+const EchoMessageInput = z.strictObject({
+  message: z.string().min(1).max(200),
 });
-const EchoMessageOutput = v.object({ echoed: v.string() });
+const EchoMessageOutput = z.object({ echoed: z.string() });
 
 const getTesting = (): ModelContextTesting | undefined => {
   if (typeof navigator === "undefined") return undefined;
@@ -33,10 +33,8 @@ export const WebMCPDemo = () => {
   // The hook compares discoverable metadata while keeping execute callbacks
   // current, so these definitions can read the latest render without a ref or
   // callback memoization bridge.
-  // Each definition retains its own inferred input type; erase that variance
-  // only at the registration boundary until heterogeneous arrays are native.
   const tools = [
-    defineTool({
+    {
       name: "list_demo_items",
       title: "List demo items",
       description:
@@ -47,29 +45,28 @@ export const WebMCPDemo = () => {
         append("list_demo_items invoked");
         return { items: ["alpha", "beta", "gamma"] };
       },
-    }),
-    defineTool({
+    } satisfies ToolDefinition<undefined, unknown, typeof ListDemoItemsOutput>,
+    {
       name: "echo_message",
       title: "Echo a message",
       description: "Echo a message back. Demonstrates input schema.",
       readOnly: true,
       input: EchoMessageInput,
-      validate: true,
       output: EchoMessageOutput,
-      inputSchema: {
-        type: "object",
-        properties: {
-          message: { type: "string", minLength: 1, maxLength: 200 },
-        },
-        required: ["message"],
-        additionalProperties: false,
-      },
+      inputSchema: z.toJSONSchema(EchoMessageInput, {
+        io: "input",
+        target: "draft-2020-12",
+      }),
       execute: async ({ message }) => {
         append(`echo_message called with "${message}"`);
         return { echoed: message };
       },
-    }),
-  ] as unknown as Tool[];
+    } satisfies ToolDefinition<
+      typeof EchoMessageInput,
+      unknown,
+      typeof EchoMessageOutput
+    >,
+  ] as const;
 
   useWebMCP(tools);
 

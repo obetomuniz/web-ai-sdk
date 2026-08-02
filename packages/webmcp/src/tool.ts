@@ -11,7 +11,7 @@ export interface ToolAnnotations {
   openWorldHint?: boolean;
 }
 
-export interface Tool<TInput = unknown, TOutput = unknown> {
+export interface ToolMetadata {
   name: string;
   /** Optional human-readable title for display in host user interfaces. */
   title?: string;
@@ -23,6 +23,10 @@ export interface Tool<TInput = unknown, TOutput = unknown> {
   destructive?: boolean;
   /** Raw passthrough; merged on top of the shorthand flags. */
   annotations?: ToolAnnotations;
+}
+
+export interface Tool<TInput = unknown, TOutput = unknown>
+  extends ToolMetadata {
   execute: (input: TInput) => Promise<TOutput> | TOutput;
 }
 
@@ -36,7 +40,7 @@ export interface RegisteredToolMetadata {
 
 /** Build the discoverable metadata exactly as it is sent to the WebMCP host. */
 export const toRegisteredToolMetadata = (
-  tool: Tool,
+  tool: ToolMetadata,
 ): RegisteredToolMetadata => {
   const annotations: ToolAnnotations = {
     ...(tool.readOnly ? { readOnlyHint: true } : {}),

@@ -1,7 +1,7 @@
 import { renderHook } from "@testing-library/react";
 import { type ReactNode, StrictMode, useLayoutEffect } from "react";
 import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
-import type { Tool } from "../index.js";
+import type { StandardSchemaV1, Tool, ToolDefinition } from "../index.js";
 import {
   type RegisterToolOptions,
   type UseWebMCPOptions,
@@ -56,6 +56,30 @@ afterEach(() => {
   setModelContext("navigator", undefined);
 });
 
+const stringSchema = (label: string): StandardSchemaV1<string, string> => ({
+  "~standard": {
+    version: 1,
+    vendor: "test",
+    validate: (value: unknown) =>
+      typeof value === "string"
+        ? { value }
+        : { issues: [{ message: `${label} must be a string` }] },
+    types: { input: "" as string, output: "" as string },
+  },
+});
+
+const numericStringSchema: StandardSchemaV1<string, number> = {
+  "~standard": {
+    version: 1,
+    vendor: "test",
+    validate: (value: unknown) =>
+      typeof value === "string" && /^\d+$/.test(value)
+        ? { value: Number(value) }
+        : { issues: [{ message: "value must be a numeric string" }] },
+    types: { input: "" as string, output: 0 as number },
+  },
+};
+
 describe("useWebMCP", () => {
   it("registers a single tool", () => {
     const { registered } = installFakeModelContext();
@@ -69,6 +93,91 @@ describe("useWebMCP", () => {
     expect(registered.has("single")).toBe(true);
     unmount();
     expect(registered.has("single")).toBe(false);
+  });
+
+  it("registers and validates a direct schema-aware definition", async () => {
+    const { registered, registerTool } = installFakeModelContext();
+
+    const { unmount } = renderHook(() =>
+      useWebMCP({
+        name: "increment",
+        description: "Increment a numeric string",
+        input: numericStringSchema,
+        inputSchema: { type: "string", pattern: "^\\d+$" },
+        execute: (count) => {
+          expectTypeOf(count).toEqualTypeOf<number>();
+          return count + 1;
+        },
+      }),
+    );
+
+    const definition = registerTool.mock.calls[0]?.[0];
+    expect(definition).not.toHaveProperty("input");
+    await expect(registered.get("increment")?.execute("41")).resolves.toBe(42);
+    await expect(
+      registered.get("increment")?.execute("nope"),
+    ).rejects.toMatchObject({
+      name: "ToolValidationError",
+      toolName: "increment",
+    });
+    unmount();
+  });
+
+  it("accepts heterogeneous direct definitions with per-tool inference", async () => {
+    const { registered } = installFakeModelContext();
+    const textTool = {
+      name: "text",
+      description: "Echo text",
+      input: stringSchema("text"),
+      execute: (text) => {
+        expectTypeOf(text).toEqualTypeOf<string>();
+        return text.toUpperCase();
+      },
+    } satisfies ToolDefinition<StandardSchemaV1<string, string>, string>;
+    const numberTool = {
+      name: "number",
+      description: "Parse a number",
+      input: numericStringSchema,
+      execute: (count) => {
+        expectTypeOf(count).toEqualTypeOf<number>();
+        return count + 1;
+      },
+    } satisfies ToolDefinition<StandardSchemaV1<string, number>, number>;
+
+    const { unmount } = renderHook(() =>
+      useWebMCP([textTool, numberTool] as const),
+    );
+
+    await expect(registered.get("text")?.execute("hello")).resolves.toBe(
+      "HELLO",
+    );
+    await expect(registered.get("number")?.execute("41")).resolves.toBe(42);
+    unmount();
+  });
+
+  it("uses the latest schema and callback without re-registering", async () => {
+    const { registered, registerTool } = installFakeModelContext();
+
+    const { rerender, unmount } = renderHook(
+      ({ label, suffix }: { label: string; suffix: string }) =>
+        useWebMCP({
+          name: "fresh-schema",
+          description: "Use current validation and state",
+          input: stringSchema(label),
+          execute: (text) => `${text}:${suffix}`,
+        }),
+      { initialProps: { label: "first", suffix: "a" } },
+    );
+    const registeredTool = registered.get("fresh-schema");
+
+    rerender({ label: "second", suffix: "b" });
+
+    expect(registerTool).toHaveBeenCalledTimes(1);
+    await expect(registeredTool?.execute("value")).resolves.toBe("value:b");
+    await expect(registeredTool?.execute(123)).rejects.toThrow(
+      "second must be a string",
+    );
+    unmount();
   });
 
   it("registers tools on mount and unregisters them on unmount", () => {

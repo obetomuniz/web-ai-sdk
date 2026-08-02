@@ -1,10 +1,9 @@
 import {
-  defineTool,
   isAvailable as isWebMCPAvailable,
-  type Tool,
+  type ToolDefinition,
 } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
-import * as v from "valibot";
+import { z } from "zod";
 import { MODES } from "../experimental/playground/presets.js";
 import { type AgentThread, findMode } from "./agentThreads.js";
 import type { ActivityEvent } from "./types.js";
@@ -21,78 +20,75 @@ export interface PlaygroundWebMCPContext {
 }
 
 const ModeIds = MODES.map((mode) => mode.id) as [string, ...string[]];
-const ModeIdInput = v.picklist(ModeIds);
-const NewConversationInput = v.object({ modeId: v.optional(ModeIdInput) });
-const SetModeInput = v.object({ modeId: ModeIdInput });
-const SendMessageInput = v.object({
-  text: v.pipe(v.string(), v.minLength(1)),
+const ModeIdInput = z
+  .enum(ModeIds)
+  .describe("Mode identifier returned by list_modes.");
+const NewConversationInput = z.strictObject({
+  modeId: ModeIdInput.optional(),
 });
+const SetModeInput = z.strictObject({ modeId: ModeIdInput });
+const SendMessageInput = z.strictObject({ text: z.string().min(1) });
 
-const OperationErrorOutput = v.object({
-  ok: v.literal(false),
-  error: v.string(),
+const OperationErrorOutput = z.object({
+  ok: z.literal(false),
+  error: z.string(),
 });
-const OperationOkOutput = v.object({ ok: v.literal(true) });
-const ListModesOutput = v.object({
-  modes: v.array(
-    v.object({
-      id: v.string(),
-      name: v.string(),
-      description: v.string(),
-      toolCount: v.number(),
+const OperationOkOutput = z.object({ ok: z.literal(true) });
+const ListModesOutput = z.object({
+  modes: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      description: z.string(),
+      toolCount: z.number(),
     }),
   ),
 });
-const ListConversationsOutput = v.object({
-  activeConversationId: v.string(),
-  conversations: v.array(
-    v.object({
-      id: v.string(),
-      name: v.string(),
-      modeId: v.string(),
-      modeName: v.string(),
-      turnCount: v.number(),
-      createdAt: v.number(),
-      updatedAt: v.number(),
+const ListConversationsOutput = z.object({
+  activeConversationId: z.string(),
+  conversations: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      modeId: z.string(),
+      modeName: z.string(),
+      turnCount: z.number(),
+      createdAt: z.number(),
+      updatedAt: z.number(),
     }),
   ),
 });
-const NewConversationOutput = v.union([
-  v.object({ id: v.string(), modeId: v.string() }),
+const NewConversationOutput = z.union([
+  z.object({ id: z.string(), modeId: z.string() }),
   OperationErrorOutput,
 ]);
-const SwitchConversationOutput = v.union([
-  v.object({
-    ok: v.literal(true),
-    activeConversationId: v.string(),
+const SwitchConversationOutput = z.union([
+  z.object({
+    ok: z.literal(true),
+    activeConversationId: z.string(),
   }),
   OperationErrorOutput,
 ]);
-const SetModeOutput = v.union([
-  v.object({ ok: v.literal(true), modeId: v.string() }),
+const SetModeOutput = z.union([
+  z.object({ ok: z.literal(true), modeId: z.string() }),
   OperationErrorOutput,
 ]);
-const OperationOutput = v.union([OperationOkOutput, OperationErrorOutput]);
+const OperationOutput = z.union([OperationOkOutput, OperationErrorOutput]);
 
-export function createPlaygroundWebMCPTools(
-  args: PlaygroundWebMCPContext,
-): Tool[] {
+export function createPlaygroundWebMCPTools(args: PlaygroundWebMCPContext) {
   const ConversationIds = Array.from(
     new Set([args.activeThread.id, ...args.threads.map((thread) => thread.id)]),
   ).sort() as [string, ...string[]];
-  const ConversationIdInput = v.object({ id: v.picklist(ConversationIds) });
-  const ConversationIdSchema = {
-    type: "object",
-    properties: {
-      id: {
-        type: "string",
-        description: "Conversation identifier returned by list_conversations.",
-        enum: ConversationIds,
-      },
-    },
-    required: ["id"],
-    additionalProperties: false,
-  };
+  const ConversationIdInput = z.strictObject({
+    id: z
+      .enum(ConversationIds)
+      .describe("Conversation identifier returned by list_conversations."),
+  });
+  const ConversationIdSchema = z.toJSONSchema(ConversationIdInput, {
+    io: "input",
+    target: "draft-2020-12",
+  });
+
   const report = (name: string, detail?: string) => {
     args.pushActivity({
       kind: "tool_invoked",
@@ -108,27 +104,32 @@ export function createPlaygroundWebMCPTools(
     };
   };
 
-  const listModes = defineTool({
-    name: "list_modes",
-    title: "List playground modes",
-    description:
-      "List the agent modes available in Playground. Each mode configures the system prompt, tools, examples, and renderers.",
-    readOnly: true,
-    output: ListModesOutput,
-    execute: async () => {
-      report("list_modes");
-      return {
-        modes: MODES.map((mode) => ({
-          id: mode.id,
-          name: mode.name,
-          description: mode.description,
-          toolCount: mode.tools.length,
-        })),
-      };
-    },
-  });
+  const listModes: ToolDefinition<undefined, unknown, typeof ListModesOutput> =
+    {
+      name: "list_modes",
+      title: "List playground modes",
+      description:
+        "List the agent modes available in Playground. Each mode configures the system prompt, tools, examples, and renderers.",
+      readOnly: true,
+      output: ListModesOutput,
+      execute: async () => {
+        report("list_modes");
+        return {
+          modes: MODES.map((mode) => ({
+            id: mode.id,
+            name: mode.name,
+            description: mode.description,
+            toolCount: mode.tools.length,
+          })),
+        };
+      },
+    };
 
-  const listConversations = defineTool({
+  const listConversations: ToolDefinition<
+    undefined,
+    unknown,
+    typeof ListConversationsOutput
+  > = {
     name: "list_conversations",
     title: "List conversations",
     description:
@@ -152,27 +153,23 @@ export function createPlaygroundWebMCPTools(
         })),
       };
     },
-  });
+  };
 
-  const newConversation = defineTool({
+  const newConversation: ToolDefinition<
+    typeof NewConversationInput,
+    unknown,
+    typeof NewConversationOutput
+  > = {
     name: "new_conversation",
     title: "New conversation",
     description:
       "Create and select a new agent conversation. Optionally pass a modeId from list_modes.",
     input: NewConversationInput,
-    validate: true,
     output: NewConversationOutput,
-    inputSchema: {
-      type: "object",
-      properties: {
-        modeId: {
-          type: "string",
-          description: "Mode identifier returned by list_modes.",
-          enum: ModeIds,
-        },
-      },
-      additionalProperties: false,
-    },
+    inputSchema: z.toJSONSchema(NewConversationInput, {
+      io: "input",
+      target: "draft-2020-12",
+    }),
     execute: async ({ modeId }) => {
       if (args.busy) return rejectBusy("new_conversation");
       const target = modeId ? findMode(modeId).id : undefined;
@@ -181,14 +178,17 @@ export function createPlaygroundWebMCPTools(
       report("new_conversation", `-> ${thread.id}`);
       return { id: thread.id, modeId: thread.modeId };
     },
-  });
+  };
 
-  const switchConversation = defineTool({
+  const switchConversation: ToolDefinition<
+    typeof ConversationIdInput,
+    unknown,
+    typeof SwitchConversationOutput
+  > = {
     name: "switch_conversation",
     title: "Switch conversation",
     description: "Switch the active agent conversation by id.",
     input: ConversationIdInput,
-    validate: true,
     output: SwitchConversationOutput,
     inputSchema: ConversationIdSchema,
     execute: async ({ id }) => {
@@ -203,16 +203,19 @@ export function createPlaygroundWebMCPTools(
       report("switch_conversation", `-> ${match.name}`);
       return { ok: true as const, activeConversationId: id };
     },
-  });
+  };
 
-  const deleteConversation = defineTool({
+  const deleteConversation: ToolDefinition<
+    typeof ConversationIdInput,
+    unknown,
+    typeof OperationOutput
+  > = {
     name: "delete_conversation",
     title: "Delete conversation",
     description:
       "Delete an agent conversation by id. Destructive: persisted turns cannot be recovered.",
     destructive: true,
     input: ConversationIdInput,
-    validate: true,
     output: OperationOutput,
     inputSchema: ConversationIdSchema,
     execute: async ({ id }) => {
@@ -229,28 +232,23 @@ export function createPlaygroundWebMCPTools(
       report("delete_conversation", `x ${match.name}`);
       return { ok: true as const };
     },
-  });
+  };
 
-  const setMode = defineTool({
+  const setMode: ToolDefinition<
+    typeof SetModeInput,
+    unknown,
+    typeof SetModeOutput
+  > = {
     name: "set_mode",
     title: "Set conversation mode",
     description:
       "Set the active conversation mode while keeping its existing turns.",
     input: SetModeInput,
-    validate: true,
     output: SetModeOutput,
-    inputSchema: {
-      type: "object",
-      properties: {
-        modeId: {
-          type: "string",
-          description: "Mode identifier returned by list_modes.",
-          enum: ModeIds,
-        },
-      },
-      required: ["modeId"],
-      additionalProperties: false,
-    },
+    inputSchema: z.toJSONSchema(SetModeInput, {
+      io: "input",
+      target: "draft-2020-12",
+    }),
     execute: async ({ modeId }) => {
       if (args.busy) return rejectBusy("set_mode");
       const mode = MODES.find((candidate) => candidate.id === modeId);
@@ -264,22 +262,23 @@ export function createPlaygroundWebMCPTools(
       report("set_mode", `-> ${mode.name}`);
       return { ok: true as const, modeId: mode.id };
     },
-  });
+  };
 
-  const sendMessage = defineTool({
+  const sendMessage: ToolDefinition<
+    typeof SendMessageInput,
+    unknown,
+    typeof OperationOutput
+  > = {
     name: "send_message",
     title: "Send playground message",
     description:
       "Send a message to the active agent conversation. The reply streams into the conversation.",
     input: SendMessageInput,
-    validate: true,
     output: OperationOutput,
-    inputSchema: {
-      type: "object",
-      properties: { text: { type: "string", minLength: 1 } },
-      required: ["text"],
-      additionalProperties: false,
-    },
+    inputSchema: z.toJSONSchema(SendMessageInput, {
+      io: "input",
+      target: "draft-2020-12",
+    }),
     execute: async ({ text }) => {
       if (args.busy) return rejectBusy("send_message");
       report("send_message", text);
@@ -291,10 +290,8 @@ export function createPlaygroundWebMCPTools(
             error: "Message was empty or the on-device model is unavailable.",
           };
     },
-  });
+  };
 
-  // Each definition retains its own inferred input type; erase that variance
-  // only at the registration boundary until heterogeneous arrays are native.
   return [
     listModes,
     listConversations,
@@ -303,7 +300,7 @@ export function createPlaygroundWebMCPTools(
     deleteConversation,
     setMode,
     sendMessage,
-  ] as unknown as Tool[];
+  ] as const;
 }
 
 export function useWebMCPTools(args: PlaygroundWebMCPContext) {

@@ -7,6 +7,7 @@ import {
   registerTool,
   type StandardSchemaV1,
   type Tool,
+  type ToolDefinition,
   ToolOutputValidationError,
   ToolValidationError,
 } from "./index.js";
@@ -555,7 +556,7 @@ describe("registerTool", () => {
   });
 });
 
-describe("defineTool", () => {
+describe("Standard Schema tool definitions", () => {
   // Tiny Standard-Schema-shaped validator for tests; mirrors what a real
   // Zod/Valibot schema would expose via the `~standard` property. Kept inline
   // so the webmcp package stays dependency-free.
@@ -595,6 +596,169 @@ describe("defineTool", () => {
       types: { input: "" as string, output: 0 as number },
     },
   };
+
+  it("accepts schemas directly and passes transformed input to execute", async () => {
+    const { registered } = installFakeModelContext();
+    const execute = vi.fn((count: number) => String(count + 1));
+
+    registerTool({
+      name: "increment",
+      description: "increments a numeric string",
+      input: numericStringSchema,
+      inputSchema: { type: "string", pattern: "^\\d+$" },
+      execute: (count) => {
+        expectTypeOf(count).toEqualTypeOf<number>();
+        return execute(count);
+      },
+    });
+
+    await expect(registered.get("increment")?.execute("41")).resolves.toBe(
+      "42",
+    );
+    expect(execute).toHaveBeenCalledWith(41);
+  });
+
+  it("validates transformed outputs from synchronous and asynchronous schemas", async () => {
+    const { registered } = installFakeModelContext();
+    const asyncOutput: StandardSchemaV1<string, number> = {
+      "~standard": {
+        version: 1,
+        vendor: "test",
+        validate: async (value: unknown) => {
+          await Promise.resolve();
+          return numericStringSchema["~standard"].validate(value);
+        },
+        types: { input: "" as string, output: 0 as number },
+      },
+    };
+
+    registerTool({
+      name: "count",
+      description: "returns a count",
+      output: asyncOutput,
+      execute: async () => "42",
+    });
+
+    await expect(registered.get("count")?.execute(undefined)).resolves.toBe(42);
+  });
+
+  it("preserves typed input validation errors without validate ceremony", async () => {
+    const { registered } = installFakeModelContext();
+    const execute = vi.fn(() => ({ ok: true }));
+
+    registerTool({
+      name: "increment",
+      description: "increments a numeric string",
+      input: numericStringSchema,
+      execute,
+    });
+
+    await expect(
+      registered.get("increment")?.execute("not-a-number"),
+    ).rejects.toMatchObject({
+      name: "ToolValidationError",
+      toolName: "increment",
+      issues: [{ message: "output must be a numeric string" }],
+    });
+    await expect(
+      registered.get("increment")?.execute("not-a-number"),
+    ).rejects.toBeInstanceOf(ToolValidationError);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it("preserves typed output validation errors", async () => {
+    const { registered } = installFakeModelContext();
+
+    registerTool({
+      name: "count",
+      description: "returns a count",
+      output: numericStringSchema,
+      execute: () => "not-a-number",
+    });
+
+    await expect(
+      registered.get("count")?.execute(undefined),
+    ).rejects.toMatchObject({
+      name: "ToolOutputValidationError",
+      toolName: "count",
+      issues: [{ message: "output must be a numeric string" }],
+    });
+  });
+
+  it("never forwards SDK-only schemas while retaining native metadata", () => {
+    const { registerTool: nativeRegister } = installFakeModelContext();
+    const annotations = { idempotentHint: true } as const;
+    const inputSchema = { type: "string" };
+    const exposedTo = ["https://agent.example"] as const;
+
+    registerTool(
+      {
+        name: "echo",
+        title: "Echo text",
+        description: "echoes",
+        input: stringSchema("input"),
+        output: stringSchema("output"),
+        inputSchema,
+        readOnly: true,
+        annotations,
+        execute: (text) => text,
+      },
+      { exposedTo },
+    );
+
+    const definition = nativeRegister.mock.calls[0]?.[0];
+    const options = nativeRegister.mock.calls[0]?.[1];
+    expect(definition).toMatchObject({
+      name: "echo",
+      title: "Echo text",
+      description: "echoes",
+      inputSchema,
+      annotations: { readOnlyHint: true, idempotentHint: true },
+    });
+    expect(definition).not.toHaveProperty("input");
+    expect(definition).not.toHaveProperty("output");
+    expect(options?.exposedTo).toBe(exposedTo);
+  });
+
+  it("accepts heterogeneous schema definitions without a Tool[] cast", () => {
+    const { registered } = installFakeModelContext();
+    const textTool = {
+      name: "text",
+      description: "returns text",
+      input: stringSchema("input"),
+      execute: (text) => {
+        expectTypeOf(text).toEqualTypeOf<string>();
+        return text;
+      },
+    } satisfies ToolDefinition<StandardSchemaV1<string, string>, string>;
+    const numberTool = {
+      name: "number",
+      description: "returns a number",
+      input: numericStringSchema,
+      execute: (count) => {
+        expectTypeOf(count).toEqualTypeOf<number>();
+        return count;
+      },
+    } satisfies ToolDefinition<StandardSchemaV1<string, number>, number>;
+    const tools = [textTool, numberTool] as const;
+
+    const cleanups = tools.map(registerTool);
+
+    expect(registered.has("text")).toBe(true);
+    expect(registered.has("number")).toBe(true);
+    for (const cleanup of cleanups) cleanup();
+  });
+
+  it("keeps defineTool as an opt-in-validation compatibility wrapper", async () => {
+    const tool = defineTool({
+      name: "echo",
+      description: "echoes",
+      input: stringSchema("input"),
+      execute: (text) => ({ text }),
+    });
+    const out = await (tool.execute as (input: unknown) => unknown)(123);
+    expect(out).toEqual({ text: 123 });
+  });
 
   it("returns a Tool that registers via the existing surface", () => {
     const { registered } = installFakeModelContext();
