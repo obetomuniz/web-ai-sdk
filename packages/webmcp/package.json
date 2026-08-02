@@ -1,6 +1,6 @@
 {
   "name": "@web-ai-sdk/webmcp",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "WebMCP (document.modelContext) support for web-ai-sdk, the TypeScript SDK for the Web AI surface.",
   "license": "MIT",
   "author": "Beto Muniz",

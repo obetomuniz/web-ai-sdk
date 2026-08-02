@@ -1,6 +1,6 @@
 {
   "name": "@web-ai-sdk/all",
-  "version": "0.7.7",
+  "version": "0.8.0",
   "description": "web-ai-sdk: the TypeScript SDK for the Web AI surface. One install for the prompt, summarizer, translator, detector, writer, rewriter, proofreader, and webmcp packages.",
   "license": "MIT",
   "author": "Beto Muniz",
