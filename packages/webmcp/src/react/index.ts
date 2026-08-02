@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { type RegisterToolOptions, registerTool, type Tool } from "../index.js";
 
 export interface UseWebMCPOptions extends RegisterToolOptions {
@@ -15,8 +15,8 @@ interface Registration {
 const getRegistrationKey = (
   tools: readonly Tool[],
   exposedTo: readonly string[] | undefined,
-): string =>
-  JSON.stringify({
+): string => {
+  const metadata = {
     tools: tools.map((tool) => ({
       name: tool.name,
       title: tool.title,
@@ -27,7 +27,36 @@ const getRegistrationKey = (
       annotations: tool.annotations,
     })),
     exposedTo,
-  }) ?? "";
+  };
+  const seen = new WeakSet<object>();
+  try {
+    return (
+      JSON.stringify(metadata, (_key, value: unknown) => {
+        if (typeof value === "bigint") return `bigint:${value.toString()}`;
+        if (typeof value !== "object" || value === null) return value;
+        if (seen.has(value)) return "[Circular]";
+        seen.add(value);
+        return value;
+      }) ?? ""
+    );
+  } catch {
+    return JSON.stringify({
+      tools: metadata.tools.map(
+        ({ name, title, description, readOnly, destructive }) => ({
+          name,
+          title,
+          description,
+          readOnly,
+          destructive,
+        }),
+      ),
+      exposedTo,
+    });
+  }
+};
+
+const useCommitEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 const createRegistration = (
   key: string,
@@ -73,7 +102,7 @@ export const useWebMCP = (
   const registrationRef = useRef<Registration | undefined>(undefined);
   const registrationKey = getRegistrationKey(tools, exposedTo);
 
-  useEffect(() => {
+  useCommitEffect(() => {
     latestExecutors.current = new Map(
       tools.map((tool) => [tool.name, tool.execute]),
     );

@@ -1,5 +1,5 @@
 import { renderHook } from "@testing-library/react";
-import { type ReactNode, StrictMode } from "react";
+import { type ReactNode, StrictMode, useLayoutEffect } from "react";
 import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import type { Tool } from "../index.js";
 import {
@@ -179,6 +179,33 @@ describe("useWebMCP", () => {
     unmount();
   });
 
+  it("compares circular metadata without crashing during render", () => {
+    const { registerTool } = installFakeModelContext();
+    const createCircularSchema = (type: string) => {
+      const schema: { self?: object; type: string } = { type };
+      schema.self = schema;
+      return schema;
+    };
+
+    const { rerender, unmount } = renderHook(
+      ({ inputSchema }: { inputSchema: object }) =>
+        useWebMCP({
+          name: "circular-schema",
+          description: "Handle non-serializable metadata",
+          inputSchema,
+          execute: async () => ({}),
+        }),
+      { initialProps: { inputSchema: createCircularSchema("object") } },
+    );
+
+    rerender({ inputSchema: createCircularSchema("object") });
+    expect(registerTool).toHaveBeenCalledTimes(1);
+
+    rerender({ inputSchema: createCircularSchema("array") });
+    expect(registerTool).toHaveBeenCalledTimes(2);
+    unmount();
+  });
+
   it("uses the latest execute callback without re-registering", () => {
     const { registered, registerTool } = installFakeModelContext();
 
@@ -202,6 +229,32 @@ describe("useWebMCP", () => {
 
     expect(registerTool).toHaveBeenCalledTimes(1);
     expect(registeredTool?.execute(undefined)).toBe(2);
+    unmount();
+  });
+
+  it("updates execute callbacks before consumer layout effects run", () => {
+    const { registered, registerTool } = installFakeModelContext();
+    const observed: number[] = [];
+
+    const { rerender, unmount } = renderHook(
+      ({ value }: { value: number }) => {
+        useWebMCP({
+          name: "commit-state",
+          description: "Read state from the latest commit",
+          execute: () => value,
+        });
+        useLayoutEffect(() => {
+          const result = registered.get("commit-state")?.execute(undefined);
+          if (typeof result === "number") observed.push(result);
+        });
+      },
+      { initialProps: { value: 1 } },
+    );
+
+    rerender({ value: 2 });
+
+    expect(registerTool).toHaveBeenCalledTimes(1);
+    expect(observed.at(-1)).toBe(2);
     unmount();
   });
 
