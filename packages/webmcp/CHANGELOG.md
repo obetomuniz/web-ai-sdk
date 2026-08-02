@@ -1,5 +1,11 @@
 # @web-ai-sdk/webmcp
 
+## 0.9.0
+
+### Minor Changes
+
+- 182e465: Expose WebMCP tool discovery, execution, and reactive retrieval through getTools(), executeTool(), and the useWebMCP() return value.
+
 ## 0.8.0
 
 ### Minor Changes
