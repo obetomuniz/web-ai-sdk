@@ -115,6 +115,26 @@
 
 /* Light: Noir light. Near-black accent on bright surfaces. */
 :root[data-theme="light"] {
+  --color-bg: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-surface-2: #ededed;
+  --color-surface-3: #e0e0e0;
+  --color-hairline: rgba(0, 0, 0, 0.12);
+  --color-hairline-2: rgba(0, 0, 0, 0.2);
+  --color-fg: #1c1c1c;
+  --color-fg-2: #4d4d4d;
+  --color-fg-3: #737373;
+  --color-fg-4: #999999;
+  --color-accent: #3b3b3b;
+  --color-accent-bright: #2b2b2b;
+  --color-accent-dim: #5e5e5e;
+  --color-accent-soft: rgba(0, 0, 0, 0.1);
+  --color-accent-line: rgba(0, 0, 0, 0.3);
+  --color-brand-dark: #ffffff;
+  --color-ok: #1f9d6b;
+  --color-info: #0066b8;
+  --color-warn: #9a6b00;
+  --color-err: #c2354a;
   --sl-color-text-accent: #16161a;
   --sl-color-accent: #16161a;
   --sl-color-accent-high: #000000;
@@ -167,23 +187,153 @@
   backdrop-filter: blur(14px) saturate(1.2);
 }
 
-.page > .header .site-title {
-  font-family: var(--sl-font-mono);
-  font-size: 0.875rem;
-  font-weight: 500;
-  letter-spacing: -0.01em;
+/* Use the same centered container and three-column rhythm as the home and
+   playground shells. The search sits in the shared center of the viewport. */
+@media (min-width: 50rem) {
+  .page > .header {
+    --sl-nav-height: calc(3.5rem + 1px);
+    --sl-nav-pad-y: 0;
+    --sl-nav-gap: 1rem;
+  }
+
+  .page > .header > .header {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 27.5rem) minmax(0, 1fr);
+    max-width: 1180px;
+    margin-inline: auto;
+    padding-inline: 1.75rem;
+    gap: 1rem;
+  }
+
+  .page > .header .title-wrapper {
+    padding: 0.25rem;
+    margin: -0.25rem;
+  }
+
+  .page > .header .docs-site-title {
+    font-weight: 400;
+  }
+
+  .page > .header .sl-flex.print\:hidden {
+    justify-content: flex-start;
+  }
+
+  .page > .header .right-group {
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .page > .header .social-icons {
+    gap: 0.5rem;
+  }
+
+  .page > .header .social-icons a {
+    letter-spacing: -0.005em;
+    font-feature-settings: "ss01", "cv11", "tnum";
+  }
+
+  .page > .header site-search button[data-open-modal] {
+    width: min(27.5rem, 100%);
+    max-width: none;
+    height: 2.375rem;
+    border-color: var(--sl-color-hairline-light);
+    border-radius: var(--radius-sm, 0.5rem);
+    padding: 0 0.625rem 0 0.875rem;
+    background-color: var(--sl-color-black);
+    font-family: var(--sl-font-sans);
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .page > .header site-search button[data-open-modal] > :last-child {
+    margin-inline-start: auto;
+  }
 }
 
-.page > .header .site-title span::after {
-  content: "";
-  display: inline-block;
-  width: 0.5em;
-  height: 0.08em;
-  margin-inline-start: 0.06em;
-  border-radius: 1px;
-  background: var(--sl-color-text-accent);
-  vertical-align: baseline;
-  animation: docs-caret-blink 1.1s steps(2) infinite;
+/* Below the wide desktop state, keep the three-column header centered while
+   reducing the actions to the same icon-only treatment used on small screens. */
+@media (min-width: 50rem) and (max-width: 71.999rem) {
+  .page > .header .playground-link,
+  .page > .header .github-link {
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
+    padding: 0.5rem;
+    box-sizing: border-box;
+  }
+
+  .page > .header .playground-link > span:first-child,
+  .page > .header .github-link > span:first-child {
+    display: none;
+  }
+
+  .page > .header .playground-link > svg,
+  .page > .header .github-link > svg {
+    display: block;
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+/* The full search field has no room beside the compact actions at this width.
+   Keep its magnifier as the discoverable control and preserve its label in the
+   button's accessible name. */
+@media (min-width: 50rem) and (max-width: 54.999rem) {
+  .page > .header > .header {
+    grid-template-columns: minmax(0, 1fr) 2.375rem minmax(0, 1fr);
+  }
+
+  .page > .header site-search button[data-open-modal] {
+    width: 2.375rem;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .page > .header site-search button[data-open-modal] > span,
+  .page > .header site-search button[data-open-modal] > kbd {
+    display: none;
+  }
+}
+
+@media (max-width: 49.999rem) {
+  .page > .header site-search button[data-open-modal] {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+/* Preserve the complete header at the narrowest phone widths. The controls
+   stay discoverable, while the reduced gaps leave room for the brand. */
+@media (max-width: 23.999rem) {
+  .page > .header > .header {
+    column-gap: 0.5rem;
+  }
+
+  .page > .header .right-group {
+    gap: 0.25rem;
+  }
+
+  .page > .header .social-icons {
+    gap: 0.5rem;
+  }
+
+  .page > .header .playground-link,
+  .page > .header .github-link {
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
+    padding: 0.5rem;
+    box-sizing: border-box;
+  }
+}
+
+.page > .header .docs-site-title:focus-visible,
+.page > .header site-search button[data-open-modal]:focus-visible {
+  outline: 2px solid var(--sl-color-text-accent);
+  outline-offset: 2px;
 }
 
 /* Keep the mobile table of contents compact and give its two labels a clear
@@ -216,12 +366,6 @@
 @keyframes docs-caret-blink {
   50% {
     opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .page > .header .site-title span::after {
-    animation: none;
   }
 }
 

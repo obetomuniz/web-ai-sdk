@@ -80,7 +80,7 @@ interface SummarizeOptions {
   sharedContext?: string;
   monitor?: (m: CreateMonitor) => void;
   cache?: "session" | "local" | { get, set };
-  cacheKey?: string; // default: JSON.stringify([pathname, trimmed input, normalizedLanguage, languageHints, type, length, format, preference, sharedContext]); normalizedLanguage = language's lowercase primary subtag (pt-BR → pt), languageHints = boolean (normalized language is in supportedLanguages)
+  cacheKey?: string; // default: JSON.stringify([pathname, trimmed input, normalizedLanguage, languageHints, type, length, format, preference, sharedContext]); normalizedLanguage = language's lowercase primary subtag (pt-BR becomes pt), languageHints = boolean (normalized language is in supportedLanguages)
   onUpdate?: (text: string) => void;
   signal?: AbortSignal;
 }

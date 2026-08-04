@@ -90,7 +90,7 @@ export const WebMCPDemo = () => {
           pretty = raw;
         }
       }
-      append(`→ result: ${pretty}`);
+      append(`result: ${pretty}`);
     } catch (err) {
       append(`× error: ${(err as Error)?.message ?? String(err)}`);
     }

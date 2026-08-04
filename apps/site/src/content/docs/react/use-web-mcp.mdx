@@ -195,7 +195,7 @@ interface Tool {
   title?: string;
   description: string;
   execute: (input: unknown) => Promise<unknown> | unknown;
-  readOnly?: boolean;              // → annotations.readOnlyHint
+  readOnly?: boolean;              // maps to annotations.readOnlyHint
   destructive?: boolean;           // compatibility shorthand
   annotations?: ToolAnnotations;   // raw passthrough; merges on top of shorthand
   inputSchema?: object;            // JSON Schema

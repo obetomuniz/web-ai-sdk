@@ -58,7 +58,6 @@ const packages = [
             {name}
           </span>
           <span class="package-description">{description}</span>
-          <span class="package-arrow" aria-hidden="true">→</span>
         </a>
       </li>
     ))
@@ -83,7 +82,7 @@ const packages = [
 
   .package-link {
     display: grid;
-    grid-template-columns: minmax(14rem, 0.85fr) minmax(0, 1.5fr) auto;
+    grid-template-columns: minmax(14rem, 0.85fr) minmax(0, 1.5fr);
     gap: 1.5rem;
     align-items: center;
     padding: 1rem;
@@ -128,23 +127,9 @@ const packages = [
     line-height: 1.45;
   }
 
-  .package-arrow {
-    color: var(--sl-color-gray-3);
-    font-family: var(--sl-font-mono);
-    font-size: 1.125rem;
-    transition:
-      color 150ms ease,
-      transform 150ms ease;
-  }
-
-  .package-link:hover .package-arrow {
-    color: var(--sl-color-white);
-    transform: translateX(0.2rem);
-  }
-
   @media (max-width: 44.999rem) {
     .package-link {
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr);
       gap: 0.3rem 1rem;
       padding: 0.875rem 0.75rem;
     }
@@ -155,15 +140,10 @@ const packages = [
       font-size: 0.875rem;
     }
 
-    .package-arrow {
-      grid-column: 2;
-      grid-row: 1 / span 2;
-    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .package-link,
-    .package-arrow {
+    .package-link {
       transition: none;
     }
   }
