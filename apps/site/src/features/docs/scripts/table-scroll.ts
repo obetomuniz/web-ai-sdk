@@ -55,9 +55,21 @@ function enhanceTable(table: HTMLTableElement) {
 }
 
 function enhanceTables() {
-  document
-    .querySelectorAll<HTMLTableElement>(TABLE_SELECTOR)
-    .forEach(enhanceTable);
+  let tables: HTMLTableElement[] | NodeListOf<HTMLTableElement>;
+
+  try {
+    tables = document.querySelectorAll<HTMLTableElement>(TABLE_SELECTOR);
+  } catch {
+    tables = Array.from(
+      document.querySelectorAll<HTMLTableElement>(".sl-markdown-content table"),
+    ).filter(
+      (table) =>
+        !table.closest(".options-table") &&
+        !table.hasAttribute("data-scroll-table"),
+    );
+  }
+
+  tables.forEach(enhanceTable);
 }
 
 if (document.readyState === "loading") {

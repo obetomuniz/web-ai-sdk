@@ -7,6 +7,8 @@ import {
   outputBox,
 } from "../../../shared/ui.js";
 
+const browserSupportHref = `${import.meta.env.BASE_URL}docs/browser-support/`;
+
 interface DownloadProgressEvent extends Event {
   readonly loaded: number;
 }
@@ -243,10 +245,7 @@ export const UnavailableNotice = ({ api }: { api: string }) => {
     <div className="block rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_40%,var(--color-hairline))] bg-surface px-3 py-[9px] font-mono text-[11.5px] text-warn">
       <span>
         {api} unavailable. See the{" "}
-        <a
-          className="underline underline-offset-2"
-          href="/docs/browser-support/"
-        >
+        <a className="underline underline-offset-2" href={browserSupportHref}>
           sourced browser-support guide
         </a>{" "}
         for current channels, trials, flags, and hardware requirements.
