@@ -1,8 +1,4 @@
 import { type ReactNode, useCallback, useRef, useState } from "react";
-import {
-  detectBrowser,
-  isDesktopWebAIBrowser,
-} from "../../../shared/browser.js";
 import { ModelMarkdown } from "../../../shared/components/ModelMarkdown.js";
 import {
   caret,
@@ -10,6 +6,8 @@ import {
   markdownProseEmpty,
   outputBox,
 } from "../../../shared/ui.js";
+
+const browserSupportHref = `${import.meta.env.BASE_URL}docs/browser-support/`;
 
 interface DownloadProgressEvent extends Event {
   readonly loaded: number;
@@ -22,20 +20,17 @@ interface CreateMonitor {
 }
 
 /**
- * Wire a Chrome Built-in AI `monitor` callback to React state. Returns the
+ * Wire a Built-in AI `monitor` callback to React state. Returns the
  * monitor function to pass into `createOptions.monitor`, plus the current
  * progress (a fraction from 0..1) or `null` when no download is in flight.
- *
- * Chrome fires `downloadprogress` events with `loaded` as a 0..1 fraction
- * during the ~1.7 GB Gemini Nano download on a fresh profile.
  */
 export const useDownloadMonitor = () => {
   const [progress, setProgress] = useState<number | null>(null);
 
   const monitor = useCallback((m: CreateMonitor) => {
-    // Chrome emits a single `downloadprogress` with loaded=1 on warm starts
-    // (model already cached) to signal readiness. Suppress that case so the
-    // notice only surfaces for a real download in progress.
+    // Some implementations emit a single `downloadprogress` with loaded=1 on
+    // warm starts. Suppress that case so the notice only surfaces for a real
+    // download in progress.
     let firstEvent = true;
     m.addEventListener("downloadprogress", (e) => {
       if (firstEvent && e.loaded >= 1) {
@@ -245,73 +240,16 @@ export const MarkdownOutput = ({
   );
 };
 
-/** Desktop Chrome or Edge — excludes mobile UAs and other Chromium forks. */
-export const isDesktopChromium = isDesktopWebAIBrowser;
-
-export const detectModelName = (): string => {
-  if (typeof globalThis === "undefined") return "on-device LM";
-  const g = globalThis as Record<string, unknown>;
-  const present =
-    "LanguageModel" in g || "Summarizer" in g || "Translator" in g;
-  if (!present) return "on-device LM";
-  const browser = detectBrowser();
-  if (browser === "edge") return "Phi-4-mini";
-  if (browser === "chrome") return "Gemini Nano";
-  return "on-device LM";
-};
-
-export const UnavailableNotice = ({
-  api,
-  flagSearch,
-}: {
-  api: string;
-  flagSearch?: string;
-}) => {
-  const browser = detectBrowser();
-
-  // Safari, Firefox, and mobile browsers (including Chrome and Edge on
-  // iOS/Android, which report as "other") don't implement the Web AI
-  // APIs, so Chrome/Edge flag instructions would mislead. These APIs are
-  // desktop-only today; say so plainly.
-  if (browser === "other") {
-    return (
-      <div className="block rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_40%,var(--color-hairline))] bg-surface px-3 py-[9px] font-mono text-[11.5px] text-warn">
-        <span>
-          {api} isn't supported in this browser yet. The Web AI APIs currently
-          run only on desktop Chrome and Edge (mobile browsers, including Chrome
-          and Edge on iOS and Android, aren't supported yet). Open this page on
-          desktop Chrome or Edge to try the demo.
-        </span>
-      </div>
-    );
-  }
-
-  const scheme = browser === "edge" ? "edge://" : "chrome://";
-  const browserName =
-    browser === "edge" ? "Edge Canary/Dev 138+" : "Chrome 138+";
+export const UnavailableNotice = ({ api }: { api: string }) => {
   return (
     <div className="block rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_40%,var(--color-hairline))] bg-surface px-3 py-[9px] font-mono text-[11.5px] text-warn">
       <span>
-        {api} unavailable in this browser.
-        {flagSearch ? (
-          <>
-            {" "}
-            Open <code>{`${scheme}flags/`}</code> in {browserName}, search for{" "}
-            <code>{flagSearch}</code>, enable it, and reload.
-          </>
-        ) : (
-          ` Open in ${browserName} to try it.`
-        )}
+        {api} unavailable. See the{" "}
+        <a className="underline underline-offset-2" href={browserSupportHref}>
+          sourced browser-support guide
+        </a>{" "}
+        for current channels, trials, flags, and hardware requirements.
       </span>
-      {browser === "edge" && (
-        <span className="mt-1.5 block text-[11px] text-fg-4">
-          If the flag is enabled but the model still won't run, check{" "}
-          <code>edge://on-device-internals</code>; the foundational model AND
-          the supplementary safety models (GENERALIZED_SAFETY, TEXT_SAFETY,
-          LANGUAGE_DETECTION) all need to show "Ready". Edge fails closed and
-          blocks all output when any safety model is missing.
-        </span>
-      )}
     </div>
   );
 };

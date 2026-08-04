@@ -1,12 +1,16 @@
 # @web-ai-sdk/writer
 
-web-ai-sdk building block for the Web's Built-in [Writer API](https://developer.chrome.com/docs/ai/writer-api). Generates new content from a writing task with session reuse, streaming, and opt-in result caching.
+This package wraps the Web's Built-in [Writer API](https://developer.chrome.com/docs/ai/writer-api). It provides session reuse, streaming, and optional result caching.
 
-**Docs:** <https://web-ai-sdk.dev/docs/guides/writer/> · **React:** [`useWriter`](https://web-ai-sdk.dev/docs/react/use-writer/)
+**Docs:** <https://web-ai-sdk.dev/docs/guides/writer/> · **React:** [`useWriter`](https://web-ai-sdk.dev/docs/react/use-writer/) · **Production:** [Checklist](https://web-ai-sdk.dev/docs/production-checklist/)
 
 ## Status
 
-The Writer API is in a developer trial (origin trial) in Chrome 137 to 148, behind `chrome://flags/#writer-api-for-gemini-nano` on localhost (`chrome://flags/#optimization-guide-on-device-model` must also be enabled). In Edge it's a developer preview in Canary/Dev 138+ behind "Writer API for Phi mini". On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `write()` throws `WriterUnavailableError` so callers can branch explicitly.
+Chrome labels Writer a **Developer trial** in its [status table](https://developer.chrome.com/docs/ai/built-in-apis). The public origin trial for Chrome 137–148 has ended. See the [Writer guide](https://developer.chrome.com/docs/ai/writer-api) for current localhost flags.
+
+Edge provides a [Canary/Dev preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) from 138.0.3309.2. Enable "Writer API for on-device language model."
+
+Without `Writer`, React reports `"unavailable"` and `write()` throws `WriterUnavailableError`.
 
 ## Install
 
@@ -15,7 +19,7 @@ pnpm add @web-ai-sdk/writer
 # or: npm i @web-ai-sdk/writer / bun add @web-ai-sdk/writer
 ```
 
-The React adapter ships as a subpath export, with no extra install. `react` is a peer dependency only when you import the `/react` entry.
+The React adapter uses the `/react` subpath. `react` is an optional peer dependency.
 
 ## Vanilla TypeScript / DOM
 

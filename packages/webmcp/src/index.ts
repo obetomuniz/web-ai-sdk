@@ -145,8 +145,9 @@ export class WebMCPUnavailableError extends Error {
  * string required by the native API. The native serialized result is returned
  * unchanged; `null` means execution triggered a navigation.
  *
- * @experimental Tool execution is implemented and publicly documented by
- * Chromium but is not yet present in the published WebMCP community draft.
+ * @experimental Chrome publicly documents tool execution at
+ * https://developer.chrome.com/docs/ai/webmcp, but it is not yet present in
+ * the published WebMCP community draft.
  */
 export const executeTool = async (
   tool: RegisteredTool,
@@ -260,7 +261,7 @@ const registerOne = async (
   options?: RegisterToolOptions,
 ): Promise<boolean> => {
   // If we still hold a live controller for this name, evict it before the
-  // native register call so Chrome doesn't reject with InvalidStateError.
+  // native register call so the browser doesn't reject with InvalidStateError.
   const prior = ownedControllers.get(registered.name);
   if (prior && prior !== controller && !prior.signal.aborted) {
     prior.abort();
@@ -284,7 +285,7 @@ const registerOne = async (
       return false;
     }
 
-    // Duplicate: Chrome's AbortSignal-driven unregistration isn't guaranteed
+    // Duplicate: AbortSignal-driven unregistration isn't guaranteed
     // to have drained by the time our (now async) rejection landed. A fresh
     // re-register fired right after an abort can still race the queued
     // removal. Yield once and retry. If the retry also fails, log and give up.
@@ -339,8 +340,8 @@ export function registerTool(
  * Register a single tool. Returns a cleanup function that unregisters it.
  *
  * Cleanup is wired through an `AbortSignal` passed to the native
- * `registerTool`, matching the W3C convention used by the Chrome
- * implementation. Calling the returned cleanup twice is a no-op.
+ * `registerTool`, matching the W3C convention used by the native API. Calling
+ * the returned cleanup twice is a no-op.
  *
  * If WebMCP is unavailable, the call is a no-op and the cleanup is a no-op.
  */

@@ -1,7 +1,6 @@
 /**
- * Adapter over the global `Summarizer` API exposed by Chrome 138+. Feature-
- * detected; on browsers without it, every entry point returns `null` so
- * callers can stay declarative.
+ * Adapter over the global `Summarizer` API. Feature-detected; on browsers
+ * without it, every entry point returns `null` so callers can stay declarative.
  *
  * Spec: https://developer.chrome.com/docs/ai/summarizer-api
  */
@@ -32,7 +31,7 @@ export interface SummarizerCreateOptions {
   expectedInputLanguages?: string[];
   expectedContextLanguages?: string[];
   outputLanguage?: string;
-  /** Observe the first-call model download (~1.7 GB on a fresh profile). */
+  /** Observe model-download progress when creation requires one. */
   monitor?: (m: CreateMonitor) => void;
 }
 
@@ -44,10 +43,8 @@ export type SummarizerAvailability =
 
 /**
  * Subset of `SummarizerCreateOptions` that the spec accepts when probing
- * availability. Edge enforces these strictly (e.g. fires a warning when
- * `outputLanguage` is missing); Chrome is more lenient. Pass the same
- * shape you'd pass to `create()` to get accurate, warning-free results
- * across browsers.
+ * availability. Pass the relevant creation shape so the result applies to the
+ * configuration you intend to create.
  */
 export interface SummarizerAvailabilityOptions {
   type?: SummarizerCreateOptions["type"];

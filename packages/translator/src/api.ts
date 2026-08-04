@@ -1,7 +1,7 @@
 /**
- * Adapter over the global `Translator` API exposed by Chrome 138+. The native
- * surface is feature-detected; on browsers without it, every entry point in
- * this module returns `null` / `undefined` so callers can stay declarative.
+ * Adapter over the global `Translator` API. The native surface is
+ * feature-detected; on browsers without it, every entry point in this module
+ * returns `null` / `undefined` so callers can stay declarative.
  *
  * Spec: https://developer.chrome.com/docs/ai/translator-api
  */

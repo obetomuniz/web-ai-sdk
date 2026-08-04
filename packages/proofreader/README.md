@@ -1,14 +1,16 @@
 # @web-ai-sdk/proofreader
 
-web-ai-sdk building block for the Web's Built-in [Proofreader API](https://developer.chrome.com/docs/ai/proofreader-api). Corrects grammar, spelling, and punctuation and returns per-issue corrections with offsets, plus session reuse and opt-in result caching.
+This package wraps the Web's Built-in [Proofreader API](https://developer.chrome.com/docs/ai/proofreader-api). It returns corrected text and an offset for each issue. It also provides session reuse and optional result caching.
 
-**Docs:** <https://web-ai-sdk.dev/docs/guides/proofreader/> · **React:** [`useProofreader`](https://web-ai-sdk.dev/docs/react/use-proofreader/)
+**Docs:** <https://web-ai-sdk.dev/docs/guides/proofreader/> · **React:** [`useProofreader`](https://web-ai-sdk.dev/docs/react/use-proofreader/) · **Production:** [Checklist](https://web-ai-sdk.dev/docs/production-checklist/)
 
 ## Status
 
-The Proofreader API is in an origin trial in Chrome 141 to 145, behind `chrome://flags/#proofreader-api-for-gemini-nano` on localhost (`chrome://flags/#optimization-guide-on-device-model` must also be enabled). In Edge it's a developer preview in Canary/Dev 142+ behind "Proofreader API for Phi mini". On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `proofread()` throws `ProofreaderUnavailableError` so callers can branch explicitly.
+Chrome labels Proofreader a **Developer trial** in its [status table](https://developer.chrome.com/docs/ai/built-in-apis). The public origin trial for Chrome 141–145 has ended. For localhost, enable `chrome://flags/#proofreader-api`.
 
-The API is **English-only** today. `expectedInputLanguages` accepts an array, but a request for an unsupported language causes the underlying `create()` to reject (surfaced here as `ProofreaderUnavailableError`); pass `["en"]` or omit it.
+Edge provides a [Canary/Dev preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/proofreader-api) from 142. Enable "Proofreader API for Phi mini." Edge requires a High device-performance class or greater.
+
+Without `Proofreader`, React reports `"unavailable"` and `proofread()` throws `ProofreaderUnavailableError`.
 
 ## Install
 
@@ -17,7 +19,7 @@ pnpm add @web-ai-sdk/proofreader
 # or: npm i @web-ai-sdk/proofreader / bun add @web-ai-sdk/proofreader
 ```
 
-The React adapter ships as a subpath export, with no extra install. `react` is a peer dependency only when you import the `/react` entry.
+The React adapter uses the `/react` subpath. `react` is an optional peer dependency.
 
 ## Vanilla TypeScript / DOM
 
@@ -71,8 +73,8 @@ interface ProofreadCorrection {
   startIndex: number;     // inclusive offset into the original input
   endIndex: number;       // exclusive offset into the original input
   correction: string;     // suggested replacement
-  type?: string;          // not emitted by Chrome's current build
-  explanation?: string;   // not emitted by Chrome's current build
+  type?: string;          // optional platform metadata
+  explanation?: string;   // optional platform metadata
 }
 
 interface ProofreadOutput {

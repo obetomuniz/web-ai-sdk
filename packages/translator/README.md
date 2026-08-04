@@ -1,12 +1,14 @@
 # @web-ai-sdk/translator
 
-web-ai-sdk building block for the Web's Built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api). String-mode translation with pair-cached sessions, opt-in result caching, and AbortSignal-driven cleanup.
+This package wraps the Web's Built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api). It caches sessions by language pair and supports optional result caching and abort signals.
 
-**Docs:** <https://web-ai-sdk.dev/docs/guides/translator/> · **React:** [`useTranslator`](https://web-ai-sdk.dev/docs/react/use-translator/)
+**Docs:** <https://web-ai-sdk.dev/docs/guides/translator/> · **React:** [`useTranslator`](https://web-ai-sdk.dev/docs/react/use-translator/) · **Production:** [Checklist](https://web-ai-sdk.dev/docs/production-checklist/)
 
 ## Status
 
-Translator API is stable in Chrome 138+ and Edge 148+ on desktop, with no flag required (per the [Edge Translator API docs](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/translator-api)). On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `translate()` throws `TranslatorUnavailableError` so callers can branch explicitly.
+Translator is stable in Chrome 138+ and shipped in Edge 148. It does not require a flag. See the [Chrome status table](https://developer.chrome.com/docs/ai/built-in-apis) and [Edge 148 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/148).
+
+Without `Translator`, React reports `"unavailable"` and `translate()` throws `TranslatorUnavailableError`.
 
 ## Install
 
@@ -15,7 +17,7 @@ pnpm add @web-ai-sdk/translator
 # or: npm i @web-ai-sdk/translator / bun add @web-ai-sdk/translator
 ```
 
-The React adapter ships as a subpath export, with no extra install. `react` is a peer dependency only when you import the `/react` entry.
+The React adapter uses the `/react` subpath. `react` is an optional peer dependency.
 
 ## Vanilla TypeScript / DOM
 

@@ -1,9 +1,11 @@
 ---
 title: Writer API
-description: web-ai-sdk building block for the Web's Built-in Writer API with session reuse, streaming, and opt-in result caching.
+description: Generate text with the built-in Writer API, streaming, session reuse, and optional result caching.
 ---
 
-Building block for the Web's Built-in [Writer API](https://developer.chrome.com/docs/ai/writer-api). Generates new content from a writing task with tone / format / length options, session reuse, streaming, and pluggable result caching. The React adapter lives at `@web-ai-sdk/writer/react`; see [useWriter](/docs/react/use-writer/).
+This package wraps the built-in [Writer API](https://developer.chrome.com/docs/ai/writer-api). It adds session reuse, streaming, and optional result caching. For React, see [useWriter](/docs/react/use-writer/).
+
+Before shipping, review the [Production checklist](/docs/production-checklist/) for safe rendering, progress, reversible suggestions, user control, and cache freshness.
 
 ## Usage
 

@@ -21,7 +21,6 @@ import {
 } from "../../../shared/ui.js";
 import {
   DownloadNotice,
-  detectModelName,
   MarkdownOutput,
   StatusBar,
   UnavailableNotice,
@@ -80,9 +79,7 @@ export const PromptDemo = () => {
         <span>session: cached · balanced</span>
       </div>
       <div className={cardBody}>
-        {available === false && (
-          <UnavailableNotice api="Prompt API" flagSearch="Prompt API" />
-        )}
+        {available === false && <UnavailableNotice api="Prompt API" />}
         <DownloadNotice progress={progress} />
         <div className={fieldSpaced}>
           <label className={label} htmlFor="prompt-demo-input">
@@ -133,7 +130,7 @@ export const PromptDemo = () => {
               : "Output will stream here…"
           }
         />
-        <StatusBar stats={stats} label={`model: ${detectModelName()}`} />
+        <StatusBar stats={stats} label="runtime: browser-provided model" />
       </div>
     </div>
   );

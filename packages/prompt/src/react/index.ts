@@ -154,11 +154,9 @@ export interface UseSessionReturn {
  * or when any primitive option (`systemPrompt`, `samplingMode`,
  * `temperature`, `topK`, `language`, `enabled`, `monitor`) changes.
  *
- * Token-level interleaving across sessions is browser-defined: the
- * underlying on-device model is single-instance, so Chrome 148 / Edge 138
- * currently serialize `sendStreaming` calls across sessions FIFO. The
- * second component's send waits for the first to drain. The API is
- * forward-compatible for runtimes that expose parallel inference.
+ * Token-level interleaving across independent sessions is browser-defined.
+ * Components should not depend on parallel inference or a particular
+ * scheduling order.
  *
  * The hook intentionally does **not** track `output` / `history` /
  * streaming status. Iterate `session.sendStreaming()` yourself and keep UI

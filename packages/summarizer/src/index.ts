@@ -62,7 +62,7 @@ export interface SummarizeOptions {
   preference?: "auto" | "speed" | "capability";
   /** Native `sharedContext` string (a hint about who/what the summary is for). */
   sharedContext?: string;
-  /** Observe the first-call model download (~1.7 GB on a fresh profile). */
+  /** Observe model-download progress when creation requires one. */
   monitor?: (m: CreateMonitor) => void;
   /**
    * Result cache. Off by default; every call hits the model. Pass
@@ -166,13 +166,10 @@ export const summarize = async (
     ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
-  // We pass the same options shape to availability() as we do to create().
-  // Edge requires this for accurate results and warns when fields like
-  // outputLanguage are missing; Chrome is more lenient but accepts the same
-  // input. `preference` is a create-core option, so availability() accepts it
-  // too; forwarding it keeps the probe honest about the configuration we're
-  // actually about to create. The narrower SummarizerAvailabilityOptions shape
-  // still filters out create-only fields like `sharedContext`.
+  // Pass the relevant create options to availability() so the probe describes
+  // the configuration we are about to create. The narrower
+  // SummarizerAvailabilityOptions shape filters out create-only fields such as
+  // `sharedContext`.
   const availability = await api
     .availability({
       ...(baseCreateOptions.type ? { type: baseCreateOptions.type } : {}),
@@ -216,10 +213,8 @@ export const summarize = async (
   }
   if (options.signal?.aborted) throw new AbortError();
 
-  // The W3C Web AI streaming contract is ambiguous between "delta" (each
-  // chunk is new content) and "cumulative" (each chunk is the full text
-  // so far). Chrome ships delta; some Edge backends ship cumulative.
-  // Detect per-chunk and merge accordingly.
+  // Browser implementations may emit delta or cumulative chunks. Detect the
+  // shape per chunk and merge accordingly.
   const mergeChunk = (buffer: string, chunk: string): string =>
     chunk.startsWith(buffer) ? chunk : buffer + chunk;
 

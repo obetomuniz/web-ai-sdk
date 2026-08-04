@@ -1,9 +1,9 @@
 ---
 title: web-ai-sdk
-description: Building blocks in TypeScript for the Web AI surface. Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.
+description: TypeScript lifecycle wrappers for browser AI APIs.
 template: splash
 hero:
-  tagline: Building blocks in TypeScript for the Web AI surface. Composable, no runtime deps, just lifecycle, streaming, and AbortSignals.
+  tagline: TypeScript lifecycle wrappers for browser AI APIs. No runtime dependencies.
   actions:
     - text: Browser support
       link: /docs/browser-support/
@@ -17,92 +17,55 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid } from "@astrojs/starlight/components";
+import PackageIndex from "../../features/docs/components/PackageIndex.astro";
 
 ## What it is
 
-**`web-ai-sdk`** ships building blocks for the Web AI surface. One package per browser capability (Prompt, WebMCP, Summarizer, Translator, Detector, Writer, Rewriter, Proofreader). Zero runtime dependencies. Written in TypeScript. See [Architecture](/docs/architecture/) for the model.
+`web-ai-sdk` provides one TypeScript package for each supported browser capability. The packages have no runtime dependencies. See [Architecture](/docs/architecture/) for the package boundaries.
 
-You can always use the raw browser APIs directly; the SDK doesn't replace or hide them. It just owns the lifecycle layer around them (session reuse, streaming, AbortSignals, feature-detected fallbacks) and is built to get thinner as the platform matures.
+The SDK does not replace the browser APIs. It manages session reuse, streaming, abort signals, cleanup, and unavailable states.
 
-Compositions that bond multiple primitives (block-level DOM translation,
-article-aware summarization, detect-then-summarize chains) are
-deliberately out of scope — the SDK wraps one capability per package;
-composition is your code.
+Before shipping a feature, use the [Production checklist](/docs/production-checklist/) to cover user intent, input selection, safe rendering, progress, reversible edits, and cache freshness.
 
-## One capability per package, on purpose
+The SDK does not compose capabilities or walk the DOM. Application code owns tasks such as article extraction and detect-then-summarize flows.
 
-A single text-generation model abstraction reaches exactly one of these built-ins, `LanguageModel` (Prompt). The other seven carry options it cannot express (target language, tone, length, confidence thresholds, per-issue offsets), and one of them, WebMCP, is an *agent* surface rather than a model. That breadth is why the SDK is per-capability rather than one provider adapter. The model abstraction is one surface among eight, not the whole product. See [Why web-ai-sdk](/docs/why-web-ai-sdk/) for the full argument.
+## One capability per package
 
-## Why not just use the APIs directly?
+Only Prompt uses the general `LanguageModel` API. The other capabilities have different inputs and results. WebMCP exposes page tools instead of generating text.
 
-You can, and nothing here stops you. The Web AI surface is the foundation; web-ai-sdk owns the thin, repetitive lifecycle layer you'd otherwise rewrite in every component, and nothing more.
+See [Why web-ai-sdk](/docs/why-web-ai-sdk/) for a detailed comparison.
 
-- **It's the same APIs.** Drop down to `LanguageModel`, `Summarizer`, `Writer`, and friends whenever you want. No lock-in, no wrapper objects you can't escape.
-- **What you'd otherwise rebuild.** Feature detection, session reuse, delta-vs-cumulative stream smoothing, AbortSignal cleanup, and feature-detected no-op fallbacks when the API is missing.
-- **It's built to shrink.** As the platform absorbs more, this layer gets thinner, not fatter. The goal is to do less over time, not more.
+## Why use a wrapper?
 
-[Why this layer is designed to get thinner over time →](/docs/architecture/#lineage-thin-shims-over-platform-primitives)
+You can use the browser APIs directly. The SDK handles lifecycle code that applications often repeat:
 
-## Composable wrappers. One philosophy.
+- feature detection and unavailable states;
+- session reuse and cleanup;
+- delta and cumulative stream normalization;
+- `AbortSignal` wiring.
 
-<CardGrid>
-  <Card title="@web-ai-sdk/all" icon="open-book">
-    Meta-package: install once, get all eight wrappers under a single
-    dependency. [Read the guide →](/docs/guides/meta-package/)
-  </Card>
-  <Card title="@web-ai-sdk/prompt" icon="comment">
-    Talk to the on-device language model. Sessions, streaming, AbortSignals.
-    [Read the guide →](/docs/guides/prompt/)
-  </Card>
-  <Card title="@web-ai-sdk/webmcp" icon="puzzle">
-    Register tools the browser's model context can call. Real agents, real
-    cleanup, no boilerplate. [Read the guide →](/docs/guides/webmcp/)
-  </Card>
-  <Card title="@web-ai-sdk/summarizer" icon="list-format">
-    Key-points, TL;DR, headlines. Configurable type and length, streaming.
-    [Read the guide →](/docs/guides/summarizer/)
-  </Card>
-  <Card title="@web-ai-sdk/translator" icon="translate">
-    String-mode translation with pair-cached sessions. Source → target in one
-    call. [Read the guide →](/docs/guides/translator/)
-  </Card>
-  <Card title="@web-ai-sdk/detector" icon="magnifier">
-    Detect the language of any text on-device. Confidence scores plus a sorted
-    list of alternates. [Read the guide →](/docs/guides/detector/)
-  </Card>
-  <Card title="@web-ai-sdk/writer" icon="pen">
-    Draft new content from a task description. Tone, format, length, streaming.
-    [Read the guide →](/docs/guides/writer/)
-  </Card>
-  <Card title="@web-ai-sdk/rewriter" icon="random">
-    Tone-shift and reshape text you already have. Shorter, longer, more formal.
-    [Read the guide →](/docs/guides/rewriter/)
-  </Card>
-  <Card title="@web-ai-sdk/proofreader" icon="approve-check-circle">
-    Grammar, spelling, and punctuation fixes with per-issue offsets you can
-    highlight in place. [Read the guide →](/docs/guides/proofreader/)
-  </Card>
-</CardGrid>
+[Read the architecture guide →](/docs/architecture/)
+
+## Packages
+
+<PackageIndex />
 
 ## Install
 
-Pick a building block, or grab the whole suite under a single install:
+Install one package or the full set:
 
 ```sh
 pnpm add @web-ai-sdk/prompt        # one block
 pnpm add @web-ai-sdk/all           # all eight blocks
 ```
 
-See the [meta-package guide](/docs/guides/meta-package/) for the two import shapes (`@web-ai-sdk/all/prompt` subpath vs `{ prompt } from "@web-ai-sdk/all"` namespaced root).
+The [meta-package guide](/docs/guides/meta-package/) documents subpath and namespaced imports.
 
 Each package ships:
 
-- **Vanilla** (`@web-ai-sdk/<pkg>`); TypeScript / DOM only, zero framework deps.
-- **React** (`@web-ai-sdk/<pkg>/react`); small hook adapter that wraps the vanilla core. `react` is an optional peer dependency.
+- **Vanilla** (`@web-ai-sdk/<pkg>`): TypeScript and DOM APIs with no framework dependency.
+- **React** (`@web-ai-sdk/<pkg>/react`): hooks over the vanilla API. `react` is an optional peer dependency.
 
-## Why composable
+## Package scope
 
-Browsers are shipping Web AI APIs behind flags. The shape changes; the lifecycle is similar across them: feature-detect, lazily create a session, stream chunks, cache results, clean up. Those concerns are framework-agnostic and worth sharing.
-
-We ship that lifecycle layer. Framework adapters, polyfills, UI primitives stay optional subpaths so they don't constrain your design system, framework, or styling stack. Pick the layers you need; skip the rest.
+Each package owns one browser capability. UI, polyfills, DOM traversal, and cross-capability workflows remain outside the core wrappers.

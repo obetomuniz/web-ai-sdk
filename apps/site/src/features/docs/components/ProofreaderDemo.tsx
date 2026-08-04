@@ -27,8 +27,8 @@ export const ProofreaderDemo = () => {
           api="Proofreader API"
           chrome={
             <>
-              Proofreader API unavailable. Open in Chrome with the Proofreader
-              API flag / origin trial enabled to exercise.
+              Chrome labels Proofreader a Developer trial. For localhost, enable{" "}
+              <code>chrome://flags/#proofreader-api</code> and reload.
             </>
           }
           edge={

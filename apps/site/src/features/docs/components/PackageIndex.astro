@@ -1,0 +1,170 @@
+---
+const packages = [
+  {
+    name: "all",
+    description: "Install all eight packages together.",
+    href: "/docs/guides/meta-package/",
+  },
+  {
+    name: "prompt",
+    description: "Send prompts and manage sessions, streams, and abort signals.",
+    href: "/docs/guides/prompt/",
+  },
+  {
+    name: "webmcp",
+    description: "Register browser tools and clean them up safely.",
+    href: "/docs/guides/webmcp/",
+  },
+  {
+    name: "summarizer",
+    description: "Create summaries, key points, teasers, and headlines.",
+    href: "/docs/guides/summarizer/",
+  },
+  {
+    name: "translator",
+    description: "Translate text between languages with reusable sessions.",
+    href: "/docs/guides/translator/",
+  },
+  {
+    name: "detector",
+    description: "Detect languages and receive confidence scores.",
+    href: "/docs/guides/detector/",
+  },
+  {
+    name: "writer",
+    description: "Draft text with a configurable tone, format, and length.",
+    href: "/docs/guides/writer/",
+  },
+  {
+    name: "rewriter",
+    description: "Change the tone or length of existing text.",
+    href: "/docs/guides/rewriter/",
+  },
+  {
+    name: "proofreader",
+    description: "Correct grammar, spelling, and punctuation.",
+    href: "/docs/guides/proofreader/",
+  },
+];
+---
+
+<ul class="package-index not-content" aria-label="Packages">
+  {
+    packages.map(({ name, description, href }) => (
+      <li>
+        <a class="package-link" href={href}>
+          <span class="package-name">
+            <span class="package-scope">@web-ai-sdk/</span>
+            {name}
+          </span>
+          <span class="package-description">{description}</span>
+          <span class="package-arrow" aria-hidden="true">→</span>
+        </a>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .package-index {
+    margin: 1.5rem 0 2.5rem;
+    padding: 0;
+    list-style: none;
+    border-block: 1px solid var(--sl-color-hairline);
+  }
+
+  .package-index li {
+    margin: 0;
+  }
+
+  .package-index li + li {
+    border-block-start: 1px solid var(--sl-color-hairline);
+  }
+
+  .package-link {
+    display: grid;
+    grid-template-columns: minmax(14rem, 0.85fr) minmax(0, 1.5fr) auto;
+    gap: 1.5rem;
+    align-items: center;
+    padding: 1rem;
+    color: var(--sl-color-white);
+    text-decoration: none;
+    transition: background-color 150ms ease;
+  }
+
+  :global(.sl-markdown-content) .package-link {
+    text-decoration: none;
+  }
+
+  .package-link:hover {
+    background: color-mix(
+      in srgb,
+      var(--sl-color-text-accent) 5%,
+      transparent
+    );
+  }
+
+  .package-link:focus-visible {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: -2px;
+  }
+
+  .package-name {
+    min-width: 0;
+    font-family: var(--sl-font-mono);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .package-scope {
+    color: var(--sl-color-gray-3);
+    font-weight: 400;
+  }
+
+  .package-description {
+    color: var(--sl-color-gray-2);
+    font-size: 0.9375rem;
+    line-height: 1.45;
+  }
+
+  .package-arrow {
+    color: var(--sl-color-gray-3);
+    font-family: var(--sl-font-mono);
+    font-size: 1.125rem;
+    transition:
+      color 150ms ease,
+      transform 150ms ease;
+  }
+
+  .package-link:hover .package-arrow {
+    color: var(--sl-color-white);
+    transform: translateX(0.2rem);
+  }
+
+  @media (max-width: 44.999rem) {
+    .package-link {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.3rem 1rem;
+      padding: 0.875rem 0.75rem;
+    }
+
+    .package-description {
+      grid-column: 1;
+      grid-row: 2;
+      font-size: 0.875rem;
+    }
+
+    .package-arrow {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .package-link,
+    .package-arrow {
+      transition: none;
+    }
+  }
+</style>

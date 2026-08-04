@@ -1,0 +1,207 @@
+---
+title: Production checklist
+description: A checklist for input, sessions, safe output, user control, progress, and caches.
+---
+
+The SDK manages browser API lifecycles. Your application manages product behavior. This checklist adapts Chrome's [Built-in AI guidance](https://developer.chrome.com/docs/ai/built-in-ai-dos-donts) to the SDK packages.
+
+| The wrapper owns | Your application owns |
+| --- | --- |
+| Feature detection and typed unavailability | Confirming user intent before preparing a model |
+| Session reuse, stream normalization, and cleanup hooks | Selecting relevant input and excluding unrelated page content |
+| AbortSignal wiring and React effect cleanup | Rendering, sanitization, progress, and fallback UI |
+| Optional result-cache adapters and complete default cache keys | Expiration, refresh, persistence policy, and user-visible history |
+
+The SDK does not select page content, interpret user intent, sanitize formatted output, persist edits, or render UI.
+
+## Prepare after clear user intent
+
+Prepare a session after the user enters an AI feature. Do not prepare every model on page load. For Prompt, pass system instructions when you create the session.
+
+```ts
+import { createSession } from "@web-ai-sdk/prompt";
+
+let reviewBase: ReturnType<typeof createSession> | undefined;
+
+reviewWorkspace.addEventListener("pointerenter", () => {
+  reviewBase ??= createSession({
+    systemPrompt: "Review code for correctness. Be concise and cite lines.",
+  });
+});
+```
+
+Preparation can download a model and use memory. Do not prepare features that the user has not opened.
+
+## Reuse the right kind of session
+
+Writer, Rewriter, and Summarizer do not keep task history. Their high-level functions reuse compatible native sessions. Prompt sessions keep history.
+
+For independent Prompt tasks, create one base session. Clone it for each task. Destroy each clone after use.
+
+```ts
+import { createSession } from "@web-ai-sdk/prompt";
+
+const base = createSession({
+  systemPrompt: "Review code for correctness. Return concise findings.",
+});
+
+async function review(code: string, signal: AbortSignal) {
+  const task = await base.clone({ signal });
+  try {
+    return await task.send(`Review this code:\n\n${code}`, { signal });
+  } finally {
+    task.destroy();
+  }
+}
+
+// When the feature itself is removed:
+base.destroy();
+```
+
+`ask()` already uses this pattern when the browser supports cloning. For chat, create one session per conversation.
+
+## Abort work that is no longer relevant
+
+Abort work after navigation, changed input, or a Stop action. Destroy long-lived sessions when their feature closes.
+
+```ts
+import { rewrite } from "@web-ai-sdk/rewriter";
+
+const controller = new AbortController();
+stopButton.addEventListener("click", () => controller.abort());
+
+await rewrite({
+  input: editor.value,
+  tone: "more-formal",
+  signal: controller.signal,
+});
+```
+
+React hooks destroy sessions during effect cleanup. Your UI must still provide per-operation cancellation and a Stop control.
+
+## Send only task-relevant text
+
+Send only text needed for the task. Exclude navigation, banners, hidden controls, metadata, and unrelated comments. Use `innerText` or explicit fields. Never send raw `innerHTML`.
+
+```ts
+import { summarize } from "@web-ai-sdk/summarizer";
+
+const article = document.querySelector<HTMLElement>("[data-article-body]");
+const input = article?.innerText.trim() ?? "";
+
+const result = await summarize({ input, type: "key-points" });
+```
+
+Extract headings or fields explicitly when the task needs them. The SDK does not define your document structure.
+
+## Treat every output as untrusted
+
+Model output can be wrong, hostile, or malformed. The SDK removes selected control characters. It does not make HTML or Markdown safe.
+
+For plain text, use React interpolation or `textContent`:
+
+```ts
+outputElement.textContent = result.output ?? "";
+```
+
+For formatted output, first collect the complete stream. Disable raw HTML and sanitize the complete result before rendering. Never pass model output directly to `innerHTML`.
+
+Do not sanitize individual stream chunks. Unsafe syntax can span multiple chunks.
+
+## Use schemas for data, layout for visual length
+
+Use Prompt structured output when code needs a predictable data shape:
+
+```ts
+import { ask } from "@web-ai-sdk/prompt";
+
+const responseConstraint = {
+  type: "object",
+  properties: {
+    title: { type: "string" },
+    summary: { type: "string" },
+  },
+  required: ["title", "summary"],
+  additionalProperties: false,
+};
+
+const { output } = await ask({
+  input: `Summarize this article:\n\n${articleText}`,
+  responseConstraint,
+});
+
+const card = output ? JSON.parse(output) : null;
+```
+
+Do not use schema `maxLength` only to fit a card. Do not request an exact character count. These limits can reduce output quality.
+
+Use CSS overflow or line clamping for the preview. Provide a way to expand the text.
+
+## Show preparation and generation progress
+
+Show model preparation and generation as separate states. Show download progress when available. Stream output only when partial text is useful.
+
+```ts
+import { ask } from "@web-ai-sdk/prompt";
+
+await ask({
+  input,
+  monitor(monitor) {
+    monitor.addEventListener("downloadprogress", (event) => {
+      setDownloadProgress(event.loaded);
+    });
+  },
+  onUpdate(text) {
+    outputElement.textContent = text;
+  },
+});
+```
+
+Show a status before replacing visible content. For short tasks, use a spinner or pending label instead of streaming.
+
+## Preserve originals and make edits reversible
+
+Treat AI edits as suggestions. Keep the original text until the user accepts the result.
+
+- **Accept** applies the suggestion and stores the previous version.
+- **Reject** removes the suggestion without changing the source.
+- **Undo** restores the previous accepted version.
+
+For multi-step edits, provide version navigation or a diff.
+
+## Expire caches and offer refresh
+
+The `"session"` and `"local"` caches do not expire entries. Use a custom cache when results need a time-to-live (TTL). Add a visible Refresh action.
+
+```ts
+import type { ResponseCache } from "@web-ai-sdk/prompt";
+import { ask } from "@web-ai-sdk/prompt";
+
+const entries = new Map<string, { value: string; expiresAt: number }>();
+const ttlCache = {
+  get(key: string) {
+    const entry = entries.get(key);
+    if (!entry || entry.expiresAt <= Date.now()) {
+      entries.delete(key);
+      return null;
+    }
+    return entry.value;
+  },
+  set(key: string, value: string) {
+    entries.set(key, { value, expiresAt: Date.now() + 60 * 60 * 1000 });
+  },
+  delete(key: string) {
+    entries.delete(key);
+  },
+} satisfies ResponseCache & { delete(key: string): void };
+
+async function summarizeFresh(input: string, refresh = false) {
+  const cacheKey = JSON.stringify(["article-summary-v1", input]);
+  if (refresh) ttlCache.delete(cacheKey);
+  return ask({ input, cache: ttlCache, cacheKey });
+}
+```
+
+Include every output-changing input and option in the key. Do not let a background refresh overwrite user edits.
+
+Provide a useful fallback when an API is unavailable. See [Browser support](/docs/browser-support/).

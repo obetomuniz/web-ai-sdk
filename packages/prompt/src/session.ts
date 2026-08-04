@@ -79,10 +79,8 @@ export const buildLangHints = (
  *     U+2060..U+206F)
  *   - BOM (U+FEFF)
  *
- * Edge's safety pipeline has been observed returning runs of `` (CANCEL)
- * as a "soft block" placeholder instead of throwing or returning empty;
- * these strip away here so callers can treat empty-after-clean as "model
- * returned nothing meaningful."
+ * Stripping these characters lets callers treat empty-after-clean as "model
+ * returned nothing meaningful" without exposing invisible control text.
  */
 const NON_PRINTING = new RegExp(
   "[" +
@@ -114,11 +112,10 @@ export const cleanResponse = (raw: string): string =>
   stripNonPrinting(raw).trim();
 
 /**
- * The W3C Web AI streaming contract is ambiguous between "delta" (each chunk
- * is new content) and "cumulative" (each chunk is the full text so far).
- * Chrome ships delta; some Edge backends (notably Phi-Silica on Copilot+
- * PCs) ship cumulative. Detect per-chunk: if the chunk starts with the prior
- * buffer, treat as cumulative (replace); otherwise treat as delta (append).
+ * Browser implementations may emit "delta" chunks (each chunk is new content)
+ * or "cumulative" chunks (each chunk is the full text so far). Detect the
+ * shape per chunk: if it starts with the prior buffer, replace; otherwise
+ * append.
  *
  * Returns `{ buffer, delta }` so streaming surfaces can decide whether to
  * hand callers cumulative text (`buffer`) or the new piece (`delta`).
@@ -172,18 +169,14 @@ export interface CreateSessionOptions {
   /** Advanced: full `expectedOutputs` passthrough. Overrides the `language` hint. */
   expectedOutputs?: LanguageModelExpectedOutput[];
   /**
-   * @experimental Forwards `tools` to the browser's Prompt API
-   * (function calling). Whether the model actually INVOKES them depends
-   * on the browser: native execution is NOT wired on current stable
-   * Chrome — the option is accepted but a no-op, and the model may
-   * surface its tool call as TEXT (`tool_code`) that the caller must
-   * parse. Pass-through only: the SDK does not execute the tools. Will
-   * begin working automatically on browsers that ship native execution.
+   * @experimental Forwards `tools` to the browser's Prompt API (function
+   * calling). Support remains browser-defined. Pass-through only: the SDK does
+   * not execute tools or parse text that resembles a tool call.
    */
   tools?: LanguageModelTool[];
   /**
-   * Observe the first-call model download (~1.7 GB on a fresh profile).
-   * Forwarded to `LanguageModel.create()`. When both this and
+   * Observe model-download progress when creation requires one. Forwarded to
+   * `LanguageModel.create()`. When both this and
    * `createOptions.monitor` are set, the top-level `monitor` wins.
    */
   monitor?: (m: CreateMonitor) => void;
@@ -626,7 +619,7 @@ const wrapInstance = (
     },
     get contextWindow() {
       // Prefer the current canonical name; fall back to the deprecated
-      // `inputQuota` so older Chrome builds still report a budget.
+      // `inputQuota` so older implementations still report a budget.
       return liveInstance?.contextWindow ?? liveInstance?.inputQuota;
     },
     get contextUsage() {
@@ -648,13 +641,9 @@ const wrapInstance = (
  * its own history, system prompt, sampling, and lifecycle. `abort()` /
  * `destroy()` on one session never affect another.
  *
- * Token-level interleaving across sessions is implementation-defined and
- * currently bottlenecked by the browser's FIFO scheduler — the underlying
- * on-device model is single-instance, so Chrome 148 / Edge 138 drain one
- * `sendStreaming` call fully before starting the next, even across
- * independent sessions. The API is forward-compatible: code written against
- * `createSession()` becomes faster automatically if a future release
- * exposes parallel inference.
+ * Token-level interleaving across independent sessions is browser-defined.
+ * Consumers should not depend on parallel inference or a particular scheduling
+ * order.
  *
  * Concurrent `send` / `sendStreaming` calls on the same session are NOT
  * queued; the native `LanguageModel` is sequential per instance and will

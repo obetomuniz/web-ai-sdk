@@ -45,96 +45,89 @@ shadows:
 
 # DESIGN.md
 
-This is the source of truth for the web-ai-sdk visual identity. It is written
-for humans and AI agents making UI changes in this repository.
+This file defines the production visual system. Humans and agents must follow
+it for UI changes.
 
-Production ships one static skin: **Noir / Dark**. The dev-only Tone Lab in
-`apps/site/src/shared/themes.ts` can test alternate token sets, but production
-must keep the baked Noir / Dark defaults unless the design system changes.
+Production uses **Noir / Dark**. The dev-only Tone Lab in
+`apps/site/src/shared/themes.ts` may test other tokens. Do not ship those tokens
+without a design-system change.
 
-## Identity
+## Principles
 
-web-ai-sdk should feel precise, quiet, local-first, and technical. The product
-wraps native browser AI primitives, so the interface should read as a thin
-instrument panel rather than a heavy SaaS dashboard.
+- Use neutral surfaces and white interaction signals.
+- Reserve color for success, warning, and error.
+- Create hierarchy with type, spacing, and surface depth.
+- Keep motion subtle and functional.
+- Prefer clear controls over decoration.
 
-Use white as the primary signal. Colour is reserved for semantic status:
-success, warning, and error.
-
-## Color Semantics
+## Color
 
 - `bg` is the page background.
-- `surface`, `surface2`, and `surface3` create depth through fills.
-- `hairline` and `hairline2` are for recessed controls and internal structure.
-- `fg`, `fg2`, `fg3`, and `fg4` are text hierarchy.
-- `accent`, `accentBright`, `accentDim`, `accentSoft`, and `accentLine` are the
-  white interaction ramp.
-- `ok`, `warn`, and `err` are semantic and should not be repurposed for brand
-  decoration.
+- `surface`, `surface2`, and `surface3` create depth.
+- `hairline` and `hairline2` define recessed controls and internal structure.
+- `fg` through `fg4` define text hierarchy.
+- `accent` tokens define the white interaction ramp.
+- `ok`, `warn`, and `err` are status colors. Do not use them as decoration.
 
-Avoid orange, blue brand glows, and large ambient colour fields. The only page
-glow should be a subtle neutral background glow.
+Avoid colored brand glows and large ambient color fields. Use only a subtle
+neutral page glow.
 
-## Typography
+## Type
 
-- Display: Space Grotesk for headings.
-- Body: Geist for prose and UI.
-- Mono: IBM Plex Mono for code, labels, eyebrows, and the wordmark.
-- Headings should be tight and calm, with small negative tracking.
-- Code and terminal-inspired UI should prioritize readability over strict
-  monochrome styling.
+- Use Space Grotesk for headings.
+- Use Geist for prose and controls.
+- Use IBM Plex Mono for code, labels, eyebrows, and the wordmark.
+- Use tight heading line height and small negative tracking.
+- Keep syntax highlighting colorful enough to scan.
 
-## Surfaces And Elevation
+## Surfaces and interaction
 
-- Cards and panels use elevation, not outer borders.
+- Use elevation instead of outer borders on cards and panels.
 - Never use inner shadows.
-- Inputs, textareas, selects, code pills, and output boxes are recessed:
-  darker fill plus hairline.
-- Hover should lighten surfaces or move arrows subtly. Avoid blurry halos.
-- Focus and active states should be crisp rings or crisp border changes.
+- Recess inputs, code pills, and output boxes with a darker fill and hairline.
+- Use a light surface change or small arrow movement on hover.
+- Use crisp rings or border changes for focus and active states.
+- Avoid blurry interaction halos.
+
+Primary actions use a white fill, dark text, and pill radius. Ghost actions use
+a transparent fill, muted border, and foreground text. Small demo controls may
+use a smaller radius but must keep the same focus treatment.
 
 ## Motion
 
-- Use an underscore caret as the brand signature.
-- Motion should be subtle and functional: streaming text, small arrow nudges,
-  scroll reveal, button press, shader movement.
+- Use the underscore caret as the brand signature.
+- Use motion for state changes, streaming, reveal, and direct feedback.
 - Respect `prefers-reduced-motion`.
-- WebGL effects must no-op when unsupported, pause off-screen, and cap DPR.
+- Make unsupported WebGL effects no-op. Pause them off-screen and cap DPR.
 
-## Components
+## Layout and components
 
-- Primary CTA: white fill, dark text, pill radius.
-- Ghost CTA: transparent or background fill, muted border, foreground text.
-- Small demo controls may use smaller radius, but should keep the same recessed
-  and focus language.
-- Section anchors use `id`, `sectionAnchor`, and `data-section` for scroll spy.
-- Use mutually exclusive classes for stateful variants. Do not compose active
-  and inactive utility sets if they conflict.
-- Keep syntax highlighting colourful enough to parse quickly. Noir does not
-  require monochrome code.
+- Section anchors use `id` and `sectionAnchor`. Outer sections use
+  `data-section` for scroll spy.
+- Use mutually exclusive classes for state variants.
+- Do not combine active and inactive utilities when they conflict.
+- Keep visible structure aligned to the page grid.
 
 ## Accessibility
 
-- Text and surface pairings must pass WCAG AA.
-- `fg4` is intentionally brighter than a purely decorative grey so metadata
-  remains readable on deep surfaces.
-- Decorative controls and shortcuts should be hidden from the accessibility
-  tree when they do not add information.
-- Maintain heading order and landmark structure.
+- Text and surface combinations must pass WCAG AA.
+- Keep `fg4` readable on deep surfaces.
+- Hide decorative controls and shortcuts from the accessibility tree.
+- Preserve heading order, landmarks, keyboard access, and visible focus.
 
-## Implementation Map
+## Files
 
-- Home page tokens: `apps/site/src/styles/home.css`
+- Tokens and base styles: `apps/site/src/styles/home.css`
 - Shared Tailwind compositions: `apps/site/src/shared/ui.ts`
 - Dev-only token derivation: `apps/site/src/shared/themes.ts`
-- Home page React islands: `apps/site/src/features/home/components/`
-- Docs styling: `apps/site/src/features/docs/styles/`
-- Brand assets: `apps/site/public/favicon.svg`, `apps/site/public/og-image.png`
+- Home components: `apps/site/src/features/home/components/`
+- Docs styles: `apps/site/src/features/docs/styles/`
+- Brand assets: `apps/site/public/favicon.svg` and
+  `apps/site/public/og-image.png`
 - OG image generator: `apps/site/scripts/build-og-image.mjs`
 
-## Writing Rules
+## Copy and comments
 
-- Do not use em dashes in copy, comments, or docs.
-- Prefer short, direct technical prose.
-- Comments should explain intent, constraints, or non-obvious behavior, not
-  restate the code.
+Follow the [documentation style](./.agents/agents.md#documentation-and-copy).
+Do not use em dashes. Comments should explain intent, constraints, or
+non-obvious behavior instead of restating code.

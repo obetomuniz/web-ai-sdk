@@ -1,6 +1,6 @@
 ---
 title: "@web-ai-sdk/webmcp"
-description: "web-ai-sdk building block for the W3C WebMCP API exposed at document.modelContext. (For backward compatibility with the previous shape of the API, this package also reads from navigator.modelContext.)"
+description: "This package wraps the W3C WebMCP API at document.modelContext. It also reads the previous navigator.modelContext shape for compatibility."
 editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/webmcp/README.md
 ---
 
@@ -8,14 +8,18 @@ editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/webmcp/READ
 This page is synced from [`packages/webmcp/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/webmcp/README.md) by `pnpm --filter @web-ai-sdk-apps/site docs:sync`. Edits should go to the README.
 :::
 
-web-ai-sdk building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `document.modelContext`. (For backward compatibility with the previous shape of the API, this package also reads from `navigator.modelContext`.)
+This package wraps the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API at `document.modelContext`. It also reads the previous `navigator.modelContext` shape for compatibility.
 
-An ergonomic, framework-agnostic adapter over the native browser API, with safe register/unregister cleanup, typed tool discovery and execution, and progressive fallback behavior for non-supporting browsers.
+The package provides typed registration, cleanup, discovery, and execution. It has no framework dependency.
 
 
 ## Status
 
-WebMCP shipped as an early preview in Chrome 146+ behind `chrome://flags/#enable-webmcp-testing`; a public [origin trial](https://developer.chrome.com/docs/ai/webmcp) opens in Chrome 149. Edge added support in 147+ behind the matching `edge://flags/` toggle. On browsers without WebMCP, registration is a no-op and discovery returns an empty list; execution rejects with `WebMCPUnavailableError` so a missing capability cannot be confused with a navigation result. A WebMCP spec update changed `registerTool` to return a Promise (cross-origin iframe tool sharing made registration asynchronous); this adapter normalizes both the legacy synchronous shape and the async shape, so consumer code is unchanged.
+Chrome provides a public [origin trial from Chrome 149](https://developer.chrome.com/docs/ai/webmcp). For local development, enable `chrome://flags/#enable-webmcp-testing`. Microsoft lists WebMCP in the [Edge 150 origin trials](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/150).
+
+Without WebMCP, registration is a no-op and discovery returns an empty list. Execution throws `WebMCPUnavailableError`.
+
+Current `registerTool` implementations can be synchronous or asynchronous. The package supports both forms.
 
 ## Install
 
@@ -110,9 +114,13 @@ export function WebMCP({ isSignedIn }: { isSignedIn: boolean }) {
 }
 ```
 
-`useWebMCP` accepts one tool or a readonly array. It registers on mount, unregisters on unmount, and cleans up immediately when `enabled` changes to `false`. Registration follows discoverable metadata and `exposedTo` values rather than object identity, while `execute` always uses the latest committed callback. Inline tool objects, arrays, and options are safe: changing React state alone does not rebuild the registration, but changing a tool's name, title, description, schema, annotations, or exposure does. Memoize tool arrays and large schemas when practical to avoid rebuilding and comparing their metadata on every render; correctness does not depend on memoization.
+`useWebMCP` accepts one tool or a readonly array. It registers on mount and unregisters on unmount. Setting `enabled` to `false` also removes the registration.
 
-The same hook retrieves every tool exposed to the current document and refreshes the returned list after native `toolchange` events. Its `refresh()` method performs an explicit fresh read. Call `useWebMCP({ fromOrigins })` without definitions for retrieval-only use. Inline `fromOrigins` arrays are safe; discovery restarts only when their values change.
+Registration follows tool metadata and `exposedTo` values, not object identity. `execute` always uses the latest callback. Inline objects and arrays are safe. Metadata changes rebuild the registration. Memoize large schemas and tool arrays to reduce comparison work.
+
+The hook also retrieves tools exposed to the current document. It refreshes after native `toolchange` events. Call `refresh()` for an explicit read.
+
+For retrieval only, call `useWebMCP({ fromOrigins })` without tool definitions. Inline `fromOrigins` arrays are safe; discovery restarts only when their values change.
 
 ## API
 
@@ -120,7 +128,7 @@ The same hook retrieves every tool exposed to the current document and refreshes
 
 Register a single tool. Returns a cleanup function. No-op on unsupported browsers.
 
-Registration is asynchronous under the hood (per the current spec); the returned cleanup is synchronous and safe to call before registration settles — it aborts the in-flight registration cleanly.
+Native registration is asynchronous. The returned cleanup is synchronous and can abort registration before it finishes.
 
 To register many at once, map and combine:
 
@@ -137,7 +145,9 @@ const cleanup = registerTool(tool, {
 });
 ```
 
-The SDK forwards the array unchanged alongside its internally owned `AbortSignal`. The browser validates each origin and rejects invalid or untrustworthy values; the wrapper preserves its non-throwing registration posture and logs that failure. Exposure is unnecessary for the owning document and should be limited to origins that genuinely need access.
+The SDK forwards the array with its own `AbortSignal`. The browser validates each origin. The wrapper logs validation failures without throwing.
+
+The owning document does not need exposure. List only origins that need access.
 
 ### `getTools(options?): Promise<RegisteredTool[]>`
 
@@ -152,7 +162,9 @@ const toolsAcrossFrames = await getTools({
 });
 ```
 
-The browser always includes eligible same-origin tools. `fromOrigins` additionally requests tools from listed secure origins; those tools must also have exposed themselves to the caller's origin. Unsupported browsers resolve to `[]`. Native permission, origin-validation, and document-state errors remain observable as rejected promises.
+The browser includes eligible same-origin tools. `fromOrigins` also requests tools from listed secure origins. Those tools must expose themselves to the caller's origin.
+
+Unsupported browsers return `[]`. Native permission, origin, and document-state errors reject the promise.
 
 ### `executeTool(tool, input?, options?): Promise<string | null>`
 
@@ -171,7 +183,7 @@ if (echo) {
 
 The native serialized string is returned unchanged. `null` means tool execution triggered a navigation. Pass `{ signal }` to cancel an in-flight call. Unsupported browsers reject with `WebMCPUnavailableError`.
 
-`executeTool()` is experimental: Chromium implements and publicly documents it, but it is not yet present in the published WebMCP community-draft IDL.
+`executeTool()` is experimental: Chrome [publicly documents it](https://developer.chrome.com/docs/ai/webmcp), but it is not yet present in the published WebMCP community-draft IDL.
 
 ### `subscribeToToolChanges(listener): () => void`
 
@@ -252,7 +264,7 @@ interface ToolDefinition<
 }
 ```
 
-`title` is for human-facing host UI. `description` is consumed by the agent host (Cursor / Claude / Chrome agent / etc.); write it as an instruction to an LLM about when to call the tool.
+`title` is for human-facing host UI. `description` is consumed by the agent host; write it as an instruction to an LLM about when to call the tool.
 
 The current WebMCP draft defines `readOnlyHint` and `untrustedContentHint`. The SDK also retains `destructiveHint`, `idempotentHint`, `openWorldHint`, and the `destructive` shorthand as source-compatible passthroughs for MCP-shaped and earlier WebMCP hosts; current-draft browsers may ignore those compatibility fields.
 

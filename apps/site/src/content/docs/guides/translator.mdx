@@ -1,9 +1,11 @@
 ---
 title: Translator API
-description: web-ai-sdk building block for the Web's Built-in Translator. String-mode translation with pair-cached sessions and opt-in result caching.
+description: Translate text with the built-in Translator API, pair-based session reuse, and optional result caching.
 ---
 
-Building block for the Web's Built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api) (on-demand language packs). String-mode translation with pair-cached sessions, opt-in result caching, AbortSignal-driven cleanup. See [useTranslator](/docs/react/use-translator/) for React.
+This package wraps the built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api). It adds pair-based session reuse, optional result caching, and abort cleanup. For React, see [useTranslator](/docs/react/use-translator/).
+
+Before shipping, review the [Production checklist](/docs/production-checklist/) for task-relevant input, safe rendering, progress, reversible changes, and cache freshness.
 
 ## Usage
 
@@ -129,4 +131,3 @@ try {
   throw err;
 }
 ```
-

@@ -109,9 +109,7 @@ export const WriterDemo = () => {
         </span>
       </div>
       <div className={cardBody}>
-        {available === false && (
-          <UnavailableNotice api="Writer API" flagSearch="Writer" />
-        )}
+        {available === false && <UnavailableNotice api="Writer API" />}
         <DownloadNotice progress={progress} />
         <ErrorNotice error={error} />
         <div className={fieldSpaced}>
@@ -164,7 +162,7 @@ export const WriterDemo = () => {
           streaming={streaming}
           placeholder={
             available === false
-              ? "Enable the Writer API flag in Chrome to draft."
+              ? "Open this demo in a supported Writer API setup to draft."
               : "Run to draft content from the task above."
           }
         />

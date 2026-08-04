@@ -1,12 +1,16 @@
 # @web-ai-sdk/rewriter
 
-web-ai-sdk building block for the Web's Built-in [Rewriter API](https://developer.chrome.com/docs/ai/rewriter-api). Revises and restructures existing text with tone / length adjustments, session reuse, streaming, and opt-in result caching.
+This package wraps the Web's Built-in [Rewriter API](https://developer.chrome.com/docs/ai/rewriter-api). It changes the tone or length of text. It also provides session reuse, streaming, and optional result caching.
 
-**Docs:** <https://web-ai-sdk.dev/docs/guides/rewriter/> · **React:** [`useRewriter`](https://web-ai-sdk.dev/docs/react/use-rewriter/)
+**Docs:** <https://web-ai-sdk.dev/docs/guides/rewriter/> · **React:** [`useRewriter`](https://web-ai-sdk.dev/docs/react/use-rewriter/) · **Production:** [Checklist](https://web-ai-sdk.dev/docs/production-checklist/)
 
 ## Status
 
-The Rewriter API is in a developer trial (origin trial) in Chrome 137 to 148. It shares the Writer's joint trial, so it's enabled via the same `chrome://flags/#writer-api-for-gemini-nano` flag on localhost (there is no separate Rewriter flag; `chrome://flags/#optimization-guide-on-device-model` must also be enabled). In Edge it's a developer preview in Canary/Dev 138+ behind "Rewriter API for Phi mini". On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `rewrite()` throws `RewriterUnavailableError` so callers can branch explicitly.
+Chrome labels Rewriter a **Developer trial** in its [status table](https://developer.chrome.com/docs/ai/built-in-apis). The public origin trial for Chrome 137–148 has ended. See the [Rewriter guide](https://developer.chrome.com/docs/ai/rewriter-api) for current localhost flags.
+
+Edge provides a [Canary/Dev preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) from 138.0.3309.2. Enable "Rewriter API for on-device language model."
+
+Without `Rewriter`, React reports `"unavailable"` and `rewrite()` throws `RewriterUnavailableError`.
 
 ## Install
 
@@ -15,7 +19,7 @@ pnpm add @web-ai-sdk/rewriter
 # or: npm i @web-ai-sdk/rewriter / bun add @web-ai-sdk/rewriter
 ```
 
-The React adapter ships as a subpath export, with no extra install. `react` is a peer dependency only when you import the `/react` entry.
+The React adapter uses the `/react` subpath. `react` is an optional peer dependency.
 
 ## Vanilla TypeScript / DOM
 

@@ -431,10 +431,7 @@ const TABS: Tab[] = [
       },
       {
         t: [
-          [
-            "com",
-            "  // Chrome streams deltas; Edge / Phi-Silica streams cumulative.",
-          ],
+          ["com", "  // Browser streams may be delta- or cumulative-shaped."],
         ],
       },
       {
@@ -448,7 +445,7 @@ const TABS: Tab[] = [
         t: [
           [
             "com",
-            "  // strip Edge soft-block placeholders (C0 / C1 control chars)",
+            "  // strip non-printing control characters before rendering",
           ],
         ],
       },

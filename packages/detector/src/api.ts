@@ -1,7 +1,6 @@
 /**
- * Adapter over the global `LanguageDetector` API exposed by Chrome (behind
- * `chrome://flags/#language-detection-api`). Feature-detected; on browsers
- * without it, every entry point returns `null` so callers can stay
+ * Adapter over the global `LanguageDetector` API. Feature-detected; on
+ * browsers without it, every entry point returns `null` so callers can stay
  * declarative.
  *
  * Spec: https://developer.chrome.com/docs/ai/language-detection

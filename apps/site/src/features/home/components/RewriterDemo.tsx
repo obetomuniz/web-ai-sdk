@@ -109,9 +109,7 @@ export const RewriterDemo = () => {
         </span>
       </div>
       <div className={cardBody}>
-        {available === false && (
-          <UnavailableNotice api="Rewriter API" flagSearch="Rewriter" />
-        )}
+        {available === false && <UnavailableNotice api="Rewriter API" />}
         <DownloadNotice progress={progress} />
         <ErrorNotice error={error} />
         <div className={fieldSpaced}>
@@ -164,7 +162,7 @@ export const RewriterDemo = () => {
           streaming={streaming}
           placeholder={
             available === false
-              ? "Enable the Rewriter API flag in Chrome to rewrite."
+              ? "Open this demo in a supported Rewriter API setup to rewrite."
               : "Run to rewrite the text above."
           }
         />

@@ -52,30 +52,27 @@ const PACKAGE_ROWS: PackageInfo[] = [
   {
     slug: "prompt",
     title: "prompt",
-    tag: "Talk to the on-device language model. Sessions, streaming, and AbortSignals; done.",
+    tag: "Send prompts and manage independent sessions, streams, and abort signals.",
     bullets: [
-      [
-        "Session reuse.",
-        "Cached by config so re-renders do not churn the model.",
-      ],
+      ["Session reuse.", "Compatible calls reuse a cached base session."],
       [
         "Streaming first.",
-        "AsyncIterable out of the box; React hook gives you a string.",
+        "The vanilla session yields deltas. The React hook exposes cumulative text.",
       ],
       [
         "Clean lifecycle.",
-        "AbortController on unmount, retry on session-lost.",
+        "React cleanup aborts work and destroys the session.",
       ],
     ],
   },
   {
     slug: "webmcp",
     title: "webmcp",
-    tag: "Register tools the browser's model context can call. Real agents, real cleanup, no boilerplate.",
+    tag: "Register tools for the browser's model context and clean them up safely.",
     bullets: [
       [
         "Declarative tools.",
-        "Register from React; AbortSignal cleanup on unmount.",
+        "Register from React and clean up with an AbortSignal.",
       ],
       [
         "Last writer wins.",
@@ -83,7 +80,7 @@ const PACKAGE_ROWS: PackageInfo[] = [
       ],
       [
         "SDK-first surface.",
-        "Register, discover, and execute without raw browser globals.",
+        "Register, discover, and execute through typed functions.",
       ],
     ],
   },
@@ -93,27 +90,21 @@ const PACKAGE_ROWS: PackageInfo[] = [
     tag: "Key-points, TL;DR, headlines. Configurable type and length.",
     bullets: [
       ["Four shapes.", "key-points, tl;dr, teaser, headline."],
+      ["Three lengths.", "Choose short, medium, or long output."],
       [
-        "Three lengths.",
-        "short, medium, long. Deterministic with the same seed.",
+        "Streaming summaries.",
+        "Receive cumulative text as the model responds.",
       ],
-      ["Streaming summaries.", "Pipe chunks straight into your UI."],
     ],
   },
   {
     slug: "translator",
     title: "translator",
-    tag: "Pair-based translation with block-level round-trip. Walks the DOM, swaps text, keeps markup intact.",
+    tag: "Translate a string between a source and target language.",
     bullets: [
-      [
-        "Pair caching.",
-        "Sessions cached per source to target pair. Switching is instant.",
-      ],
-      [
-        "Block round-trip.",
-        "Walks the DOM, swaps text, keeps the markup intact.",
-      ],
-      ["Graceful fallback.", "No-op fallback when the API is missing."],
+      ["Pair caching.", "Sessions are cached by source and target language."],
+      ["String input.", "The SDK does not walk or mutate the DOM."],
+      ["Typed fallback.", "Unavailable environments return a state or error."],
     ],
   },
   {
@@ -123,53 +114,47 @@ const PACKAGE_ROWS: PackageInfo[] = [
     bullets: [
       [
         "Top candidate or full list.",
-        "Use the best guess, or inspect every alternate above your threshold.",
+        "Use the top result or inspect all results above a threshold.",
       ],
       [
         "Bias hints.",
-        "Pass expectedInputLanguages to break ties between similar languages.",
+        "Pass expectedInputLanguages when you know the likely languages.",
       ],
       [
         "Wire the others.",
-        "Detect first, then summarize, translate, or prompt with the result.",
+        "Application code can pass the result to another capability.",
       ],
     ],
   },
   {
     slug: "writer",
     title: "writer",
-    tag: "Draft new content from a task description. Tone, format, length; streamed straight into your UI.",
+    tag: "Draft text from a task description. Configure tone, format, and length.",
     bullets: [
       [
         "Task in, prose out.",
-        "Give it a prompt; get back a paragraph, email, or post.",
+        "Pass a writing task and receive generated text.",
       ],
+      ["Tone and length.", "Choose a tone and output length."],
       [
-        "Tone and length.",
-        "formal, neutral, casual, across short, medium, and long.",
-      ],
-      [
-        "Markdown safe.",
-        "Trims edges only, so formatting and line breaks survive.",
+        "Output cleanup.",
+        "The wrapper trims outer whitespace and preserves internal formatting.",
       ],
     ],
   },
   {
     slug: "rewriter",
     title: "rewriter",
-    tag: "Tone-shift and reshape text you already have. More formal, shorter, or longer; one call.",
+    tag: "Change the tone or length of existing text.",
     bullets: [
       [
         "Relative adjustments.",
         "more-formal, more-casual, shorter, longer, as-is.",
       ],
-      [
-        "Streaming first.",
-        "Pipe the revised text in as the model produces it.",
-      ],
+      ["Streaming first.", "Receive cumulative text as the model responds."],
       [
         "Same lifecycle.",
-        "Session reuse, AbortSignals, opt-in caching; shared with Writer.",
+        "Reuse sessions, abort work, and opt in to result caching.",
       ],
     ],
   },

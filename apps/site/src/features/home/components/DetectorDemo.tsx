@@ -20,7 +20,6 @@ import {
 } from "../../../shared/ui.js";
 import {
   DownloadNotice,
-  detectModelName,
   ErrorNotice,
   StatusBar,
   UnavailableNotice,
@@ -81,10 +80,7 @@ export const DetectorDemo = () => {
       </div>
       <div className={cardBody}>
         {available === false && (
-          <UnavailableNotice
-            api="Language Detector API"
-            flagSearch="language detection"
-          />
+          <UnavailableNotice api="Language Detector API" />
         )}
         <DownloadNotice progress={null} />
         <ErrorNotice error={error?.message ?? null} />
@@ -147,7 +143,7 @@ export const DetectorDemo = () => {
             </span>
           )}
         </div>
-        <StatusBar stats={stats} label={`model: ${detectModelName()}`} />
+        <StatusBar stats={stats} label="runtime: language-detection model" />
       </div>
     </div>
   );

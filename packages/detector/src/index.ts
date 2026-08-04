@@ -159,8 +159,8 @@ export const detect = async (options: DetectOptions): Promise<DetectResult> => {
     ...(options.monitor ? { monitor: options.monitor } : {}),
   };
 
-  // Pass the same shape to availability() as we do to create() so engines
-  // that warn on mismatch (Edge) stay quiet.
+  // Pass the same shape to availability() as we do to create() so the probe
+  // applies to the requested configuration.
   const availability = await api
     .availability(
       expectedInputLanguages ? { expectedInputLanguages } : undefined,
