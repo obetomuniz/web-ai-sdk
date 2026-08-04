@@ -1,325 +1,144 @@
-# .agents/agents.md
+# AGENTS.md
 
-This file is the single source of truth for **any AI agent** (Cursor, Claude Code, Copilot, Devin, etc.) working on this repository. Read it once at the start of a session, then keep it open as a reference.
+Repository-specific rules for coding agents. The root `AGENTS.md` symlinks to
+this file.
 
-The root `AGENTS.md` is a compatibility symlink to this file for tools that still discover only the older AGENTS.md convention.
+## Read first
 
-For human-facing context see the root [`README.md`](../README.md) and [`CONTRIBUTING.md`](../CONTRIBUTING.md), plus one README per package under `packages/<name>/README.md`. For the visual identity (colour, type, surfaces) that any UI change must follow, see [`DESIGN.md`](../DESIGN.md).
+- [`README.md`](../README.md): product and package overview.
+- [`CONTRIBUTING.md`](../CONTRIBUTING.md): governance, capability adoption,
+  changesets, and releases.
+- [`DESIGN.md`](../DESIGN.md): visual identity for every UI change.
+- `packages/<name>/README.md`: public contract for one package.
 
----
+Keep this file focused on agent constraints. Put human guidance in the files
+above.
 
-## 1. What this is
+## Principles
 
-**`web-ai-sdk`** is a small monorepo of building blocks for the Web AI surface. Each package is framework-agnostic by default and ships a React subpath adapter; future Vue / Svelte adapters slot in the same way.
+- Choose the smallest implementation that fully meets the current requirement.
+- Keep one package responsible for one browser capability.
+- Keep core wrappers thin. They own lifecycle and ergonomics, not product policy.
+- Use project dependencies before adding code or packages. Core wrappers must
+  keep zero runtime dependencies.
+- Preserve public API behavior unless the task explicitly changes it. Document
+  breaking changes and migrations.
+- Use only public sources for published capability claims, flags, versions, and
+  timelines.
 
-| Package                 | Wraps                                                  | Status     |
-| ----------------------- | ------------------------------------------------------ | ---------- |
-| `@web-ai-sdk/webmcp`    | `document.modelContext` (W3C WebMCP)                   | Ported     |
-| `@web-ai-sdk/translator`| `Translator` (Web Built-in AI Translator API)       | Ported     |
-| `@web-ai-sdk/summarizer`| `Summarizer` (Web Built-in AI Summarizer API)       | Ported     |
-| `@web-ai-sdk/prompt`    | `LanguageModel` (Web Built-in AI Prompt API)        | New        |
-| `@web-ai-sdk/detector`  | `LanguageDetector` (Web Built-in AI Language Detection API) | New |
-| `@web-ai-sdk/writer`    | `Writer` (Web Built-in AI Writer API)               | New        |
-| `@web-ai-sdk/rewriter`  | `Rewriter` (Web Built-in AI Rewriter API)           | New        |
-| `@web-ai-sdk/proofreader`| `Proofreader` (Web Built-in AI Proofreader API)    | New        |
-| `@web-ai-sdk/all`       | meta-package; re-exports the others above under one install | New     |
+## Architecture
 
-One private workspace app lives under `apps/site`: an Astro marketing site with Starlight docs mounted at `/docs/` and live React demos. Run `pnpm dev` after `pnpm build:packages`.
+This is a strict TypeScript and pnpm monorepo. Wrapper packages live in
+`packages/`. The Astro site, Starlight docs, Playground, and demos live in
+`apps/site/`.
 
-Each package exposes:
+Each wrapper exposes:
 
-- **Vanilla** (`@web-ai-sdk/<pkg>`); TS/DOM only, zero framework deps.
-- **React** (`@web-ai-sdk/<pkg>/react`); small hook adapter that wraps the vanilla core. `react` is an optional peer dep.
+- `@web-ai-sdk/<name>`: framework-agnostic core.
+- `@web-ai-sdk/<name>/react`: optional React hook adapter.
 
-Lifecycle layer on purpose. Each package only manages session lifetime, cleanup, feature detection, and the gnarly bits (safe register/unregister in webmcp, delta-vs-cumulative chunk smoothing in prompt/summarizer, etc.). Framework adapters, polyfills, and UI primitives are opt-in subpaths, not bundled into the core packages.
+### Core wrappers
 
-### Scope rule
+- Wrap one native capability. Do not compose SDK packages in a wrapper.
+- Do not render UI, walk application DOM, or add third-party runtimes.
+- Keep selectors and root elements configurable when an API accepts them.
+- Make cleanup functions idempotent.
+- Make feature detection safe. `isAvailable()` returns `false`, and
+  `checkAvailability()` returns `null`, when the API cannot run.
+- High-level vanilla functions may throw a typed unavailability error. React
+  hooks expose an `"unavailable"` state instead.
+- Preserve structured native results when their metadata matters.
+- Make session reuse safe and clearable. Evict rejected creation promises.
+- Cache only with complete, lossless keys and semantically valid reuse.
 
-Decision heuristic for new code: *if it bonds two SDK packages, walks the DOM, or needs a third-party runtime, it doesn't belong in an SDK wrapper.* Higher-level compositions (block-level DOM translation, article skeleton extraction, detect-then-summarize chains) are consumer-code territory; the SDK ships primitives only.
+The vanilla core is the source of truth. React adapters are hooks, not
+components, and must not duplicate core logic. Keep effect dependencies honest.
 
-The bias is toward *less* code over time, not more. This is the same trajectory mature utility libraries follow as the platform catches up (lodash → native methods, moment/date-fns → `Temporal`): own only the lifecycle and ergonomics the raw API leaves rough, and let the wrapper thin out as the Web AI APIs stabilize. When in doubt about whether something belongs, default to leaving it out.
+Before adding a capability, apply the adoption policy in
+[`CONTRIBUTING.md`](../CONTRIBUTING.md#capability-adoption-policy). Tracked
+capabilities stay as issues. Preview, Trial, and Stable capabilities may become
+packages when public evidence is sufficient.
 
-Full rules in [`CONTRIBUTING.md` § Governance](../CONTRIBUTING.md#governance); user-facing version at [`apps/site/src/content/docs/architecture.mdx`](../apps/site/src/content/docs/architecture.mdx) ([web-ai-sdk.dev/docs/architecture/](https://web-ai-sdk.dev/docs/architecture/)).
+## Code
 
----
+- Do not introduce `any` without an explicit reason in a comment.
+- Use `import type` for type-only imports.
+- Respect strict mode, `verbatimModuleSyntax`, and `noUncheckedIndexedAccess`.
+- Do not use relative imports across package boundaries. Import published
+  `@web-ai-sdk/*` exports.
+- Use `.js` suffixes for relative subpath imports inside packages.
+- Add tests beside the source. Cover core behavior before React lifecycle.
+- Do not hand-edit `pnpm-lock.yaml`, generated `dist/`, or `node_modules/`.
+- Create changesets through `pnpm changeset`. Do not hand-curate generated
+  changeset files.
 
-## 2. Stack & runtime
+## Documentation and copy
 
-- **TypeScript** strict, ESM (`"type": "module"`), `verbatimModuleSyntax`.
-- **pnpm 10** workspaces (declared in `pnpm-workspace.yaml`).
-- **tsup** for builds; emits ESM + CJS + `.d.ts` from `src/index.ts` and `src/react/index.ts`.
-- **Vitest + happy-dom** for tests.
-- **Biome** for lint + format (one tool, scoped to `packages/**` and `apps/**` `.ts`/`.tsx`). No ESLint, no Prettier.
-- **Changesets** for versioning + publishing.
-- **Node** `>= 22.12.0` (declared in `engines`; `.nvmrc` pins Node 24 for local dev).
-- **Corepack** provisions the right pnpm version automatically from `package.json#packageManager`. No extra tooling required.
+Apply these rules to public docs, package READMEs, home copy, demos, Playground
+guidance, user-facing help and errors, and maintainer documentation.
 
----
+Use a house style inspired by Simplified Technical English. Do not claim formal
+STE compliance.
 
-## 3. Folder map
-
-```
-.
-├── packages/
-│   ├── webmcp/
-│   │   ├── src/
-│   │   │   ├── index.ts          # vanilla core
-│   │   │   ├── index.test.ts
-│   │   │   └── react/
-│   │   │       ├── index.ts      # React hook
-│   │   │       └── index.test.tsx
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   ├── tsup.config.ts
-│   │   ├── vitest.config.ts
-│   │   └── README.md
-│   ├── translator/               # same shape; adds api.ts + cache.ts
-│   ├── summarizer/               # same shape; adds skeleton.ts + cache.ts
-│   ├── prompt/                   # same shape; adds api.ts + cache.ts
-│   ├── detector/                 # same shape; adds api.ts + cache.ts
-│   ├── writer/                   # same shape; adds api.ts + cache.ts
-│   ├── rewriter/                 # same shape; adds api.ts + cache.ts
-│   ├── proofreader/              # same shape; adds api.ts + cache.ts
-│   └── sdk/                      # @web-ai-sdk/all meta-package; re-exports the eight above
-├── apps/
-│   └── site/                     # Astro site + Starlight docs
-├── .changeset/
-├── .github/workflows/            # CI gate + release + Pages deploy
-├── .nvmrc                        # pins Node 24 for local dev
-├── biome.json                    # lint + format
-├── package.json                  # workspace root + every pnpm script (incl. "packageManager" → pnpm@10.34.3)
-├── pnpm-workspace.yaml
-├── tsconfig.base.json            # shared compiler options
-├── README.md                     # human onboarding entry point
-├── CONTRIBUTING.md               # contribution flow
-├── DESIGN.md                     # visual identity source of truth (Noir / Dark)
-├── .agents/
-│   └── agents.md                 # ← you are here
-└── AGENTS.md                     # compatibility symlink
-```
-
-Package layout is intentionally uniform; open one package, you've seen them all.
-
----
-
-## 4. Commands
-
-All workflow commands are pnpm scripts in `package.json`.
-
-| Task                              | Command                    |
-| --------------------------------- | -------------------------- |
-| Watch site + docs                | `pnpm dev`                 |
-| Watch wrapper packages            | `pnpm dev:packages`        |
-| Watch meta-package                | `pnpm dev:sdk`             |
-| Boot unified app (`:5173`)        | `pnpm site`                |
-| Build everything                  | `pnpm build`               |
-| Build every package               | `pnpm build:packages`      |
-| Build the app                     | `pnpm build:apps`          |
-| Lint + format audit               | `pnpm lint`                |
-| Auto-fix lint + format            | `pnpm lint:fix`            |
-| Format only (write)               | `pnpm format`              |
-| Format audit only                 | `pnpm format:check`        |
-| `tsc --noEmit` everywhere         | `pnpm typecheck`           |
-| Vitest across packages            | `pnpm test`                |
-| Full quality gate                 | `pnpm gate`                |
-| Create a changeset                | `pnpm changeset`           |
-| Apply pending changesets          | `pnpm version-packages`    |
-| Publish via Changesets            | `pnpm release`             |
-| Build Pages artifact              | `pnpm pages:build`         |
-| Preview combined Pages locally    | `pnpm pages:preview`       |
-| Remove the local `_site/`         | `pnpm pages:clean`         |
-
-**Run before any commit:** `pnpm gate`.
-
----
-
-## 5. Conventions (the rules to follow)
-
-### TypeScript
-
-- **No `any`.** Reintroducing it should be intentional and commented.
-- **Type-only imports** with `import type { ... }`.
-- **`verbatimModuleSyntax`**; write the imports the way they'll compile; no implicit elision.
-- **`noUncheckedIndexedAccess`** is on; array/index access is `T | undefined`.
-- **No relative imports across package boundaries.** Each package is self-contained; cross-package usage goes through `@web-ai-sdk/*` published exports.
-- **Subpath imports inside a package** use `.js` suffix (`from "../index.js"`); required by ESM resolution under `moduleResolution: "Bundler"` for the published shape.
-
-### Capability adoption gate
-
-Before scaffolding a wrapper, classify it as Tracked, Preview, Trial, Stable, or Retired using [`CONTRIBUTING.md` § Capability adoption policy](../CONTRIBUTING.md#capability-adoption-policy).
-
-- Tracked capabilities stay as issues. Only Preview, Trial, or Stable capabilities may become packages.
-- Preview requires an authoritative public source, public instructions sufficient to run and document the implementation, a cohesive capability boundary, material lifecycle value beyond types, zero runtime dependencies, deterministic tests, and deliberate unsupported-browser behavior.
-- Published issues, PRs, READMEs, docs, demos, changelogs, and release notes must rely entirely on public sources. Never link, quote, paraphrase, or disclose versions, flags, behavior, or timelines learned only from confidential, restricted, or private-preview material. If the public evidence is insufficient, keep the capability Tracked.
-- Record the stage and exact public setup requirements in the package README and browser-support docs. Preview and Trial packages remain `0.x`; Stable browser support does not automatically make the package `1.0`.
-- Do not copy capability-specific conveniences mechanically. Session reuse must be safe and clearable; rejected creation promises must be evicted. Result caching requires a complete key, lossless serialization, and semantically valid reuse, including a compatibility discriminator when outputs depend on one. Preserve structured native results when their metadata matters.
-- When a capability is withdrawn or replaced, deprecate it with migration guidance instead of silently repurposing the package.
-
-### Core package contract
-
-These rules apply to the API-wrapper packages (`@web-ai-sdk/prompt`, `webmcp`, `summarizer`, `translator`, `detector`, `writer`, `rewriter`, `proofreader`). Future packages with a different role (UI primitives, polyfills, etc.) sit at different layers and get their own rules.
-
-- **No UI components in the core wrappers.** A core package may never render DOM. The React adapter is a hook, not a component. UI primitives would ship as a separate `@web-ai-sdk/ui` package, not bolted into a wrapper.
-- **Feature-detection helpers never throw.** `isAvailable()` returns `false` and `checkAvailability()` returns `null` when the native API cannot be used. High-level vanilla execution may throw a package-specific typed unavailability error; React hooks absorb it into an `"unavailable"` state. Registration-style APIs may instead return an idempotent no-op cleanup when that preserves their natural call shape.
-- **Configurable selectors / roots.** Don't hardcode page-specific assumptions; every selector or root element an SDK helper accepts must be overridable via the API.
-- **Cleanup must be idempotent.** Returning a cleanup function from `register*` / `start*` is the universal lifecycle. Calling it twice must not throw.
-
-### React adapter shape
-
-- Hook-only. Consumers render the button / tooltip / card themselves.
-- The hook wraps the vanilla core; do not duplicate logic.
-- Effect deps must be honest. If the hook accepts an array, document that callers should memoize it.
-
-### Annotations
-
-- WebMCP exposes shorthand flags (`readOnly`, `destructive`) that translate to spec annotations (`readOnlyHint`, `destructiveHint`) under the hood. Raw `annotations` passthrough merges on top, so consumers can still set `idempotentHint` / `openWorldHint` directly.
-
-### Files & docs
-
-- **One package = one job.** Don't add cross-package helpers in this monorepo without a clear reason; copy small utilities instead.
-- **READMEs are user-facing.** Show install, the smallest possible vanilla example, the smallest possible React example, then the API surface.
-- Don't write design docs unless the user asks. Conventions live here; package-specific decisions live in the package README.
-
-### Documentation style
-
-Use a house style inspired by [ASD-STE100 Simplified Technical English](https://www.asd-ste100.org/about_STE.html). Do not claim formal STE compliance.
-
-- Aim for 25 words or fewer in a prose sentence. Split sentences that contain more than one claim or action.
-- Use active voice and direct verbs. Use the imperative form for instructions.
-- Use one term for one concept. Do not alternate between synonyms for variety.
-- State behavior before rationale. Put conditions and exceptions next to the behavior they modify.
+- Aim for 25 words or fewer per prose sentence.
+- Use active voice, direct verbs, and imperative instructions.
+- Use one term for one concept.
+- State behavior before rationale. Keep conditions next to the behavior.
 - Replace hype, metaphors, and rhetorical claims with concrete behavior.
-- Keep paragraphs short. Use a list or table only when it makes comparison or scanning easier.
-- Preserve API names and required technical terms. Define an uncommon term at first use.
+- Do not use em dashes.
+- Keep paragraphs short. Use lists and tables only when they improve scanning.
+- Preserve exact API names. Define uncommon technical terms once.
 
-### Docs reliability
+Treat examples as public API:
 
-- Treat docs examples as part of the public API. When editing or reviewing docs, verify option names, result shapes, hook return values, and helper export names against the actual exported TypeScript interfaces and runtime tests.
-- After API renames, audit stale docs terms across READMEs and docs pages. Common drift patterns in this repo include `prompt()` vs `ask()`, `prompt` vs `input`, `onChunk` vs `onUpdate`, `response` / `summary` vs `output`, top-level detector `language` vs `output.language`, `is*Available()` aliases vs `isAvailable()`, and removed cache factories vs `cache: "session" | "local"`.
-- Package READMEs are the source for generated package docs under `apps/site/src/content/docs/packages/*.md`, but those pages are checked in. If you fix a README drift, update the matching checked-in package docs page in the same change or regenerate it.
-- Changelog migration snippets are historical; don't "fix" old before/after examples unless they are inaccurate for the release they describe.
-- After docs changes, run `pnpm --filter @web-ai-sdk-apps/site typecheck`. Biome may intentionally ignore Markdown docs, so don't treat "no files processed" as validation.
+- Verify names, options, results, and hook returns against TypeScript exports and
+  tests.
+- Update a package README and its checked-in page under
+  `apps/site/src/content/docs/packages/` together.
+- Do not rewrite historical changelog migration examples unless they were wrong
+  for that release.
+- Run `pnpm --filter @web-ai-sdk-apps/site typecheck` after docs changes.
 
-### Home page styling (`apps/site`)
+## Site UI
 
-The marketing site uses **Tailwind CSS v4**. Full guardrails: [`apps/site/README.md`](../apps/site/README.md). Visual identity (colour semantics, typography, surfaces, motion) is governed by [`DESIGN.md`](../DESIGN.md); follow it for any UI change.
+- Follow [`DESIGN.md`](../DESIGN.md) for color, type, surfaces, and motion.
+- Use Tailwind first on the home page. Reuse utilities from
+  `apps/site/src/shared/ui.ts`.
+- Keep `apps/site/src/styles/home.css` limited to tokens, resets, variables, and
+  keyframes.
+- Do not add static inline styles to React components. Inline styles are only
+  for dynamic values.
+- Keep conflicting state classes mutually exclusive.
+- Consolidate nearby one-off utilities when editing mixed legacy components.
 
-- **Tailwind first.** New UI goes through `src/shared/ui.ts` (composed utilities), not new `.css` files or raw CSS in components.
-- **`src/styles/home.css` is bootstrap only** — `@theme` tokens, layout CSS variables, keyframes, and minimal `@layer base` resets. No component-level rules.
-- **No inline CSS in React** except dynamic values (e.g. progress bar width). Static `<style>` / inline `style=` belongs only in standalone static files such as `public/404.html`.
-- **State classes must be mutually exclusive** when Tailwind utilities conflict (tabs, chips, buttons).
-- The codebase is still **partially mixed** (some inline Tailwind in components not yet in `ui.ts`); consolidate when editing, don't add more one-offs.
+See [`apps/site/README.md`](../apps/site/README.md) for complete site rules.
 
----
+## Commands
 
-## 6. Common tasks (cookbook)
+Use scripts from [`package.json`](../package.json). Common commands:
 
-### Add a new tool / wrapper package
+- `pnpm dev`: watch the site and docs.
+- `pnpm build`: build packages and apps.
+- `pnpm gate`: run lint, build, typecheck, and tests.
 
-1. Confirm the capability has reached Preview, Trial, or Stable under the capability adoption gate. Keep Tracked capabilities as issues.
-2. `cp -r packages/<closest-template> packages/<new>` and rename in `package.json`, `tsup.config.ts`, `tsconfig.json`.
-3. Replace `src/index.ts` / `src/api.ts` / `src/react/index.ts` with the real wrapper. Keep the core package contract (§ 5).
-4. Add Vitest tests next to each source file.
-5. Write `README.md` matching the existing structure (status / install / vanilla / React / API / errors / license).
-6. Add the new package's docs MDX pages under `apps/site/src/content/docs/guides/<name>.mdx` and `apps/site/src/content/docs/react/use-<name>.mdx`, plus a docs demo component under `apps/site/src/features/docs/components/`, plus a sidebar entry in `apps/site/astro.config.mjs`. Add a corresponding static row and React demo island to `apps/site/src/pages/index.astro`.
-7. `pnpm install` at the repo root (picks up the new workspace package).
-8. `pnpm changeset` to record the new package for the next release.
-9. `pnpm gate` to verify everything is wired up.
+Run focused checks while iterating. Build before typecheck because the site
+consumes package output. Run `pnpm gate` before any commit.
 
-Note: a brand-new package's **first** publish must be done locally; CI can't create it. See [Cut a release](#cut-a-release).
+## Git and workspace safety
 
-### Add a React-only feature to an existing package
-
-1. Land the logic in `src/index.ts` first. The vanilla core is the source of truth.
-2. Add the hook in `src/react/index.ts` as a thin wrapper.
-3. Add tests for both layers; vanilla covers behavior, React covers lifecycle.
-
-### Add a new dev dep to a single package
-
-`cd packages/<pkg> && pnpm add -D <pkg>`; pnpm hoists shared deps automatically. Don't add per-package devDependencies that already exist at the root.
-
-### Cut a release
-
-Releases are automated by the [`changesets/action`](.github/workflows/release.yml) and publish through **npm Trusted Publishing (OIDC)** — there is intentionally no `NPM_TOKEN` secret in the workflow.
-
-1. `pnpm changeset` and pick the bump kind for each touched package; commit the generated markdown.
-2. Open a PR. When it merges to `main`, the release workflow opens (or updates) a **"chore: version packages"** PR that runs `pnpm version-packages` (bumps versions, writes CHANGELOGs, consumes the changesets).
-3. Merge the "Version Packages" PR. That triggers `pnpm release` (`pnpm build:packages && changeset publish`), publishing every package whose version isn't yet on npm. `changeset publish` is idempotent, so re-runs are safe.
-
-**The first publish of a brand-new package must be done locally — CI cannot create it.** OIDC Trusted Publishing can't authenticate a package that doesn't exist yet (you can't configure a Trusted Publisher before the package exists), and a CI npm token can't *create* a new package in the `@web-ai-sdk` org either (npm returns a masked `404 Not Found` on the initial `PUT`). So the very first publish of each new package is manual:
-
-```sh
-npm login                 # as a @web-ai-sdk org member (handles 2FA)
-pnpm build:packages
-cd packages/<new> && npm publish --access public --provenance=false
-```
-
-Provenance is disabled for that first manual publish because it requires CI/OIDC; subsequent CI releases generate it. Once the package exists, set up a Trusted Publisher for it at `npmjs.com/package/@web-ai-sdk/<new>/access` (point it at this repo + `release.yml`), and every future version publishes automatically via the workflow above. This is why pre-existing packages release through CI with no token, while a new package's `0.x.0` debut is hand-published.
-
----
-
-## 7. Don't-touch zones
-
-| Path / file       | Why                                                                            |
-| ----------------- | ------------------------------------------------------------------------------ |
-| `pnpm-lock.yaml`  | Only update via `pnpm install` / `pnpm add`. Don't hand-edit.                  |
-| `dist/`           | Build output. Never commit.                                                    |
-| `node_modules/`   | Obvious.                                                                       |
-| `.changeset/*.md` | Generated by `pnpm changeset`; keep, but don't hand-curate after the fact.    |
-
----
-
-## 8. Quality gates
-
-A change is "ready" when **all four** of these pass:
-
-```bash
-pnpm lint        # 0 errors  (Biome; lint + format audit across packages and apps)
-pnpm build       # ✓ Complete (packages + apps); must run before typecheck because apps consume the built dist
-pnpm typecheck   # 0 errors  (per-package tsc --noEmit, apps included)
-pnpm test        # all green (Vitest + happy-dom)
-```
-
-Or in one shot: `pnpm gate`.
-
----
-
-## 9. Glossary
-
-- **Tool**; In WebMCP, a named, agent-callable function with a description, optional JSON Schema input, and an `execute` handler. Registered with `document.modelContext.registerTool`.
-- **Core package / lifecycle layer**; A package that ships logic, types, and session lifecycle but no DOM / no styles / no rendering primitives. The eight API-wrapper packages are all core packages. Future packages with a different role (UI primitives, polyfills) sit at different layers.
-- **Subpath export**; A package entry exposed under a path like `@web-ai-sdk/webmcp/react`. Configured via `package.json#exports`. Lets one install ship multiple framework adapters that tree-shake independently.
-- **Feature-detected no-op**; The pattern this monorepo uses everywhere: if the underlying browser API is absent, the wrapper returns a no-op cleanup / `undefined` / similar, so consumer code can ship without polyfills or branching.
-
----
-
-## 10. Boundaries
-- Never run git push without explicit approval in the same message.
-- Never create or merge PRs unless I explicitly ask in that turn.
-- Never run git commit until you have shown me the exact commit message and I approve it. Show it first for approval before any non-read-only actions are taken, including branch creation.
-- Force-push is only allowed with explicit approval to update a PR already on main (e.g., `git push --force-with-lease origin <branch>`).
-- Never rebase or delete branches without explicit approval.
-- Do not add `Co-authored-by:` trailers or agent attribution in commits.
-- Always confirm PR title and description before opening a PR; show them to me for approval first.
-- Never run `git commit --amend` without explicit approval.
-
-## 11. Work in the session's tree — never create worktrees
-
-The goal: every change stays visible to the tools bound to this repo — editors, git GUIs, and the coding agent itself. **Isolation is fine; invisibility is not.**
-
-This applies to **any** agent, skill, GUI, or automation touching this repo — regardless of its default isolation behaviour.
-
-> **Why:** the workspace bound to this session — whatever tool it is — tracks a **single working tree**: the one checkout it was opened on. A `git worktree` is a *separate* directory with its own checkout, so changes made there are **real but invisible** to that workspace (its git view shows "working tree clean"), and the branch gets locked to that folder (selecting it elsewhere errors with *"already used by worktree"*). A `.worktrees/` subdir is inside the repo path but is still a separate working tree — being "in the repo path" does NOT make it visible.
-
-- **The rule: edit the session's bound working tree, in place, on a dedicated branch.** `git switch -c <type>/<scope>-<slug>` from HEAD and edit the checked-out tree directly. Every change then shows live in the workspace's git view. This covers single-branch work, which is essentially all work.
-- **Do NOT create a worktree — by any mechanism.** This is a hard rule for every agent, skill, skill variant, subagent, and automation. It bans both:
-  - raw `git worktree add` (and any `$TMPDIR` / out-of-repo scratch checkout), and
-  - a skill's built-in "isolation/worktree" mode. `/improve` and its variants default to `isolation: "worktree"`; that default is **overridden to in-place execution here**. Do not opt back into it.
-  - Rationale: a worktree you create is a separate checkout the session is **not** bound to, so the work is invisible and the branch gets locked. (The restriction is on *creation*: a worktree the human has already set up and switched the session into is fine to edit and manage normally.)
-- **Need a parallel branch? Hand it back to me.** If a task genuinely requires a second branch checked out at the same time, **stop and tell me** — creating worktrees is my call, done through my tool's own worktree feature so the session is actually bound to it. Never improvise one yourself.
-- **Start from a clean working tree.** If uncommitted changes are present, stop and ask me to commit or stash before beginning work.
-- **Never merge, push, or commit to `main` directly** — leave the branch for me to review and merge.
-- **Review branches in-tree** (`git diff --stat main..<branch>`, re-run any acceptance criteria).
-- When searching (`glob`/`grep`), scope to `packages/` and `apps/` — don't recurse into `.worktrees/` (any existing worktrees there would duplicate results).
-
-The test this section enforces: if the workspace bound to this session can't see your changes — because they're in a worktree (anywhere, `.worktrees/` included) or under `$TMPDIR` — that's the failure mode. Edit the tree the session is already bound to.
+- Work only in the session's current working tree. Never create a worktree,
+  including through a skill, subagent, temporary directory, or `.worktrees/`.
+- Do not overwrite or hide existing changes. If unexpected changes exist before
+  work starts, stop and ask the user to commit or stash them.
+- Use a dedicated branch. Never commit, merge, or push directly to `main`.
+- Before branch creation or another non-read-only git action, show the intended
+  commit message and get approval.
+- Never commit until the user approves the exact commit message.
+- Never push without explicit approval in the same message.
+- Never create or merge a PR unless the user asks in that turn. Show the PR
+  title and description for approval first.
+- Never rebase, delete branches, or amend commits without explicit approval.
+- Force-push only with explicit approval to update an existing PR.
+- Do not add agent attribution or `Co-authored-by:` trailers.
+- If parallel work needs another branch, stop and ask the user to create the
+  workspace through their tool.

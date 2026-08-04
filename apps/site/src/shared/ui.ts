@@ -228,7 +228,7 @@ export const navCenterPlaceholder =
   "h-10 w-48 justify-self-center max-[640px]:hidden";
 
 const navCtaBase =
-  "inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-sm border px-3 py-2 font-mono text-[12.5px] transition-all max-[640px]:size-9 max-[640px]:p-0";
+  "inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-sm border px-3 py-2 font-mono text-[12.5px] leading-[1.55] no-underline transition-all max-[640px]:size-9 max-[640px]:p-0";
 
 export const navCta = `${navCtaBase} border-hairline-2 text-fg-2 hover:border-accent-line hover:text-fg`;
 

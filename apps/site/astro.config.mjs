@@ -57,6 +57,7 @@ export default defineConfig({
       disable404Route: true,
       components: {
         Head: "./src/features/docs/components/Head.astro",
+        SocialIcons: "./src/features/docs/components/SocialIcons.astro",
       },
       favicon: "/favicon.svg",
       head: [
@@ -159,7 +160,6 @@ export default defineConfig({
         {
           label: "Start",
           items: [
-            { label: "Playground", link: "/playground/" },
             { label: "Why web-ai-sdk", slug: "docs/why-web-ai-sdk" },
             { label: "Browser support", slug: "docs/browser-support" },
             {

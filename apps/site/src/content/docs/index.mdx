@@ -17,7 +17,7 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid } from "@astrojs/starlight/components";
+import PackageIndex from "../../features/docs/components/PackageIndex.astro";
 
 ## What it is
 
@@ -48,45 +48,7 @@ You can use the browser APIs directly. The SDK handles lifecycle code that appli
 
 ## Packages
 
-<CardGrid>
-  <Card title="@web-ai-sdk/all" icon="open-book">
-    Meta-package: install once, get all eight wrappers under a single
-    dependency. [Read the guide →](/docs/guides/meta-package/)
-  </Card>
-  <Card title="@web-ai-sdk/prompt" icon="comment">
-    Send prompts and manage independent sessions, streams, and abort signals.
-    [Read the guide →](/docs/guides/prompt/)
-  </Card>
-  <Card title="@web-ai-sdk/webmcp" icon="puzzle">
-    Register tools for the browser's model context. The package manages
-    registration cleanup. [Read the guide →](/docs/guides/webmcp/)
-  </Card>
-  <Card title="@web-ai-sdk/summarizer" icon="list-format">
-    Create key points, summaries, teasers, or headlines. Configure length and
-    stream the result.
-    [Read the guide →](/docs/guides/summarizer/)
-  </Card>
-  <Card title="@web-ai-sdk/translator" icon="translate">
-    Translate text between a source and target language. Sessions are cached by
-    language pair. [Read the guide →](/docs/guides/translator/)
-  </Card>
-  <Card title="@web-ai-sdk/detector" icon="magnifier">
-    Detect a text's language. Receive confidence scores and sorted alternatives.
-    [Read the guide →](/docs/guides/detector/)
-  </Card>
-  <Card title="@web-ai-sdk/writer" icon="pen">
-    Draft new content from a task description. Tone, format, length, streaming.
-    [Read the guide →](/docs/guides/writer/)
-  </Card>
-  <Card title="@web-ai-sdk/rewriter" icon="random">
-    Change the tone or length of existing text.
-    [Read the guide →](/docs/guides/rewriter/)
-  </Card>
-  <Card title="@web-ai-sdk/proofreader" icon="approve-check-circle">
-    Correct grammar, spelling, and punctuation. Receive an offset for each issue.
-    [Read the guide →](/docs/guides/proofreader/)
-  </Card>
-</CardGrid>
+<PackageIndex />
 
 ## Install
 
