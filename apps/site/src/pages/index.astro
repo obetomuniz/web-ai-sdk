@@ -320,10 +320,12 @@ const matrixColumns = [
 
 // Browser marks from SVG Logos via Iconify (CC0).
 const browserColumns = [
-  { name: "Chrome", icon: "/browser-icons/chrome.svg" },
-  { name: "Edge", icon: "/browser-icons/edge.svg" },
-  { name: "Safari", icon: "/browser-icons/safari.svg" },
-  { name: "Firefox", icon: "/browser-icons/firefox.svg" },
+  { name: "Chrome", icons: ["/browser-icons/chrome.svg"] },
+  { name: "Edge", icons: ["/browser-icons/edge.svg"] },
+  {
+    name: "Safari / Firefox",
+    icons: ["/browser-icons/safari.svg", "/browser-icons/firefox.svg"],
+  },
 ] as const;
 ---
 
@@ -657,7 +659,9 @@ const browserColumns = [
                     {browserColumns.map((browser) => (
                       <th class={`${ui.supportHead} ${ui.supportCenteredHead}`}>
                         <span class={ui.browserLabel}>
-                          <img class={ui.browserIcon} src={browser.icon} width="18" height="18" alt="" aria-hidden="true" />
+                          {browser.icons.map((icon) => (
+                            <img class={ui.browserIcon} src={icon} width="18" height="18" alt="" aria-hidden="true" />
+                          ))}
                           <span>{browser.name}</span>
                         </span>
                       </th>
@@ -682,7 +686,6 @@ const browserColumns = [
                           <span class={`${ui.supportVersion} ${supportVersionTone(row.edge)}`}>{row.edge}</span>
                         )}
                       </td>
-                      <td><span class={`${ui.supportPill} ${ui.supportPillWarn}`}>no-op fallback</span></td>
                       <td><span class={`${ui.supportPill} ${ui.supportPillWarn}`}>no-op fallback</span></td>
                     </tr>
                   ))}

@@ -472,6 +472,7 @@
 .browser-table-heading img {
   width: 1.125rem;
   height: 1.125rem;
+  margin: 0;
   flex: none;
   object-fit: contain;
 }
