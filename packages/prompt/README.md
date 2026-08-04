@@ -1,12 +1,20 @@
 # @web-ai-sdk/prompt
 
-web-ai-sdk building block for the Web's Built-in [Prompt API](https://developer.chrome.com/docs/ai/prompt-api) (`LanguageModel`). One-shot `ask()` for embeds and widgets, plus a thin `createSession()` primitive (and React `useSession`) for chat-shaped apps that need independent per-conversation sessions and delta-shaped streaming. The wrapper smooths cross-browser quirks (delta-vs-cumulative chunks, control-character cleanup, abort wiring); UI state and conversation history are the consumer's concern.
+This package wraps the Web's Built-in [Prompt API](https://developer.chrome.com/docs/ai/prompt-api) (`LanguageModel`). Use `ask()` for one-shot prompts. Use `createSession()` or React `useSession()` for conversations and delta streams.
+
+The package normalizes stream chunks, removes selected control characters, and wires abort signals. Application code owns UI state and message history.
 
 **Docs:** <https://web-ai-sdk.dev/docs/guides/prompt/> · **React:** [`usePrompt`](https://web-ai-sdk.dev/docs/react/use-prompt/) · [`useSession`](https://web-ai-sdk.dev/docs/react/use-session/) · **Production:** [Checklist](https://web-ai-sdk.dev/docs/production-checklist/)
 
 ## Status
 
-Prompt API [ships stable in Chrome 148+](https://developer.chrome.com/docs/ai/prompt-api) with no flag required. On Edge it is a [developer preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api) in Canary/Dev 138.0.3309.2+ behind "Prompt API for on-device language model." Phi-4-mini is the documented default and requires a High-or-greater device performance class; Canary/Dev 150.0.4070+ can optionally use the prerelease Aion-1.0-Instruct model on Medium/Low devices behind the additional "Enable prerelease on-device language model" flag. See [Browser support](https://web-ai-sdk.dev/docs/browser-support/) for the sourced matrix. On browsers without `LanguageModel`, the React hook stays `"unavailable"`; vanilla `ask()` throws `PromptUnavailableError` so callers can branch explicitly.
+Prompt API is [stable in Chrome 148+](https://developer.chrome.com/docs/ai/prompt-api). It does not require a flag.
+
+Edge provides a [Canary/Dev preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api) from 138.0.3309.2. Enable "Prompt API for on-device language model." Edge uses Phi-4-mini by default on High-class devices.
+
+Canary/Dev 150.0.4070+ can use prerelease Aion-1.0-Instruct on Medium/Low devices. This path requires the "Enable prerelease on-device language model" flag.
+
+See [Browser support](https://web-ai-sdk.dev/docs/browser-support/) for the full matrix. Without `LanguageModel`, React reports `"unavailable"` and `ask()` throws `PromptUnavailableError`.
 
 ## Install
 
@@ -15,7 +23,7 @@ pnpm add @web-ai-sdk/prompt
 # or: npm i @web-ai-sdk/prompt / bun add @web-ai-sdk/prompt
 ```
 
-The React adapter ships as a subpath export, with no extra install. `react` is a peer dependency only when you import the `/react` entry.
+The React adapter uses the `/react` subpath. `react` is an optional peer dependency.
 
 ## Vanilla TypeScript / DOM
 
@@ -58,9 +66,15 @@ const text = await session.send("And what about the Prompt API?");
 session.destroy();
 ```
 
-Every `createSession()` call returns an independent `LanguageModelInstance` with its own history, system prompt, sampling, and lifecycle — `abort()` / `destroy()` on one session never touch another. Concurrent `send` / `sendStreaming` calls on the **same** session are NOT queued — the underlying `LanguageModel` is sequential per instance and will reject the overlapping call with `InvalidStateError`. Either `await` the previous send or call `session.abort()` before issuing a new turn. Multi-turn conversation context is tracked by the native instance itself; UI message lists are your data model.
+Each `createSession()` call returns an independent `LanguageModelInstance`. It has its own history, system prompt, sampling, and lifecycle.
 
-Calling `createSession()` starts `LanguageModel.create()` immediately. The first `send`, `sendStreaming`, or `clone` only awaits that already-started creation, so creating a base session as soon as the user's intent is clear is a valid prewarming primitive. The synchronous `Session` wrapper is returned before native creation necessarily resolves; see [Context-window introspection](#context-window-introspection) for the resulting getter-readiness distinction.
+Calls on the same session are not queued. An overlapping `send()` or `sendStreaming()` call fails with `InvalidStateError`. Await the current call or call `session.abort()` first.
+
+The native instance tracks conversation context. Your application owns the UI message list.
+
+`createSession()` starts `LanguageModel.create()` immediately. Create a base session when the workflow becomes known to start preparation early.
+
+The synchronous `Session` wrapper can return before native creation finishes. The first `send()`, `sendStreaming()`, or `clone()` waits for it. See [Context-window introspection](#context-window-introspection) for getter readiness.
 
 **Concurrency note.** Each session has independent history, system prompts, sampling, and lifecycle. Scheduling across different native sessions is browser-defined, so do not depend on token-level interleaving or a particular parallelism policy.
 
@@ -131,7 +145,9 @@ export function Chat({ persona }: { persona: string }) {
 }
 ```
 
-`useSession` is lifecycle-only: it starts in `"loading"` while the native `LanguageModel.create()` call is in flight, moves to `"ready"` when `session` is usable, destroys the session on unmount, and recreates it when any primitive option changes. It deliberately does **not** track `response` / `history` / streaming status — that's your UI state, you own it. Each `useSession()` call owns its own underlying `LanguageModelInstance`, so component state and `abort()` / `destroy()` stay scoped to the owning component. Scheduling across sessions remains browser-defined (see the Concurrency note above).
+`useSession` manages lifecycle only. It reports `"loading"` during native creation and `"ready"` when the session is usable. It destroys the session on unmount and recreates it when a primitive option changes.
+
+The hook does not track responses, history, or streaming status. Keep that state in your component. Each hook call owns one native instance. Scheduling across instances is browser-defined.
 
 ## API
 
@@ -248,15 +264,21 @@ const tools: LanguageModelTool[] = [
 const session = createSession({ systemPrompt, tools });
 ```
 
-This is **pass-through only**: the SDK forwards `tools` and never calls `execute` itself. Native tool execution depends on the browser implementation, so treat it as experimental and provide a fallback. Parsing model-emitted tool-like text and running a manual execution loop are deliberately left in the consumer layer.
+The SDK only forwards `tools`; it does not call `execute`. Native tool execution depends on the browser. Treat it as experimental and provide a fallback.
 
-`tools` works on `ask()` too (`ask({ input, tools })`), with one caveat: `ask()` may keep warm base sessions through an LRU keyed by `JSON.stringify(createOptions)`, and `JSON.stringify` drops functions — so a tool's `execute` doesn't contribute to the key, only its `name` / `description` / `inputSchema` do. Each `ask()` prompt still runs on a clone or fresh one-shot instance. Prefer `createSession()` for tool-bearing sessions: it bypasses the cache and matches the base-session + per-run-`clone()` pattern.
+Your application must parse tool-like model output and run any manual execution loop.
+
+`tools` also works with `ask({ input, tools })`. Its base-session cache key uses `JSON.stringify(createOptions)`, which excludes functions. A tool's `execute` function does not affect the key; its metadata does.
+
+Each `ask()` call still uses a clone or fresh instance. Prefer `createSession()` for tool-based sessions because it bypasses this cache.
 
 To declare the native tool modalities, pass them through the advanced `expectedInputs` / `expectedOutputs` fields (`{ type: "tool-response" }` / `{ type: "tool-call" }`).
 
 ### Session resilience: base + per-task `clone()`
 
-For agents and multi-task flows, reusing one long-lived session lets unrelated history accumulate, while recreating a session per task repeats creation and instruction processing. Chrome's [session-management guidance](https://developer.chrome.com/docs/ai/session-management) recommends keeping one warm **base** session (system prompt only) and calling `clone()` per task: the clone inherits the system prompt without unrelated task history, then gets independent history and lifecycle.
+Do not reuse one session across unrelated tasks. Its history will continue to grow. Creating a new session for every task repeats setup work.
+
+Chrome's [session-management guidance](https://developer.chrome.com/docs/ai/session-management) recommends a warm base session with only the system prompt. Call `clone()` for each task. Each clone inherits the prompt but has independent history and lifecycle.
 
 ```ts
 // As soon as the workflow is chosen, begin native creation with final instructions.
@@ -324,13 +346,15 @@ const json = await session.send([
 
 They compose: prefill the opening brace, set `responseConstraint` for the full shape.
 
-**Spec rule:** `prefix: true` is only valid on the **trailing** `assistant` message. Anywhere else (a non-final message, a non-assistant role) the browser throws a `"SyntaxError"` `DOMException`. The SDK does **not** catch this, so it propagates to your `send` / `sendStreaming` caller.
+**Spec rule:** `prefix: true` is valid only on the final `assistant` message. Other uses cause a `"SyntaxError"` `DOMException`. The SDK passes this error to the caller.
 
 > **Note on `content`:** `LanguageModelMessage.content` is currently `string` only. Multimodal `ContentPart[]` content (images, audio) is tracked as a future enhancement; no timeline is promised.
 
 ### Context-window introspection
 
-`Session` surfaces the live token budget the native instance reports, so consumers can size work to the actual context window instead of hardcoding a char cap. Calling `createSession()` starts native creation eagerly, but the wrapper returns synchronously: both getters remain `undefined` while that creation promise is in flight. The first `send` awaits the already-started creation; alternatively, read the getters on a session from `clone()`, whose instance is live the moment `clone()` resolves. In React, `useSession` does not report `"ready"` until the same native creation has resolved.
+`Session` exposes the token budget reported by the native instance. Use it to size input for the current context window.
+
+Both getters are `undefined` until native creation finishes. The first `send()` waits for creation. A resolved `clone()` is ready immediately. In React, `useSession` reports `"ready"` after creation finishes.
 
 - `session.contextWindow` — max input tokens for the session (the context window).
 - `session.contextUsage` — input tokens used so far. On a fresh base-clone this reflects the inherited history (≈ the system prompt), the right baseline to budget a turn against.
@@ -351,7 +375,9 @@ if (quota) {
 // (older browsers / pre-creation).
 ```
 
-`session.onContextOverflow(listener)` subscribes to the native `contextoverflow` event, which fires when a turn pushes usage past the window and the oldest history is dropped. Use it to compact or fork a fresh `clone()` before hitting `QuotaExceededError`. It returns an idempotent cleanup function, and is a no-op (returns a no-op cleanup) when the instance doesn't expose the event.
+`session.onContextOverflow(listener)` subscribes to the native `contextoverflow` event. The event fires when a turn exceeds the window and drops the oldest history.
+
+Use it to compact history or create a fresh clone before `QuotaExceededError`. It returns an idempotent cleanup function. Unsupported instances return a no-op cleanup.
 
 ```ts
 const stop = session.onContextOverflow(() => {
@@ -371,7 +397,9 @@ interface UseSessionReturn {
 }
 ```
 
-Lifecycle-only: feature detection + create + destroy on unmount + recreate when any primitive option (`systemPrompt`, `samplingMode`, `temperature`, `topK`, `language`) changes. Object options (`expectedInputs`, `createOptions`) participate by reference; memoize them or accept the recreate cost. UI state is your concern — iterate `session.sendStreaming()` and accumulate text into your own component state.
+The hook detects support, creates a session, and destroys it on unmount. It recreates the session when a primitive option changes.
+
+Object options participate by reference. Memoize them to avoid recreation. Store streamed output and other UI state in your component.
 
 ### `isAvailable(): boolean`
 
@@ -385,7 +413,7 @@ Forwards to `LanguageModel.availability()`. Returns `null` if the global is miss
 
 Two layers, same as `@web-ai-sdk/summarizer`:
 
-- **Session cache** (internal, in-memory, on by default for `ask()` only): a bounded LRU of warm base `LanguageModel` instances keyed by stringified create-options. Cold-start ≈ 1-3s; when `clone()` is supported, warm calls can skip re-parsing the same base instructions while still prompting on an isolated clone. `createSession()` bypasses this cache entirely.
+- **Session cache** (internal, in-memory, on for `ask()`): a bounded LRU of base instances keyed by serialized creation options. When supported, each call uses an isolated clone. `createSession()` bypasses this cache.
 - **Result cache** (opt-in): pass a `cache` (anything matching `{ get, set }`) to memoize final responses by `(input, systemPrompt, samplingMode / temperature / topK)`. Omit it for a fresh model call every time.
 
 ```ts
@@ -406,9 +434,11 @@ ask({ input: "hi", cache: myMap, cacheKey: "greeting" });
 
 The vanilla `ask()` throws `PromptUnavailableError` when the API is missing or reports `availability: "unavailable"`. The React hook absorbs this and returns `status: "unavailable"` instead.
 
-`createSession()` starts native creation immediately and returns a `Session` wrapper synchronously. If the underlying `create()` rejects, the error surfaces when the first `send`, `sendStreaming`, or `clone` awaits that already-started work. In React, `useSession()` waits for native creation before reporting `"ready"` and reports `"unavailable"` with `error` if creation fails.
+`createSession()` starts native creation and returns a `Session` wrapper immediately. If creation fails, the first `send()`, `sendStreaming()`, or `clone()` reports the error.
 
-`AbortSignal` is supported on every surface. Aborting mid-stream resolves cleanly; the result cache is not written for aborted runs. Aborts reject with `PromptAbortError` (exported; `instanceof PromptAbortError` works, and its `name` is `"AbortError"`), thrown by both `ask()` and sessions.
+In React, `useSession()` waits for creation before reporting `"ready"`. It reports `"unavailable"` and stores the error when creation fails.
+
+Every API accepts `AbortSignal`. An aborted run does not write to the result cache. Both `ask()` and sessions reject with the exported `PromptAbortError`. Its `name` is `"AbortError"`.
 
 ## License
 

@@ -4,9 +4,8 @@ This document describes the internal architecture of the Playground at
 `/playground/`. It is maintainer documentation for the site application, not
 part of the public SDK documentation.
 
-The Playground is a consumer of `web-ai-sdk`. It demonstrates how the SDK
-packages can be composed into a local-first agent experience without moving
-application orchestration or UI concerns into the framework-agnostic wrappers.
+The Playground consumes `web-ai-sdk`. It combines the packages in a local-first
+agent application. Orchestration and UI code stay outside the SDK wrappers.
 
 ## Goals
 
@@ -28,10 +27,8 @@ application orchestration or UI concerns into the framework-agnostic wrappers.
 | Components | Composer, conversation navigation, transcript presentation, runtime metadata, and panel controls |
 | Astro boot shell | Immediate read-only rendering of the last persisted conversation before React is interactive |
 
-The Playground should use `@web-ai-sdk/*` whenever the SDK already owns the
-browser API lifecycle. Consumer-specific behavior such as chaining multiple
-packages, choosing tools for a mode, or persisting conversations stays in this
-feature.
+Use `@web-ai-sdk/*` for browser API lifecycle management. Keep package
+composition, mode tools, and conversation persistence in this feature.
 
 ## Directory map
 
@@ -71,71 +68,55 @@ Playground
     └── RuntimePanel
 ```
 
-`Playground` coordinates cross-cutting workflow state. Each child owns one
-recognizable product region, while shared stateful behavior lives in a named
-hook or domain module. Small visual primitives such as `PanelToggle` remain
-implementation details of those primary components.
+`Playground` coordinates shared workflow state. Each child owns one product
+region. Named hooks and domain modules contain shared stateful behavior.
 
 ## Technical decisions
 
 ### 1. The Playground is application code, not a new SDK abstraction
 
-The SDK wrappers remain small and framework-agnostic. The Playground is where
-multiple wrappers are intentionally composed into a product experience. This
-keeps the core packages reusable and prevents a demo-specific agent model from
-becoming public API.
+The SDK wrappers remain small and framework-agnostic. The Playground combines
+them into an application. Playground-specific behavior is not public SDK API.
 
 ### 2. Conversations are local-first
 
-Conversation state is loaded synchronously from `localStorage` in the React
-state initializer. Writes happen after state changes, and conversations sort by
-`updatedAt` so the most recently active work remains first.
+The React state initializer loads conversations from `localStorage`. It writes
+after state changes and sorts conversations by `updatedAt`.
 
-Persisted data is treated as recoverable input rather than trusted application
-state. Invalid conversations and turns are discarded individually. One
-malformed entry must not erase every valid conversation.
+Treat persisted data as untrusted input. Discard invalid conversations and
+turns individually. One malformed entry must not erase valid conversations.
 
 The persistence schema is shared conceptually by the Astro boot shell and the
 React application. A schema change must update both readers and the
 `agentThreads` regression tests.
 
-### 3. The cached conversation is the loading state
+### 3. Show the cached conversation during loading
 
-The page does not display a spinner or an empty conversation while JavaScript
-boots. `PlaygroundFallback.astro` reads the same browser storage synchronously
-and renders a read-only representation of the last active conversation.
+Do not show a spinner or empty conversation while JavaScript loads.
+`PlaygroundFallback.astro` renders the last active conversation from storage.
 
-React replaces that shell in `useLayoutEffect`, before the browser paints an
-intermediate interactive state. The boot shell is `inert` and must not acquire
-business logic or handle user actions. Its only job is to preserve the first
-paint until React owns the page.
+React replaces the shell in `useLayoutEffect`. The shell is `inert`; it must not
+contain business logic or handle input.
 
-The boot renderer and React renderer use different runtime libraries because
-the boot shell must execute inline before the island loads. They must continue
-to support the same safe Markdown subset and storage shape. Visual parity is
-covered through build-preview reload QA.
+The boot and React renderers use different runtime libraries. They must support
+the same safe Markdown subset and storage shape. Check visual parity in a build
+preview.
 
 ### 4. Availability checks are optimistic
 
-Prompt API probing is asynchronous, but a probe is not evidence that the model
-is unavailable. The initial state therefore behaves as ready and only surfaces
-a warning after Chrome reports a definitive unavailable, downloadable, or
-downloading state.
+Prompt API detection is asynchronous. Treat the initial state as ready. Show a
+warning only after the browser reports a known unavailable or download state.
 
-This prevents the composer and runtime status from flashing between enabled
-and disabled during page load. Downloading states are polled because Chrome can
-transition without a page reload.
+This prevents status changes during page load. Poll download states because the
+browser can update them without a reload.
 
-### 5. Every run owns its original conversation
+### 5. Keep each run with its original conversation
 
-When a message starts, the Playground captures its conversation id, turn id,
-and whether it is the first turn. Completion appends and titles the captured
-conversation rather than whichever conversation happens to be selected later.
+When a message starts, capture its conversation ID, turn ID, and first-turn
+state. Append the result to that conversation, even if the selection changes.
 
-Conversation switching, deletion, mode changes, and WebMCP mutations are
-blocked while a response is running. This is an integrity boundary, not merely
-a UI choice. Without it, asynchronous completion could write model output into
-the wrong conversation or reset the wrong model session.
+Block conversation changes and WebMCP mutations while a response runs. This
+prevents output from reaching the wrong conversation or model session.
 
 ### 6. Modes configure behavior without deleting history
 
@@ -179,17 +160,14 @@ Scrolling upward disables following immediately. It resumes when the user
 returns near the bottom or activates the latest-message control. Reduced-motion
 preferences use immediate scrolling.
 
-### 10. Examples have an immediate deterministic baseline
+### 10. Show curated examples first
 
-Every mode ships curated examples, so the composer never waits for generated
-suggestions on first render. Generated examples are requested only when the
-user explicitly activates the generate control. Recent conversation turns
-provide context for that request without triggering it automatically.
+Every mode includes curated examples. Generate new examples only when the user
+requests them. Use recent turns as context for that request.
 
-Generation is cancelled when the mode, conversation, or active run changes.
-Outputs are filtered for concrete goals and reject placeholder resources such
-as root GitHub URLs or `example.com`. Contextual fallbacks ensure that model
-failure does not leave the composer empty or introduce a layout shift.
+Cancel generation when the mode, conversation, or active run changes. Reject
+placeholder resources such as root GitHub URLs or `example.com`. Use contextual
+fallbacks when generation fails.
 
 ### 11. Responsive panels slide instead of compressing content
 
@@ -260,8 +238,7 @@ pnpm build
 pnpm --filter @web-ai-sdk-apps/site exec astro preview --port 4173
 ```
 
-Use Chrome for final Playground QA because the on-device APIs are exposed
-there. Verify at minimum:
+Use a supported browser for final Playground QA. Verify at minimum:
 
 - persisted reload without an empty-state flash;
 - desktop, intermediate, and mobile layouts;

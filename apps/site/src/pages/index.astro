@@ -51,14 +51,14 @@ const ogImageUrl = new URL("og-image.png", SITE_ORIGIN).toString();
 const navItems = [
   {
     id: "why-raw",
-    label: "Why not raw?",
-    summary: "The thin lifecycle layer the SDK owns.",
+    label: "Why a wrapper?",
+    summary: "Lifecycle work handled by the SDK.",
     tick: "h-4",
   },
   {
     id: "why-sdk",
     label: "Why per-capability",
-    summary: "One focused package for each browser AI surface.",
+    summary: "One package for each browser capability.",
     tick: "h-6",
   },
   {
@@ -88,7 +88,7 @@ const navItems = [
   {
     id: "philosophy",
     label: "Why composable",
-    summary: "Lifecycle primitives that fit your own UI.",
+    summary: "SDK and application responsibilities.",
     tick: "h-4",
   },
   {
@@ -518,21 +518,21 @@ const browserColumns = [
         <div class={ui.container}>
           <div class={`${ui.sectionHead} ${ui.sectionAnchor}`} id="why-raw">
             <div>
-              <div class={ui.sectionEyebrow}>the question</div>
-              <h2 class="mt-2">Why not just use the APIs directly?</h2>
+              <div class={ui.sectionEyebrow}>purpose</div>
+              <h2 class="mt-2">Why use a wrapper?</h2>
             </div>
             <a class={ui.permalink} href="#why-raw"><span aria-hidden="true">↑</span><span class={ui.srOnly}>Link to the why-not-the-raw-APIs section</span></a>
           </div>
           <div class={`${ui.whyRawGrid} ${ui.reveal}`} data-reveal>
             <p class={ui.whyRawLead}>
-              You can, and nothing here stops you. The Web AI surface is the foundation.
+              You can use the browser APIs directly.
             </p>
             <div>
               <p class={ui.whyRawText}>
-                web-ai-sdk owns the thin, repetitive lifecycle layer you would otherwise rewrite in every app: capability checks, model downloads, session reuse, streaming with chunk smoothing, AbortSignal cleanup, opt-in result caching, and feature-detected fallbacks. Drop down to the raw APIs whenever you want.
+                web-ai-sdk handles capability checks, session reuse, stream normalization, abort signals, cleanup, and optional result caching.
               </p>
               <a class={`${ui.pkgDocs} mt-5`} href="#philosophy">
-                <span class={ui.silverText}>See why it's composable</span>
+                <span class={ui.silverText}>See package boundaries</span>
               </a>
             </div>
           </div>
@@ -550,9 +550,9 @@ const browserColumns = [
           </div>
           <div class={`${ui.twoCol} ${ui.reveal}`} data-reveal>
             <div>
-              <h3 class={ui.philosophyTitle}>One model surface.</h3>
+              <h3 class={ui.philosophyTitle}>Prompt.</h3>
               <p class={ui.philosophyText}>
-                A single text-generation model abstraction reaches exactly one of these built-ins, <code>LanguageModel</code> (Prompt). Useful, but one surface, not the whole product.
+                Prompt wraps the general <code>LanguageModel</code> API.
               </p>
               <ul class={ui.philosophyList}>
                 <li>Prompt / LanguageModel only</li>
@@ -560,9 +560,9 @@ const browserColumns = [
               </ul>
             </div>
             <div>
-              <h3 class={ui.philosophyTitle}>Seven surfaces beyond it.</h3>
+              <h3 class={ui.philosophyTitle}>Other capabilities.</h3>
               <p class={ui.philosophyText}>
-                The rest carry options a text-out contract cannot hold, so each gets its own thin package.
+                The other APIs use different options and result types. Each has its own package.
               </p>
               <ul class={ui.philosophyList}>
                 <li>Translator (source + target language, pair-cached sessions)</li>
@@ -583,8 +583,8 @@ const browserColumns = [
           <div class={`${ui.sectionHead} ${ui.sectionAnchor}`} id="matrix">
             <div>
               <div class={ui.sectionEyebrow}>capability matrix</div>
-              <h2 class="mt-2">One lifecycle layer, eight surfaces.</h2>
-              <p class="mt-3.5">The same guarantees, applied per API. Not every capability needs every feature; the matrix below tracks what each package actually does.</p>
+              <h2 class="mt-2">Lifecycle features by package.</h2>
+              <p class="mt-3.5">Each package implements only the lifecycle features supported by its browser API.</p>
             </div>
             <a class={ui.permalink} href="#matrix"><span aria-hidden="true">↑</span><span class={ui.srOnly}>Link to Capability matrix section</span></a>
           </div>
@@ -629,7 +629,7 @@ const browserColumns = [
           <div class={`${ui.sectionHead} ${ui.sectionAnchor}`} id="packages">
             <div>
               <div class={ui.sectionEyebrow}>packages</div>
-              <h2 class="mt-2">Composable wrappers. One philosophy.</h2>
+              <h2 class="mt-2">Packages.</h2>
             </div>
             <a class={ui.permalink} href="#packages"><span aria-hidden="true">↑</span><span class={ui.srOnly}>Link to Packages section</span></a>
           </div>
@@ -644,7 +644,7 @@ const browserColumns = [
             <div>
               <div class={ui.sectionEyebrow}>support</div>
               <h2 class="mt-2">Browser support.</h2>
-              <p class="mt-3.5">Web AI support lands capability by capability and vendor by vendor. The wrappers feature-detect their native API and expose an explicit unavailable path; check the linked vendor source before choosing your fallback.</p>
+              <p class="mt-3.5">Support differs by capability and browser. Each status links to a vendor source. The wrappers expose an unavailable state for fallback UI.</p>
             </div>
             <a class={ui.permalink} href="#support"><span aria-hidden="true">↑</span><span class={ui.srOnly}>Link to Browser support section</span></a>
           </div>
@@ -701,8 +701,8 @@ const browserColumns = [
           <div class={`${ui.sectionHead} ${ui.sectionAnchor}`} id="how">
             <div>
               <div class={ui.sectionEyebrow}>how it works</div>
-              <h2 class="mt-2">Same task. Three levels of abstraction.</h2>
-              <p class="mt-3.5">All three tabs do the same thing: detect an article's language and summarize it into key-points. Same result, less to wire up.</p>
+              <h2 class="mt-2">Compare three API levels.</h2>
+              <p class="mt-3.5">Each tab detects an article's language and creates a key-point summary. Compare the raw API, vanilla SDK, and React code.</p>
             </div>
             <a class={ui.permalink} href="#how"><span aria-hidden="true">↑</span><span class={ui.srOnly}>Link to How it works section</span></a>
           </div>
@@ -716,16 +716,16 @@ const browserColumns = [
         <div class={ui.container}>
           <div class={`${ui.sectionHead} ${ui.sectionAnchor}`} id="philosophy">
             <div>
-              <div class={ui.sectionEyebrow}>philosophy</div>
-              <h2 class="mt-2">Why composable.</h2>
+              <div class={ui.sectionEyebrow}>scope</div>
+              <h2 class="mt-2">Responsibilities.</h2>
             </div>
             <a class={ui.permalink} href="#philosophy"><span aria-hidden="true">↑</span><span class={ui.srOnly}>Link to Philosophy section</span></a>
           </div>
           <div class={`${ui.twoCol} ${ui.reveal}`} data-reveal>
             <div>
-              <h3 class={ui.philosophyTitle}>We handle the rough edges.</h3>
+              <h3 class={ui.philosophyTitle}>SDK responsibilities.</h3>
               <p class={ui.philosophyText}>
-                The Web AI surface is young. Capability checks, model downloads, abortable streams, session lifetimes, and delta/cumulative stream normalization are all things you would otherwise re-implement in every component.
+                The SDK handles browser API lifecycles. This includes support checks, sessions, streams, abort signals, and cleanup.
               </p>
               <ul class={ui.philosophyList}>
                 <li>Feature detection per package</li>
@@ -736,9 +736,9 @@ const browserColumns = [
               </ul>
             </div>
             <div>
-              <h3 class={ui.philosophyTitle}>You compose the stack.</h3>
+              <h3 class={ui.philosophyTitle}>Application responsibilities.</h3>
               <p class={ui.philosophyText}>
-                We ship the lifecycle layer: state machines, streams, abort signals. Framework adapters, polyfills, and UI primitives stay optional so they do not constrain the design system.
+                Application code owns UI, persistence, DOM traversal, fallbacks, and cross-capability workflows.
               </p>
               <ul class={ui.philosophyList}>
                 <li>Framework-agnostic core</li>
@@ -813,10 +813,10 @@ const browserColumns = [
         <div class={ui.container}>
           <div class={`${ui.ctaGlow} ${ui.sectionAnchor} ${ui.reveal}`} data-reveal id="start">
             <div class={ui.ctaBlock}>
-              <div class={`${ui.sectionEyebrow} mb-5 justify-center`}>ship it</div>
-              <h2 class={`${ui.ctaBlockTitle} ${ui.gradientText}`}>Try it in your project.</h2>
+              <div class={`${ui.sectionEyebrow} mb-5 justify-center`}>install</div>
+              <h2 class={`${ui.ctaBlockTitle} ${ui.gradientText}`}>Add it to your project.</h2>
               <p class={ui.ctaBlockText}>
-                One install, all eight blocks. Or pick the individual <code>@web-ai-sdk/*</code> packages. Ships ESM, CJS, and types. Tree-shakable.
+                Install <code>@web-ai-sdk/all</code> or select an individual package. Each package includes ESM, CJS, and TypeScript declarations.
               </p>
               <InstallPill pkg="@web-ai-sdk/all" className="mx-auto" client:visible />
               <div class={ui.ctaLinks}>

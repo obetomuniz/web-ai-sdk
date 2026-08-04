@@ -39,10 +39,10 @@ function browserName(browser: WebAIBrowser): string {
 
 function unavailableMessage(browser: WebAIBrowser): string {
   if (browser === "chrome") {
-    return "Chrome can run the Prompt API, but it is not available here. Check Chrome's version, built-in AI settings, and model status, then reload.";
+    return "The Prompt API is unavailable. Check Chrome's version, AI settings, and model status. Then reload.";
   }
   if (browser === "edge") {
-    return "Edge can run the Prompt API in Canary and Dev, but it is not available here. Check Edge's AI settings and model status, then reload.";
+    return "The Prompt API is unavailable. Check Edge's channel, AI settings, and model status. Then reload.";
   }
-  return "This browser does not support the on-device Prompt API. Open the playground in desktop Chrome or Edge.";
+  return "This browser does not support the Prompt API. Open the Playground in desktop Chrome or Edge.";
 }

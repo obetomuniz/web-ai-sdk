@@ -1,6 +1,6 @@
 ---
 title: "@web-ai-sdk/writer"
-description: "web-ai-sdk building block for the Web's Built-in Writer API. Generates new content from a writing task with session reuse, streaming, and opt-in result caching."
+description: "This package wraps the Web's Built-in Writer API. It provides session reuse, streaming, and optional result caching."
 editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/writer/README.md
 ---
 
@@ -8,12 +8,16 @@ editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/writer/READ
 This page is synced from [`packages/writer/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/writer/README.md) by `pnpm --filter @web-ai-sdk-apps/site docs:sync`. Edits should go to the README.
 :::
 
-web-ai-sdk building block for the Web's Built-in [Writer API](https://developer.chrome.com/docs/ai/writer-api). Generates new content from a writing task with session reuse, streaming, and opt-in result caching.
+This package wraps the Web's Built-in [Writer API](https://developer.chrome.com/docs/ai/writer-api). It provides session reuse, streaming, and optional result caching.
 
 
 ## Status
 
-Chrome's current [Built-in AI status table](https://developer.chrome.com/docs/ai/built-in-apis) labels Writer a **Developer trial**. Its public joint origin-trial window with Rewriter ran from Chrome 137 through 148 and has ended; the [Writer docs](https://developer.chrome.com/docs/ai/writer-api) list the current localhost flags. In Edge it is a [developer preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) in Canary/Dev 138.0.3309.2+ behind "Writer API for on-device language model." On browsers without `Writer`, the React hook stays `"unavailable"`; vanilla `write()` throws `WriterUnavailableError` so callers can branch explicitly.
+Chrome labels Writer a **Developer trial** in its [status table](https://developer.chrome.com/docs/ai/built-in-apis). The public origin trial for Chrome 137–148 has ended. See the [Writer guide](https://developer.chrome.com/docs/ai/writer-api) for current localhost flags.
+
+Edge provides a [Canary/Dev preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) from 138.0.3309.2. Enable "Writer API for on-device language model."
+
+Without `Writer`, React reports `"unavailable"` and `write()` throws `WriterUnavailableError`.
 
 ## Install
 
@@ -22,7 +26,7 @@ pnpm add @web-ai-sdk/writer
 # or: npm i @web-ai-sdk/writer / bun add @web-ai-sdk/writer
 ```
 
-The React adapter ships as a subpath export, with no extra install. `react` is a peer dependency only when you import the `/react` entry.
+The React adapter uses the `/react` subpath. `react` is an optional peer dependency.
 
 ## Vanilla TypeScript / DOM
 

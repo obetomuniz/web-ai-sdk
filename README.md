@@ -2,7 +2,7 @@
 
 **web-ai-sdk is a TypeScript SDK for the Web AI surface.**
 
-Use Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP with a stable, typed, composable interface, instead of wiring up each browser API by hand.
+Use typed lifecycle wrappers for Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP.
 
 ```ts
 import { ask } from "@web-ai-sdk/prompt";
@@ -10,28 +10,27 @@ import { ask } from "@web-ai-sdk/prompt";
 const { output } = await ask({ input: "Summarize this page in one sentence." });
 ```
 
-A small, focused monorepo of framework-agnostic packages that smooth over the gnarly bits of the new `document.modelContext`, `Translator`, `Summarizer`, `LanguageModel`, `LanguageDetector`, `Writer`, `Rewriter`, and `Proofreader` browser APIs (feature detection, session caching, streaming, lifecycle, and control-character cleanup) without bringing any UI along.
-
-> If you're exploring AI in the browser, a [star on GitHub](https://github.com/obetomuniz/web-ai-sdk) helps others find web-ai-sdk.
+Each package wraps one browser capability. It handles feature detection, sessions, streaming, abort signals, and cleanup. It does not render UI.
 
 ## Why this exists
 
-The Web AI surface is promising but still early and shifting. Every app that touches it re-implements the same lifecycle: feature-detect, wait for model availability, create and reuse sessions, stream chunks, abort cleanly, and fall back when the capability is missing. web-ai-sdk owns that layer so you build against one stable, typed surface rather than coupling your whole app to today's experimental API shape. The wrappers feature-detect and expose deliberate unavailable behavior, so the same code can ship with a useful fallback.
+Browser AI APIs have similar lifecycle requirements. Applications must detect support, create sessions, stream results, abort work, and clean up resources.
 
-The SDK is per-capability because the Web ships more than one AI surface. Six specialized built-ins (Translator, Summarizer, Writer, Rewriter, Proofreader, Language Detector) each carry option spaces a single text-model abstraction cannot express, and WebMCP (`document.modelContext`) is an agent surface rather than a model at all. That breadth is the point, not an accident. One package per capability, and the model abstraction is one of them rather than the whole product.
+`web-ai-sdk` handles that lifecycle. Each wrapper also exposes an unavailable state for fallback UI.
+
+The SDK uses one package per capability. Each built-in has different options and result types. WebMCP exposes page tools instead of generating text.
 
 ## What it is
 
-**`web-ai-sdk`** ships one package per browser capability. Zero runtime dependencies. Written in TypeScript. That's it. The SDK tracks a moving browser spec and intentionally stays out of the way of *how* you build an app.
+`web-ai-sdk` ships TypeScript packages with no runtime dependencies. Application code controls rendering, persistence, and cross-capability workflows.
 
-All model output is untrusted. The SDK strips selected non-printing control characters; that cleanup does **not** make HTML or Markdown safe. Use React interpolation or `textContent` for plain text. If you convert model Markdown or HTML into rendered HTML, keep raw HTML disabled and sanitize the complete accumulated output before inserting it into the DOM—never sanitize and concatenate individual stream chunks, because malicious syntax can span updates.
+Treat all model output as untrusted. Control-character cleanup does not make HTML or Markdown safe.
+
+Use React interpolation or `textContent` for plain text. Sanitize complete formatted output before rendering it. Do not sanitize stream chunks separately.
 
 Before shipping, use the [Production checklist](./apps/site/src/content/docs/production-checklist.mdx) for intent-driven preparation, task-relevant text extraction, session lifetime, progress, reversible edits, and expiring caches.
 
-Compositions that bond multiple primitives (block-level DOM translation,
-article-aware summarization, detect-then-summarize chains) are
-deliberately out of scope — the SDK wraps one capability per package;
-composition is your code.
+The SDK does not walk the DOM or compose capabilities. Application code owns article extraction and detect-then-summarize flows.
 
 See [`apps/site/src/content/docs/architecture.mdx`](./apps/site/src/content/docs/architecture.mdx) (rendered at [`web-ai-sdk.dev/docs/architecture/`](https://web-ai-sdk.dev/docs/architecture/)) for the full model.
 
@@ -51,21 +50,21 @@ Each package ships:
 - **Vanilla** entry (`@web-ai-sdk/<pkg>`): TypeScript / DOM only, zero framework deps.
 - **React** entry (`@web-ai-sdk/<pkg>/react`): small hook adapter wrapping the vanilla core. `react` is an optional peer dep.
 
-## Build for the agentic web
+## Browser AI and WebMCP
 
-The browser is becoming both an AI runtime and an agent surface. The Built-in AI wrappers (Prompt, Summarizer, Translator, and friends) cover the runtime half: local model capabilities behind one typed interface. [`@web-ai-sdk/webmcp`](./packages/webmcp) covers the agent half: structured, agent-callable tools your page exposes to visiting agents. Feature detection and explicit unavailable paths keep the same code shipping with a fallback, so neither half is a hard requirement — see [Browser support](./apps/site/src/content/docs/browser-support.mdx) for what's available where.
+The Built-in AI packages wrap local browser capabilities. [`@web-ai-sdk/webmcp`](./packages/webmcp) registers page tools for compatible agents.
 
-## Why composable
+All packages use feature detection. See [Browser support](./apps/site/src/content/docs/browser-support.mdx) for current availability.
 
-Browsers are shipping Web AI APIs at different maturity levels. The shape changes; the lifecycle is similar across them: feature-detect, lazily create a session, stream chunks, cache results, clean up. Those concerns are framework-agnostic and worth sharing.
+## Scope
 
-**We ship that lifecycle layer.** Framework adapters, polyfills, UI primitives stay optional subpaths so they don't constrain your design system, framework, or styling stack. Pick the layers you need; skip the rest.
+The core packages handle browser API lifecycles. They do not include UI, polyfills, DOM traversal, or cross-capability orchestration.
 
-This is the same shape mature utility libraries converge on as the platform catches up (lodash → native methods, moment/date-fns → `Temporal`): a thin shim over a native primitive that gets *thinner* as the primitive stabilizes. See [Architecture § Lineage](./apps/site/src/content/docs/architecture.mdx) for the full reasoning.
+React hooks ship as optional subpaths. See [Architecture](./apps/site/src/content/docs/architecture.mdx) for the complete boundaries.
 
 ## Install
 
-Pick the building blocks you need, or grab the whole suite in one install:
+Install one package or all eight:
 
 ```sh
 pnpm add @web-ai-sdk/webmcp        # one block
@@ -99,7 +98,7 @@ pnpm build:packages  # build packages so workspace consumers can resolve them
 pnpm dev             # site at http://localhost:5173/, docs at /docs/
 ```
 
-For the AI APIs to run, open a supporting browser. Chrome's [current status table](https://developer.chrome.com/docs/ai/built-in-apis) documents Summarizer, Translator, and Language Detector as stable from 138 and Prompt as stable from 148. Writer, Rewriter, and Proofreader currently carry Chrome's **Developer trial** label; their older public origin-trial milestone windows have ended. WebMCP has a [Chrome origin trial from 149](https://developer.chrome.com/docs/ai/webmcp). Microsoft documents Summarizer and the writing APIs in its [Writing Assistance guide](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis), Translator and Language Detector in the [Edge 148 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/148), and Prompt plus WebMCP origin trials in the [Edge 150 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/150). See [Browser support](./apps/site/src/content/docs/browser-support.mdx) for current flags and capability-specific model and hardware requirements.
+The demos require a browser that supports the selected API. See [Browser support](./apps/site/src/content/docs/browser-support.mdx) for versions, flags, trials, and hardware requirements.
 
 ## Repo layout
 
@@ -145,7 +144,7 @@ Toolchain: Node 24 (pinned in `.nvmrc`) + pnpm 10.34.3 (pinned via `package.json
 
 ## Roadmap
 
-Directional, not a commitment. The bias is toward owning only the lifecycle and ergonomics the raw APIs leave rough, and thinning out as the Web AI APIs stabilize.
+This roadmap is not a release commitment. New work must stay within the lifecycle scope.
 
 - Cloud / custom-provider fallback for unsupported browsers
 - More browser compatibility helpers

@@ -1,22 +1,22 @@
 ---
 title: Production checklist
-description: Production guidance for input selection, session lifetime, safe rendering, user control, progress, and caching around the Web AI lifecycle wrappers.
+description: A checklist for input, sessions, safe output, user control, progress, and caches.
 ---
 
-The SDK owns the repetitive lifecycle around each browser capability. Your application still owns the product decisions around that lifecycle. This checklist adapts Chrome's public [Built-in AI APIs: Do and don't](https://developer.chrome.com/docs/ai/built-in-ai-dos-donts) guidance to the `@web-ai-sdk/*` packages.
+The SDK manages browser API lifecycles. Your application manages product behavior. This checklist adapts Chrome's [Built-in AI guidance](https://developer.chrome.com/docs/ai/built-in-ai-dos-donts) to the SDK packages.
 
 | The wrapper owns | Your application owns |
 | --- | --- |
-| Feature detection and typed unavailability | Establishing clear user intent before preparing a model |
-| Session creation, reuse, stream normalization, and cleanup hooks | Selecting task-relevant input and excluding unrelated page content |
+| Feature detection and typed unavailability | Confirming user intent before preparing a model |
+| Session reuse, stream normalization, and cleanup hooks | Selecting relevant input and excluding unrelated page content |
 | AbortSignal wiring and React effect cleanup | Rendering, sanitization, progress, and fallback UI |
 | Optional result-cache adapters and complete default cache keys | Expiration, refresh, persistence policy, and user-visible history |
 
-The wrapper never walks your page, chooses what a user meant, sanitizes formatted output, persists edits, or renders UI. Those responsibilities depend on your product and intentionally stay in consumer code.
+The SDK does not select page content, interpret user intent, sanitize formatted output, persist edits, or render UI.
 
 ## Prepare after clear user intent
 
-Prepare a session when the user enters or points at a relevant AI surface, not on every page load and not only after the final **Generate** click. For Prompt, provide system instructions at creation time so they become native `initialPrompts`:
+Prepare a session after the user enters an AI feature. Do not prepare every model on page load. For Prompt, pass system instructions when you create the session.
 
 ```ts
 import { createSession } from "@web-ai-sdk/prompt";
@@ -30,13 +30,13 @@ reviewWorkspace.addEventListener("pointerenter", () => {
 });
 ```
 
-Do not prewarm speculative features the user has shown no intent to use. The first preparation can download a model, consume memory, and take time.
+Preparation can download a model and use memory. Do not prepare features that the user has not opened.
 
 ## Reuse the right kind of session
 
-Writer, Rewriter, and Summarizer sessions are stateless between tasks. Their high-level SDK functions reuse compatible native sessions automatically. Prompt sessions retain conversation history, so unrelated tasks should not share one conversation.
+Writer, Rewriter, and Summarizer do not keep task history. Their high-level functions reuse compatible native sessions. Prompt sessions keep history.
 
-For repeated independent Prompt tasks, keep a base containing only the system instructions, clone it per task, and destroy each clone when it finishes:
+For independent Prompt tasks, create one base session. Clone it for each task. Destroy each clone after use.
 
 ```ts
 import { createSession } from "@web-ai-sdk/prompt";
@@ -58,11 +58,11 @@ async function review(code: string, signal: AbortSignal) {
 base.destroy();
 ```
 
-For one-shot Prompt work, `ask()` already uses a warm base plus a fresh clone when the browser supports cloning. For a real conversation, use one `createSession()` per conversation and keep its history deliberately.
+`ask()` already uses this pattern when the browser supports cloning. For chat, create one session per conversation.
 
 ## Abort work that is no longer relevant
 
-Connect cancellation to navigation, changed input, and an explicit Stop action. Destroy long-lived sessions when their feature unmounts or closes.
+Abort work after navigation, changed input, or a Stop action. Destroy long-lived sessions when their feature closes.
 
 ```ts
 import { rewrite } from "@web-ai-sdk/rewriter";
@@ -77,11 +77,11 @@ await rewrite({
 });
 ```
 
-React hooks clean up the native session when their effect is replaced or unmounted. Per-operation cancellation and an explicit Stop control are still consumer decisions.
+React hooks destroy sessions during effect cleanup. Your UI must still provide per-operation cancellation and a Stop control.
 
 ## Send only task-relevant text
 
-Extract the smallest readable text that answers the task. Exclude navigation, cookie banners, hidden controls, metadata, and unrelated comments. Prefer `innerText` or explicit text extraction; never send raw `innerHTML`.
+Send only text needed for the task. Exclude navigation, banners, hidden controls, metadata, and unrelated comments. Use `innerText` or explicit fields. Never send raw `innerHTML`.
 
 ```ts
 import { summarize } from "@web-ai-sdk/summarizer";
@@ -92,11 +92,11 @@ const input = article?.innerText.trim() ?? "";
 const result = await summarize({ input, type: "key-points" });
 ```
 
-If a task needs headings or selected fields, extract those values explicitly. DOM traversal and article-shape decisions stay outside the SDK because every application has a different document model.
+Extract headings or fields explicitly when the task needs them. The SDK does not define your document structure.
 
 ## Treat every output as untrusted
 
-Model output can be incorrect, hostile, or malformed. The SDK removes selected non-printing control characters; it does not make HTML or Markdown safe.
+Model output can be wrong, hostile, or malformed. The SDK removes selected control characters. It does not make HTML or Markdown safe.
 
 For plain text, use React interpolation or `textContent`:
 
@@ -104,11 +104,13 @@ For plain text, use React interpolation or `textContent`:
 outputElement.textContent = result.output ?? "";
 ```
 
-If you render formatted output, accumulate the full stream, parse it with raw HTML disabled, sanitize the complete result, and only then update the live DOM. Do not set `innerHTML` from model output, and do not sanitize chunks independently: unsafe syntax can span chunk boundaries.
+For formatted output, first collect the complete stream. Disable raw HTML and sanitize the complete result before rendering. Never pass model output directly to `innerHTML`.
+
+Do not sanitize individual stream chunks. Unsafe syntax can span multiple chunks.
 
 ## Use schemas for data, layout for visual length
 
-Use Prompt structured output when application logic needs a predictable shape:
+Use Prompt structured output when code needs a predictable data shape:
 
 ```ts
 import { ask } from "@web-ai-sdk/prompt";
@@ -131,11 +133,13 @@ const { output } = await ask({
 const card = output ? JSON.parse(output) : null;
 ```
 
-Do not add schema `maxLength` solely to fit a card, and do not prompt for an exact character count. A model can satisfy those constraints with compressed or degraded text. Let it generate naturally, then constrain the preview visually with overflow or line clamping and offer an expanded view.
+Do not use schema `maxLength` only to fit a card. Do not request an exact character count. These limits can reduce output quality.
+
+Use CSS overflow or line clamping for the preview. Provide a way to expand the text.
 
 ## Show preparation and generation progress
 
-Distinguish model preparation from inference. Surface download progress when available, show an active state for non-streaming tasks, and stream longer output when partial text is useful.
+Show model preparation and generation as separate states. Show download progress when available. Stream output only when partial text is useful.
 
 ```ts
 import { ask } from "@web-ai-sdk/prompt";
@@ -153,95 +157,51 @@ await ask({
 });
 ```
 
-Avoid replacing user-visible content without a transition or status cue. For short tasks, a spinner or pending label may be clearer than token-by-token output.
+Show a status before replacing visible content. For short tasks, use a spinner or pending label instead of streaming.
 
 ## Preserve originals and make edits reversible
 
-AI editing should produce a suggestion, not silently replace the source. Keep the original, let the user Accept or Reject, and retain enough version history to Undo.
+Treat AI edits as suggestions. Keep the original text until the user accepts the result.
 
-```ts
-const versions = [editor.value];
-let suggestion: string | null = null;
+- **Accept** applies the suggestion and stores the previous version.
+- **Reject** removes the suggestion without changing the source.
+- **Undo** restores the previous accepted version.
 
-function accept() {
-  if (!suggestion) return;
-  versions.push(suggestion);
-  editor.value = suggestion;
-  suggestion = null;
-}
-
-function reject() {
-  suggestion = null;
-  editor.value = versions.at(-1) ?? "";
-}
-
-function undo() {
-  if (versions.length > 1) versions.pop();
-  editor.value = versions.at(-1) ?? "";
-}
-```
-
-For multi-step workflows, add previous/next version navigation or a diff. The user remains the final editor.
+For multi-step edits, provide version navigation or a diff.
 
 ## Expire caches and offer refresh
 
-The built-in `"session"` and `"local"` cache shortcuts are intentionally small adapters; they do not impose a product-specific freshness policy. Use a custom cache when results need a time-to-live, and provide a visible way to force fresh inference.
+The `"session"` and `"local"` caches do not expire entries. Use a custom cache when results need a time-to-live (TTL). Add a visible Refresh action.
 
 ```ts
 import type { ResponseCache } from "@web-ai-sdk/prompt";
 import { ask } from "@web-ai-sdk/prompt";
 
-const TTL_MS = 60 * 60 * 1000;
-const prefix = "ai-summary:";
-
-const cache: ResponseCache & { delete(key: string): void } = {
-  get(key) {
-    const raw = localStorage.getItem(prefix + key);
-    if (!raw) return null;
-    try {
-      const item = JSON.parse(raw) as { value: unknown; expiresAt: unknown };
-      if (
-        typeof item.value === "string" &&
-        typeof item.expiresAt === "number" &&
-        Date.now() < item.expiresAt
-      ) {
-        return item.value;
-      }
-    } catch {
-      // Treat malformed storage as a cache miss.
+const entries = new Map<string, { value: string; expiresAt: number }>();
+const ttlCache = {
+  get(key: string) {
+    const entry = entries.get(key);
+    if (!entry || entry.expiresAt <= Date.now()) {
+      entries.delete(key);
+      return null;
     }
-    localStorage.removeItem(prefix + key);
-    return null;
+    return entry.value;
   },
-  set(key, value) {
-    localStorage.setItem(
-      prefix + key,
-      JSON.stringify({ value, expiresAt: Date.now() + TTL_MS }),
-    );
+  set(key: string, value: string) {
+    entries.set(key, { value, expiresAt: Date.now() + 60 * 60 * 1000 });
   },
-  delete(key) {
-    localStorage.removeItem(prefix + key);
+  delete(key: string) {
+    entries.delete(key);
   },
-};
+} satisfies ResponseCache & { delete(key: string): void };
 
 async function summarizeFresh(input: string, refresh = false) {
   const cacheKey = JSON.stringify(["article-summary-v1", input]);
-  if (refresh) cache.delete(cacheKey);
-  return ask({ input, cache, cacheKey });
+  if (refresh) ttlCache.delete(cacheKey);
+  return ask({ input, cache: ttlCache, cacheKey });
 }
 ```
 
-Custom keys must include every input and option that can change the output. Validate cached data before rendering, expire it conservatively, and never let a background refresh overwrite user edits.
+Include every output-changing input and option in the key. Do not let a background refresh overwrite user edits.
 
-## Before shipping
-
-- Prepare only after clear user intent, with Prompt instructions ready at creation.
-- Reuse stateless sessions; isolate unrelated Prompt histories with base-plus-clone.
-- Abort stale work and destroy sessions when the feature goes away.
-- Extract task-relevant text with `innerText` or explicit fields, never raw `innerHTML`.
-- Render plain text safely; sanitize complete formatted output.
-- Use schemas for data shape, not visual character limits.
-- Show preparation and inference progress.
-- Preserve originals with Accept, Reject, Undo, or version navigation.
-- Give persistent caches a TTL and a user-visible refresh path.
-- Keep unsupported-browser fallback UI useful; see [Browser support](/docs/browser-support/).
+Provide a useful fallback when an API is unavailable. See [Browser support](/docs/browser-support/).

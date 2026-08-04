@@ -180,6 +180,18 @@ These rules apply to the API-wrapper packages (`@web-ai-sdk/prompt`, `webmcp`, `
 - **READMEs are user-facing.** Show install, the smallest possible vanilla example, the smallest possible React example, then the API surface.
 - Don't write design docs unless the user asks. Conventions live here; package-specific decisions live in the package README.
 
+### Documentation style
+
+Use a house style inspired by [ASD-STE100 Simplified Technical English](https://www.asd-ste100.org/about_STE.html). Do not claim formal STE compliance.
+
+- Aim for 25 words or fewer in a prose sentence. Split sentences that contain more than one claim or action.
+- Use active voice and direct verbs. Use the imperative form for instructions.
+- Use one term for one concept. Do not alternate between synonyms for variety.
+- State behavior before rationale. Put conditions and exceptions next to the behavior they modify.
+- Replace hype, metaphors, and rhetorical claims with concrete behavior.
+- Keep paragraphs short. Use a list or table only when it makes comparison or scanning easier.
+- Preserve API names and required technical terms. Define an uncommon term at first use.
+
 ### Docs reliability
 
 - Treat docs examples as part of the public API. When editing or reviewing docs, verify option names, result shapes, hook return values, and helper export names against the actual exported TypeScript interfaces and runtime tests.

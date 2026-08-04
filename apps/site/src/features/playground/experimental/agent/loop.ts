@@ -541,7 +541,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
           let answer: string;
           if (tools.length > 0 && looksLikeUnparsedToolCall(reply, tools)) {
             answer =
-              "The model tried to call a tool in a format I couldn't parse this time (its tool-call format varies between runs). Re-run - it usually works on another try.";
+              "The model returned an invalid tool call. Run the request again.";
           } else {
             answer = stripToolCode(reply) || reply.trim();
           }
@@ -1363,7 +1363,7 @@ function composeSignals(
 
 function makeUnavailableAgent(tools: readonly AgentTool[]): Agent {
   const text =
-    "The on-device model isn't available yet. Confirm the Prompt API model is downloaded in a supported Chrome build, then reload the playground.";
+    "The on-device model is unavailable. Confirm that the Prompt API model is downloaded, then reload the Playground.";
   const failure: AgentFailure = {
     name: "PromptUnavailableError",
     message: "Prompt API is unavailable in this environment.",

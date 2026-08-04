@@ -3,12 +3,12 @@ title: WebMCP
 description: Register, discover, and execute agent-callable tools on the W3C WebMCP surface through typed vanilla and React SDK APIs.
 ---
 
-Building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API exposed at `document.modelContext`. (For backward compatibility with the previous shape of the API, this package also reads from `navigator.modelContext`.) Register, discover, and execute agent-callable tools from any framework; the package is vanilla TypeScript / DOM with an optional React adapter shipped as a subpath export. See [useWebMCP](/docs/react/use-web-mcp/) for React.
+This package wraps the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API at `document.modelContext`. It can register, discover, and execute tools. It also reads the earlier `navigator.modelContext` API for compatibility. For React, see [useWebMCP](/docs/react/use-web-mcp/).
 
-Where the Built-in AI APIs make the browser an AI runtime, WebMCP makes your page an agent surface: instead of a visiting agent guessing what your interface elements do, the page declares structured tools the agent can discover and call.
+WebMCP lets a page declare structured tools that agents can discover and call.
 
 :::caution[Experimental]
-WebMCP is a proposed standard in early preview. Chrome documents an origin trial from Chrome 149 plus a local-development flag, and Microsoft lists an Edge 150 origin trial. Treat it as progressive enhancement: keep the human UI path, and let the wrapper no-op where the API is missing. Current sources and setup live in [Browser support](/docs/browser-support/).
+WebMCP is an early proposal. Chrome documents an origin trial from version 149 and a local flag. Microsoft lists an Edge 150 origin trial. Keep the human UI path. See [Browser support](/docs/browser-support/) for setup.
 :::
 
 ## Usage
@@ -46,7 +46,7 @@ const cleanup = () => cleanups.forEach((c) => c());
 
 ## Discover and execute tools
 
-Use SDK primitives rather than reaching through `document.modelContext` directly. `getTools()` returns the browser-facing metadata for tools exposed to the current document; `executeTool()` accepts one of those returned objects and serializes the JavaScript input value for the native call.
+`getTools()` returns metadata for tools exposed to the current document. `executeTool()` accepts one returned tool and serializes its input for the native call.
 
 ```ts
 import {
@@ -68,7 +68,9 @@ const unsubscribe = subscribeToToolChanges(() => {
 });
 ```
 
-`getTools({ fromOrigins })` can additionally request tools from descendant documents at listed secure origins. Cross-origin tools are returned only when the registering document also exposed them to the caller's origin. The browser returns each `inputSchema` as a serialized JSON string and includes the registering `window` and `origin`.
+`getTools({ fromOrigins })` also requests tools from descendant documents at listed secure origins. The registering document must expose each tool to the caller's origin.
+
+The browser returns `inputSchema` as serialized JSON. It also includes the registering `window` and `origin`.
 
 `executeTool()` returns the native serialized string unchanged; `null` means the tool triggered navigation. Chrome [publicly documents it](https://developer.chrome.com/docs/ai/webmcp), but it is not yet in the published WebMCP community-draft IDL, so the SDK marks it experimental.
 
@@ -142,11 +144,11 @@ maintaining a second handwritten definition.
 
 ## Registration cleanup
 
-`registerTool(tool, options?)` returns a cleanup function: `() => void`. Calling it unregisters the tool. Calling it twice is a no-op. On browsers without `document.modelContext` (or the legacy `navigator.modelContext`), the cleanup is itself a no-op.
+`registerTool(tool, options?)` returns a cleanup function. It unregisters the tool and is safe to call more than once. Unsupported browsers return a no-op cleanup.
 
 ## How it works
 
-`document.modelContext.registerTool({...}, { signal, exposedTo })` is the spec entry point. (For backward compatibility with the previous shape of the API, this package also reads from `navigator.modelContext`.) The wrapper sits on top with these quality-of-life additions:
+`document.modelContext.registerTool({...}, { signal, exposedTo })` is the standard entry point. The wrapper adds this lifecycle behavior:
 
 - **Feature detection.** On browsers without `document.modelContext` (or the legacy `navigator.modelContext`), registration and subscriptions are no-ops, discovery resolves to `[]`, and `isAvailable()` returns `false`. Execution rejects with `WebMCPUnavailableError` so missing support is distinct from a `null` navigation result.
 - **Last-writer-wins on duplicate names.** React effect cleanup is asynchronous; a fast re-render can attempt to register `"foo"` before the browser processes the prior `abort()`. The wrapper detects the resulting duplicate-name error, queues a microtask retry, and tracks ownership so a stale registration can't squat the name.
@@ -163,7 +165,9 @@ const cleanup = registerTool(tool, {
 });
 ```
 
-The SDK forwards the array unchanged alongside its internally owned `AbortSignal`. The browser validates each origin and rejects invalid or untrustworthy values. Those asynchronous failures follow the package's existing non-throwing registration posture: they are logged without creating an unhandled rejection. Grant access only to origins that genuinely need it; `exposedTo` is exposure configuration, not an authorization layer.
+The SDK forwards the array with its own `AbortSignal`. The browser validates each origin. The wrapper logs validation failures without creating an unhandled rejection.
+
+List only origins that need access. `exposedTo` controls exposure; it does not grant authorization.
 
 An in-page agent or inspector requests those cross-origin tools with the complementary discovery option:
 
@@ -196,7 +200,7 @@ For source compatibility, the SDK retains `destructiveHint`, `idempotentHint`, `
 
 ## Tool design
 
-A tool is a semantic interface, not just a function: the agent selects tools by reading names, descriptions, schemas, and annotations. A few rules of thumb:
+Agents select tools by reading their names, descriptions, schemas, and annotations. Follow these rules:
 
 - **Action-oriented names.** `add_to_cart`, `select_shipping_address`, `run_diagnostics` — not `doAction`, `submit`, or `handleClick`.
 - **Descriptions that say when to use the tool**, not just what it does. Besides the schema, the description is the agent's only routing signal.
@@ -207,7 +211,9 @@ A tool is a semantic interface, not just a function: the agent selects tools by 
 
 ## Errors and unavailability
 
-Registration and event subscription never throw for a missing API; they return no-op cleanups. Discovery returns an empty list. Tool execution is different because `null` already means that execution triggered a navigation, so missing support rejects with the typed `WebMCPUnavailableError`:
+Registration and event subscription return no-op cleanups when the API is missing. Discovery returns an empty list.
+
+Execution uses `null` for navigation. It therefore reports missing support with `WebMCPUnavailableError`:
 
 ```ts
 import { registerTool, isAvailable } from "@web-ai-sdk/webmcp";
@@ -236,7 +242,7 @@ definitions directly to `registerTool()` or `useWebMCP()`.
 
 Chrome opened a public [origin trial](https://developer.chrome.com/blog/ai-webmcp-origin-trial) for WebMCP from Chrome 149, and Microsoft lists WebMCP among the [Edge 150 origin trials](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/150). For local Chrome development, the vendor documents a flag that works without a token. See [Browser support](/docs/browser-support/) for the current setup and source links.
 
-Keep WebMCP optional either way. The wrapper already no-ops when the API is missing, so the same registration code ships to every browser — with or without the trial:
+Keep WebMCP optional. Registration becomes a no-op when the API is missing, so the same code can run in other browsers:
 
 ```ts
 import { registerTool } from "@web-ai-sdk/webmcp";
@@ -257,7 +263,7 @@ registerTool({
 
 ## Debugging in DevTools
 
-Chrome DevTools includes experimental WebMCP debugging in the **Application** panel, introduced in [DevTools 149](https://developer.chrome.com/blog/new-in-devtools-149): inspect registered tools and their schemas, run a tool manually with custom parameters, track active and pending invocations, and inspect execution status and return payloads. Tools registered through `registerTool` show up there like any other `document.modelContext` registration.
+Chrome DevTools 149 added experimental WebMCP debugging to the **Application** panel. You can inspect tools, run them with custom input, and inspect results. Tools registered through this SDK appear with other `document.modelContext` tools.
 
 The panel is off by default; enable both Chrome flags and restart the browser:
 

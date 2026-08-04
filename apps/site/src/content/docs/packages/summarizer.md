@@ -1,6 +1,6 @@
 ---
 title: "@web-ai-sdk/summarizer"
-description: "web-ai-sdk building block for the Web's Built-in Summarizer API. String-mode summarization with session reuse, output cleaning, streaming, and opt-in result caching."
+description: "This package wraps the Web's Built-in Summarizer API. It provides session reuse, output cleanup, streaming, and optional result caching."
 editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/summarizer/README.md
 ---
 
@@ -8,12 +8,14 @@ editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/summarizer/
 This page is synced from [`packages/summarizer/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/summarizer/README.md) by `pnpm --filter @web-ai-sdk-apps/site docs:sync`. Edits should go to the README.
 :::
 
-web-ai-sdk building block for the Web's Built-in [Summarizer API](https://developer.chrome.com/docs/ai/summarizer-api). String-mode summarization with session reuse, output cleaning, streaming, and opt-in result caching.
+This package wraps the Web's Built-in [Summarizer API](https://developer.chrome.com/docs/ai/summarizer-api). It provides session reuse, output cleanup, streaming, and optional result caching.
 
 
 ## Status
 
-Summarizer API is stable in Chrome 138+ and enabled by default in Edge 138+, per the [Chrome status table](https://developer.chrome.com/docs/ai/built-in-apis) and [Edge Writing Assistance API docs](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis). On browsers without `Summarizer`, the React hook stays `"unavailable"`; vanilla `summarize()` throws `SummarizerUnavailableError` so callers can branch explicitly.
+Summarizer is stable in Chrome 138+ and enabled by default in Edge 138+. See the [Chrome status table](https://developer.chrome.com/docs/ai/built-in-apis) and [Edge guide](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis).
+
+Without `Summarizer`, React reports `"unavailable"` and `summarize()` throws `SummarizerUnavailableError`.
 
 ## Install
 
@@ -22,7 +24,7 @@ pnpm add @web-ai-sdk/summarizer
 # or: npm i @web-ai-sdk/summarizer / bun add @web-ai-sdk/summarizer
 ```
 
-The React adapter ships as a subpath export, with no extra install. `react` is a peer dependency only when you import the `/react` entry.
+The React adapter uses the `/react` subpath. `react` is an optional peer dependency.
 
 ## Vanilla TypeScript / DOM
 

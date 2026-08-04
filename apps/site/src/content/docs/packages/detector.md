@@ -1,6 +1,6 @@
 ---
 title: "@web-ai-sdk/detector"
-description: "web-ai-sdk building block for the Web's Built-in Language Detector API. Detect the language of any text on-device, with confidence scores and a sorted list of alternates. Session reuse, pluggable result caching, AbortSignal-driven cleanup."
+description: "This package wraps the Web's Built-in Language Detector API. It returns confidence scores and sorted alternatives. It also supports session reuse, optional result caching, and abort signals."
 editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/detector/README.md
 ---
 
@@ -8,12 +8,14 @@ editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/detector/RE
 This page is synced from [`packages/detector/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/detector/README.md) by `pnpm --filter @web-ai-sdk-apps/site docs:sync`. Edits should go to the README.
 :::
 
-web-ai-sdk building block for [the Web's Built-in Language Detector API](https://developer.chrome.com/docs/ai/language-detection). Detect the language of any text on-device, with confidence scores and a sorted list of alternates. Session reuse, pluggable result caching, AbortSignal-driven cleanup.
+This package wraps the Web's Built-in [Language Detector API](https://developer.chrome.com/docs/ai/language-detection). It returns confidence scores and sorted alternatives. It also supports session reuse, optional result caching, and abort signals.
 
 
 ## Status
 
-Language Detector ships stable in Chrome 138+ and shipped in Edge 148, with no flag required, per the [Chrome status table](https://developer.chrome.com/docs/ai/built-in-apis) and [Edge 148 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/148). On browsers without `LanguageDetector`, the React hook stays `"unavailable"`; vanilla `detect()` throws `DetectorUnavailableError` so callers can branch explicitly.
+Language Detector is stable in Chrome 138+ and shipped in Edge 148. It does not require a flag. See the [Chrome status table](https://developer.chrome.com/docs/ai/built-in-apis) and [Edge 148 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/148).
+
+Without `LanguageDetector`, React reports `"unavailable"` and `detect()` throws `DetectorUnavailableError`.
 
 ## Install
 
@@ -22,7 +24,7 @@ pnpm add @web-ai-sdk/detector
 # or: npm i @web-ai-sdk/detector / bun add @web-ai-sdk/detector
 ```
 
-The React adapter ships as a subpath export, with no extra install. `react` is a peer dependency only when you import the `/react` entry.
+The React adapter uses the `/react` subpath. `react` is an optional peer dependency.
 
 ## Vanilla TypeScript / DOM
 

@@ -7,13 +7,13 @@ Thanks for considering a contribution. This file is the human-facing entry point
 ```sh
 git clone https://github.com/obetomuniz/web-ai-sdk.git
 cd web-ai-sdk
-pnpm install     # Node 24 from .nvmrc + pnpm 9.15.0 from Corepack
+pnpm install     # Node 24 from .nvmrc + pnpm 10.34.3 from Corepack
 pnpm gate        # lint + build + typecheck + test
 ```
 
 If `pnpm gate` passes, your local environment matches CI.
 
-If you don't already have Node, install it once (via [nvm](https://github.com/nvm-sh/nvm), [fnm](https://github.com/Schniz/fnm), [Volta](https://volta.sh/), `brew`, or whatever you prefer); it'll respect `.nvmrc`. Corepack ships with Node 16.13+ and provisions the right `pnpm` version from `package.json` automatically.
+Install Node with a version manager or package manager. This repository uses the version in `.nvmrc`. Corepack reads the pnpm version from `package.json`.
 
 ## Project shape
 
@@ -30,6 +30,12 @@ See the [README "Repo layout" section](./README.md#repo-layout) for the full tre
 3. **Run `pnpm gate`.** It runs Biome, builds packages and apps, typechecks every workspace, and runs every test. CI runs the same gate, so a clean local gate equals a passing PR.
 4. **Add a changeset** if you're shipping a user-facing change. `pnpm changeset` opens an interactive picker. Skip this for docs-only or internal changes.
 5. **Open a PR** against `main`. The CI workflow will rerun the gate; the release workflow opens a "Version Packages" PR when there are pending changesets to publish.
+
+## Writing documentation
+
+Use the documentation rules in [`.agents/agents.md`](./.agents/agents.md#documentation-style). They apply to public docs, READMEs, demos, home copy, and maintainer guidance.
+
+The style is inspired by Simplified Technical English, but the project does not claim formal compliance. Prefer short sentences, direct verbs, consistent terms, and concrete behavior.
 
 ## Governance
 

@@ -1,12 +1,14 @@
 # @web-ai-sdk/summarizer
 
-web-ai-sdk building block for the Web's Built-in [Summarizer API](https://developer.chrome.com/docs/ai/summarizer-api). String-mode summarization with session reuse, output cleaning, streaming, and opt-in result caching.
+This package wraps the Web's Built-in [Summarizer API](https://developer.chrome.com/docs/ai/summarizer-api). It provides session reuse, output cleanup, streaming, and optional result caching.
 
 **Docs:** <https://web-ai-sdk.dev/docs/guides/summarizer/> · **React:** [`useSummarizer`](https://web-ai-sdk.dev/docs/react/use-summarizer/) · **Production:** [Checklist](https://web-ai-sdk.dev/docs/production-checklist/)
 
 ## Status
 
-Summarizer API is stable in Chrome 138+ and enabled by default in Edge 138+, per the [Chrome status table](https://developer.chrome.com/docs/ai/built-in-apis) and [Edge Writing Assistance API docs](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis). On browsers without `Summarizer`, the React hook stays `"unavailable"`; vanilla `summarize()` throws `SummarizerUnavailableError` so callers can branch explicitly.
+Summarizer is stable in Chrome 138+ and enabled by default in Edge 138+. See the [Chrome status table](https://developer.chrome.com/docs/ai/built-in-apis) and [Edge guide](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis).
+
+Without `Summarizer`, React reports `"unavailable"` and `summarize()` throws `SummarizerUnavailableError`.
 
 ## Install
 
@@ -15,7 +17,7 @@ pnpm add @web-ai-sdk/summarizer
 # or: npm i @web-ai-sdk/summarizer / bun add @web-ai-sdk/summarizer
 ```
 
-The React adapter ships as a subpath export, with no extra install. `react` is a peer dependency only when you import the `/react` entry.
+The React adapter uses the `/react` subpath. `react` is an optional peer dependency.
 
 ## Vanilla TypeScript / DOM
 

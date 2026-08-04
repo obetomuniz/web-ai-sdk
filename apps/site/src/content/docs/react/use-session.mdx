@@ -3,11 +3,13 @@ title: useSession
 description: Lifecycle-only React adapter for createSession. Each call owns one never-shared LanguageModel session; UI state is the consumer's concern.
 ---
 
-Lifecycle-only React adapter for the chat-shaped [`createSession()`](/docs/guides/prompt/#chat-createsession) primitive in `@web-ai-sdk/prompt`. Each `useSession` call owns one underlying `LanguageModelInstance`, with independent history, system prompt, sampling, and lifecycle. The hook handles feature detection, async create readiness, destroy-on-unmount, and recreate-on-options-change. It does **not** track `response`, `history`, or streaming status; iterate `session.sendStreaming()` yourself and keep UI state in your own component.
+`useSession` is the React adapter for [`createSession()`](/docs/guides/prompt/#chat-createsession). Each call owns one native instance. The hook detects support, waits for creation, destroys on unmount, and recreates after option changes.
 
-For ask-and-display flows (embeds, widgets, single-question UIs) prefer [`usePrompt`](/docs/react/use-prompt/); it uses isolated one-shot prompts and may keep a warm base session for same-shape calls.
+The hook does not track responses, history, or streaming status. Keep that state in your component.
 
-When enabled, mounting `useSession` starts `LanguageModel.create()` in the hook's lifecycle effect; it does not wait for a call to `send`. This makes mounting an intent-driven workflow a valid prewarm. The hook stays `"loading"` and keeps `session` null until that eagerly started native creation resolves.
+For one-shot interfaces, use [`usePrompt`](/docs/react/use-prompt/). It isolates each prompt and can reuse a prepared base session.
+
+When enabled, mounting the hook starts native creation. The hook stays `"loading"` and keeps `session` null until creation finishes.
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for initial instructions, base-plus-clone tasks, destruction, safe rendering, progress, and reversible UI.
 
@@ -54,11 +56,11 @@ export function Chat({ persona }: { persona: string }) {
 }
 ```
 
-`session.sendStreaming(text)` yields **deltas** (each chunk is the new text since the last yield). Accumulate into your own `response` state for a typewriter effect. The hook stays out of the streaming loop entirely.
+`session.sendStreaming(text)` yields deltas. Accumulate them in your response state. The hook does not manage the streaming loop.
 
 ## Independent chats
 
-Two `useSession` calls with identical options get two independent underlying instances. In a chat app with N agents in the same mode, each pane owns its own history, abort, and destroy lifecycle. Scheduling across those native sessions is browser-defined, so do not depend on token-level interleaving or a particular parallelism policy.
+Two hook calls with identical options get independent native instances. Each component owns its history, abort, and destroy lifecycle. Scheduling across instances is browser-defined.
 
 ```tsx
 function ChatList({ agents }: { agents: Agent[] }) {
@@ -78,7 +80,7 @@ function ChatPane({ agent }: { agent: Agent }) {
 
 ## Forking with `clone()` (agents / multi-task)
 
-`session` is the vanilla `Session`, so `session.clone()` is available in React too. For agents that run many tasks against one persona, keep the `useSession` base warm (system prompt only) and clone it per task so each run gets fresh history without re-parsing the system prompt. See [Session resilience](/docs/guides/prompt/#session-resilience-base--per-task-clone) for the full rationale.
+`session` is the vanilla `Session`, so it supports `clone()`. Keep one base with the system prompt and clone it for each independent task. See [Session resilience](/docs/guides/prompt/#session-resilience-base--per-task-clone).
 
 ```tsx
 const { session } = useSession({ systemPrompt });
@@ -102,7 +104,7 @@ const runTask = async (input: string) => {
 return <p>{response}</p>;
 ```
 
-Destroying a clone never affects the base session. The hook still owns the base session's lifecycle (destroyed on unmount / option change); clones you create are yours to destroy.
+Destroying a clone does not affect its base. The hook manages the base lifecycle. You must destroy clones that you create.
 
 ## Return shape
 
@@ -122,7 +124,7 @@ The hook waits for native creation before reporting `"ready"`. If `LanguageModel
 
 ## Recreating the session
 
-The hook recreates the underlying instance whenever a primitive option changes (`systemPrompt`, `samplingMode`, `temperature`, `topK`, `language`, `enabled`). Object options (`expectedInputs`, `expectedOutputs`, `createOptions`) participate in the dependency check by reference; memoize them or accept the recreate cost.
+The hook recreates the instance when a primitive option changes. It compares object options by reference; memoize them to avoid recreation.
 
 ```tsx
 const expected = useMemo<LanguageModelExpectedInput[]>(
@@ -134,7 +136,7 @@ const { session } = useSession({ systemPrompt, expectedInputs: expected });
 
 ## Disabled state
 
-Pass `enabled: false` to skip session creation entirely (status stays `"unavailable"`). Flipping it back to `true` creates the session on the next render. Useful when the session depends on user opt-in.
+Pass `enabled: false` to skip creation. The status stays `"unavailable"`. Setting it to `true` creates the session on the next render.
 
 ## Seeding multi-turn context
 
@@ -154,7 +156,9 @@ const { status, session } = useSession({
 if (status !== "ready" || !session) return null;
 ```
 
-The seeded turns become real context for the model. UI history lives in your own component state. Use either the `systemPrompt` shorthand or `createOptions.initialPrompts`, without duplicating the instruction. If both are supplied, `initialPrompts` is authoritative and the SDK warns once per loaded module instance that `systemPrompt` was ignored.
+Seeded turns become model context. Keep UI history in component state. Use either `systemPrompt` or `createOptions.initialPrompts`, not both.
+
+If you supply both, `initialPrompts` takes precedence. The SDK warns once that it ignored `systemPrompt`.
 
 ## Reference
 
