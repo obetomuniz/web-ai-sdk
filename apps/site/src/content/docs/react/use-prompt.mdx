@@ -108,7 +108,7 @@ interface UsePromptReturn {
   error: Error | null;
   fromCache: boolean;
   ask(input: string): Promise<void>;  // cancels any in-flight request first
-  abort(): void;                      // cancel in-flight; status → "idle"
+  abort(): void;                      // cancel in-flight; status becomes "idle"
   reset(): void;                      // clear output without aborting
 }
 

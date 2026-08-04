@@ -343,7 +343,7 @@ const json = await session.send([
   { role: "user", content: "Describe a cat in one word of JSON." },
   { role: "assistant", content: '{"thought":"', prefix: true },
 ]);
-// model completes: feline"}  ->  you parse {"thought":"feline"}
+// The model completes the prefix with `feline"`; parse the JSON as {"thought":"feline"}.
 ```
 
 **Prefill vs `responseConstraint`**: both shape output, different trade-offs:

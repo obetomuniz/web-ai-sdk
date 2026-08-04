@@ -13,9 +13,9 @@ Before shipping, review the [Production checklist](/docs/production-checklist/) 
 import { detect } from "@web-ai-sdk/detector";
 
 const result = await detect({ input: "Olá, mundo" });
-console.log(result.output?.language);   // → "pt"
-console.log(result.output?.confidence); // → 0.98
-console.log(result.output?.all);        // → [{ detectedLanguage, confidence }, ...]
+console.log(result.output?.language);   // result: "pt"
+console.log(result.output?.confidence); // result: 0.98
+console.log(result.output?.all);        // result: [{ detectedLanguage, confidence }, ...]
 ```
 
 `result.output` is the detection result with `language` (BCP-47), `confidence`, and `all` (full sorted candidates), or `null` for empty input or when the top confidence is below `minConfidence`. `result.cached` indicates whether the response came from the cache without invoking the model.
@@ -71,7 +71,7 @@ By default, `detect()` returns the highest-confidence candidate regardless of ho
 
 ```ts
 const result = await detect({ input: "??", minConfidence: 0.8 });
-// → { output: null, cached: false }
+// returns { output: null, cached: false }
 ```
 
 When `output` is `null` due to threshold, the full candidate list isn't returned. Lower `minConfidence` to `0` and inspect `result.output.all` if you need to see the alternates.

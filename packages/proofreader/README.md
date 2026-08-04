@@ -33,7 +33,11 @@ const result = await proofread({
 
 console.log(result.output?.correctedInput);
 for (const c of result.output?.corrections ?? []) {
-  console.log(c.startIndex, c.endIndex, "→", c.correction);
+  console.log({
+    startIndex: c.startIndex,
+    endIndex: c.endIndex,
+    correction: c.correction,
+  });
 }
 ```
 

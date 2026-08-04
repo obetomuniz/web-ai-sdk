@@ -57,7 +57,9 @@ export default defineConfig({
       disable404Route: true,
       components: {
         Head: "./src/features/docs/components/Head.astro",
+        SiteTitle: "./src/features/docs/components/SiteTitle.astro",
         SocialIcons: "./src/features/docs/components/SocialIcons.astro",
+        ThemeSelect: "./src/features/docs/components/ThemeToggle.astro",
       },
       favicon: "/favicon.svg",
       head: [

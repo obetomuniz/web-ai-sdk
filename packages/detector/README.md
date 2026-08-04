@@ -25,9 +25,9 @@ The React adapter uses the `/react` subpath. `react` is an optional peer depende
 import { detect } from "@web-ai-sdk/detector";
 
 const result = await detect({ input: "Olá, mundo" });
-console.log(result.output?.language);   // → "pt"
-console.log(result.output?.confidence); // → 0.98
-console.log(result.output?.all);        // → full sorted list of candidates
+console.log(result.output?.language);   // result: "pt"
+console.log(result.output?.confidence); // result: 0.98
+console.log(result.output?.all);        // result: full sorted list of candidates
 ```
 
 ## React

@@ -30,8 +30,8 @@ const result = await translate({
   targetLanguage: "pt",
 });
 
-console.log(result.output); // -> "Olá, mundo."
-console.log(result.cached); // -> false
+console.log(result.output); // result: "Olá, mundo."
+console.log(result.cached); // result: false
 ```
 
 `result.output` is the translated text, or `null` when the input is empty or when `sourceLanguage` and `targetLanguage` normalize to the same base language.
