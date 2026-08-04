@@ -1,8 +1,6 @@
 /**
- * Adapter over the global `Proofreader` API exposed by Chrome (behind
- * `chrome://flags/#proofreader-api-for-gemini-nano`). Feature-detected; on
- * browsers without it, every entry point returns `null` so callers can stay
- * declarative.
+ * Adapter over the global `Proofreader` API. Feature-detected; on browsers
+ * without it, every entry point returns `null` so callers can stay declarative.
  *
  * Spec: https://developer.chrome.com/docs/ai/proofreader-api
  */
@@ -25,9 +23,9 @@ export interface ProofreadCorrection {
   endIndex: number;
   /** The suggested replacement for `input.slice(startIndex, endIndex)`. */
   correction: string;
-  /** Error label (e.g. `"spelling"`). Not emitted by Chrome's current build. */
+  /** Optional error label (for example, `"spelling"`). */
   type?: string;
-  /** Plain-language explanation. Not emitted by Chrome's current build. */
+  /** Optional plain-language explanation. */
   explanation?: string;
 }
 

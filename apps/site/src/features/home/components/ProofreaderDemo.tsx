@@ -93,9 +93,7 @@ export const ProofreaderDemo = () => {
         <span>{corrections} fixes</span>
       </div>
       <div className={cardBody}>
-        {available === false && (
-          <UnavailableNotice api="Proofreader API" flagSearch="Proofreader" />
-        )}
+        {available === false && <UnavailableNotice api="Proofreader API" />}
         <DownloadNotice progress={progress} />
         <ErrorNotice error={error} />
         <div className={fieldSpaced}>
@@ -125,7 +123,7 @@ export const ProofreaderDemo = () => {
           streaming={running}
           placeholder={
             available === false
-              ? "Enable the Proofreader API flag in Chrome to check grammar."
+              ? "Open this demo in a supported Proofreader API setup."
               : "Run to correct grammar, spelling, and punctuation."
           }
         />

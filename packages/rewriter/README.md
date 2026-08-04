@@ -2,11 +2,11 @@
 
 web-ai-sdk building block for the Web's Built-in [Rewriter API](https://developer.chrome.com/docs/ai/rewriter-api). Revises and restructures existing text with tone / length adjustments, session reuse, streaming, and opt-in result caching.
 
-**Docs:** <https://web-ai-sdk.dev/docs/guides/rewriter/> · **React:** [`useRewriter`](https://web-ai-sdk.dev/docs/react/use-rewriter/)
+**Docs:** <https://web-ai-sdk.dev/docs/guides/rewriter/> · **React:** [`useRewriter`](https://web-ai-sdk.dev/docs/react/use-rewriter/) · **Production:** [Checklist](https://web-ai-sdk.dev/docs/production-checklist/)
 
 ## Status
 
-The Rewriter API is in a developer trial (origin trial) in Chrome 137 to 148. It shares the Writer's joint trial, so it's enabled via the same `chrome://flags/#writer-api-for-gemini-nano` flag on localhost (there is no separate Rewriter flag; `chrome://flags/#optimization-guide-on-device-model` must also be enabled). In Edge it's a developer preview in Canary/Dev 138+ behind "Rewriter API for Phi mini". On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `rewrite()` throws `RewriterUnavailableError` so callers can branch explicitly.
+Chrome's current [Built-in AI status table](https://developer.chrome.com/docs/ai/built-in-apis) labels Rewriter a **Developer trial**. Its public joint origin-trial window with Writer ran from Chrome 137 through 148 and has ended; the [Rewriter docs](https://developer.chrome.com/docs/ai/rewriter-api) list the current localhost flags. In Edge it is a [developer preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) in Canary/Dev 138.0.3309.2+ behind "Rewriter API for on-device language model." On browsers without `Rewriter`, the React hook stays `"unavailable"`; vanilla `rewrite()` throws `RewriterUnavailableError` so callers can branch explicitly.
 
 ## Install
 

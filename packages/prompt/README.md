@@ -1,12 +1,12 @@
 # @web-ai-sdk/prompt
 
-web-ai-sdk building block for the Web's Built-in [Prompt API](https://developer.chrome.com/docs/extensions/ai/prompt-api) (`LanguageModel`). One-shot `ask()` for embeds and widgets, plus a thin `createSession()` primitive (and React `useSession`) for chat-shaped apps that need independent per-conversation sessions and delta-shaped streaming. The wrapper smooths cross-browser quirks (delta-vs-cumulative chunks, control-character cleanup, abort wiring); UI state and conversation history are the consumer's concern.
+web-ai-sdk building block for the Web's Built-in [Prompt API](https://developer.chrome.com/docs/ai/prompt-api) (`LanguageModel`). One-shot `ask()` for embeds and widgets, plus a thin `createSession()` primitive (and React `useSession`) for chat-shaped apps that need independent per-conversation sessions and delta-shaped streaming. The wrapper smooths cross-browser quirks (delta-vs-cumulative chunks, control-character cleanup, abort wiring); UI state and conversation history are the consumer's concern.
 
-**Docs:** <https://web-ai-sdk.dev/docs/guides/prompt/> · **React:** [`usePrompt`](https://web-ai-sdk.dev/docs/react/use-prompt/) · [`useSession`](https://web-ai-sdk.dev/docs/react/use-session/)
+**Docs:** <https://web-ai-sdk.dev/docs/guides/prompt/> · **React:** [`usePrompt`](https://web-ai-sdk.dev/docs/react/use-prompt/) · [`useSession`](https://web-ai-sdk.dev/docs/react/use-session/) · **Production:** [Checklist](https://web-ai-sdk.dev/docs/production-checklist/)
 
 ## Status
 
-Prompt API ships stable in Chrome 148+ — no flag required. Chrome 138–147 still works with `chrome://flags/#prompt-api-for-gemini-nano` enabled. On Edge it remains a developer preview in Canary/Dev 138+ behind `edge://flags/#prompt-api-for-phi-mini`, with Phi-4-mini's stricter safety pipeline often refusing output (see [Browser support](https://web-ai-sdk.dev/browser-support)). On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `ask()` throws `PromptUnavailableError` so callers can branch explicitly.
+Prompt API [ships stable in Chrome 148+](https://developer.chrome.com/docs/ai/prompt-api) with no flag required. On Edge it is a [developer preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api) in Canary/Dev 138.0.3309.2+ behind "Prompt API for on-device language model." Phi-4-mini is the documented default and requires a High-or-greater device performance class; Canary/Dev 150.0.4070+ can optionally use the prerelease Aion-1.0-Instruct model on Medium/Low devices behind the additional "Enable prerelease on-device language model" flag. See [Browser support](https://web-ai-sdk.dev/docs/browser-support/) for the sourced matrix. On browsers without `LanguageModel`, the React hook stays `"unavailable"`; vanilla `ask()` throws `PromptUnavailableError` so callers can branch explicitly.
 
 ## Install
 
@@ -62,7 +62,7 @@ Every `createSession()` call returns an independent `LanguageModelInstance` with
 
 Calling `createSession()` starts `LanguageModel.create()` immediately. The first `send`, `sendStreaming`, or `clone` only awaits that already-started creation, so creating a base session as soon as the user's intent is clear is a valid prewarming primitive. The synchronous `Session` wrapper is returned before native creation necessarily resolves; see [Context-window introspection](#context-window-introspection) for the resulting getter-readiness distinction.
 
-**Concurrency note.** Each session is an independent `LanguageModel` instance: independent history, system prompt, sampling, and lifecycle. The underlying on-device model is single-instance, so the browser currently schedules `sendStreaming` calls across sessions FIFO. Overlapping sends do not interleave token-by-token in Chrome 148 / Edge 138 — the second send waits for the first to drain. This is a constraint of the runtime, not of the API; code written against `createSession()` becomes faster automatically if a future release exposes parallel inference.
+**Concurrency note.** Each session has independent history, system prompts, sampling, and lifecycle. Scheduling across different native sessions is browser-defined, so do not depend on token-level interleaving or a particular parallelism policy.
 
 ## React
 
@@ -131,7 +131,7 @@ export function Chat({ persona }: { persona: string }) {
 }
 ```
 
-`useSession` is lifecycle-only: it starts in `"loading"` while the native `LanguageModel.create()` call is in flight, moves to `"ready"` when `session` is usable, destroys the session on unmount, and recreates it when any primitive option changes. It deliberately does **not** track `response` / `history` / streaming status — that's your UI state, you own it. Each `useSession()` call owns its own underlying `LanguageModelInstance`, so component state and `abort()` / `destroy()` stay scoped to the owning component. Token-level interleaving across sessions is browser-defined (see the Concurrency note above) — Chrome 148 / Edge 138 currently drain through one underlying model FIFO.
+`useSession` is lifecycle-only: it starts in `"loading"` while the native `LanguageModel.create()` call is in flight, moves to `"ready"` when `session` is usable, destroys the session on unmount, and recreates it when any primitive option changes. It deliberately does **not** track `response` / `history` / streaming status — that's your UI state, you own it. Each `useSession()` call owns its own underlying `LanguageModelInstance`, so component state and `abort()` / `destroy()` stay scoped to the owning component. Scheduling across sessions remains browser-defined (see the Concurrency note above).
 
 ## API
 
@@ -248,15 +248,15 @@ const tools: LanguageModelTool[] = [
 const session = createSession({ systemPrompt, tools });
 ```
 
-This is **pass-through only**: the SDK forwards `tools` and never calls `execute` itself. Whether the model actually invokes a tool depends on the browser. Native execution is **not** wired on current stable Chrome — the option is accepted but is a silent no-op, and the model may surface its tool call as plain text (a `tool_code` block) that your code must parse. The passthrough begins working automatically on browsers that ship native execution; until then, `responseConstraint` remains the robust default. The heuristic `tool_code` parser and the tool-execution loop are deliberately left in the consumer layer.
+This is **pass-through only**: the SDK forwards `tools` and never calls `execute` itself. Native tool execution depends on the browser implementation, so treat it as experimental and provide a fallback. Parsing model-emitted tool-like text and running a manual execution loop are deliberately left in the consumer layer.
 
-`tools` works on `ask()` too (`ask({ input, tools })`), with one caveat: `ask()` may keep warm base sessions through an LRU keyed by `JSON.stringify(createOptions)`, and `JSON.stringify` drops functions — so a tool's `execute` doesn't contribute to the key, only its `name` / `description` / `inputSchema` do. Each `ask()` prompt still runs on a clone or fresh one-shot instance. It's harmless today (the SDK never runs `execute`), but it matters once native execution lands, so prefer `createSession()` for tool-bearing sessions — it bypasses the cache and matches the base-session + per-run-`clone()` pattern.
+`tools` works on `ask()` too (`ask({ input, tools })`), with one caveat: `ask()` may keep warm base sessions through an LRU keyed by `JSON.stringify(createOptions)`, and `JSON.stringify` drops functions — so a tool's `execute` doesn't contribute to the key, only its `name` / `description` / `inputSchema` do. Each `ask()` prompt still runs on a clone or fresh one-shot instance. Prefer `createSession()` for tool-bearing sessions: it bypasses the cache and matches the base-session + per-run-`clone()` pattern.
 
 To declare the native tool modalities, pass them through the advanced `expectedInputs` / `expectedOutputs` fields (`{ type: "tool-response" }` / `{ type: "tool-call" }`).
 
 ### Session resilience: base + per-task `clone()`
 
-For agents and multi-task flows, reusing one long-lived session lets history accumulate (later runs "echo" earlier ones, and you eventually hit `QuotaExceededError`), while recreating a session per task pays the cold start and can hit Chrome's single-instance degradation. The spec's [recommended pattern](https://developer.chrome.com/docs/ai/session-management) is to keep one warm **base** session (system prompt only) and `clone()` it per task: the clone inherits the system prompt and history without re-parsing or another `create()`, then gets independent history and lifecycle.
+For agents and multi-task flows, reusing one long-lived session lets unrelated history accumulate, while recreating a session per task repeats creation and instruction processing. Chrome's [session-management guidance](https://developer.chrome.com/docs/ai/session-management) recommends keeping one warm **base** session (system prompt only) and calling `clone()` per task: the clone inherits the system prompt without unrelated task history, then gets independent history and lifecycle.
 
 ```ts
 // As soon as the workflow is chosen, begin native creation with final instructions.
@@ -335,7 +335,7 @@ They compose: prefill the opening brace, set `responseConstraint` for the full s
 - `session.contextWindow` — max input tokens for the session (the context window).
 - `session.contextUsage` — input tokens used so far. On a fresh base-clone this reflects the inherited history (≈ the system prompt), the right baseline to budget a turn against.
 
-These mirror the Prompt API's `contextWindow` / `contextUsage` (the renamed successors of `inputQuota` / `inputUsage`); the wrapper reads the new names and falls back to the deprecated ones on older Chrome builds.
+These mirror the Prompt API's `contextWindow` / `contextUsage`; the wrapper also reads the deprecated `inputQuota` / `inputUsage` names for compatibility.
 
 ```ts
 const base = createSession({ systemPrompt }); // native creation starts here

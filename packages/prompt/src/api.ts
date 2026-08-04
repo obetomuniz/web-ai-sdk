@@ -1,6 +1,5 @@
 /**
- * Adapter over the global `LanguageModel` API exposed by Chrome (behind
- * `chrome://flags/#prompt-api-for-gemini-nano`). Feature-detected; on browsers
+ * Adapter over the global `LanguageModel` API. Feature-detected; on browsers
  * without it, every entry point returns `null` so callers can stay declarative.
  *
  * Spec: https://github.com/webmachinelearning/prompt-api
@@ -81,16 +80,12 @@ export interface LanguageModelCreateOptions {
   expectedInputs?: LanguageModelExpectedInput[];
   expectedOutputs?: LanguageModelExpectedOutput[];
   signal?: AbortSignal;
-  /** Observe the first-call model download (~1.7 GB on a fresh profile). */
+  /** Observe model-download progress when creation requires one. */
   monitor?: (m: CreateMonitor) => void;
   /**
-   * @experimental Forwards `tools` to the browser's Prompt API
-   * (function calling). Whether the model actually INVOKES them depends
-   * on the browser: native execution is NOT wired on current stable
-   * Chrome — the option is accepted but a no-op, and the model may
-   * surface its tool call as TEXT (`tool_code`) that the caller must
-   * parse. Pass-through only: the SDK does not execute the tools. Will
-   * begin working automatically on browsers that ship native execution.
+   * @experimental Forwards `tools` to the browser's Prompt API (function
+   * calling). Support remains browser-defined. Pass-through only: the SDK does
+   * not execute tools or parse text that resembles a tool call.
    */
   tools?: LanguageModelTool[];
 }

@@ -13,7 +13,7 @@ web-ai-sdk building block for the Web's Built-in [Writer API](https://developer.
 
 ## Status
 
-The Writer API is in a developer trial (origin trial) in Chrome 137 to 148, behind `chrome://flags/#writer-api-for-gemini-nano` on localhost (`chrome://flags/#optimization-guide-on-device-model` must also be enabled). In Edge it's a developer preview in Canary/Dev 138+ behind "Writer API for Phi mini". On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `write()` throws `WriterUnavailableError` so callers can branch explicitly.
+Chrome's current [Built-in AI status table](https://developer.chrome.com/docs/ai/built-in-apis) labels Writer a **Developer trial**. Its public joint origin-trial window with Rewriter ran from Chrome 137 through 148 and has ended; the [Writer docs](https://developer.chrome.com/docs/ai/writer-api) list the current localhost flags. In Edge it is a [developer preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) in Canary/Dev 138.0.3309.2+ behind "Writer API for on-device language model." On browsers without `Writer`, the React hook stays `"unavailable"`; vanilla `write()` throws `WriterUnavailableError` so callers can branch explicitly.
 
 ## Install
 

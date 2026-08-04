@@ -5,6 +5,8 @@ description: web-ai-sdk building block for the Web's Built-in Translator. String
 
 Building block for the Web's Built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api) (on-demand language packs). String-mode translation with pair-cached sessions, opt-in result caching, AbortSignal-driven cleanup. See [useTranslator](/docs/react/use-translator/) for React.
 
+Before shipping, review the [Production checklist](/docs/production-checklist/) for task-relevant input, safe rendering, progress, reversible changes, and cache freshness.
+
 ## Usage
 
 ```ts
@@ -129,4 +131,3 @@ try {
   throw err;
 }
 ```
-

@@ -34,16 +34,16 @@ export const PromptDemo = ({
           api="Prompt API"
           chrome={
             <>
-              Prompt API unavailable. Stable in Chrome 148+; on Chrome 138–147
-              enable <code>chrome://flags/#prompt-api-for-gemini-nano</code> and
-              reload.
+              Prompt API unavailable. It is stable in Chrome 148+; see Browser
+              support for the current hardware and operating-system
+              requirements.
             </>
           }
           edge={
             <>
               Prompt API unavailable. In Edge Canary/Dev 138+, open{" "}
-              <code>edge://flags/</code>, search for "Prompt API for Phi mini",
-              enable it, and reload.
+              <code>edge://flags/</code>, search for "Prompt API for on-device
+              language model", enable it, and reload.
             </>
           }
         />

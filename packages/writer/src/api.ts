@@ -1,8 +1,6 @@
 /**
- * Adapter over the global `Writer` API exposed by Chrome (behind
- * `chrome://flags/#writer-api-for-gemini-nano`). Feature-detected; on
- * browsers without it, every entry point returns `null` so callers can stay
- * declarative.
+ * Adapter over the global `Writer` API. Feature-detected; on browsers without
+ * it, every entry point returns `null` so callers can stay declarative.
  *
  * Spec: https://developer.chrome.com/docs/ai/writer-api
  */

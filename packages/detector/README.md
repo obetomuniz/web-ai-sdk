@@ -2,11 +2,11 @@
 
 web-ai-sdk building block for [the Web's Built-in Language Detector API](https://developer.chrome.com/docs/ai/language-detection). Detect the language of any text on-device, with confidence scores and a sorted list of alternates. Session reuse, pluggable result caching, AbortSignal-driven cleanup.
 
-**Docs:** <https://web-ai-sdk.dev/docs/guides/detector/> · **React:** [`useDetector`](https://web-ai-sdk.dev/docs/react/use-detector/)
+**Docs:** <https://web-ai-sdk.dev/docs/guides/detector/> · **React:** [`useDetector`](https://web-ai-sdk.dev/docs/react/use-detector/) · **Production:** [Checklist](https://web-ai-sdk.dev/docs/production-checklist/)
 
 ## Status
 
-Language Detector ships stable in Chrome 138+ and Edge 148+ on desktop, with no flag required (per the [Edge Language Detector API docs](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/languagedetector-api)). On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `detect()` throws `DetectorUnavailableError` so callers can branch explicitly.
+Language Detector ships stable in Chrome 138+ and shipped in Edge 148, with no flag required, per the [Chrome status table](https://developer.chrome.com/docs/ai/built-in-apis) and [Edge 148 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/148). On browsers without `LanguageDetector`, the React hook stays `"unavailable"`; vanilla `detect()` throws `DetectorUnavailableError` so callers can branch explicitly.
 
 ## Install
 

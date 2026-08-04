@@ -25,6 +25,8 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 
 You can always use the raw browser APIs directly; the SDK doesn't replace or hide them. It just owns the lifecycle layer around them (session reuse, streaming, AbortSignals, feature-detected fallbacks) and is built to get thinner as the platform matures.
 
+Before shipping a feature, use the [Production checklist](/docs/production-checklist/) to cover user intent, input selection, safe rendering, progress, reversible edits, and cache freshness.
+
 Compositions that bond multiple primitives (block-level DOM translation,
 article-aware summarization, detect-then-summarize chains) are
 deliberately out of scope — the SDK wraps one capability per package;

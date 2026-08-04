@@ -1,9 +1,6 @@
 /**
- * Adapter over the global `Rewriter` API exposed by Chrome. The Rewriter
- * shares the Writer's joint origin trial and is enabled via the same
- * `chrome://flags/#writer-api-for-gemini-nano` flag (there is no separate
- * Rewriter flag). Feature-detected; on browsers without it, every entry
- * point returns `null` so callers can stay declarative.
+ * Adapter over the global `Rewriter` API. Feature-detected; on browsers
+ * without it, every entry point returns `null` so callers can stay declarative.
  *
  * Spec: https://developer.chrome.com/docs/ai/rewriter-api
  */

@@ -112,14 +112,14 @@ export const WebMCPDemo = () => {
           api="WebMCP"
           chrome={
             <>
-              Enable <code>chrome://flags/#enable-webmcp-testing</code> in
-              Chrome 146+ and reload to exercise the tools.
+              Enable <code>chrome://flags/#enable-webmcp-testing</code> for
+              local Chrome development, or use the Chrome origin trial from 149.
             </>
           }
           edge={
             <>
-              Enable <code>edge://flags/#enable-webmcp-testing</code> in Edge
-              147+ and reload to exercise the tools.
+              Microsoft lists WebMCP in the Edge 150 origin trials. Register an
+              origin-trial token to exercise the tools.
             </>
           }
         />

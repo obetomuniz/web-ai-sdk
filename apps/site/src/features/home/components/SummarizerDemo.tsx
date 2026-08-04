@@ -27,7 +27,6 @@ import {
   DownloadNotice,
   ErrorNotice,
   InfoNotice,
-  isDesktopChromium,
   MarkdownOutput,
   StatusBar,
   UnavailableNotice,
@@ -35,15 +34,14 @@ import {
   useStreamStats,
 } from "./shared.js";
 
-const SAMPLE_ARTICLE = `The Summarizer API ships as part of the browser's built-in AI surface. The model runs locally; there's no network round-trip, no API key, and no per-call cost. Latency is bounded by the device. On a recent M-series Mac, an 800-word article summarizes in under 600 ms. On a mid-tier Pixel, the same call takes about 1.4 seconds. The API exposes four summary types (key-points, tl;dr, teaser, headline) and three length presets. Output is deterministic with the same input and seed. The downside: model weights are large, so the first call on a cold profile downloads ~1.7 GB. Subsequent calls are instant.`;
+const SAMPLE_ARTICLE = `The Summarizer API is part of the browser's built-in AI surface. Applications should pass only the text that is relevant to the user's task, show model-download and generation progress, and treat every result as untrusted content. The API exposes multiple summary types and length presets. A lifecycle wrapper can handle feature detection, session reuse, streaming normalization, abort signals, and optional result caching. The application still owns text extraction, rendering, sanitization, cache freshness, fallback UI, and the decision to preserve or replace the original content.`;
 
 type SummaryType = "key-points" | "tldr" | "headline";
 type SummaryLength = "short" | "medium" | "long";
 type SummaryPreference = "auto" | "speed" | "capability";
 
 const preferenceInfo = (preference: SummaryPreference): string | null => {
-  if (!isDesktopChromium()) return null;
-  return `preference: ${preference} is experimental. Enable the Summarizer API performance preference flag, restart your browser, and reload for model tiering.`;
+  return `preference: ${preference} is experimental and may be unavailable in the current browser implementation.`;
 };
 
 const ChipSelect = <T extends string>({

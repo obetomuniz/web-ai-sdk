@@ -9,6 +9,8 @@ For ask-and-display flows (embeds, widgets, single-question UIs) prefer [`usePro
 
 When enabled, mounting `useSession` starts `LanguageModel.create()` in the hook's lifecycle effect; it does not wait for a call to `send`. This makes mounting an intent-driven workflow a valid prewarm. The hook stays `"loading"` and keeps `session` null until that eagerly started native creation resolves.
 
+Before shipping, review the [Production checklist](/docs/production-checklist/) for initial instructions, base-plus-clone tasks, destruction, safe rendering, progress, and reversible UI.
+
 ## Usage
 
 ```tsx
@@ -56,7 +58,7 @@ export function Chat({ persona }: { persona: string }) {
 
 ## Independent chats
 
-Two `useSession` calls with identical options get two independent underlying instances. In a chat app with N agents in the same mode, each pane owns its own history, abort, and destroy lifecycle. Current Chrome / Edge builds may still serialize token generation FIFO across sessions because the underlying on-device model is single-instance.
+Two `useSession` calls with identical options get two independent underlying instances. In a chat app with N agents in the same mode, each pane owns its own history, abort, and destroy lifecycle. Scheduling across those native sessions is browser-defined, so do not depend on token-level interleaving or a particular parallelism policy.
 
 ```tsx
 function ChatList({ agents }: { agents: Agent[] }) {

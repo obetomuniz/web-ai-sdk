@@ -2,7 +2,7 @@
 
 **web-ai-sdk is a TypeScript SDK for the Web AI surface.**
 
-Use Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP with a stable, typed, composable interface, instead of wiring up each experimental browser API by hand.
+Use Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP with a stable, typed, composable interface, instead of wiring up each browser API by hand.
 
 ```ts
 import { ask } from "@web-ai-sdk/prompt";
@@ -16,7 +16,7 @@ A small, focused monorepo of framework-agnostic packages that smooth over the gn
 
 ## Why this exists
 
-The Web AI surface is promising but still early and shifting. Every app that touches it re-implements the same lifecycle: feature-detect, wait for model availability, create and reuse sessions, stream chunks, abort cleanly, and fall back when the capability is missing. web-ai-sdk owns that layer so you build against one stable, typed surface rather than coupling your whole app to today's experimental API shape. The wrappers feature-detect and no-op when a browser lacks the API, so the same code ships everywhere.
+The Web AI surface is promising but still early and shifting. Every app that touches it re-implements the same lifecycle: feature-detect, wait for model availability, create and reuse sessions, stream chunks, abort cleanly, and fall back when the capability is missing. web-ai-sdk owns that layer so you build against one stable, typed surface rather than coupling your whole app to today's experimental API shape. The wrappers feature-detect and expose deliberate unavailable behavior, so the same code can ship with a useful fallback.
 
 The SDK is per-capability because the Web ships more than one AI surface. Six specialized built-ins (Translator, Summarizer, Writer, Rewriter, Proofreader, Language Detector) each carry option spaces a single text-model abstraction cannot express, and WebMCP (`document.modelContext`) is an agent surface rather than a model at all. That breadth is the point, not an accident. One package per capability, and the model abstraction is one of them rather than the whole product.
 
@@ -25,6 +25,8 @@ The SDK is per-capability because the Web ships more than one AI surface. Six sp
 **`web-ai-sdk`** ships one package per browser capability. Zero runtime dependencies. Written in TypeScript. That's it. The SDK tracks a moving browser spec and intentionally stays out of the way of *how* you build an app.
 
 All model output is untrusted. The SDK strips selected non-printing control characters; that cleanup does **not** make HTML or Markdown safe. Use React interpolation or `textContent` for plain text. If you convert model Markdown or HTML into rendered HTML, keep raw HTML disabled and sanitize the complete accumulated output before inserting it into the DOM—never sanitize and concatenate individual stream chunks, because malicious syntax can span updates.
+
+Before shipping, use the [Production checklist](./apps/site/src/content/docs/production-checklist.mdx) for intent-driven preparation, task-relevant text extraction, session lifetime, progress, reversible edits, and expiring caches.
 
 Compositions that bond multiple primitives (block-level DOM translation,
 article-aware summarization, detect-then-summarize chains) are
@@ -37,7 +39,7 @@ See [`apps/site/src/content/docs/architecture.mdx`](./apps/site/src/content/docs
 | ------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------- |
 | [`@web-ai-sdk/webmcp`](./packages/webmcp)            | `document.modelContext` (W3C WebMCP)           | Safe register/unregister, shorthand annotations, `useWebMCP` hook         |
 | [`@web-ai-sdk/translator`](./packages/translator)    | Web Built-in `Translator`                   | String-mode translation, pair-cached sessions, opt-in result caching       |
-| [`@web-ai-sdk/summarizer`](./packages/summarizer)    | Web Built-in `Summarizer`                   | Skeleton extraction, sessionStorage caching, streaming chunks             |
+| [`@web-ai-sdk/summarizer`](./packages/summarizer)    | Web Built-in `Summarizer`                   | Session reuse, opt-in result caching, streaming chunks                     |
 | [`@web-ai-sdk/prompt`](./packages/prompt)            | Web Built-in `LanguageModel` (Prompt API)   | System prompt + sampling, session reuse, streaming, result cache          |
 | [`@web-ai-sdk/detector`](./packages/detector)        | Web Built-in `LanguageDetector`             | Confidence thresholds, bias hints, session reuse, `useDetector` hook      |
 | [`@web-ai-sdk/writer`](./packages/writer)            | Web Built-in `Writer`                       | Tone/format/length, session reuse, streaming, `useWriter` hook            |
@@ -51,11 +53,11 @@ Each package ships:
 
 ## Build for the agentic web
 
-The browser is becoming both an AI runtime and an agent surface. The Built-in AI wrappers (Prompt, Summarizer, Translator, and friends) cover the runtime half: local model capabilities behind one typed interface. [`@web-ai-sdk/webmcp`](./packages/webmcp) covers the agent half: structured, agent-callable tools your page exposes to visiting agents. Feature detection and no-op fallbacks keep the same code shipping everywhere, so neither half is a hard requirement — see [Browser support](./apps/site/src/content/docs/browser-support.mdx) for what's available where.
+The browser is becoming both an AI runtime and an agent surface. The Built-in AI wrappers (Prompt, Summarizer, Translator, and friends) cover the runtime half: local model capabilities behind one typed interface. [`@web-ai-sdk/webmcp`](./packages/webmcp) covers the agent half: structured, agent-callable tools your page exposes to visiting agents. Feature detection and explicit unavailable paths keep the same code shipping with a fallback, so neither half is a hard requirement — see [Browser support](./apps/site/src/content/docs/browser-support.mdx) for what's available where.
 
 ## Why composable
 
-Browsers are shipping Web AI APIs behind flags. The shape changes; the lifecycle is similar across them: feature-detect, lazily create a session, stream chunks, cache results, clean up. Those concerns are framework-agnostic and worth sharing.
+Browsers are shipping Web AI APIs at different maturity levels. The shape changes; the lifecycle is similar across them: feature-detect, lazily create a session, stream chunks, cache results, clean up. Those concerns are framework-agnostic and worth sharing.
 
 **We ship that lifecycle layer.** Framework adapters, polyfills, UI primitives stay optional subpaths so they don't constrain your design system, framework, or styling stack. Pick the layers you need; skip the rest.
 
@@ -97,7 +99,7 @@ pnpm build:packages  # build packages so workspace consumers can resolve them
 pnpm dev             # site at http://localhost:5173/, docs at /docs/
 ```
 
-For the AI APIs to actually run, open a supporting browser. On Chrome, Summarizer/Translator/Detector are stable in 138+ and Prompt is stable in 148+ (no flags); the Writing Assistance APIs (Writer, Rewriter, Proofreader) are developer/origin trials behind their own `chrome://flags/` toggles; WebMCP needs `chrome://flags/#enable-webmcp-testing` through Chrome 148 and joins a public origin trial in Chrome 149. On Edge, only Summarizer is in stable (138+ default-on); Prompt, Translator, Detector, and WebMCP are developer previews in Canary/Dev behind their respective `edge://flags/` toggles. On Windows the four Built-in AI APIs (Prompt, Summarizer, Translator, Detector) work reliably once flagged; macOS sees higher refusal rates from the Phi-4-mini safety pipeline for Prompt and Summarizer. WebMCP on Edge remains rough on both platforms. See [Browser support](./apps/site/src/content/docs/browser-support.mdx) for the per-package matrix and exact flag names.
+For the AI APIs to run, open a supporting browser. Chrome's [current status table](https://developer.chrome.com/docs/ai/built-in-apis) documents Summarizer, Translator, and Language Detector as stable from 138 and Prompt as stable from 148. Writer, Rewriter, and Proofreader currently carry Chrome's **Developer trial** label; their older public origin-trial milestone windows have ended. WebMCP has a [Chrome origin trial from 149](https://developer.chrome.com/docs/ai/webmcp). Microsoft documents Summarizer and the writing APIs in its [Writing Assistance guide](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis), Translator and Language Detector in the [Edge 148 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/148), and Prompt plus WebMCP origin trials in the [Edge 150 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/150). See [Browser support](./apps/site/src/content/docs/browser-support.mdx) for current flags and capability-specific model and hardware requirements.
 
 ## Repo layout
 

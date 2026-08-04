@@ -13,7 +13,7 @@ web-ai-sdk building block for the Web's Built-in [Summarizer API](https://develo
 
 ## Status
 
-Summarizer API is stable in Chrome 138+ and Edge 138+ on desktop (enabled by default since Edge 138, per the [Edge Writing Assistance APIs docs](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis)). On Edge the Phi-4-mini safety pipeline frequently returns "low quality output blocked"; the library wraps that as a typed error. On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `summarize()` throws `SummarizerUnavailableError` so callers can branch explicitly.
+Summarizer API is stable in Chrome 138+ and enabled by default in Edge 138+, per the [Chrome status table](https://developer.chrome.com/docs/ai/built-in-apis) and [Edge Writing Assistance API docs](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis). On browsers without `Summarizer`, the React hook stays `"unavailable"`; vanilla `summarize()` throws `SummarizerUnavailableError` so callers can branch explicitly.
 
 ## Install
 
@@ -137,7 +137,7 @@ The wrapper strips wrapping quotes / whitespace and collapses internal whitespac
 
 ## Language support
 
-The Web's Built-in Summarizer (Chrome 138+ and Edge 138+) accepts `expectedInputLanguages` / `outputLanguage` only for `["en", "es", "ja"]`. For other languages this library omits those hints and you steer output via `sharedContext` instead. Pass your own `supportedLanguages` if Chrome adds more.
+By default, the wrapper emits `expectedInputLanguages` / `outputLanguage` hints only for `["en", "es", "ja"]`. For other languages it omits those hints and you can steer output via `sharedContext` instead. Pass `supportedLanguages` explicitly when your target browser documents a broader set.
 
 ## License
 

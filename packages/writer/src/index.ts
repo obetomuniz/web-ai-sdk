@@ -216,10 +216,8 @@ export const write = async (options: WriteOptions): Promise<WriteResult> => {
     ...(options.signal ? { signal: options.signal } : {}),
   };
 
-  // The W3C Web AI streaming contract is ambiguous between "delta" (each
-  // chunk is new content) and "cumulative" (each chunk is the full text so
-  // far). Chrome ships delta; some backends ship cumulative. Detect
-  // per-chunk and merge accordingly.
+  // Browser implementations may emit delta or cumulative chunks. Detect the
+  // shape per chunk and merge accordingly.
   const mergeChunk = (buffer: string, chunk: string): string =>
     chunk.startsWith(buffer) ? chunk : buffer + chunk;
 

@@ -13,7 +13,7 @@ One-install meta-package for web-ai-sdk, the TypeScript SDK for the Web AI surfa
 
 ## Status
 
-Each underlying scoped package is independently supported in Chrome / Edge with the corresponding Web AI flag enabled. See the per-package READMEs for browser support details:
+Each underlying package tracks its browser capability independently: some APIs are stable, while others require a developer preview, developer trial, or origin trial. See the sourced [browser-support matrix](https://web-ai-sdk.dev/docs/browser-support/) and per-package READMEs for current details:
 
 - [`@web-ai-sdk/prompt`](https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/prompt)
 - [`@web-ai-sdk/summarizer`](https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/summarizer)

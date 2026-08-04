@@ -5,6 +5,8 @@ description: web-ai-sdk building block for the Web's Built-in LanguageDetector w
 
 Building block for [the Web's Built-in Language Detector API](https://developer.chrome.com/docs/ai/language-detection). Detect the language of any text on-device, with confidence scores and a sorted list of alternates. Session reuse, opt-in result caching, AbortSignal-driven cleanup. See [useDetector](/docs/react/use-detector/) for React.
 
+Before shipping, review the [Production checklist](/docs/production-checklist/) for intent-driven preparation, task-relevant input, progress, and cache freshness.
+
 ## Usage
 
 ```ts
@@ -85,7 +87,7 @@ detect({
 });
 ```
 
-The hint is also forwarded to `availability()` so engines that warn on shape mismatch (Edge) stay quiet.
+The hint is also forwarded to `availability()` so the capability check and creation request use the same shape.
 
 ## Composing with the other packages
 

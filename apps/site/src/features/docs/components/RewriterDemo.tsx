@@ -31,15 +31,15 @@ export const RewriterDemo = ({ language = "en" }: { language?: string }) => {
           api="Rewriter API"
           chrome={
             <>
-              Rewriter API unavailable. Open in Chrome with the Rewriter API
-              flag / origin trial enabled to exercise.
+              Chrome labels Rewriter a Developer trial. For localhost, enable
+              the current Rewriter setup listed in Browser support.
             </>
           }
           edge={
             <>
               Rewriter API unavailable. In Edge Canary/Dev 138+, open{" "}
-              <code>edge://flags/</code>, search for "Rewriter API for Phi
-              mini", enable it, and reload.
+              <code>edge://flags/</code>, search for "Rewriter API for on-device
+              language model", enable it, and reload.
             </>
           }
         />

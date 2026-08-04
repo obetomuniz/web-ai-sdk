@@ -5,6 +5,8 @@ description: web-ai-sdk building block for the Web's Built-in Summarizer with se
 
 Building block for the Web's Built-in [Summarizer API](https://developer.chrome.com/docs/ai/summarizer-api). String-mode summarization with session reuse, sentence-aware output cleaning, streaming, and pluggable result caching. The React adapter lives at `@web-ai-sdk/summarizer/react`; see [useSummarizer](/docs/react/use-summarizer/).
 
+Before shipping, review the [Production checklist](/docs/production-checklist/) for task-relevant text extraction, safe rendering, progress, user control, and cache freshness.
+
 ## Usage
 
 ```ts
@@ -55,7 +57,7 @@ interface SummarizeOptions {
 | `format` | `"plain-text" \| "markdown"` | Output format. Defaults to `"plain-text"`. |
 | `preference` | `"auto" \| "speed" \| "capability"` | Performance preference hint. Defaults to `"auto"`. See [Performance preference](#performance-preference). |
 | `sharedContext` | `string` | Native `sharedContext` string (a hint about who/what the summary is for). |
-| `monitor` | `(m) => void` | Observe the first-call model download (~1.7 GB on a fresh profile). |
+| `monitor` | `(m) => void` | Observe first-call model download progress. |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
 | `cacheKey` | `string` | Override the default cache key (defaults to `JSON.stringify([pathname, trimmed input, normalizedLanguage, languageHints, type, length, format, preference, sharedContext])`; `normalizedLanguage` is `language`'s lowercase primary subtag (e.g. `pt-BR` → `pt`), and `languageHints` is a boolean for whether that language is in `supportedLanguages`). |
 | `onUpdate` | `(text: string) => void` | Streaming update callback. Receives the cumulative buffer, not deltas. |
@@ -150,7 +152,7 @@ The wrapper strips wrapping quotes / whitespace and collapses internal whitespac
 
 ## Language support beyond en/es/ja
 
-The Web's Built-in Summarizer (Chrome 138+, Edge 138+) only accepts `expectedInputLanguages` / `outputLanguage` for `["en", "es", "ja"]`. Pass any other language as `language: "pt"` and the library omits those hints. The model still runs, but you steer it via `sharedContext` instead:
+By default, the wrapper emits `expectedInputLanguages` / `outputLanguage` hints only for `["en", "es", "ja"]`. Pass another language as `language: "pt"` and the library omits those hints; steer the output via `sharedContext` instead:
 
 ```ts
 summarize({
@@ -160,7 +162,7 @@ summarize({
 });
 ```
 
-When Chrome adds more accepted languages, pass them explicitly via `supportedLanguages: ["en", "es", "ja", "pt"]` and the hints fire through.
+When your target browser documents more accepted languages, pass them explicitly via `supportedLanguages: ["en", "es", "ja", "pt"]` and the hints fire through.
 
 ## Errors and unavailability
 

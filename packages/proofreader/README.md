@@ -2,13 +2,11 @@
 
 web-ai-sdk building block for the Web's Built-in [Proofreader API](https://developer.chrome.com/docs/ai/proofreader-api). Corrects grammar, spelling, and punctuation and returns per-issue corrections with offsets, plus session reuse and opt-in result caching.
 
-**Docs:** <https://web-ai-sdk.dev/docs/guides/proofreader/> · **React:** [`useProofreader`](https://web-ai-sdk.dev/docs/react/use-proofreader/)
+**Docs:** <https://web-ai-sdk.dev/docs/guides/proofreader/> · **React:** [`useProofreader`](https://web-ai-sdk.dev/docs/react/use-proofreader/) · **Production:** [Checklist](https://web-ai-sdk.dev/docs/production-checklist/)
 
 ## Status
 
-The Proofreader API is in an origin trial in Chrome 141 to 145, behind `chrome://flags/#proofreader-api-for-gemini-nano` on localhost (`chrome://flags/#optimization-guide-on-device-model` must also be enabled). In Edge it's a developer preview in Canary/Dev 142+ behind "Proofreader API for Phi mini". On any other browser this library is a no-op for the React hook (it stays in `"unavailable"`). The vanilla `proofread()` throws `ProofreaderUnavailableError` so callers can branch explicitly.
-
-The API is **English-only** today. `expectedInputLanguages` accepts an array, but a request for an unsupported language causes the underlying `create()` to reject (surfaced here as `ProofreaderUnavailableError`); pass `["en"]` or omit it.
+Chrome's current [Built-in AI status table](https://developer.chrome.com/docs/ai/built-in-apis) labels Proofreader a **Developer trial**. Its public origin-trial window ran from Chrome 141 through 145 and has ended; the [Proofreader docs](https://developer.chrome.com/docs/ai/proofreader-api) list `chrome://flags/#proofreader-api` for localhost testing. In Edge it is a [developer preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/proofreader-api) in Canary/Dev 142+ behind "Proofreader API for Phi mini," with a documented High-or-greater device performance class requirement. On browsers without `Proofreader`, the React hook stays `"unavailable"`; vanilla `proofread()` throws `ProofreaderUnavailableError` so callers can branch explicitly.
 
 ## Install
 
@@ -71,8 +69,8 @@ interface ProofreadCorrection {
   startIndex: number;     // inclusive offset into the original input
   endIndex: number;       // exclusive offset into the original input
   correction: string;     // suggested replacement
-  type?: string;          // not emitted by Chrome's current build
-  explanation?: string;   // not emitted by Chrome's current build
+  type?: string;          // optional platform metadata
+  explanation?: string;   // optional platform metadata
 }
 
 interface ProofreadOutput {

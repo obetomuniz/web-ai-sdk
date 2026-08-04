@@ -415,9 +415,7 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
         </span>
       </div>
       <div className={cardBody}>
-        {available === false && (
-          <UnavailableNotice api="WebMCP" flagSearch="WebMCP" />
-        )}
+        {available === false && <UnavailableNotice api="WebMCP" />}
         <DownloadNotice progress={progress} />
         <fieldset className={fieldset}>
           <legend className={fieldLegend}>demo tools</legend>

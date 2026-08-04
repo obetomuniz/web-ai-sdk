@@ -98,13 +98,9 @@ export interface AskOptions {
   /** Advanced: full `expectedOutputs` passthrough. Overrides the `language` hint. */
   expectedOutputs?: LanguageModelExpectedOutput[];
   /**
-   * @experimental Forwards `tools` to the browser's Prompt API
-   * (function calling). Whether the model actually INVOKES them depends
-   * on the browser: native execution is NOT wired on current stable
-   * Chrome — the option is accepted but a no-op, and the model may
-   * surface its tool call as TEXT (`tool_code`) that the caller must
-   * parse. Pass-through only: the SDK does not execute the tools. Will
-   * begin working automatically on browsers that ship native execution.
+   * @experimental Forwards `tools` to the browser's Prompt API (function
+   * calling). Support remains browser-defined. Pass-through only: the SDK does
+   * not execute tools or parse text that resembles a tool call.
    */
   tools?: LanguageModelTool[];
   /** Observe the first-call model download. */

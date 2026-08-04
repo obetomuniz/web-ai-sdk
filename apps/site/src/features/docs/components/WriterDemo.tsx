@@ -32,15 +32,15 @@ export const WriterDemo = ({ language = "en" }: { language?: string }) => {
           api="Writer API"
           chrome={
             <>
-              Writer API unavailable. Open in Chrome with the Writer API flag /
-              origin trial enabled to exercise.
+              Chrome labels Writer a Developer trial. For localhost, enable the
+              current Writer setup listed in Browser support.
             </>
           }
           edge={
             <>
               Writer API unavailable. In Edge Canary/Dev 138+, open{" "}
-              <code>edge://flags/</code>, search for "Writer API for Phi mini",
-              enable it, and reload.
+              <code>edge://flags/</code>, search for "Writer API for on-device
+              language model", enable it, and reload.
             </>
           }
         />

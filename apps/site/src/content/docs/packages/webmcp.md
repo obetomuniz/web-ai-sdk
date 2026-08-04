@@ -15,7 +15,7 @@ An ergonomic, framework-agnostic adapter over the native browser API, with safe 
 
 ## Status
 
-WebMCP shipped as an early preview in Chrome 146+ behind `chrome://flags/#enable-webmcp-testing`; a public [origin trial](https://developer.chrome.com/docs/ai/webmcp) opens in Chrome 149. Edge added support in 147+ behind the matching `edge://flags/` toggle. On browsers without WebMCP, registration is a no-op and discovery returns an empty list; execution rejects with `WebMCPUnavailableError` so a missing capability cannot be confused with a navigation result. A WebMCP spec update changed `registerTool` to return a Promise (cross-origin iframe tool sharing made registration asynchronous); this adapter normalizes both the legacy synchronous shape and the async shape, so consumer code is unchanged.
+WebMCP is available through a public [Chrome origin trial from Chrome 149](https://developer.chrome.com/docs/ai/webmcp), with `chrome://flags/#enable-webmcp-testing` documented for local development. Microsoft lists WebMCP in the [Edge 150 origin trials](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/150). On browsers without WebMCP, registration is a no-op and discovery returns an empty list; execution rejects with `WebMCPUnavailableError` so a missing capability cannot be confused with a navigation result. A WebMCP spec update changed `registerTool` to return a Promise (cross-origin iframe tool sharing made registration asynchronous); this adapter normalizes both the legacy synchronous shape and the async shape, so consumer code is unchanged.
 
 ## Install
 
@@ -171,7 +171,7 @@ if (echo) {
 
 The native serialized string is returned unchanged. `null` means tool execution triggered a navigation. Pass `{ signal }` to cancel an in-flight call. Unsupported browsers reject with `WebMCPUnavailableError`.
 
-`executeTool()` is experimental: Chromium implements and publicly documents it, but it is not yet present in the published WebMCP community-draft IDL.
+`executeTool()` is experimental: Chrome [publicly documents it](https://developer.chrome.com/docs/ai/webmcp), but it is not yet present in the published WebMCP community-draft IDL.
 
 ### `subscribeToToolChanges(listener): () => void`
 
@@ -252,7 +252,7 @@ interface ToolDefinition<
 }
 ```
 
-`title` is for human-facing host UI. `description` is consumed by the agent host (Cursor / Claude / Chrome agent / etc.); write it as an instruction to an LLM about when to call the tool.
+`title` is for human-facing host UI. `description` is consumed by the agent host; write it as an instruction to an LLM about when to call the tool.
 
 The current WebMCP draft defines `readOnlyHint` and `untrustedContentHint`. The SDK also retains `destructiveHint`, `idempotentHint`, `openWorldHint`, and the `destructive` shorthand as source-compatible passthroughs for MCP-shaped and earlier WebMCP hosts; current-draft browsers may ignore those compatibility fields.
 

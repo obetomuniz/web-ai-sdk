@@ -8,7 +8,7 @@ Building block for the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/
 Where the Built-in AI APIs make the browser an AI runtime, WebMCP makes your page an agent surface: instead of a visiting agent guessing what your interface elements do, the page declares structured tools the agent can discover and call.
 
 :::caution[Experimental]
-WebMCP is a proposed standard in early preview: behind flags and an origin trial in Chromium browsers, absent everywhere else. Treat it as progressive enhancement — keep the human UI path, and let the wrapper no-op where the API is missing. Current versions and flag names live in [Browser support](/docs/browser-support/).
+WebMCP is a proposed standard in early preview. Chrome documents an origin trial from Chrome 149 plus a local-development flag, and Microsoft lists an Edge 150 origin trial. Treat it as progressive enhancement: keep the human UI path, and let the wrapper no-op where the API is missing. Current sources and setup live in [Browser support](/docs/browser-support/).
 :::
 
 ## Usage
@@ -70,7 +70,7 @@ const unsubscribe = subscribeToToolChanges(() => {
 
 `getTools({ fromOrigins })` can additionally request tools from descendant documents at listed secure origins. Cross-origin tools are returned only when the registering document also exposed them to the caller's origin. The browser returns each `inputSchema` as a serialized JSON string and includes the registering `window` and `origin`.
 
-`executeTool()` returns the native serialized string unchanged; `null` means the tool triggered navigation. It is implemented and publicly documented by Chromium but is not yet in the published WebMCP community-draft IDL, so the SDK marks it experimental.
+`executeTool()` returns the native serialized string unchanged; `null` means the tool triggered navigation. Chrome [publicly documents it](https://developer.chrome.com/docs/ai/webmcp), but it is not yet in the published WebMCP community-draft IDL, so the SDK marks it experimental.
 
 ## Tool
 
@@ -149,7 +149,7 @@ maintaining a second handwritten definition.
 `document.modelContext.registerTool({...}, { signal, exposedTo })` is the spec entry point. (For backward compatibility with the previous shape of the API, this package also reads from `navigator.modelContext`.) The wrapper sits on top with these quality-of-life additions:
 
 - **Feature detection.** On browsers without `document.modelContext` (or the legacy `navigator.modelContext`), registration and subscriptions are no-ops, discovery resolves to `[]`, and `isAvailable()` returns `false`. Execution rejects with `WebMCPUnavailableError` so missing support is distinct from a `null` navigation result.
-- **Last-writer-wins on duplicate names.** React effect cleanup is asynchronous; a fast re-render can attempt to register `"foo"` before Chrome processed the prior `abort()`. The wrapper detects the resulting duplicate-name error, queues a microtask retry, and tracks ownership so a stale registration can't squat the name.
+- **Last-writer-wins on duplicate names.** React effect cleanup is asynchronous; a fast re-render can attempt to register `"foo"` before the browser processes the prior `abort()`. The wrapper detects the resulting duplicate-name error, queues a microtask retry, and tracks ownership so a stale registration can't squat the name.
 - **One AbortController per call.** `registerTool` returns a cleanup function that aborts the underlying controller and unregisters the tool.
 - **Library-neutral validation.** Direct definitions may carry Standard Schema input and output validators. The SDK validates and transforms around `execute`, then strips those SDK-only fields before native registration.
 
@@ -234,7 +234,7 @@ definitions directly to `registerTool()` or `useWebMCP()`.
 
 ## Origin trial
 
-Chrome opened a public [origin trial](https://developer.chrome.com/blog/ai-webmcp-origin-trial) for WebMCP (Chrome 149), so you can test agent-callable tools with real traffic before the API stabilizes. Sign up on the [Chrome origin trials](https://developer.chrome.com/origintrials) page; for local development a flag works without a token — see [Browser support](/docs/browser-support/) for the current flag names.
+Chrome opened a public [origin trial](https://developer.chrome.com/blog/ai-webmcp-origin-trial) for WebMCP from Chrome 149, and Microsoft lists WebMCP among the [Edge 150 origin trials](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/150). For local Chrome development, the vendor documents a flag that works without a token. See [Browser support](/docs/browser-support/) for the current setup and source links.
 
 Keep WebMCP optional either way. The wrapper already no-ops when the API is missing, so the same registration code ships to every browser — with or without the trial:
 
@@ -257,9 +257,9 @@ registerTool({
 
 ## Debugging in DevTools
 
-Chromium DevTools includes experimental WebMCP debugging in the **Application** panel (introduced in Chrome's [DevTools 149](https://developer.chrome.com/blog/new-in-devtools-149); Edge ships it too): inspect registered tools and their schemas, run a tool manually with custom parameters, track active and pending invocations, and inspect execution status and return payloads. Tools registered through `registerTool` show up there like any other `document.modelContext` registration.
+Chrome DevTools includes experimental WebMCP debugging in the **Application** panel, introduced in [DevTools 149](https://developer.chrome.com/blog/new-in-devtools-149): inspect registered tools and their schemas, run a tool manually with custom parameters, track active and pending invocations, and inspect execution status and return payloads. Tools registered through `registerTool` show up there like any other `document.modelContext` registration.
 
-The panel is off by default; enable both flags (under `chrome://flags` / `edge://flags`) and restart the browser:
+The panel is off by default; enable both Chrome flags and restart the browser:
 
 - `#devtools-webmcp-support`
 - `#enable-webmcp-testing`

@@ -87,7 +87,7 @@ The SDK is allowed to be ergonomic *within a single capability*. Examples that l
 
 - **Warm LRU session pool.** `ask()` reuses `LanguageModel.create()` results across same-shape callers. Cold start drops to sub-second. The pool size is fixed at a sensible default; if you need fine-grained eviction control, use `createSession()` and own the lifecycle yourself.
 - **Optional result cache.** `ask()` accepts a `cache` option that memoizes responses by `(input, systemPrompt, samplingMode / temperature / topK)`. Off by default; pass `"session"` / `"local"` for the matching web-storage shortcut, or supply your own `{ get, set }` backend.
-- **Delta-vs-cumulative stream normalization.** Chrome emits delta chunks; some Edge backends emit cumulative buffers. The wrapper smooths this so `onUpdate` always sees the cumulative buffer and `sendStreaming()` always yields deltas.
+- **Delta-vs-cumulative stream normalization.** Browser implementations may expose delta chunks or cumulative buffers. The wrapper smooths this so `onUpdate` always sees the cumulative buffer and `sendStreaming()` always yields deltas.
 
 These are **ergonomic defaults**, not opinions about *how* you build an app. They each:
 

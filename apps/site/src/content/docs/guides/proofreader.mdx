@@ -5,6 +5,8 @@ description: web-ai-sdk building block for the Web's Built-in Proofreader API. C
 
 Building block for the Web's Built-in [Proofreader API](https://developer.chrome.com/docs/ai/proofreader-api). Corrects grammar, spelling, and punctuation, returning the fully corrected text plus per-issue corrections with offsets into the original input. Session reuse and pluggable result caching included. The React adapter lives at `@web-ai-sdk/proofreader/react`; see [useProofreader](/docs/react/use-proofreader/).
 
+Before shipping, review the [Production checklist](/docs/production-checklist/) for preserving originals, Accept/Reject/Undo flows, safe rendering, and cache freshness.
+
 ## Usage
 
 ```ts
@@ -56,8 +58,8 @@ interface ProofreadCorrection {
   startIndex: number;   // inclusive offset into the original input
   endIndex: number;     // exclusive offset into the original input
   correction: string;   // suggested replacement
-  type?: string;        // not emitted by Chrome's current build
-  explanation?: string; // not emitted by Chrome's current build
+  type?: string;        // optional platform metadata
+  explanation?: string; // optional platform metadata
 }
 
 interface ProofreadOutput {

@@ -3,45 +3,66 @@ title: Browser support
 description: Where each web-ai-sdk package runs today, including Chrome and Edge specifics.
 ---
 
-Web AI support lands engine by engine, and it is desktop-only for now: mobile browsers, including Chrome and Edge on iOS and Android, don't expose these APIs yet. Where it isn't there yet, every package is a feature-detected no-op so your code doesn't crash; render whatever fallback UI you want.
+Browser support changes independently for every capability. The matrix below uses current public Chrome and Edge documentation rather than inferring behavior from a shared browser engine. The final column describes SDK behavior when the corresponding native global is missing; it is not a claim that another browser vendor has implemented or rejected the API.
 
-| Package | Chrome | Edge | Safari | Firefox |
-| --- | --- | --- | --- | --- |
-| `@web-ai-sdk/prompt` | 148+ · stable | 138+ · Canary/Dev · flag | no-op fallback | no-op fallback |
-| `@web-ai-sdk/summarizer` | 138+ · stable | 138+ · stable | no-op fallback | no-op fallback |
-| `@web-ai-sdk/translator` | 138+ · stable | 148+ · stable | no-op fallback | no-op fallback |
-| `@web-ai-sdk/detector` | 138+ · stable | 148+ · stable | no-op fallback | no-op fallback |
-| `@web-ai-sdk/writer` | 137+ · OT · flag | 138+ · Canary/Dev · flag | no-op fallback | no-op fallback |
-| `@web-ai-sdk/rewriter` | 137+ · OT · flag | 138+ · Canary/Dev · flag | no-op fallback | no-op fallback |
-| `@web-ai-sdk/proofreader` | 141+ · OT · flag | 142+ · Canary/Dev · flag | no-op fallback | no-op fallback |
-| `@web-ai-sdk/webmcp` | 146+ · flag · OT 149+ | 147+ · flag | no-op fallback | no-op fallback |
+| Package | Chrome | Edge | When the native API is missing |
+| --- | --- | --- | --- |
+| `@web-ai-sdk/prompt` | [148+ · stable](https://developer.chrome.com/docs/ai/prompt-api) | [138+ · Canary/Dev · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api); [OT in 150](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/150) | feature-detected fallback |
+| `@web-ai-sdk/summarizer` | [138+ · stable](https://developer.chrome.com/docs/ai/built-in-apis) | [138+ · stable](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) | feature-detected fallback |
+| `@web-ai-sdk/translator` | [138+ · stable](https://developer.chrome.com/docs/ai/built-in-apis) | [148+ · stable](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/148) | feature-detected fallback |
+| `@web-ai-sdk/detector` | [138+ · stable](https://developer.chrome.com/docs/ai/built-in-apis) | [148+ · stable](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/148) | feature-detected fallback |
+| `@web-ai-sdk/writer` | [Developer trial · local flag](https://developer.chrome.com/docs/ai/writer-api) | [138+ · Canary/Dev · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) | feature-detected fallback |
+| `@web-ai-sdk/rewriter` | [Developer trial · local flag](https://developer.chrome.com/docs/ai/rewriter-api) | [138+ · Canary/Dev · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) | feature-detected fallback |
+| `@web-ai-sdk/proofreader` | [Developer trial · local flag](https://developer.chrome.com/docs/ai/proofreader-api) | [142+ · Canary/Dev · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/proofreader-api) | feature-detected fallback |
+| `@web-ai-sdk/webmcp` | [OT from 149 · local flag](https://developer.chrome.com/docs/ai/webmcp) | [OT in 150](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/150) | feature-detected fallback |
 
-Versions reflect when the underlying platform API became available. Wrapper exports stay stable across all browsers. **stable** = on by default, no flag; **Canary/Dev** = preview channel that still needs the matching `edge://flags` toggle enabled; **flag** = ships in the normal channel but stays behind a `chrome://flags` / `edge://flags` toggle; **OT** = origin trial. Per-API sources are linked under [Edge specifics](#edge-specifics) and in References below.
+**Stable** means the vendor documents the API as enabled by default. **Canary/Dev** is an Edge developer preview that requires the documented flag. **Developer trial** is Chrome's current status-table label; it does not mean a public origin-trial token is currently active. **OT** means the vendor lists a public origin trial.
 
-The Writing Assistance APIs (Writer, Rewriter) and the Proofreader API are still experimental: developer/origin trials in Chrome and developer previews in Edge Canary/Dev. Like the other Gemini Nano / Phi-4-mini APIs, they are **desktop-only** (no Android, iOS, or non-Chromebook-Plus ChromeOS) and are **not available in Web Workers** — top-level windows and same-origin iframes only (cross-origin iframes require a Permissions-Policy `allow` delegation).
+The wrappers do not detect browser brands or versions. They test for the native API and its reported availability. Vanilla execution throws a typed package-specific unavailability error where appropriate; React hooks surface `status: "unavailable"`.
+
+## Chrome specifics
+
+Chrome's [current Built-in AI status table](https://developer.chrome.com/docs/ai/built-in-apis) lists Translator, Language Detector, and Summarizer as stable from Chrome 138, Prompt as stable from Chrome 148, and Writer, Rewriter, and Proofreader as **Developer trial**.
+
+The public origin-trial milestone windows documented on the capability pages are historical:
+
+- Writer and Rewriter shared an origin trial from Chrome 137 through 148.
+- Proofreader had an origin trial from Chrome 141 through 145.
+
+Those ended windows should not be confused with the current Developer trial label or local flag access. For current localhost testing, the vendor pages document:
+
+| Surface | Current Chrome localhost setup |
+| --- | --- |
+| Writer and Rewriter | Enable `#optimization-guide-on-device-model`, `#prompt-api-for-gemini-nano-multimodal-input`, and `#writer-api-for-gemini-nano`; Rewriter shares Writer's flag. |
+| Proofreader | Enable `#proofreader-api`. |
+| WebMCP | Enable `#enable-webmcp-testing`; production testing uses the origin trial from Chrome 149. |
+
+The [Prompt hardware requirements](https://developer.chrome.com/docs/ai/prompt-api) distinguish task-specific APIs from foundation-model APIs. Chrome documents Translator and Language Detector for desktop. Prompt, Summarizer, Writer, Rewriter, and Proofreader require a supported desktop or Chromebook Plus platform, sufficient storage, and either the documented GPU or CPU resources. Consult the capability page rather than assuming that any Chromium-based browser has the same support.
 
 ## Edge specifics
 
-Summarizer (enabled by default since Edge 138, per the [Edge Writing Assistance APIs docs](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis)), Translator (Edge 148+, per the [Edge Translator API docs](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/translator-api)), and Language Detector (Edge 148+, per the [Edge Language Detector API docs](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/languagedetector-api)) all ship in Edge stable with no flag. The Prompt API is still a developer preview in Edge Canary/Dev 138+, the Writer and Rewriter APIs in Edge Canary/Dev 138+, and the Proofreader API in Edge Canary/Dev 142+, each behind its own "… API for Phi mini" flag. WebMCP landed in Edge 147 behind a flag.
+Microsoft documents Summarizer as enabled by default from Edge 138, Writer and Rewriter as Canary/Dev previews from 138.0.3309.2, Prompt as a Canary/Dev preview from 138.0.3309.2, and Proofreader as a Canary/Dev preview from 142. Translator and Language Detector shipped as Edge 148 web-platform features. Edge 150 also lists public origin trials for Prompt and WebMCP.
 
-Prompt, Summarizer, Writer, Rewriter, and Proofreader all route through Phi-4-mini with a stricter safety pipeline than Chrome's Gemini Nano; Translator and Language Detector run dedicated on-device models.
+### Models and hardware are capability-specific
 
-- **macOS quirk:** on macOS, the on-device model frequently refuses output for Prompt and Summarizer — summarizer returns "low quality output blocked", prompt may emit C0 control-character placeholders. The library handles both (strips C0/C1, normalizes streaming shape, wraps refusals in typed errors), but the model itself is the bottleneck on that platform. Windows doesn't reproduce this.
-- Flags on `edge://flags/`: "Prompt API for Phi mini", "Writer API for Phi mini", "Rewriter API for Phi mini", "Proofreader API for Phi mini". Summarizer (Edge 138+), Translator (Edge 148+), and Language Detector (Edge 148+) ship on by default with no flag.
-- Hardware check: `edge://on-device-internals` must show a "High" device performance class.
+| Edge capability | Documented model path | Documented device-performance condition |
+| --- | --- | --- |
+| Prompt | Phi-4-mini by default; optional prerelease Aion-1.0-Instruct in Canary/Dev 150.0.4070+ when "Enable prerelease on-device language model" is enabled | High or greater for Phi; Medium/Low only through the prerelease Aion path |
+| Summarizer, Writer, Rewriter | Phi-4-mini by default; the [Writing Assistance docs](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) now document the same optional prerelease Aion override in Canary/Dev 150.0.4070+ | High or greater for Phi; Medium/Low only through the documented prerelease Aion path |
+| Proofreader | Phi-4-mini | High or greater; Microsoft does not document an Aion override on the Proofreader page |
+| Translator | Task-specific translation models | No Phi/Aion performance-class rule is documented on the Translator page |
+| Language Detector | Task-specific language-detection model | No Phi/Aion performance-class rule is documented on the Language Detector page |
 
-WebMCP on Edge isn't yet covered by an official Microsoft developer-docs page; the version above reflects empirical Canary/Dev testing.
+The Aion path is not generalized to Proofreader, Translator, or Language Detector because their public pages do not document it.
 
-References: Microsoft Learn: [Prompt](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api) · [Writing Assistance](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) · [Proofreader](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/proofreader-api) · [Translator](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/translator-api) · [Language Detector](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/languagedetector-api).
+Current Edge preview flag labels are:
 
-## Enabling on Chrome
+- "Prompt API for on-device language model"
+- "Writer API for on-device language model"
+- "Rewriter API for on-device language model"
+- "Proofreader API for Phi mini"
+- "Enable prerelease on-device language model" for the optional Aion override documented for Prompt and Writing Assistance
 
-| Surface | Flag |
-| --- | --- |
-| WebMCP | `chrome://flags/#enable-webmcp-testing` (Chrome 146+); [origin trial](https://developer.chrome.com/docs/ai/webmcp) opens in Chrome 149 |
-| Prompt API | Stable in Chrome 148+ (no flag); Chrome 138–147 needs `chrome://flags/#prompt-api-for-gemini-nano` |
-| Summarizer, Translator, Detector | Stable in Chrome 138+ |
-| Writer & Rewriter | `chrome://flags/#writer-api-for-gemini-nano` (joint trial; Chrome 137–148). Rewriter has no separate flag — it shares the Writer toggle |
-| Proofreader | `chrome://flags/#proofreader-api-for-gemini-nano` (Chrome 141–145) |
+Summarizer is enabled by default. Translator and Language Detector do not require these generative-model flags.
 
-The Writing Assistance and Proofreader flags also require `chrome://flags/#optimization-guide-on-device-model` enabled. After enabling a flag, restart Chrome and wait for the on-device model to download (`chrome://on-device-internals`).
+References: Microsoft Learn [Prompt](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api), [Writing Assistance](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis), [Proofreader](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/proofreader-api), [Translator](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/translator-api), [Language Detector](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/languagedetector-api), [Edge 148 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/148), and [Edge 150 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/150).

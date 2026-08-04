@@ -203,10 +203,9 @@ const structuredData = {
 };
 
 // Sources we cite for each availability claim, so readers can verify per cell.
-// Chrome → Chrome for Developers; Edge → Microsoft Learn. WebMCP on Edge has no
-// official Microsoft page yet, so that one cell links nowhere (see note below).
+// Chrome → Chrome for Developers; Edge → Microsoft Learn.
 const chromeDocs: Record<string, string> = {
-  prompt: "https://developer.chrome.com/docs/extensions/ai/prompt-api",
+  prompt: "https://developer.chrome.com/docs/ai/prompt-api",
   summarizer: "https://developer.chrome.com/docs/ai/summarizer-api",
   translator: "https://developer.chrome.com/docs/ai/translator-api",
   detector: "https://developer.chrome.com/docs/ai/language-detection",
@@ -230,7 +229,8 @@ const edgeDocs: Record<string, string | undefined> = {
     "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis",
   proofreader:
     "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/proofreader-api",
-  webmcp: undefined,
+  webmcp:
+    "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/150",
 };
 
 interface SupportRow {
@@ -242,14 +242,30 @@ interface SupportRow {
 }
 
 const supportRows: SupportRow[] = [
-  { pkg: "prompt", chrome: "148+ stable", edge: "138+ flag, Canary/Dev" },
+  {
+    pkg: "prompt",
+    chrome: "148+ stable",
+    edge: "138+ Canary/Dev flag; OT 150",
+  },
   { pkg: "summarizer", chrome: "138+ stable", edge: "138+ stable" },
   { pkg: "translator", chrome: "138+ stable", edge: "148+ stable" },
   { pkg: "detector", chrome: "138+ stable", edge: "148+ stable" },
-  { pkg: "writer", chrome: "137+ flag, OT", edge: "138+ flag, Canary/Dev" },
-  { pkg: "rewriter", chrome: "137+ flag, OT", edge: "138+ flag, Canary/Dev" },
-  { pkg: "proofreader", chrome: "141+ flag, OT", edge: "142+ flag, Canary/Dev" },
-  { pkg: "webmcp", chrome: "146+ flag, OT 149+", edge: "147+ flag" },
+  {
+    pkg: "writer",
+    chrome: "Developer trial, local flag",
+    edge: "138+ Canary/Dev flag",
+  },
+  {
+    pkg: "rewriter",
+    chrome: "Developer trial, local flag",
+    edge: "138+ Canary/Dev flag",
+  },
+  {
+    pkg: "proofreader",
+    chrome: "Developer trial, local flag",
+    edge: "142+ Canary/Dev flag",
+  },
+  { pkg: "webmcp", chrome: "OT 149+, local flag", edge: "OT 150" },
 ].map((row) => ({
   ...row,
   chromeHref: chromeDocs[row.pkg],
@@ -261,7 +277,11 @@ const supportVersionTone = (value: string) => {
   // Canary/Dev previews are also flag-gated; keep the preview tone so the
   // channel requirement reads as the primary signal, not the flag.
   if (value.includes("Canary/Dev")) return ui.supportVersionPreview;
-  if (value.includes("flag") || value.includes("OT"))
+  if (
+    value.includes("Developer trial") ||
+    value.includes("flag") ||
+    value.includes("OT")
+  )
     return ui.supportVersionFlag;
   return ui.supportVersionPreview;
 };
@@ -624,7 +644,7 @@ const browserColumns = [
             <div>
               <div class={ui.sectionEyebrow}>support</div>
               <h2 class="mt-2">Browser support.</h2>
-              <p class="mt-3.5">Web AI support lands engine by engine, and it is desktop-only for now: mobile browsers, including Chrome and Edge on iOS and Android, are not supported yet. Where it is not there yet, you get a feature-detected no-op so your code does not crash.</p>
+              <p class="mt-3.5">Web AI support lands capability by capability and vendor by vendor. The wrappers feature-detect their native API and expose an explicit unavailable path; check the linked vendor source before choosing your fallback.</p>
             </div>
             <a class={ui.permalink} href="#support"><span aria-hidden="true">↑</span><span class={ui.srOnly}>Link to Browser support section</span></a>
           </div>
@@ -670,7 +690,7 @@ const browserColumns = [
               </table>
             </div>
             <div class={ui.supportNote}>
-              Each version links to its source. <strong>stable</strong> = on by default; <strong>Canary/Dev</strong> = preview channel, needs the matching flag; <strong>flag</strong> = normal channel, behind a flag; <strong>OT</strong> = <a class="underline underline-offset-2" href="https://developer.chrome.com/docs/web-platform/origin-trials" target="_blank" rel="noreferrer">origin trial</a>. WebMCP/Edge is empirical (no official page yet).
+              Each status links to its vendor source. <strong>stable</strong> = documented as on by default; <strong>Canary/Dev</strong> = Edge preview channel with the documented flag; <strong>Developer trial</strong> = Chrome's current status label, not an active public token program; <strong>OT</strong> = <a class="underline underline-offset-2" href="https://developer.chrome.com/docs/web-platform/origin-trials" target="_blank" rel="noreferrer">origin trial</a>. Historical Writer/Rewriter (137–148) and Proofreader (141–145) Chrome origin-trial windows have ended.
             </div>
           </div>
         </div>
@@ -705,7 +725,7 @@ const browserColumns = [
             <div>
               <h3 class={ui.philosophyTitle}>We handle the rough edges.</h3>
               <p class={ui.philosophyText}>
-                The Web AI surface is young. Capability checks, model downloads, abortable streams, session lifetimes, and DOM-rebuild safety are all things you would otherwise re-implement in every component.
+                The Web AI surface is young. Capability checks, model downloads, abortable streams, session lifetimes, and delta/cumulative stream normalization are all things you would otherwise re-implement in every component.
               </p>
               <ul class={ui.philosophyList}>
                 <li>Feature detection per package</li>

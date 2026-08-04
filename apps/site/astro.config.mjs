@@ -162,6 +162,10 @@ export default defineConfig({
             { label: "Playground", link: "/playground/" },
             { label: "Why web-ai-sdk", slug: "docs/why-web-ai-sdk" },
             { label: "Browser support", slug: "docs/browser-support" },
+            {
+              label: "Production checklist",
+              slug: "docs/production-checklist",
+            },
             { label: "Architecture", slug: "docs/architecture" },
           ],
         },
