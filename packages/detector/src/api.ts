@@ -281,6 +281,9 @@ export const acquireLanguageDetector = (
       released = true;
       entry.inFlightCount -= 1;
       settleEntry(entry);
+      // The dropped pin may leave the cache over its cap; re-trim now
+      // instead of waiting for the next create or configure call.
+      trim();
     },
   };
 };

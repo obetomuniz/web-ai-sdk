@@ -209,4 +209,17 @@ describe("prepareSummarizer", () => {
     await tick();
     expect(instances[0]?.destroy).toHaveBeenCalledTimes(1);
   });
+
+  it("re-trims the cache when the last in-flight pin drops", async () => {
+    const { api, instances } = installFakeApi();
+    configureSummarizerCache({ max: 0 });
+
+    await summarize({ language: "en", input: "Long text." });
+    await tick();
+    expect(instances[0]?.destroy).toHaveBeenCalledTimes(1);
+
+    // Nothing stayed cached, so the same call creates a fresh session.
+    await summarize({ language: "en", input: "Long text." });
+    expect(api.create).toHaveBeenCalledTimes(2);
+  });
 });

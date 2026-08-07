@@ -218,4 +218,17 @@ describe("prepareLanguageDetector", () => {
     await tick();
     expect(instances[0]?.destroy).toHaveBeenCalledTimes(1);
   });
+
+  it("re-trims the cache when the last in-flight pin drops", async () => {
+    const { api, instances } = installFakeApi();
+    configureLanguageDetectorCache({ max: 0 });
+
+    await detect({ input: "hola", expectedInputLanguages: ["es"] });
+    await tick();
+    expect(instances[0]?.destroy).toHaveBeenCalledTimes(1);
+
+    // Nothing stayed cached, so the same call creates a fresh session.
+    await detect({ input: "hola", expectedInputLanguages: ["es"] });
+    expect(api.create).toHaveBeenCalledTimes(2);
+  });
 });

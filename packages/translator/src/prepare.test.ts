@@ -275,4 +275,25 @@ describe("prepareTranslator", () => {
     await tick();
     expect(instances[0]?.destroy).toHaveBeenCalledTimes(1);
   });
+
+  it("re-trims the cache when the last in-flight pin drops", async () => {
+    const { api, instances } = installFakeApi();
+    configureTranslatorCache({ max: 0 });
+
+    await translate({
+      input: "Olá",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+    await tick();
+    expect(instances[0]?.destroy).toHaveBeenCalledTimes(1);
+
+    // Nothing stayed cached, so the same call creates a fresh session.
+    await translate({
+      input: "Olá",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+    expect(api.create).toHaveBeenCalledTimes(2);
+  });
 });

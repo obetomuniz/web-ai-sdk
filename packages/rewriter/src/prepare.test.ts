@@ -205,4 +205,17 @@ describe("prepareRewriter", () => {
     await tick();
     expect(instances[0]?.destroy).toHaveBeenCalledTimes(1);
   });
+
+  it("re-trims the cache when the last in-flight pin drops", async () => {
+    const { api, instances } = installFakeApi();
+    configureRewriterCache({ max: 0 });
+
+    await rewrite({ input: "Make this clearer." });
+    await tick();
+    expect(instances[0]?.destroy).toHaveBeenCalledTimes(1);
+
+    // Nothing stayed cached, so the same call creates a fresh session.
+    await rewrite({ input: "Make this clearer." });
+    expect(api.create).toHaveBeenCalledTimes(2);
+  });
 });

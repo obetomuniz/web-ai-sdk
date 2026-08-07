@@ -243,4 +243,17 @@ describe("prepareLanguageModel", () => {
     session.destroy();
     lease.release();
   });
+
+  it("re-trims the cache when the last in-flight pin drops", async () => {
+    const { api, bases } = installFakeApi();
+    configureLanguageModelCache({ max: 0 });
+
+    await ask({ input: "hello", systemPrompt: "sys" });
+    await tick();
+    expect(bases[0]?.destroy).toHaveBeenCalledTimes(1);
+
+    // Nothing stayed cached, so the same call creates a fresh session.
+    await ask({ input: "hello", systemPrompt: "sys" });
+    expect(api.create).toHaveBeenCalledTimes(2);
+  });
 });

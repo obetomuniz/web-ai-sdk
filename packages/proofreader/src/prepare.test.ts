@@ -224,4 +224,17 @@ describe("prepareProofreader", () => {
     await tick();
     expect(instances[0]?.destroy).toHaveBeenCalledTimes(1);
   });
+
+  it("re-trims the cache when the last in-flight pin drops", async () => {
+    const { api, instances } = installFakeApi();
+    configureProofreaderCache({ max: 0 });
+
+    await proofread({ input: "Tengo gato.", expectedInputLanguages: ["es"] });
+    await tick();
+    expect(instances[0]?.destroy).toHaveBeenCalledTimes(1);
+
+    // Nothing stayed cached, so the same call creates a fresh session.
+    await proofread({ input: "Tengo gato.", expectedInputLanguages: ["es"] });
+    expect(api.create).toHaveBeenCalledTimes(2);
+  });
 });
