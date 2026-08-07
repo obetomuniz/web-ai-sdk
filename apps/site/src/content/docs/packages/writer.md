@@ -109,7 +109,43 @@ import {
 } from "@web-ai-sdk/writer";
 ```
 
-The internal session cache is LRU-bounded (default 8). Evicted sessions have their `destroy()` invoked when present.
+The internal session cache is LRU-bounded (default 8). Evicted sessions have their `destroy()` invoked when present. Clearing detaches sessions pinned by a lease or an in-flight call and destroys them when the last pin drops.
+
+### Prepare and release
+
+`prepareWriter(options)` starts native session creation when user intent is clear, before the input exists. It returns a `WriterLease`:
+
+```ts
+interface WriterLease {
+  ready: Promise<void>; // settles when native creation settles
+  release(): void;      // idempotent
+}
+```
+
+```ts
+import { prepareWriter, write } from "@web-ai-sdk/writer";
+
+// User opened the compose panel; warm the session now.
+const writerModel = prepareWriter({ tone: "formal", length: "medium" });
+
+// The matching call reuses the prepared session with no second create.
+const result = await write({
+  input: "An inquiry to my bank about how to enable wire transfers.",
+  tone: "formal",
+  length: "medium",
+});
+
+// User dismissed the panel.
+writerModel.release();
+```
+
+- `prepareWriter` never throws synchronously. Unavailability and creation failure reject `ready` with `WriterUnavailableError`.
+- `release()` is idempotent. The final release destroys the session once no other lease or in-flight call uses it.
+- Releasing before creation settles destroys the session after creation succeeds.
+- Failed creation evicts the entry, so a later prepare retries.
+- Sessions with active leases never evict from the LRU cache.
+
+Reuse requires the same session-affecting options as the `write` call. `PrepareWriterOptions` covers `language`, `supportedLanguages`, `tone`, `format`, `length`, `sharedContext`, and `monitor`.
 
 ## Result caching
 

@@ -115,7 +115,42 @@ Drop every cached proofreader session. Sessions live for the tab lifetime by def
 
 ### Session cache controls
 
-`configureProofreaderCache({ max })` bounds the internal warm `Proofreader` session cache (default `8`). `clearProofreaderSessions()` drops every warm session, and `clearProofreaderSession({ expectedInputLanguages })` drops one matching proofreader configuration.
+`configureProofreaderCache({ max })` bounds the internal warm `Proofreader` session cache (default `8`). `clearProofreaderSessions()` drops every warm session, and `clearProofreaderSession({ expectedInputLanguages })` drops one matching proofreader configuration. Clearing detaches sessions pinned by a lease or an in-flight call and destroys them when the last pin drops.
+
+### Prepare and release
+
+`prepareProofreader(options?)` starts native session creation when user intent is clear, before the input exists. It returns a `ProofreaderLease`:
+
+```ts
+interface ProofreaderLease {
+  ready: Promise<void>; // settles when native creation settles
+  release(): void;      // idempotent
+}
+```
+
+```ts
+import { prepareProofreader, proofread } from "@web-ai-sdk/proofreader";
+
+// User focused the editor; warm the session now.
+const proofreaderModel = prepareProofreader({ expectedInputLanguages: ["en"] });
+
+// The matching call reuses the prepared session with no second create.
+const result = await proofread({
+  input: "I seen him yesterday at the store.",
+  expectedInputLanguages: ["en"],
+});
+
+// User left the editor.
+proofreaderModel.release();
+```
+
+- `prepareProofreader` never throws synchronously. Unavailability and creation failure reject `ready` with `ProofreaderUnavailableError`.
+- `release()` is idempotent. The final release destroys the session once no other lease or in-flight call uses it.
+- Releasing before creation settles destroys the session after creation succeeds.
+- Failed creation evicts the entry, so a later prepare retries.
+- Sessions with active leases never evict from the LRU cache.
+
+Reuse requires the same session-affecting options as the `proofread` call. `PrepareProofreaderOptions` covers `expectedInputLanguages` and `monitor`.
 
 ## Result caching
 

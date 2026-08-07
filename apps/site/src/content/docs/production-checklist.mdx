@@ -16,7 +16,7 @@ The SDK does not select page content, interpret user intent, sanitize formatted 
 
 ## Prepare after clear user intent
 
-Prepare a session after the user enters an AI feature. Do not prepare every model on page load. For Prompt, pass system instructions when you create the session.
+Prepare a session after the user enters an AI feature. Do not prepare every model on page load. Every task package exports a `prepare` function that warms the session and returns a release handle; see the [Session lifecycle guide](/docs/guides/session-lifecycle/). For chat-shaped Prompt use, pass system instructions when you create the session.
 
 ```ts
 import { createSession } from "@web-ai-sdk/prompt";

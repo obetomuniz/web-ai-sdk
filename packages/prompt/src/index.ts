@@ -9,11 +9,15 @@
  */
 
 import {
+  acquireLanguageModel,
+  type ConfigureLanguageModelCacheOptions,
   type CreateMonitor,
   checkAvailability,
+  clearLanguageModelSession,
+  clearLanguageModelSessions,
+  configureLanguageModelCache,
   dropCachedLanguageModel,
   getLanguageModelApi,
-  getOrCreateLanguageModel,
   isAvailable,
   isLanguageModelCloneUnavailable,
   type LanguageModelApi,
@@ -30,6 +34,7 @@ import {
   type LanguageModelPromptOptions,
   type LanguageModelSamplingMode,
   type LanguageModelTool,
+  leaseLanguageModel,
   markLanguageModelCloneUnavailable,
 } from "./api.js";
 import {
@@ -56,6 +61,7 @@ import {
 
 export type {
   CacheOption,
+  ConfigureLanguageModelCacheOptions,
   CreateMonitor,
   CreateSessionOptions,
   DefaultCacheKeyInput,
@@ -78,6 +84,9 @@ export type {
 };
 export {
   checkAvailability,
+  clearLanguageModelSession,
+  clearLanguageModelSessions,
+  configureLanguageModelCache,
   createSession,
   DEFAULT_CACHE_TTL_MS,
   isAvailable,
@@ -161,13 +170,146 @@ export interface AskResult {
   cached: boolean;
 }
 
-const destroyedFallbackBases = new WeakSet<LanguageModelInstance>();
-
 const wrapCreateError = (err: unknown): PromptUnavailableError => {
   const message = (err as Error)?.message ?? String(err);
   return new PromptUnavailableError(
     `LanguageModel.create() failed: ${message}`,
   );
+};
+
+/**
+ * Session-affecting subset of `AskOptions`. `prepareLanguageModel` and
+ * `ask` derive the same native create options from these fields, so a
+ * prepared base session is reused by the matching call.
+ */
+export type PrepareLanguageModelOptions = Pick<
+  AskOptions,
+  | "systemPrompt"
+  | "samplingMode"
+  | "temperature"
+  | "topK"
+  | "language"
+  | "supportedLanguages"
+  | "expectedInputs"
+  | "expectedOutputs"
+  | "tools"
+  | "monitor"
+>;
+
+interface BaseSessionConfig {
+  createOptions: LanguageModelCreateOptions;
+  effectiveLanguageHint: string | undefined;
+}
+
+/**
+ * Single source of the option-to-base-session mapping. The session cache keys
+ * by `createOptions`, so `ask` and `prepareLanguageModel` must both go
+ * through this derivation.
+ */
+const resolveBaseSessionConfig = (
+  options: PrepareLanguageModelOptions,
+): BaseSessionConfig => {
+  const langHints = buildLangHints(
+    options.language,
+    options.supportedLanguages,
+  );
+  const [languageHintedInput] = options.expectedInputs
+    ? []
+    : (langHints.expectedInputs?.[0]?.languages ?? []);
+  const [languageHintedOutput] = options.expectedOutputs
+    ? []
+    : (langHints.expectedOutputs?.[0]?.languages ?? []);
+  // Mirror buildLangHints() exactly: supportedLanguages are intentionally not
+  // normalized in the cache key unless they produce runtime language hints.
+  const effectiveLanguageHint = languageHintedInput ?? languageHintedOutput;
+
+  const initialPrompts: LanguageModelMessage[] = options.systemPrompt
+    ? [{ role: "system", content: options.systemPrompt }]
+    : [];
+
+  const createOptions: LanguageModelCreateOptions = {
+    ...(initialPrompts.length > 0 ? { initialPrompts } : {}),
+    ...(options.samplingMode !== undefined
+      ? { samplingMode: options.samplingMode }
+      : {}),
+    ...(options.temperature !== undefined
+      ? { temperature: options.temperature }
+      : {}),
+    ...(options.topK !== undefined ? { topK: options.topK } : {}),
+    ...(options.expectedInputs
+      ? { expectedInputs: options.expectedInputs }
+      : langHints.expectedInputs
+        ? { expectedInputs: langHints.expectedInputs }
+        : {}),
+    ...(options.expectedOutputs
+      ? { expectedOutputs: options.expectedOutputs }
+      : langHints.expectedOutputs
+        ? { expectedOutputs: langHints.expectedOutputs }
+        : {}),
+    ...(options.tools ? { tools: options.tools } : {}),
+    ...(options.monitor ? { monitor: options.monitor } : {}),
+  };
+
+  return { createOptions, effectiveLanguageHint };
+};
+
+export interface LanguageModelLease {
+  /**
+   * Resolves when the native base session is created. Rejects with
+   * `PromptUnavailableError` when the API is missing or creation fails.
+   */
+  ready: Promise<void>;
+  /**
+   * Idempotent. The final release destroys the base session once no other
+   * lease or in-flight call uses it.
+   */
+  release(): void;
+}
+
+/**
+ * Start base-session creation as soon as user intent is clear, before the
+ * input exists. The matching `ask()` call clones from the prepared base
+ * without a second create. Never throws synchronously; unavailability,
+ * invalid options, and creation failures reject `ready`. Failed preparations
+ * leave the cache so a later call can retry. `createSession()` is unaffected;
+ * it always creates a caller-owned session.
+ */
+export const prepareLanguageModel = (
+  options: PrepareLanguageModelOptions = {},
+): LanguageModelLease => {
+  const noopLease = (reason: unknown): LanguageModelLease => {
+    const ready = Promise.reject(reason);
+    // Keep unobserved leases from surfacing unhandled rejections.
+    ready.catch(() => {});
+    return { ready, release: () => {} };
+  };
+
+  const api = getLanguageModelApi();
+  if (!api?.create) {
+    return noopLease(
+      new PromptUnavailableError(
+        "Prompt API (LanguageModel) is not available in this environment.",
+      ),
+    );
+  }
+
+  let createOptions: LanguageModelCreateOptions;
+  try {
+    assertValidSamplingOptions(options);
+    createOptions = resolveBaseSessionConfig(options).createOptions;
+  } catch (err) {
+    // Same invalid-option contract as ask(), surfaced through ready so
+    // prepare never throws synchronously.
+    return noopLease(err);
+  }
+
+  const lease = leaseLanguageModel(api, createOptions);
+  const ready = lease.ready.catch((err) => {
+    if (err instanceof PromptAbortError) throw err;
+    throw wrapCreateError(err);
+  });
+  ready.catch(() => {});
+  return { ready, release: lease.release };
 };
 
 const createOneShotLanguageModel = async (
@@ -179,16 +321,6 @@ const createOneShotLanguageModel = async (
   } catch (err) {
     if (err instanceof PromptAbortError) throw err;
     throw wrapCreateError(err);
-  }
-};
-
-const destroyFallbackBaseOnce = (session: LanguageModelInstance): void => {
-  if (destroyedFallbackBases.has(session)) return;
-  destroyedFallbackBases.add(session);
-  try {
-    session.destroy?.();
-  } catch {
-    // best-effort; unused no-clone probes should never mask prompt results.
   }
 };
 
@@ -217,19 +349,8 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
 
   assertValidSamplingOptions(options);
 
-  const langHints = buildLangHints(
-    options.language,
-    options.supportedLanguages,
-  );
-  const [languageHintedInput] = options.expectedInputs
-    ? []
-    : (langHints.expectedInputs?.[0]?.languages ?? []);
-  const [languageHintedOutput] = options.expectedOutputs
-    ? []
-    : (langHints.expectedOutputs?.[0]?.languages ?? []);
-  // Mirror buildLangHints() exactly: supportedLanguages are intentionally not
-  // normalized in the cache key unless they produce runtime language hints.
-  const effectiveLanguageHint = languageHintedInput ?? languageHintedOutput;
+  const { createOptions: baseCreateOptions, effectiveLanguageHint } =
+    resolveBaseSessionConfig(options);
   const cache = resolveCache(options.cache, options.cacheTtl);
   const cacheKey =
     options.cacheKey ??
@@ -251,33 +372,6 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
     const cached = cache.get(cacheKey);
     if (cached) return { output: cached, cached: true };
   }
-
-  const initialPrompts: LanguageModelMessage[] = options.systemPrompt
-    ? [{ role: "system", content: options.systemPrompt }]
-    : [];
-
-  const baseCreateOptions: LanguageModelCreateOptions = {
-    ...(initialPrompts.length > 0 ? { initialPrompts } : {}),
-    ...(options.samplingMode !== undefined
-      ? { samplingMode: options.samplingMode }
-      : {}),
-    ...(options.temperature !== undefined
-      ? { temperature: options.temperature }
-      : {}),
-    ...(options.topK !== undefined ? { topK: options.topK } : {}),
-    ...(options.expectedInputs
-      ? { expectedInputs: options.expectedInputs }
-      : langHints.expectedInputs
-        ? { expectedInputs: langHints.expectedInputs }
-        : {}),
-    ...(options.expectedOutputs
-      ? { expectedOutputs: options.expectedOutputs }
-      : langHints.expectedOutputs
-        ? { expectedOutputs: langHints.expectedOutputs }
-        : {}),
-    ...(options.tools ? { tools: options.tools } : {}),
-    ...(options.monitor ? { monitor: options.monitor } : {}),
-  };
 
   const availability = await api
     .availability({
@@ -309,31 +403,35 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
     if (isLanguageModelCloneUnavailable(baseCreateOptions)) {
       session = await createOneShotLanguageModel(api, baseCreateOptions);
     } else {
-      const baseSessionPromise = getOrCreateLanguageModel(
-        api,
-        baseCreateOptions,
-      );
-
-      // Wrap session-create failures with context so consumers can branch on
-      // a single typed error instead of parsing browser-specific messages.
-      let baseSession: LanguageModelInstance;
+      // Pin the base entry while creating and cloning so a concurrent final
+      // lease release or clear cannot destroy it mid-use.
+      const acquired = acquireLanguageModel(api, baseCreateOptions);
       try {
-        baseSession = await baseSessionPromise;
-      } catch (err) {
-        if (err instanceof PromptAbortError) throw err;
-        throw wrapCreateError(err);
-      }
-      if (options.signal?.aborted) throw new PromptAbortError();
+        // Wrap session-create failures with context so consumers can branch
+        // on a single typed error instead of parsing browser-specific
+        // messages.
+        let baseSession: LanguageModelInstance;
+        try {
+          baseSession = await acquired.session;
+        } catch (err) {
+          if (err instanceof PromptAbortError) throw err;
+          throw wrapCreateError(err);
+        }
+        if (options.signal?.aborted) throw new PromptAbortError();
 
-      if (typeof baseSession.clone !== "function") {
-        markLanguageModelCloneUnavailable(baseCreateOptions);
-        dropCachedLanguageModel(baseCreateOptions);
-        destroyFallbackBaseOnce(baseSession);
-        session = await createOneShotLanguageModel(api, baseCreateOptions);
-      } else {
-        session = await baseSession.clone(
-          options.signal ? { signal: options.signal } : undefined,
-        );
+        if (typeof baseSession.clone !== "function") {
+          markLanguageModelCloneUnavailable(baseCreateOptions);
+          // Detach the no-clone base from the cache; the pin drain in the
+          // finally below destroys it exactly once.
+          dropCachedLanguageModel(baseCreateOptions);
+          session = await createOneShotLanguageModel(api, baseCreateOptions);
+        } else {
+          session = await baseSession.clone(
+            options.signal ? { signal: options.signal } : undefined,
+          );
+        }
+      } finally {
+        acquired.done();
       }
     }
     if (options.signal?.aborted) throw new PromptAbortError();

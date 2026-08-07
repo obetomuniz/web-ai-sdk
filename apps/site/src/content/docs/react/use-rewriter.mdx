@@ -9,6 +9,8 @@ React adapter for `@web-ai-sdk/rewriter`. Auto-runs on mount, re-runs when `inpu
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for safe streaming, progress, Accept/Reject/Undo flows, and cache freshness.
 
+To warm the session before the hook first runs, call `prepareRewriter` from the core package on user intent. See the [Session lifecycle guide](/docs/guides/session-lifecycle/).
+
 ## Live demo
 
 <RewriterDemo client:only="react" />

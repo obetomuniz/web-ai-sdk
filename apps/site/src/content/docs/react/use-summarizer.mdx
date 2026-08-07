@@ -9,6 +9,8 @@ React adapter for `@web-ai-sdk/summarizer`. Auto-runs on mount, re-runs when `in
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for task-relevant text extraction, safe streaming, progress, and cache freshness.
 
+To warm the session before the hook first runs, call `prepareSummarizer` from the core package on user intent. See the [Session lifecycle guide](/docs/guides/session-lifecycle/).
+
 ## Live demo
 
 <SummarizerDemo client:only="react" />

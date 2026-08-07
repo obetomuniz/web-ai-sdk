@@ -9,10 +9,11 @@
  */
 
 import {
+  acquireProofreader,
   type ConfigureProofreaderCacheOptions,
   type CreateMonitor,
-  getOrCreateProofreader,
   getProofreaderApi,
+  leaseProofreader,
   type ProofreadCorrection,
   type ProofreaderApi,
   type ProofreaderAvailability,
@@ -33,16 +34,10 @@ export {
   clearProofreaderSession,
   clearProofreaderSessions,
   configureProofreaderCache,
-  getOrCreateProofreader,
-  getProofreaderApi,
   isAvailable,
 } from "./api.js";
 
-export {
-  DEFAULT_CACHE_TTL_MS,
-  defaultCacheKey,
-  resolveCache,
-} from "./cache.js";
+export { DEFAULT_CACHE_TTL_MS } from "./cache.js";
 
 export type {
   CacheOption,
@@ -113,6 +108,85 @@ class ProofreaderAbortError extends Error {
 }
 
 /**
+ * Session-affecting subset of `ProofreadOptions`. `prepareProofreader` and
+ * `proofread` derive the same native create options from these fields, so a
+ * prepared session is reused by the matching call.
+ */
+export type PrepareProofreaderOptions = Pick<
+  ProofreadOptions,
+  "expectedInputLanguages" | "monitor"
+>;
+
+interface SessionConfig {
+  expectedInputLanguages: string[] | undefined;
+  createOptions: ProofreaderCreateOptions;
+}
+
+/**
+ * Single source of the option-to-session mapping. The session cache keys by
+ * `createOptions`, so `proofread` and `prepareProofreader` must both go
+ * through this derivation.
+ */
+const resolveSessionConfig = (
+  options: PrepareProofreaderOptions,
+): SessionConfig => {
+  const expectedInputLanguages = options.expectedInputLanguages
+    ? [...options.expectedInputLanguages]
+    : undefined;
+  const createOptions: ProofreaderCreateOptions = {
+    ...(expectedInputLanguages ? { expectedInputLanguages } : {}),
+    ...(options.monitor ? { monitor: options.monitor } : {}),
+  };
+  return { expectedInputLanguages, createOptions };
+};
+
+export interface ProofreaderLease {
+  /**
+   * Resolves when the native session is created. Rejects with
+   * `ProofreaderUnavailableError` when the API is missing or creation fails.
+   */
+  ready: Promise<void>;
+  /**
+   * Idempotent. The final release destroys the session once no other lease
+   * or in-flight call uses it.
+   */
+  release(): void;
+}
+
+/**
+ * Start native session creation as soon as user intent is clear, before the
+ * input exists. The matching `proofread` call reuses the prepared session
+ * without a second create. Never throws synchronously; unavailability and
+ * creation failures reject `ready`. Failed preparations leave the cache so a
+ * later call can retry.
+ */
+export const prepareProofreader = (
+  options: PrepareProofreaderOptions = {},
+): ProofreaderLease => {
+  const api = getProofreaderApi();
+  if (!api?.create) {
+    const ready = Promise.reject(
+      new ProofreaderUnavailableError(
+        "Proofreader API is not available in this environment.",
+      ),
+    );
+    // Keep unobserved leases from surfacing unhandled rejections.
+    ready.catch(() => {});
+    return { ready, release: () => {} };
+  }
+  const { createOptions } = resolveSessionConfig(options);
+  const lease = leaseProofreader(api, createOptions);
+  const ready = lease.ready.catch((err) => {
+    const message = (err as Error)?.message ?? String(err);
+    throw new ProofreaderUnavailableError(
+      `Proofreader.create() failed: ${message}`,
+    );
+  });
+  ready.catch(() => {});
+  return { ready, release: lease.release };
+};
+
+/**
  * Proofread a string for grammar, spelling, and punctuation. Returns the
  * corrected text plus the list of per-issue corrections. Returns
  * `{ output: null, ... }` for empty input. Throws
@@ -132,9 +206,8 @@ export const proofread = async (
   const text = options.input.trim();
   if (!text) return { output: null, cached: false };
 
-  const expectedInputLanguages = options.expectedInputLanguages
-    ? [...options.expectedInputLanguages]
-    : undefined;
+  const { expectedInputLanguages, createOptions } =
+    resolveSessionConfig(options);
 
   const cache = resolveCache(options.cache, options.cacheTtl);
   const cacheKey =
@@ -150,11 +223,6 @@ export const proofread = async (
     }
   }
 
-  const baseCreateOptions: ProofreaderCreateOptions = {
-    ...(expectedInputLanguages ? { expectedInputLanguages } : {}),
-    ...(options.monitor ? { monitor: options.monitor } : {}),
-  };
-
   const availability = await api
     .availability(
       expectedInputLanguages ? { expectedInputLanguages } : undefined,
@@ -165,30 +233,35 @@ export const proofread = async (
   }
   if (options.signal?.aborted) throw new ProofreaderAbortError();
 
-  const sessionPromise = getOrCreateProofreader(api, baseCreateOptions);
-
-  // Wrap session-create failures with context so consumers can branch on a
-  // single typed error instead of parsing browser-specific messages.
-  let proofreader: ProofreaderInstance;
+  // The pin defers destruction (lease release, clear, eviction) until this
+  // call finishes.
+  const acquired = acquireProofreader(api, createOptions);
   try {
-    proofreader = await sessionPromise;
-  } catch (err) {
-    if (err instanceof ProofreaderAbortError) throw err;
-    const message = (err as Error)?.message ?? String(err);
-    throw new ProofreaderUnavailableError(
-      `Proofreader.create() failed: ${message}`,
-    );
+    // Wrap session-create failures with context so consumers can branch on a
+    // single typed error instead of parsing browser-specific messages.
+    let proofreader: ProofreaderInstance;
+    try {
+      proofreader = await acquired.session;
+    } catch (err) {
+      if (err instanceof ProofreaderAbortError) throw err;
+      const message = (err as Error)?.message ?? String(err);
+      throw new ProofreaderUnavailableError(
+        `Proofreader.create() failed: ${message}`,
+      );
+    }
+    if (options.signal?.aborted) throw new ProofreaderAbortError();
+
+    const raw = await proofreader.proofread(text);
+    if (options.signal?.aborted) throw new ProofreaderAbortError();
+
+    const output: ProofreadOutput = {
+      correctedInput: raw.correctedInput ?? text,
+      corrections: Array.isArray(raw.corrections) ? raw.corrections : [],
+    };
+
+    if (cache) cache.set(cacheKey, JSON.stringify(output));
+    return { output, cached: false };
+  } finally {
+    acquired.done();
   }
-  if (options.signal?.aborted) throw new ProofreaderAbortError();
-
-  const raw = await proofreader.proofread(text);
-  if (options.signal?.aborted) throw new ProofreaderAbortError();
-
-  const output: ProofreadOutput = {
-    correctedInput: raw.correctedInput ?? text,
-    corrections: Array.isArray(raw.corrections) ? raw.corrections : [],
-  };
-
-  if (cache) cache.set(cacheKey, JSON.stringify(output));
-  return { output, cached: false };
 };

@@ -40,6 +40,30 @@ const _cacheOptionTripwire: [
   : never = true;
 void _cacheOptionTripwire;
 
+// Compile-time tripwire: every task package exposes the same lease shape from
+// its prepare function.
+type LeaseShape = { ready: Promise<void>; release(): void };
+const _prepareLeaseTripwire: [
+  ReturnType<typeof sdk.prompt.prepareLanguageModel>,
+  ReturnType<typeof sdk.summarizer.prepareSummarizer>,
+  ReturnType<typeof sdk.translator.prepareTranslator>,
+  ReturnType<typeof sdk.detector.prepareLanguageDetector>,
+  ReturnType<typeof sdk.writer.prepareWriter>,
+  ReturnType<typeof sdk.rewriter.prepareRewriter>,
+  ReturnType<typeof sdk.proofreader.prepareProofreader>,
+] extends [
+  LeaseShape,
+  LeaseShape,
+  LeaseShape,
+  LeaseShape,
+  LeaseShape,
+  LeaseShape,
+  LeaseShape,
+]
+  ? true
+  : never = true;
+void _prepareLeaseTripwire;
+
 describe("web-ai-sdk root namespace", () => {
   it("exposes every scoped package", () => {
     expect(typeof sdk.prompt.ask).toBe("function");
@@ -54,6 +78,23 @@ describe("web-ai-sdk root namespace", () => {
     expect(typeof sdk.writer.write).toBe("function");
     expect(typeof sdk.rewriter.rewrite).toBe("function");
     expect(typeof sdk.proofreader.proofread).toBe("function");
+  });
+
+  it("exposes the prepare lifecycle on every task package", () => {
+    expect(typeof sdk.prompt.prepareLanguageModel).toBe("function");
+    expect(typeof sdk.summarizer.prepareSummarizer).toBe("function");
+    expect(typeof sdk.translator.prepareTranslator).toBe("function");
+    expect(typeof sdk.detector.prepareLanguageDetector).toBe("function");
+    expect(typeof sdk.writer.prepareWriter).toBe("function");
+    expect(typeof sdk.rewriter.prepareRewriter).toBe("function");
+    expect(typeof sdk.proofreader.prepareProofreader).toBe("function");
+    expect(typeof sdk.prompt.clearLanguageModelSessions).toBe("function");
+    expect(typeof sdk.summarizer.clearSummarizerSessions).toBe("function");
+    expect(typeof sdk.translator.clearTranslatorSessions).toBe("function");
+    expect(typeof sdk.detector.clearLanguageDetectorSessions).toBe("function");
+    expect(typeof sdk.writer.clearWriterSessions).toBe("function");
+    expect(typeof sdk.rewriter.clearRewriterSessions).toBe("function");
+    expect(typeof sdk.proofreader.clearProofreaderSessions).toBe("function");
   });
 
   it("exposes the shared cache TTL default on result-producing packages", () => {

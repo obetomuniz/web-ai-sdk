@@ -1,0 +1,98 @@
+---
+title: Session lifecycle
+description: Prepare sessions on user intent, reuse them across calls, and release them when a feature closes.
+---
+
+Built-in AI sessions run on-device models. Creating a session can take seconds and can trigger a model download. Every live session holds model memory until the tab closes.
+
+Chrome's [Built-in AI dos and don'ts](https://developer.chrome.com/docs/ai/built-in-ai-dos-donts) turns that cost into three rules: prepare the model at a reasonable time, reuse sessions instead of re-creating them, and destroy sessions you no longer need. This guide shows how the SDK covers each rule and which parts your application controls.
+
+## What you get without any code
+
+Every task package keeps a bounded LRU cache of warm native sessions, keyed by the session-affecting options. Calls with the same configuration reuse the warm session and skip the cold start. `ask()` in Prompt goes further: it keeps one warm base session and runs each call on a fresh clone, so unrelated prompts never share context.
+
+This covers the reuse rule by default. The remaining two rules need one signal only your application has: user intent.
+
+## Prepare on user intent
+
+The SDK cannot know when a user is about to use an AI feature. Your application does: a panel opens, a field gains focus, a pointer hovers the action. `prepare<Noun>(options)` starts native session creation at that moment, before any input exists.
+
+```ts
+import { prepareSummarizer, summarize } from "@web-ai-sdk/summarizer";
+
+// The user opened the summary panel: warm the session now.
+const summarizerModel = prepareSummarizer({ language: "en", type: "key-points" });
+
+// The user clicked: the matching call reuses the prepared session.
+const result = await summarize({
+  input: articleText,
+  language: "en",
+  type: "key-points",
+});
+
+// The user closed the panel: destroy the session and free its memory.
+summarizerModel.release();
+```
+
+Reuse happens when the prepare options match the session-affecting options of the later call. A mismatch is never an error; the call creates its own session lazily, as it would without preparation.
+
+Do not prepare on module import or page load. Preparation can download a model and holds memory, so it needs real intent behind it.
+
+## Release when the feature closes
+
+`prepare` returns a lease: `{ ready: Promise<void>; release(): void }`. Call `release()` when the user leaves the feature. The session is destroyed as soon as it is safe, which frees the model memory instead of waiting for the tab to close.
+
+`release()` is idempotent, so wiring it to more than one teardown path is safe:
+
+```ts
+const translatorModel = prepareTranslator({ sourceLanguage: "en", targetLanguage: "es" });
+
+closeButton.addEventListener("click", () => {
+  translationPanel.hidden = true;
+  translatorModel.release();
+});
+```
+
+Safety rules the SDK enforces for you:
+
+- Multiple prepares for one configuration share one native session. Each caller holds its own lease.
+- Releasing one lease never destroys a session that another lease or an in-flight call still uses. The final release destroys it exactly once.
+- Releasing before creation settles destroys the session after creation succeeds.
+- Sessions with active leases never fall out of the LRU cache.
+- Preparing one configuration cannot release or reuse another configuration.
+
+## Observe readiness and failure
+
+`ready` resolves when the native session exists. Use it to switch UI states: enable the action, or hide a "downloading model" hint. `prepare` never throws synchronously; a missing API or a failed creation rejects `ready` with the package's typed unavailability error.
+
+```ts
+const translatorModel = prepareTranslator({ sourceLanguage: "en", targetLanguage: "fr" });
+
+translatorModel.ready
+  .then(() => showReadyState())
+  .catch(() => showFallback());
+```
+
+Failure is a real path. Chrome refuses some downloads without a user gesture, storage can be full, and a device can be unsupported. A failed preparation leaves the cache, so a later prepare retries cleanly.
+
+## Function names per package
+
+| Package | Prepare | Lease type |
+| --- | --- | --- |
+| [`@web-ai-sdk/prompt`](/docs/packages/prompt/) | `prepareLanguageModel` | `LanguageModelLease` |
+| [`@web-ai-sdk/summarizer`](/docs/packages/summarizer/) | `prepareSummarizer` | `SummarizerLease` |
+| [`@web-ai-sdk/translator`](/docs/packages/translator/) | `prepareTranslator` | `TranslatorLease` |
+| [`@web-ai-sdk/detector`](/docs/packages/detector/) | `prepareLanguageDetector` | `LanguageDetectorLease` |
+| [`@web-ai-sdk/writer`](/docs/packages/writer/) | `prepareWriter` | `WriterLease` |
+| [`@web-ai-sdk/rewriter`](/docs/packages/rewriter/) | `prepareRewriter` | `RewriterLease` |
+| [`@web-ai-sdk/proofreader`](/docs/packages/proofreader/) | `prepareProofreader` | `ProofreaderLease` |
+
+Each package README documents its session-affecting option fields. Prompt's `createSession()` stays outside this system; it always creates a caller-owned session you destroy yourself.
+
+Every package also exports `configure<Noun>Cache({ max })`, `clear<Noun>Sessions()`, and `clear<Noun>Session(options)` for direct cache control. Clearing detaches sessions pinned by a lease or an in-flight call and destroys them when the last pin drops.
+
+## References
+
+- [Built-in AI dos and don'ts](https://developer.chrome.com/docs/ai/built-in-ai-dos-donts): the Chrome guidance this design follows.
+- [Built-in AI APIs overview](https://developer.chrome.com/docs/ai/built-in): availability and download behavior per API.
+- [Production checklist](/docs/production-checklist/): the wider ownership split between the SDK and your application.

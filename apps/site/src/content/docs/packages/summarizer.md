@@ -108,6 +108,39 @@ Feature-detect helper.
 
 Forwards to the spec's `availability()` call. Returns `null` if the global is missing or the call throws.
 
+### Prepare and release
+
+`prepareSummarizer(options)` starts native session creation when user intent is clear, before the input exists. It returns a `SummarizerLease`: `{ ready: Promise<void>; release(): void }`.
+
+```ts
+import { prepareSummarizer, summarize } from "@web-ai-sdk/summarizer";
+
+// User hovers the "Summarize" button: warm the session now.
+const summarizerModel = prepareSummarizer({ language: "en", type: "key-points" });
+
+// The matching call reuses the prepared session; no second create.
+const result = await summarize({
+  input: articleText,
+  language: "en",
+  type: "key-points",
+});
+
+// User dismisses the feature: let the session go.
+summarizerModel.release();
+```
+
+- `prepareSummarizer` never throws synchronously. Unavailability and creation failure reject `ready` with `SummarizerUnavailableError`.
+- `release()` is idempotent. The final release destroys the session once no other lease or in-flight call uses it.
+- Releasing before creation settles destroys the session after creation succeeds.
+- Failed creation evicts the entry, so a later prepare retries.
+- Sessions with active leases never evict from the LRU cache.
+
+Reuse requires the same session-affecting options as the `summarize` call. For this package those are `language`, `supportedLanguages`, `type`, `length`, `format`, `preference`, `sharedContext`, and `monitor` (`PrepareSummarizerOptions`).
+
+### Session cache controls
+
+`configureSummarizerCache({ max })` bounds the internal warm `Summarizer` session cache (default `8`). `clearSummarizerSessions()` drops every warm session, and `clearSummarizerSession(createOptions)` drops one matching configuration. Clearing detaches sessions pinned by a lease or an in-flight call and destroys them when the last pin drops.
+
 ## Performance preference
 
 `preference` is a hint about the speed/quality tradeoff the browser makes when picking the underlying model:
@@ -149,7 +182,7 @@ summarize({ language: "en", input: text, cache: "local", cacheTtl: 5 * 60 * 1000
 summarize({ language: "en", input: text, cache: "local", cacheRefresh: true });
 ```
 
-The internal session cache (warm `Summarizer` instances) is separate and always on, so same-config calls skip the ~1-3s cold start within a tab.
+The internal session cache (warm `Summarizer` instances) is separate and always on, so same-config calls skip the ~1-3s cold start within a tab. Bound or clear it via the Session cache controls above.
 
 ## Output normalization
 

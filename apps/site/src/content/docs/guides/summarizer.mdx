@@ -7,6 +7,8 @@ This package wraps the built-in [Summarizer API](https://developer.chrome.com/do
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for task-relevant text extraction, safe rendering, progress, user control, and cache freshness.
 
+Use `prepareSummarizer` to warm a session on user intent and release it when the feature closes. See the [Session lifecycle guide](/docs/guides/session-lifecycle/).
+
 ## Usage
 
 ```ts

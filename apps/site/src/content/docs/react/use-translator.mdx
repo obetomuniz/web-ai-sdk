@@ -9,6 +9,8 @@ React adapter for `@web-ai-sdk/translator`. Auto-translates `input` from `source
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for safe rendering, progress, reversible changes, and cache freshness.
 
+To warm the session before the hook first runs, call `prepareTranslator` from the core package on user intent. See the [Session lifecycle guide](/docs/guides/session-lifecycle/).
+
 ## Live demo
 
 <TranslatorDemo client:only="react" />

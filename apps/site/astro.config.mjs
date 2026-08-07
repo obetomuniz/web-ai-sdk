@@ -174,7 +174,6 @@ export default defineConfig({
         {
           label: "Guides",
           items: [
-            { label: "Meta-package", slug: "docs/guides/meta-package" },
             { label: "Prompt", slug: "docs/guides/prompt" },
             { label: "WebMCP", slug: "docs/guides/webmcp" },
             { label: "Summarizer", slug: "docs/guides/summarizer" },
@@ -183,6 +182,11 @@ export default defineConfig({
             { label: "Writer", slug: "docs/guides/writer" },
             { label: "Rewriter", slug: "docs/guides/rewriter" },
             { label: "Proofreader", slug: "docs/guides/proofreader" },
+            { label: "Meta-package", slug: "docs/guides/meta-package" },
+            {
+              label: "Session lifecycle",
+              slug: "docs/guides/session-lifecycle",
+            },
           ],
         },
         {

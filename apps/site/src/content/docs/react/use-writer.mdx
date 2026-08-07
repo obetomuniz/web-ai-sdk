@@ -9,6 +9,8 @@ React adapter for `@web-ai-sdk/writer`. Auto-runs on mount, re-runs when `input`
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for safe streaming, progress, reversible suggestions, and cache freshness.
 
+To warm the session before the hook first runs, call `prepareWriter` from the core package on user intent. See the [Session lifecycle guide](/docs/guides/session-lifecycle/).
+
 ## Live demo
 
 <WriterDemo client:only="react" />
