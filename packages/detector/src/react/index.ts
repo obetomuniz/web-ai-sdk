@@ -49,6 +49,8 @@ export const useDetector = (options: UseDetectorOptions): UseDetectorReturn => {
     monitor,
     cache,
     cacheKey,
+    cacheTtl,
+    cacheRefresh,
     enabled = true,
   } = options;
 
@@ -80,6 +82,8 @@ export const useDetector = (options: UseDetectorOptions): UseDetectorReturn => {
       monitor,
       cache,
       cacheKey,
+      cacheTtl,
+      cacheRefresh,
       signal: controller.signal,
     })
       .then((result: DetectResult) => {
@@ -110,6 +114,8 @@ export const useDetector = (options: UseDetectorOptions): UseDetectorReturn => {
     monitor,
     cache,
     cacheKey,
+    cacheTtl,
+    cacheRefresh,
   ]);
 
   return { status, output, error, fromCache };

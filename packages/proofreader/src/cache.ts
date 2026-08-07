@@ -16,28 +16,96 @@ export interface ProofreadCache {
  */
 export type CacheOption = "session" | "local" | ProofreadCache;
 
+/**
+ * Default time-to-live for entries written by the built-in `"session"` /
+ * `"local"` storage shortcuts: one hour. On-device model output changes as
+ * the browser updates the model, so built-in entries expire instead of
+ * persisting indefinitely. Override per call with `cacheTtl`. Custom
+ * `{ get, set }` caches own their expiry policy.
+ */
+export const DEFAULT_CACHE_TTL_MS = 60 * 60 * 1000;
+
+/** Version tag for the storage envelope written by the built-in shortcuts. */
+const ENVELOPE_VERSION = 1;
+
+interface CacheEnvelope {
+  v: number;
+  value: string;
+  expiresAt: number;
+}
+
+/**
+ * Parse a stored entry into a versioned envelope. Legacy raw strings,
+ * malformed JSON, unsupported versions, and invalid timestamps all return
+ * `null` so the caller treats them as misses.
+ */
+const parseEnvelope = (raw: string): CacheEnvelope | null => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null) return null;
+  const envelope = parsed as Partial<CacheEnvelope>;
+  if (envelope.v !== ENVELOPE_VERSION) return null;
+  if (typeof envelope.value !== "string") return null;
+  if (
+    typeof envelope.expiresAt !== "number" ||
+    !Number.isFinite(envelope.expiresAt)
+  )
+    return null;
+  return envelope as CacheEnvelope;
+};
+
+const normalizeTtl = (ttlMs: number | undefined): number =>
+  typeof ttlMs === "number" && Number.isFinite(ttlMs) && ttlMs > 0
+    ? ttlMs
+    : DEFAULT_CACHE_TTL_MS;
+
 interface DefaultCacheOptions {
   storage?: Storage;
   prefix?: string;
+  ttlMs?: number;
 }
 
 const createStorageCache = (options: DefaultCacheOptions): ProofreadCache => {
   const prefix = options.prefix ?? "proofreader:";
   const storage = options.storage;
+  const ttlMs = normalizeTtl(options.ttlMs);
 
   return {
     get(key) {
       if (!storage) return null;
+      let raw: string | null;
       try {
-        return storage.getItem(prefix + key);
+        raw = storage.getItem(prefix + key);
       } catch {
         return null;
       }
+      if (raw === null) return null;
+      const envelope = parseEnvelope(raw);
+      if (envelope && Date.now() < envelope.expiresAt) return envelope.value;
+      // Legacy raw strings, malformed envelopes, and expired entries are
+      // misses; drop them so the next successful run replaces the slot.
+      try {
+        storage.removeItem(prefix + key);
+      } catch {
+        // best-effort cleanup only.
+      }
+      return null;
     },
     set(key, value) {
       if (!storage) return;
       try {
-        storage.setItem(prefix + key, value);
+        storage.setItem(
+          prefix + key,
+          JSON.stringify({
+            v: ENVELOPE_VERSION,
+            value,
+            expiresAt: Date.now() + ttlMs,
+          }),
+        );
       } catch {
         // quota / disabled storage; best-effort only.
       }
@@ -48,10 +116,12 @@ const createStorageCache = (options: DefaultCacheOptions): ProofreadCache => {
 /**
  * Resolve the public `cache` option into a concrete `{ get, set }` backend.
  * `undefined` → no caching. `"session"` / `"local"` → wrap the matching
- * web-storage backend (no-op fallback if unavailable). Object → passthrough.
+ * web-storage backend (no-op fallback if unavailable) with a TTL envelope.
+ * Object → passthrough; `ttlMs` does not apply to custom backends.
  */
 export const resolveCache = (
   value: CacheOption | undefined,
+  ttlMs?: number,
 ): ProofreadCache | undefined => {
   if (value === undefined) return undefined;
   if (value === "session") {
@@ -59,14 +129,14 @@ export const resolveCache = (
       typeof globalThis !== "undefined"
         ? (globalThis as { sessionStorage?: Storage }).sessionStorage
         : undefined;
-    return createStorageCache({ storage });
+    return createStorageCache({ storage, ttlMs });
   }
   if (value === "local") {
     const storage =
       typeof globalThis !== "undefined"
         ? (globalThis as { localStorage?: Storage }).localStorage
         : undefined;
-    return createStorageCache({ storage });
+    return createStorageCache({ storage, ttlMs });
   }
   return value;
 };

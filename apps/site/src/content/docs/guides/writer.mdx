@@ -40,6 +40,8 @@ interface WriteOptions {
   monitor?: (m: CreateMonitor) => void;
   cache?: "session" | "local" | { get, set };
   cacheKey?: string;
+  cacheTtl?: number;              // built-in shortcut TTL in ms; default 1 hour
+  cacheRefresh?: boolean;         // skip the cache read, write the fresh result
   onUpdate?: (text: string) => void;
   signal?: AbortSignal;
 }
@@ -60,6 +62,8 @@ interface WriteOptions {
 | `monitor` | `(m) => void` | Observe the first-call model download. |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
 | `cacheKey` | `string` | Override the default cache key. |
+| `cacheTtl` | `number` | TTL in milliseconds for entries written by the built-in `"session"` / `"local"` shortcuts. Defaults to one hour. Ignored by custom `{ get, set }` caches. |
+| `cacheRefresh` | `boolean` | Skip the cache read and replace the cached value after a successful run. The refreshed run reports `cached: false`. |
 | `onUpdate` | `(text: string) => void` | Streaming update callback. Receives the cumulative buffer, not deltas. |
 | `signal` | `AbortSignal` | Abort signal. |
 
@@ -79,7 +83,7 @@ interface WriteResult {
 1. **Trim and cache check.** Whitespace-only input short-circuits to `null`. If a `cache` is configured and has the key, return immediately.
 2. **Cache `Writer.create()` sessions** by create-options. First call pays the cold start; later same-config calls reuse the warm session.
 3. **Stream `writeStreaming()`** when the instance supports it, falling back to one-shot `write()`. Chunks are merged (delta or cumulative) and pushed to `onUpdate` as the cumulative buffer.
-4. **Optionally cache the final output** when you pass a `cache`. Off by default.
+4. **Optionally cache the final output** when you pass a `cache`. Off by default. Built-in `"session"` / `"local"` entries expire after one hour by default. Pass `cacheTtl` (milliseconds) to change the TTL per call. Pass `cacheRefresh: true` to skip the read and replace the cached value after a successful run. Custom `{ get, set }` caches own their expiry policy.
 
 ## Output normalization
 

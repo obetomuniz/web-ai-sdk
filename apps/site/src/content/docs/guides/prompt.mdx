@@ -55,6 +55,8 @@ interface AskOptions {
   responseConstraint?: object;
   cache?: "session" | "local" | { get, set };
   cacheKey?: string;
+  cacheTtl?: number;      // built-in shortcut TTL in ms; default 1 hour
+  cacheRefresh?: boolean; // skip the cache read, write the fresh result
   onUpdate?: (text: string) => void;
   signal?: AbortSignal;
 }
@@ -78,6 +80,8 @@ interface AskOptions {
 | `responseConstraint` | `object` | JSON Schema for structured output. |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
 | `cacheKey` | `string` | Override the default cache key (JSON string of the prompt and output-shaping options). |
+| `cacheTtl` | `number` | TTL in milliseconds for entries written by the built-in `"session"` / `"local"` shortcuts. Defaults to one hour. Ignored by custom `{ get, set }` caches. |
+| `cacheRefresh` | `boolean` | Skip the cache read and replace the cached value after a successful run. The refreshed run reports `cached: false`. |
 | `onUpdate` | `(text: string) => void` | Streaming update callback. Cumulative buffer, not deltas. |
 | `signal` | `AbortSignal` | Abort signal. |
 
@@ -245,7 +249,7 @@ Chrome's `LanguageModel` exposes `LanguageModel.create({...})` to spin up a sess
 
 - **Feature detection.** `isAvailable()` / `checkAvailability()` return `false` / `null` on browsers without the API. The vanilla `ask()` throws `PromptUnavailableError`; the React hook surfaces `status: "unavailable"`.
 - **Warm base reuse for `ask()`** (ergonomic default, scoped to `ask`). A bounded LRU caches base `LanguageModel.create()` calls by stringified create options. Each prompt still runs on an isolated clone, or on a fresh one-shot instance when `clone()` is unavailable. `createSession()` never touches this cache.
-- **Optional result cache for `ask()` (off by default).** Every call hits the model unless you opt in. Pass `cache: "session"` for `sessionStorage`, `cache: "local"` for `localStorage`, or any `{ get, set }`-shaped object to memoize responses by `(input, systemPrompt, samplingMode / temperature / topK)`.
+- **Optional result cache for `ask()` (off by default).** Every call hits the model unless you opt in. Pass `cache: "session"` for `sessionStorage`, `cache: "local"` for `localStorage`, or any `{ get, set }`-shaped object to memoize responses by `(input, systemPrompt, samplingMode / temperature / topK)`. Built-in `"session"` / `"local"` entries expire after one hour by default. Pass `cacheTtl` (milliseconds) to change the TTL per call. Pass `cacheRefresh: true` to skip the read and replace the cached value after a successful run. Custom `{ get, set }` caches own their expiry policy.
 - **Delta-vs-cumulative chunk detection.** Browser implementations may expose delta or cumulative chunks. The wrapper normalizes per chunk so `onUpdate` (cumulative) and `sendStreaming()` (deltas) have stable SDK semantics.
 
 The two cache-shaped items above are *ergonomic defaults scoped to `ask()`*, not opinions about how to use a language model. Multi-package compositions (agent loops, conversation history, tool dispatch) are not part of this package; see [Architecture](/docs/architecture/) for the split.

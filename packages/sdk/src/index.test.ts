@@ -16,6 +16,30 @@ import * as writerSubpath from "./writer.js";
 // We check a single representative export from each package as a tripwire;
 // the full APIs are covered by each scoped package's own tests.
 
+// Compile-time tripwire: the shared result-cache options exist with the same
+// names on every result-producing package.
+type SharedCacheOptions = { cacheTtl?: number; cacheRefresh?: boolean };
+const _cacheOptionTripwire: [
+  Pick<sdk.prompt.AskOptions, "cacheTtl" | "cacheRefresh">,
+  Pick<sdk.summarizer.SummarizeOptions, "cacheTtl" | "cacheRefresh">,
+  Pick<sdk.translator.TranslateOptions, "cacheTtl" | "cacheRefresh">,
+  Pick<sdk.detector.DetectOptions, "cacheTtl" | "cacheRefresh">,
+  Pick<sdk.writer.WriteOptions, "cacheTtl" | "cacheRefresh">,
+  Pick<sdk.rewriter.RewriteOptions, "cacheTtl" | "cacheRefresh">,
+  Pick<sdk.proofreader.ProofreadOptions, "cacheTtl" | "cacheRefresh">,
+] extends [
+  SharedCacheOptions,
+  SharedCacheOptions,
+  SharedCacheOptions,
+  SharedCacheOptions,
+  SharedCacheOptions,
+  SharedCacheOptions,
+  SharedCacheOptions,
+]
+  ? true
+  : never = true;
+void _cacheOptionTripwire;
+
 describe("web-ai-sdk root namespace", () => {
   it("exposes every scoped package", () => {
     expect(typeof sdk.prompt.ask).toBe("function");
@@ -30,6 +54,17 @@ describe("web-ai-sdk root namespace", () => {
     expect(typeof sdk.writer.write).toBe("function");
     expect(typeof sdk.rewriter.rewrite).toBe("function");
     expect(typeof sdk.proofreader.proofread).toBe("function");
+  });
+
+  it("exposes the shared cache TTL default on result-producing packages", () => {
+    const oneHour = 60 * 60 * 1000;
+    expect(sdk.prompt.DEFAULT_CACHE_TTL_MS).toBe(oneHour);
+    expect(sdk.summarizer.DEFAULT_CACHE_TTL_MS).toBe(oneHour);
+    expect(sdk.translator.DEFAULT_CACHE_TTL_MS).toBe(oneHour);
+    expect(sdk.detector.DEFAULT_CACHE_TTL_MS).toBe(oneHour);
+    expect(sdk.writer.DEFAULT_CACHE_TTL_MS).toBe(oneHour);
+    expect(sdk.rewriter.DEFAULT_CACHE_TTL_MS).toBe(oneHour);
+    expect(sdk.proofreader.DEFAULT_CACHE_TTL_MS).toBe(oneHour);
   });
 });
 

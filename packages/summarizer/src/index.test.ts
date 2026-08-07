@@ -145,6 +145,56 @@ describe("summarize", () => {
     expect(api.create).not.toHaveBeenCalled();
   });
 
+  it("bypasses the cache read and replaces the value on cacheRefresh", async () => {
+    const api = installFakeSummarizer({ summary: "Fresh summary." });
+    const cache = inMemoryCache();
+    cache.set("k", "Stale summary.");
+    const result = await summarize({
+      language: "en",
+      input: "Some article body.",
+      cache,
+      cacheKey: "k",
+      cacheRefresh: true,
+    });
+    expect(result).toEqual({ output: "Fresh summary.", cached: false });
+    expect(api.create).toHaveBeenCalled();
+    expect(cache.get("k")).toBe("Fresh summary.");
+  });
+
+  it("does not overwrite a cached value when the run is aborted", async () => {
+    installFakeSummarizer();
+    const cache = inMemoryCache();
+    cache.set("k", "Stale summary.");
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      summarize({
+        language: "en",
+        input: "Some article body.",
+        cache,
+        cacheKey: "k",
+        cacheRefresh: true,
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(cache.get("k")).toBe("Stale summary.");
+  });
+
+  it("does not overwrite a cached value when the response is empty", async () => {
+    installFakeSummarizer({ summary: "   " });
+    const cache = inMemoryCache();
+    cache.set("k", "Stale summary.");
+    const result = await summarize({
+      language: "en",
+      input: "Some article body.",
+      cache,
+      cacheKey: "k",
+      cacheRefresh: true,
+    });
+    expect(result).toEqual({ output: null, cached: false });
+    expect(cache.get("k")).toBe("Stale summary.");
+  });
+
   it("does not collide cache entries when input differs on the same route and language", async () => {
     let calls = 0;
     const api = installFakeSummarizer();
@@ -423,7 +473,10 @@ describe("summarize", () => {
         cacheKey: "k",
       });
       expect(first).toEqual({ output: "Stored.", cached: false });
-      expect(storage.setItem).toHaveBeenCalledWith("summarizer:k", "Stored.");
+      const stored = JSON.parse(store.get("summarizer:k") ?? "");
+      expect(stored.v).toBe(1);
+      expect(stored.value).toBe("Stored.");
+      expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
       const createsAfterFirst = api.create.mock.calls.length;
       const second = await summarize({
@@ -457,7 +510,10 @@ describe("summarize", () => {
         cacheKey: "k",
       });
       expect(first).toEqual({ output: "Stored.", cached: false });
-      expect(storage.setItem).toHaveBeenCalledWith("summarizer:k", "Stored.");
+      const stored = JSON.parse(store.get("summarizer:k") ?? "");
+      expect(stored.v).toBe(1);
+      expect(stored.value).toBe("Stored.");
+      expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
       const createsAfterFirst = api.create.mock.calls.length;
       const second = await summarize({

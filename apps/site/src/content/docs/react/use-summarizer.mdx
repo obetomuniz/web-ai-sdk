@@ -58,6 +58,8 @@ The hook exposes the same two caches as the vanilla `summarize()`:
 - **Session cache** (in-memory, always on): warm sessions are reused across calls with the same `{ language, type, length, sharedContext, … }` shape. Plan your inputs around these dimensions to keep cold-starts rare.
 - **Result cache** (opt-in): off by default. Pass `cache: "session"` for per-tab caching, `cache: "local"` to persist across tabs, or any `{ get, set }`-shaped object for a custom backend.
 
+Built-in `"session"` / `"local"` entries expire after one hour by default. Pass `cacheTtl` (milliseconds) to change the TTL per call. Pass `cacheRefresh: true` to skip the read and replace the cached value after a successful run. Custom `{ get, set }` caches own their expiry policy.
+
 `result.fromCache` lets you render a "From cache" hint or skip a re-fetch loop entirely.
 
 ## Streaming UX
@@ -86,6 +88,8 @@ interface UseSummarizerOptions extends Omit<SummarizeOptions, "onUpdate" | "sign
   monitor?: (m: CreateMonitor) => void;
   cache?: "session" | "local" | { get, set };
   cacheKey?: string;
+  cacheTtl?: number;       // built-in shortcut TTL in ms; default 1 hour
+  cacheRefresh?: boolean;  // skip the cache read, write the fresh result
 }
 
 interface UseSummarizerReturn {

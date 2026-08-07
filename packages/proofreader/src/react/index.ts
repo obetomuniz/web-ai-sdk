@@ -47,6 +47,8 @@ export const useProofreader = (
     monitor,
     cache,
     cacheKey,
+    cacheTtl,
+    cacheRefresh,
     enabled = true,
   } = options;
 
@@ -72,6 +74,8 @@ export const useProofreader = (
       monitor,
       cache,
       cacheKey,
+      cacheTtl,
+      cacheRefresh,
       signal: controller.signal,
     })
       .then((result) => {
@@ -94,7 +98,16 @@ export const useProofreader = (
     return () => {
       controller.abort();
     };
-  }, [enabled, input, expectedInputLanguages, monitor, cache, cacheKey]);
+  }, [
+    enabled,
+    input,
+    expectedInputLanguages,
+    monitor,
+    cache,
+    cacheKey,
+    cacheTtl,
+    cacheRefresh,
+  ]);
 
   return { status, output, error, fromCache };
 };

@@ -30,6 +30,8 @@ interface DetectOptions {
   monitor?: (m: CreateMonitor) => void;
   cache?: "session" | "local" | { get, set };
   cacheKey?: string;
+  cacheTtl?: number;      // built-in shortcut TTL in ms; default 1 hour
+  cacheRefresh?: boolean; // skip the cache read, write the fresh result
   signal?: AbortSignal;
 }
 ```
@@ -44,6 +46,8 @@ interface DetectOptions {
 | `monitor` | `(m) => void` | Observe the first-call model download. |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. `"session"` / `"local"` wrap the matching web-storage; pass an object for a custom backend. |
 | `cacheKey` | `string` | Override the default cache key (JSON array string of `[input, sortedExpectedInputLanguages]`). |
+| `cacheTtl` | `number` | TTL in milliseconds for entries written by the built-in `"session"` / `"local"` shortcuts. Defaults to one hour. Ignored by custom `{ get, set }` caches. |
+| `cacheRefresh` | `boolean` | Skip the cache read and replace the cached value after a successful run. The refreshed run reports `cached: false`. |
 | `signal` | `AbortSignal` | Abort signal. |
 
 </div>
@@ -63,7 +67,7 @@ Chrome's `LanguageDetector` exposes `LanguageDetector.create({...})` to spin up 
 
 - **Feature detection.** `isAvailable()` / `checkAvailability()` return `false` / `null` on browsers without the API. The vanilla `detect()` throws `DetectorUnavailableError`; the React hook surfaces `status: "unavailable"`.
 - **Session reuse.** Internally caches `LanguageDetector.create()` by `expectedInputLanguages` shape. Cold-start is fast on this model (~100-300ms); warm calls are sub-50ms.
-- **Optional result cache.** Off by default. Pass `cache: "session"` to memoize results in `sessionStorage`, or `cache: "local"` for `localStorage`, or any `{ get, set }`-shaped object for a custom backend.
+- **Optional result cache.** Off by default. Pass `cache: "session"` to memoize results in `sessionStorage`, or `cache: "local"` for `localStorage`, or any `{ get, set }`-shaped object for a custom backend. Built-in `"session"` / `"local"` entries expire after one hour by default. Pass `cacheTtl` (milliseconds) to change the TTL per call. Pass `cacheRefresh: true` to skip the read and replace the cached value after a successful run. Custom `{ get, set }` caches own their expiry policy.
 
 ## Confidence threshold
 
