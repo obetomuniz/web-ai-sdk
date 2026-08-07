@@ -116,11 +116,36 @@ Forwards to the spec's `availability()` call. Returns `null` if the global is mi
 
 ### Session cache controls
 
-`configureTranslatorCache({ max })` bounds the internal warm `Translator` session cache (default `8`). `clearTranslatorSessions()` drops every warm session, and `clearTranslatorSession({ sourceLanguage, targetLanguage })` drops one matching language pair.
+`configureTranslatorCache({ max })` bounds the internal warm `Translator` session cache (default `8`). `clearTranslatorSessions()` drops every warm session, and `clearTranslatorSession({ sourceLanguage, targetLanguage })` drops one matching language pair. Clearing detaches sessions pinned by a lease or an in-flight call and destroys them when the last pin drops.
 
-### Lower-level helpers (advanced)
+### Prepare and release
 
-`getTranslatorApi`, `getOrCreateTranslator`, and `defaultCacheKey` are exported so you can compose your own pipeline or cache policy.
+`prepareTranslator(options)` starts native session creation when user intent is clear, before the input exists. It returns a `TranslatorLease`: `{ ready: Promise<void>; release(): void }`.
+
+```ts
+import { prepareTranslator, translate } from "@web-ai-sdk/translator";
+
+// User opens the translation menu: warm the session now.
+const translatorModel = prepareTranslator({ sourceLanguage: "en", targetLanguage: "pt" });
+
+// The matching call reuses the prepared session; no second create.
+const result = await translate({
+  input: "Hello, world.",
+  sourceLanguage: "en",
+  targetLanguage: "pt",
+});
+
+// User dismisses the feature: let the session go.
+translatorModel.release();
+```
+
+- `prepareTranslator` never throws synchronously. Unavailability and creation failure reject `ready` with `TranslatorUnavailableError`.
+- `release()` is idempotent. The final release destroys the session once no other lease or in-flight call uses it.
+- Releasing before creation settles destroys the session after creation succeeds.
+- Failed creation evicts the entry, so a later prepare retries.
+- Sessions with active leases never evict from the LRU cache.
+
+Reuse requires the same session-affecting options as the `translate` call. For this package those are `sourceLanguage` and `targetLanguage` (`PrepareTranslatorOptions`). `monitor` observes creation only and never affects reuse.
 
 ## Caching
 

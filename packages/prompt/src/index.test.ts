@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   __clearSessionCacheForTests,
-  __configureCacheForTests,
+  configureLanguageModelCache,
 } from "./api.js";
 import {
   ask,
@@ -618,7 +618,7 @@ describe("ask", () => {
   });
 
   it("bounds remembered no-clone create-option shapes", async () => {
-    __configureCacheForTests(1);
+    configureLanguageModelCache({ max: 1 });
     const fake = installFakeLanguageModel({
       sessionFactory: () => ({
         prompt: vi.fn(async () => "reply"),

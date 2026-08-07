@@ -58,7 +58,7 @@ await summarizer.summarize({ language: "en", input: document.body.innerText });
 const tools = await webmcp.getTools();
 ```
 
-The root entry namespaces each scoped package because several exports (e.g. `checkAvailability`, `isAvailable`, `defaultCacheKey`) appear in more than one package and would collide on a flat re-export.
+The root entry namespaces each scoped package because several exports (e.g. `checkAvailability`, `isAvailable`, `DEFAULT_CACHE_TTL_MS`) appear in more than one package and would collide on a flat re-export.
 
 ## Why a meta-package?
 

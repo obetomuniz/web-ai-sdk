@@ -91,9 +91,30 @@ Feature-detect helper.
 
 Forwards to `LanguageDetector.availability()`. Returns `null` if the global is missing or the call throws.
 
-### Lower-level helpers (advanced)
+### Prepare and release
 
-`getLanguageDetectorApi`, `getOrCreateLanguageDetector`, `defaultCacheKey`; exported so you can compose your own pipeline (e.g. share a session across multiple call sites, or roll your own retry).
+`prepareLanguageDetector(options)` starts native session creation when user intent is clear, before the input exists. It returns a `LanguageDetectorLease`: `{ ready: Promise<void>; release(): void }`. Options are optional; the zero-config call prepares the default detector.
+
+```ts
+import { prepareLanguageDetector, detect } from "@web-ai-sdk/detector";
+
+// User focuses the input field: warm the session now.
+const detectorModel = prepareLanguageDetector();
+
+// The matching call reuses the prepared session; no second create.
+const result = await detect({ input: "Olá, mundo" });
+
+// User dismisses the feature: let the session go.
+detectorModel.release();
+```
+
+- `prepareLanguageDetector` never throws synchronously. Unavailability and creation failure reject `ready` with `DetectorUnavailableError`.
+- `release()` is idempotent. The final release destroys the session once no other lease or in-flight call uses it.
+- Releasing before creation settles destroys the session after creation succeeds.
+- Failed creation evicts the entry, so a later prepare retries.
+- Sessions with active leases never evict from the LRU cache.
+
+Reuse requires the same session-affecting options as the `detect` call. For this package that is `expectedInputLanguages` (`PrepareLanguageDetectorOptions`). `monitor` observes creation only and never affects reuse.
 
 ## Caching
 
@@ -102,7 +123,7 @@ Two layers, same as the other packages:
 - **Session cache** (internal, in-memory, always on): a `Map<stringifiedOptions, LanguageDetector>` so consecutive calls with the same `expectedInputLanguages` shape reuse the warm session. Cold-start is fast on this model (~100-300ms) but warm is still sub-50ms.
 - **Result cache** (opt-in): pass a `cache` (anything matching `{ get, set }`) to memoize the full sorted list by trimmed text. Omit it for a fresh model call every time.
 
-Use `configureLanguageDetectorCache({ max })` to bound the warm session cache (default `8`). `clearLanguageDetectorSessions()` drops every warm session, and `clearLanguageDetectorSession({ expectedInputLanguages })` drops one matching detector configuration.
+Use `configureLanguageDetectorCache({ max })` to bound the warm session cache (default `8`). `clearLanguageDetectorSessions()` drops every warm session, and `clearLanguageDetectorSession({ expectedInputLanguages })` drops one matching detector configuration. Clearing detaches sessions pinned by a lease or an in-flight call and destroys them when the last pin drops.
 
 ```ts
 // Off by default; every call hits the model.

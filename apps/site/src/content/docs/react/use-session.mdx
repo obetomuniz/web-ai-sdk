@@ -21,6 +21,8 @@ When enabled, mounting the hook starts native creation. The hook stays `"loading
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for initial instructions, base-plus-clone tasks, destruction, safe rendering, progress, and reversible UI.
 
+`useSession` owns its session directly, outside the shared warm cache. For how `ask()` and the task packages manage warm sessions, see the [Session lifecycle guide](/docs/guides/session-lifecycle/).
+
 ## Usage
 
 ```tsx

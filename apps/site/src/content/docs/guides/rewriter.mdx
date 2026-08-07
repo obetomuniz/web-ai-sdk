@@ -7,6 +7,8 @@ This package wraps the built-in [Rewriter API](https://developer.chrome.com/docs
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for safe rendering, progress, Accept/Reject/Undo flows, and cache freshness.
 
+Use `prepareRewriter` to warm a session on user intent and release it when the feature closes. See the [Session lifecycle guide](/docs/guides/session-lifecycle/).
+
 ## Usage
 
 ```ts

@@ -7,6 +7,8 @@ This package wraps the built-in [Writer API](https://developer.chrome.com/docs/a
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for safe rendering, progress, reversible suggestions, user control, and cache freshness.
 
+Use `prepareWriter` to warm a session on user intent and release it when the feature closes. See the [Session lifecycle guide](/docs/guides/session-lifecycle/).
+
 ## Usage
 
 ```ts

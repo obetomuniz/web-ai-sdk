@@ -108,7 +108,42 @@ import {
 } from "@web-ai-sdk/rewriter";
 ```
 
-The internal session cache is LRU-bounded (default 8). Evicted sessions have their `destroy()` invoked when present.
+The internal session cache is LRU-bounded (default 8). Evicted sessions have their `destroy()` invoked when present. Clearing detaches sessions pinned by a lease or an in-flight call and destroys them when the last pin drops.
+
+### Prepare and release
+
+`prepareRewriter(options)` starts native session creation when user intent is clear, before the input exists. It returns a `RewriterLease`:
+
+```ts
+interface RewriterLease {
+  ready: Promise<void>; // settles when native creation settles
+  release(): void;      // idempotent
+}
+```
+
+```ts
+import { prepareRewriter, rewrite } from "@web-ai-sdk/rewriter";
+
+// User opened the polish panel; warm the session now.
+const rewriterModel = prepareRewriter({ tone: "more-formal" });
+
+// The matching call reuses the prepared session with no second create.
+const result = await rewrite({
+  input: "hey, can u send me that doc when u get a sec? thx",
+  tone: "more-formal",
+});
+
+// User dismissed the panel.
+rewriterModel.release();
+```
+
+- `prepareRewriter` never throws synchronously. Unavailability and creation failure reject `ready` with `RewriterUnavailableError`.
+- `release()` is idempotent. The final release destroys the session once no other lease or in-flight call uses it.
+- Releasing before creation settles destroys the session after creation succeeds.
+- Failed creation evicts the entry, so a later prepare retries.
+- Sessions with active leases never evict from the LRU cache.
+
+Reuse requires the same session-affecting options as the `rewrite` call. `PrepareRewriterOptions` covers `language`, `supportedLanguages`, `tone`, `format`, `length`, and `sharedContext`. `monitor` observes creation only and never affects reuse.
 
 ## Result caching
 

@@ -8,9 +8,11 @@
  */
 
 import {
+  acquireWriter,
+  type ConfigureWriterCacheOptions,
   type CreateMonitor,
-  getOrCreateWriter,
   getWriterApi,
+  leaseWriter,
   type WriterApi,
   type WriterAvailability,
   type WriterAvailabilityOptions,
@@ -29,19 +31,14 @@ export {
   clearWriterSession,
   clearWriterSessions,
   configureWriterCache,
-  getOrCreateWriter,
-  getWriterApi,
   isAvailable,
 } from "./api.js";
 
-export {
-  DEFAULT_CACHE_TTL_MS,
-  defaultCacheKey,
-  resolveCache,
-} from "./cache.js";
+export { DEFAULT_CACHE_TTL_MS } from "./cache.js";
 
 export type {
   CacheOption,
+  ConfigureWriterCacheOptions,
   CreateMonitor,
   WriteCache,
   WriterApi,
@@ -124,6 +121,110 @@ class WriterAbortError extends Error {
 }
 
 /**
+ * Session-affecting subset of `WriteOptions`. `prepareWriter` and `write`
+ * derive the same native create options from these fields, so a prepared
+ * session is reused by the matching call.
+ * `monitor` observes creation only; it never affects the cache key.
+ */
+export type PrepareWriterOptions = Pick<
+  WriteOptions,
+  | "language"
+  | "supportedLanguages"
+  | "tone"
+  | "format"
+  | "length"
+  | "sharedContext"
+  | "monitor"
+>;
+
+interface SessionConfig {
+  lang: string | undefined;
+  languageHints: boolean;
+  createOptions: WriterCreateOptions;
+}
+
+/**
+ * Single source of the option-to-session mapping. The session cache key derives from
+ * the stable fields of `createOptions` (`monitor` never fragments reuse),
+ * so `write` and `prepareWriter` must both go through this
+ * derivation.
+ */
+const resolveSessionConfig = (options: PrepareWriterOptions): SessionConfig => {
+  const lang = options.language ? NORMALIZE_LANG(options.language) : undefined;
+  const supported = new Set(
+    (options.supportedLanguages ?? DEFAULT_SUPPORTED_LANGUAGES).map(
+      NORMALIZE_LANG,
+    ),
+  );
+  const languageHints = lang ? supported.has(lang) : false;
+
+  const langOptions: Pick<
+    WriterCreateOptions,
+    "expectedInputLanguages" | "expectedContextLanguages" | "outputLanguage"
+  > =
+    lang && languageHints
+      ? {
+          expectedInputLanguages: [lang],
+          expectedContextLanguages: [lang],
+          outputLanguage: lang,
+        }
+      : {};
+
+  const createOptions: WriterCreateOptions = {
+    tone: options.tone ?? "neutral",
+    format: options.format ?? "markdown",
+    length: options.length ?? "short",
+    sharedContext: options.sharedContext ?? "",
+    ...langOptions,
+    ...(options.monitor ? { monitor: options.monitor } : {}),
+  };
+
+  return { lang, languageHints, createOptions };
+};
+
+export interface WriterLease {
+  /**
+   * Resolves when the native session is created. Rejects with
+   * `WriterUnavailableError` when the API is missing or creation fails.
+   */
+  ready: Promise<void>;
+  /**
+   * Idempotent. The final release destroys the session once no other lease
+   * or in-flight call uses it.
+   */
+  release(): void;
+}
+
+/**
+ * Start native session creation as soon as user intent is clear, before the
+ * input exists. The matching `write` call reuses the prepared session
+ * without a second create. Never throws synchronously; unavailability and
+ * creation failures reject `ready`. Failed preparations leave the cache so a
+ * later call can retry.
+ */
+export const prepareWriter = (options: PrepareWriterOptions): WriterLease => {
+  const api = getWriterApi();
+  if (!api?.create) {
+    const ready = Promise.reject(
+      new WriterUnavailableError(
+        "Writer API is not available in this environment.",
+      ),
+    );
+    // Keep unobserved leases from surfacing unhandled rejections.
+    ready.catch(() => {});
+    return { ready, release: () => {} };
+  }
+  const { createOptions } = resolveSessionConfig(options);
+  const lease = leaseWriter(api, createOptions);
+  const ready = lease.ready.catch((err) => {
+    const message = (err as Error)?.message ?? String(err);
+    throw new WriterUnavailableError(`Writer.create() failed: ${message}`);
+  });
+  ready.catch(() => {});
+  return { ready, release: lease.release };
+};
+
+/**
  * Generate new content for a writing task. Uses streaming when the underlying
  * instance supports it, one-shot otherwise. Returns `{ output: null }` for
  * empty input. Throws `WriterUnavailableError` when the API isn't present in
@@ -143,12 +244,7 @@ export const write = async (options: WriteOptions): Promise<WriteResult> => {
   const text = options.input.trim();
   if (!text) return { output: null, cached: false };
 
-  const lang = options.language ? NORMALIZE_LANG(options.language) : undefined;
-  const supportedLanguages = (
-    options.supportedLanguages ?? DEFAULT_SUPPORTED_LANGUAGES
-  ).map(NORMALIZE_LANG);
-  const supported = new Set(supportedLanguages);
-  const languageHints = lang ? supported.has(lang) : false;
+  const { lang, languageHints, createOptions } = resolveSessionConfig(options);
   const cache = resolveCache(options.cache, options.cacheTtl);
   const cacheKey =
     options.cacheKey ??
@@ -167,45 +263,23 @@ export const write = async (options: WriteOptions): Promise<WriteResult> => {
     if (cached) return { output: cached, cached: true };
   }
 
-  const langOptions: Pick<
-    WriterCreateOptions,
-    "expectedInputLanguages" | "expectedContextLanguages" | "outputLanguage"
-  > =
-    lang && languageHints
-      ? {
-          expectedInputLanguages: [lang],
-          expectedContextLanguages: [lang],
-          outputLanguage: lang,
-        }
-      : {};
-
-  const baseCreateOptions: WriterCreateOptions = {
-    tone: options.tone ?? "neutral",
-    format: options.format ?? "markdown",
-    length: options.length ?? "short",
-    sharedContext: options.sharedContext ?? "",
-    ...langOptions,
-    ...(options.monitor ? { monitor: options.monitor } : {}),
-  };
-
   // Pass the same shape to availability() as we do to create() so engines
   // that warn on mismatch stay quiet.
   const availability = await api
     .availability({
-      ...(baseCreateOptions.tone ? { tone: baseCreateOptions.tone } : {}),
-      ...(baseCreateOptions.format ? { format: baseCreateOptions.format } : {}),
-      ...(baseCreateOptions.length ? { length: baseCreateOptions.length } : {}),
-      ...(baseCreateOptions.expectedInputLanguages
-        ? { expectedInputLanguages: baseCreateOptions.expectedInputLanguages }
+      ...(createOptions.tone ? { tone: createOptions.tone } : {}),
+      ...(createOptions.format ? { format: createOptions.format } : {}),
+      ...(createOptions.length ? { length: createOptions.length } : {}),
+      ...(createOptions.expectedInputLanguages
+        ? { expectedInputLanguages: createOptions.expectedInputLanguages }
         : {}),
-      ...(baseCreateOptions.expectedContextLanguages
+      ...(createOptions.expectedContextLanguages
         ? {
-            expectedContextLanguages:
-              baseCreateOptions.expectedContextLanguages,
+            expectedContextLanguages: createOptions.expectedContextLanguages,
           }
         : {}),
-      ...(baseCreateOptions.outputLanguage
-        ? { outputLanguage: baseCreateOptions.outputLanguage }
+      ...(createOptions.outputLanguage
+        ? { outputLanguage: createOptions.outputLanguage }
         : {}),
     })
     .catch(() => "unavailable" as const);
@@ -214,45 +288,50 @@ export const write = async (options: WriteOptions): Promise<WriteResult> => {
   }
   if (options.signal?.aborted) throw new WriterAbortError();
 
-  const sessionPromise = getOrCreateWriter(api, baseCreateOptions);
-
-  // Wrap session-create failures with context so consumers can branch on a
-  // single typed error instead of parsing browser-specific messages.
-  let writer: WriterInstance;
+  // The pin defers destruction (lease release, clear, eviction) until this
+  // call finishes.
+  const acquired = acquireWriter(api, createOptions);
   try {
-    writer = await sessionPromise;
-  } catch (err) {
-    if (err instanceof WriterAbortError) throw err;
-    const message = (err as Error)?.message ?? String(err);
-    throw new WriterUnavailableError(`Writer.create() failed: ${message}`);
-  }
-  if (options.signal?.aborted) throw new WriterAbortError();
-
-  const taskOptions = {
-    ...(options.context !== undefined ? { context: options.context } : {}),
-    ...(options.signal ? { signal: options.signal } : {}),
-  };
-
-  // Browser implementations may emit delta or cumulative chunks. Detect the
-  // shape per chunk and merge accordingly.
-  const mergeChunk = (buffer: string, chunk: string): string =>
-    chunk.startsWith(buffer) ? chunk : buffer + chunk;
-
-  let finalText: string;
-  if (typeof writer.writeStreaming === "function") {
-    let buffer = "";
-    for await (const chunk of writer.writeStreaming(text, taskOptions)) {
-      if (options.signal?.aborted) throw new WriterAbortError();
-      buffer = mergeChunk(buffer, chunk);
-      options.onUpdate?.(buffer);
+    // Wrap session-create failures with context so consumers can branch on a
+    // single typed error instead of parsing browser-specific messages.
+    let writer: WriterInstance;
+    try {
+      writer = await acquired.session;
+    } catch (err) {
+      if (err instanceof WriterAbortError) throw err;
+      const message = (err as Error)?.message ?? String(err);
+      throw new WriterUnavailableError(`Writer.create() failed: ${message}`);
     }
-    finalText = buffer.trim();
-  } else {
-    const raw = await writer.write(text, taskOptions);
     if (options.signal?.aborted) throw new WriterAbortError();
-    finalText = raw.trim();
-  }
 
-  if (finalText && cache) cache.set(cacheKey, finalText);
-  return { output: finalText || null, cached: false };
+    const taskOptions = {
+      ...(options.context !== undefined ? { context: options.context } : {}),
+      ...(options.signal ? { signal: options.signal } : {}),
+    };
+
+    // Browser implementations may emit delta or cumulative chunks. Detect the
+    // shape per chunk and merge accordingly.
+    const mergeChunk = (buffer: string, chunk: string): string =>
+      chunk.startsWith(buffer) ? chunk : buffer + chunk;
+
+    let finalText: string;
+    if (typeof writer.writeStreaming === "function") {
+      let buffer = "";
+      for await (const chunk of writer.writeStreaming(text, taskOptions)) {
+        if (options.signal?.aborted) throw new WriterAbortError();
+        buffer = mergeChunk(buffer, chunk);
+        options.onUpdate?.(buffer);
+      }
+      finalText = buffer.trim();
+    } else {
+      const raw = await writer.write(text, taskOptions);
+      if (options.signal?.aborted) throw new WriterAbortError();
+      finalText = raw.trim();
+    }
+
+    if (finalText && cache) cache.set(cacheKey, finalText);
+    return { output: finalText || null, cached: false };
+  } finally {
+    acquired.done();
+  }
 };

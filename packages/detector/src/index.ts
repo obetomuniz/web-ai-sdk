@@ -9,6 +9,7 @@
  */
 
 import {
+  acquireLanguageDetector,
   type ConfigureLanguageDetectorCacheOptions,
   type CreateMonitor,
   checkAvailability,
@@ -17,13 +18,13 @@ import {
   configureLanguageDetectorCache,
   type DetectionResult,
   getLanguageDetectorApi,
-  getOrCreateLanguageDetector,
   isAvailable,
   type LanguageDetectorApi,
   type LanguageDetectorAvailability,
   type LanguageDetectorAvailabilityOptions,
   type LanguageDetectorCreateOptions,
   type LanguageDetectorInstance,
+  leaseLanguageDetector,
 } from "./api.js";
 import {
   type CacheOption,
@@ -119,6 +120,89 @@ class DetectorAbortError extends Error {
 }
 
 /**
+ * Session-affecting subset of `DetectOptions`. `prepareLanguageDetector` and
+ * `detect` derive the same native create options from these fields, so a
+ * prepared session is reused by the matching call.
+ * `monitor` observes creation only; it never affects the cache key.
+ */
+export type PrepareLanguageDetectorOptions = Pick<
+  DetectOptions,
+  "expectedInputLanguages" | "monitor"
+>;
+
+interface SessionConfig {
+  expectedInputLanguages: string[] | undefined;
+  createOptions: LanguageDetectorCreateOptions;
+}
+
+/**
+ * Single source of the option-to-session mapping. The session cache key derives from
+ * the stable fields of `createOptions` (`monitor` never fragments reuse),
+ * so `detect` and `prepareLanguageDetector` must both go
+ * through this derivation.
+ */
+const resolveSessionConfig = (
+  options: PrepareLanguageDetectorOptions,
+): SessionConfig => {
+  const expectedInputLanguages = options.expectedInputLanguages
+    ? [...options.expectedInputLanguages]
+    : undefined;
+
+  const createOptions: LanguageDetectorCreateOptions = {
+    ...(expectedInputLanguages ? { expectedInputLanguages } : {}),
+    ...(options.monitor ? { monitor: options.monitor } : {}),
+  };
+
+  return { expectedInputLanguages, createOptions };
+};
+
+export interface LanguageDetectorLease {
+  /**
+   * Resolves when the native session is created. Rejects with
+   * `DetectorUnavailableError` when the API is missing or creation fails.
+   */
+  ready: Promise<void>;
+  /**
+   * Idempotent. The final release destroys the session once no other lease
+   * or in-flight call uses it.
+   */
+  release(): void;
+}
+
+/**
+ * Start native session creation as soon as user intent is clear, before the
+ * input exists. The matching `detect` call reuses the prepared session
+ * without a second create. Never throws synchronously; unavailability and
+ * creation failures reject `ready`. Failed preparations leave the cache so a
+ * later call can retry.
+ */
+export const prepareLanguageDetector = (
+  options: PrepareLanguageDetectorOptions = {},
+): LanguageDetectorLease => {
+  const api = getLanguageDetectorApi();
+  if (!api?.create) {
+    const ready = Promise.reject(
+      new DetectorUnavailableError(
+        "LanguageDetector API is not available in this environment.",
+      ),
+    );
+    // Keep unobserved leases from surfacing unhandled rejections.
+    ready.catch(() => {});
+    return { ready, release: () => {} };
+  }
+  const { createOptions } = resolveSessionConfig(options);
+  const lease = leaseLanguageDetector(api, createOptions);
+  const ready = lease.ready.catch((err) => {
+    const message = (err as Error)?.message ?? String(err);
+    throw new DetectorUnavailableError(
+      `LanguageDetector.create() failed: ${message}`,
+    );
+  });
+  ready.catch(() => {});
+  return { ready, release: lease.release };
+};
+
+/**
  * Detect the language of a string. Returns the top match with confidence,
  * plus the full sorted list for callers that want to inspect alternates.
  * Returns `{ output: null, ... }` for empty input or when the top
@@ -139,9 +223,8 @@ export const detect = async (options: DetectOptions): Promise<DetectResult> => {
   }
 
   const minConfidence = options.minConfidence ?? 0;
-  const expectedInputLanguages = options.expectedInputLanguages
-    ? [...options.expectedInputLanguages]
-    : undefined;
+  const { expectedInputLanguages, createOptions } =
+    resolveSessionConfig(options);
 
   const cache = resolveCache(options.cache, options.cacheTtl);
   const cacheKey =
@@ -169,11 +252,6 @@ export const detect = async (options: DetectOptions): Promise<DetectResult> => {
     }
   }
 
-  const baseCreateOptions: LanguageDetectorCreateOptions = {
-    ...(expectedInputLanguages ? { expectedInputLanguages } : {}),
-    ...(options.monitor ? { monitor: options.monitor } : {}),
-  };
-
   // Pass the same shape to availability() as we do to create() so the probe
   // applies to the requested configuration.
   const availability = await api
@@ -186,42 +264,47 @@ export const detect = async (options: DetectOptions): Promise<DetectResult> => {
   }
   if (options.signal?.aborted) throw new DetectorAbortError();
 
-  const sessionPromise = getOrCreateLanguageDetector(api, baseCreateOptions);
-
-  // Wrap session-create failures with context so consumers can branch on
-  // a single typed error instead of parsing browser-specific messages.
-  let session: LanguageDetectorInstance;
+  // The pin defers destruction (lease release, clear, eviction) until this
+  // call finishes.
+  const acquired = acquireLanguageDetector(api, createOptions);
   try {
-    session = await sessionPromise;
-  } catch (err) {
-    if (err instanceof DetectorAbortError) throw err;
-    const message = (err as Error)?.message ?? String(err);
-    throw new DetectorUnavailableError(
-      `LanguageDetector.create() failed: ${message}`,
-    );
-  }
-  if (options.signal?.aborted) throw new DetectorAbortError();
+    // Wrap session-create failures with context so consumers can branch on
+    // a single typed error instead of parsing browser-specific messages.
+    let session: LanguageDetectorInstance;
+    try {
+      session = await acquired.session;
+    } catch (err) {
+      if (err instanceof DetectorAbortError) throw err;
+      const message = (err as Error)?.message ?? String(err);
+      throw new DetectorUnavailableError(
+        `LanguageDetector.create() failed: ${message}`,
+      );
+    }
+    if (options.signal?.aborted) throw new DetectorAbortError();
 
-  const results = await session.detect(text);
-  if (options.signal?.aborted) throw new DetectorAbortError();
+    const results = await session.detect(text);
+    if (options.signal?.aborted) throw new DetectorAbortError();
 
-  // The spec says results are sorted by confidence descending; sort again
-  // defensively in case an implementation drifts.
-  const sorted = [...results].sort((a, b) => b.confidence - a.confidence);
-  if (cache && sorted.length > 0) {
-    cache.set(cacheKey, JSON.stringify(sorted));
-  }
+    // The spec says results are sorted by confidence descending; sort again
+    // defensively in case an implementation drifts.
+    const sorted = [...results].sort((a, b) => b.confidence - a.confidence);
+    if (cache && sorted.length > 0) {
+      cache.set(cacheKey, JSON.stringify(sorted));
+    }
 
-  const top = sorted[0];
-  if (!top || top.confidence < minConfidence) {
-    return { output: null, cached: false };
+    const top = sorted[0];
+    if (!top || top.confidence < minConfidence) {
+      return { output: null, cached: false };
+    }
+    return {
+      output: {
+        language: top.detectedLanguage,
+        confidence: top.confidence,
+        all: sorted,
+      },
+      cached: false,
+    };
+  } finally {
+    acquired.done();
   }
-  return {
-    output: {
-      language: top.detectedLanguage,
-      confidence: top.confidence,
-      all: sorted,
-    },
-    cached: false,
-  };
 };

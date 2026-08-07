@@ -7,6 +7,8 @@ This package wraps the built-in [Translator API](https://developer.chrome.com/do
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for task-relevant input, safe rendering, progress, reversible changes, and cache freshness.
 
+Use `prepareTranslator` to warm a session on user intent and release it when the feature closes. See the [Session lifecycle guide](/docs/guides/session-lifecycle/).
+
 ## Usage
 
 ```ts

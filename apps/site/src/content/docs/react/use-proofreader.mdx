@@ -9,6 +9,8 @@ React adapter for `@web-ai-sdk/proofreader`. Auto-runs on mount and re-runs when
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for preserving originals, Accept/Reject/Undo flows, safe rendering, and cache freshness.
 
+To warm the session before the hook first runs, call `prepareProofreader` from the core package on user intent. See the [Session lifecycle guide](/docs/guides/session-lifecycle/).
+
 ## Live demo
 
 <ProofreaderDemo client:only="react" />

@@ -3,19 +3,13 @@ title: Prompt API
 description: Use ask() for one-shot prompts or createSession() for multi-turn conversations with the built-in LanguageModel API.
 ---
 
-import { PromptDemo } from "../../../features/docs/components/PromptDemo.tsx";
-
 This package wraps the built-in [Prompt API](https://developer.chrome.com/docs/ai/prompt-api) (`LanguageModel`). Use `ask()` for one-shot prompts. Use `createSession()` for multi-turn conversations.
 
 The package [README](https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/prompt#readme) covers installation and the API reference. This page explains the vanilla API. For React, see [usePrompt](/docs/react/use-prompt/) and [useSession](/docs/react/use-session/).
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for intent-driven preparation, session isolation, input selection, safe rendering, progress, reversible edits, and cache freshness.
 
-## Live demo
-
-<PromptDemo client:only="react" />
-
-Type a question and click "Ask". Tokens stream in as the model produces them. The demo runs on this page through the React adapter; the vanilla `ask()` below has the same behavior.
+Use `prepareLanguageModel` to warm a session on user intent and release it when the feature closes. See the [Session lifecycle guide](/docs/guides/session-lifecycle/).
 
 ## One-shot: `ask()`
 

@@ -238,29 +238,57 @@ interface CacheConfig {
 
 const cacheConfig: CacheConfig = { max: DEFAULT_MAX_CACHED_SESSIONS };
 
+interface SessionEntry {
+  key: string;
+  session: Promise<LanguageModelInstance>;
+  /** Active prepare leases. Leased entries never evict. */
+  leaseCount: number;
+  /** `ask()` calls currently using this base session. */
+  inFlightCount: number;
+  /** Still reachable through `sessionCache`. */
+  inMap: boolean;
+  /** Destruction already scheduled; guards double-destroy. */
+  destroyed: boolean;
+}
+
 // Map iteration order is insertion order, which lets us use it as an LRU:
 // on hit we re-insert to bump recency, and on overflow we evict the
 // oldest (first) entry.
-const sessionCache = new Map<string, Promise<LanguageModelInstance>>();
+const sessionCache = new Map<string, SessionEntry>();
 const cloneUnavailableCacheKeys = new Map<string, true>();
+
+const isPinned = (entry: SessionEntry): boolean =>
+  entry.leaseCount > 0 || entry.inFlightCount > 0;
 
 const normalizeCacheMax = (max: number): number =>
   Number.isFinite(max) ? Math.max(0, Math.floor(max)) : 0;
 
+export interface ConfigureLanguageModelCacheOptions {
+  /** Soft cap on cached base sessions. Default: `8`. */
+  max?: number;
+}
+
 /**
- * Test-only escape hatch; reconfigure the session LRU cap. Not part of the
- * public API.
+ * Bound the internal base-session cache used by `ask()` and
+ * `prepareLanguageModel()`. Excess entries are evicted in LRU order (their
+ * `destroy?()` is invoked when present). Lowering `max` immediately evicts
+ * down to the new ceiling. `createSession()` sessions are caller-owned and
+ * unaffected.
  */
-export const __configureCacheForTests = (max: number): void => {
-  cacheConfig.max = normalizeCacheMax(max);
+export const configureLanguageModelCache = (
+  options: ConfigureLanguageModelCacheOptions = {},
+): void => {
+  if (options.max !== undefined) {
+    cacheConfig.max = normalizeCacheMax(options.max);
+  }
   trim();
 };
 
-const destroySession = (entry: Promise<LanguageModelInstance>): void => {
-  entry
-    .then((session) => {
+const destroySession = (session: Promise<LanguageModelInstance>): void => {
+  session
+    .then((instance) => {
       try {
-        session.destroy?.();
+        instance.destroy?.();
       } catch {
         // best-effort; the spec doesn't require destroy to be infallible.
       }
@@ -270,13 +298,32 @@ const destroySession = (entry: Promise<LanguageModelInstance>): void => {
     });
 };
 
+const detachEntry = (entry: SessionEntry): void => {
+  if (!entry.inMap) return;
+  entry.inMap = false;
+  sessionCache.delete(entry.key);
+};
+
+/**
+ * Destroy a detached entry once nothing pins it. Pinned entries are settled
+ * again when their last lease releases or their last in-flight call ends.
+ */
+const settleEntry = (entry: SessionEntry): void => {
+  if (entry.inMap || entry.destroyed || isPinned(entry)) return;
+  entry.destroyed = true;
+  destroySession(entry.session);
+};
+
 const trim = (): void => {
-  while (sessionCache.size > cacheConfig.max) {
-    const oldestKey = sessionCache.keys().next().value;
-    if (oldestKey === undefined) return;
-    const evicted = sessionCache.get(oldestKey);
-    sessionCache.delete(oldestKey);
-    if (evicted) destroySession(evicted);
+  if (sessionCache.size > cacheConfig.max) {
+    for (const entry of [...sessionCache.values()]) {
+      if (sessionCache.size <= cacheConfig.max) break;
+      // Leased or in-flight entries never evict, so the cache may temporarily
+      // exceed `max` while they stay pinned.
+      if (isPinned(entry)) continue;
+      detachEntry(entry);
+      settleEntry(entry);
+    }
   }
   while (cloneUnavailableCacheKeys.size > cacheConfig.max) {
     const oldestKey = cloneUnavailableCacheKeys.keys().next().value;
@@ -286,41 +333,159 @@ const trim = (): void => {
 };
 
 /**
- * Get or create a `LanguageModel` session for the given options. Sessions live
- * for the tab lifetime so consecutive calls with the same shape skip the
- * ~1-3s cold start. On `create()` failure the cache slot is purged so the
- * next call retries instead of returning a poisoned promise.
- *
- * The cache is shared across `ask()` calls only. `createSession()` bypasses
- * this cache so chat-shaped apps get independent sessions per call.
+ * Drop every cached base session. Sessions live for the tab lifetime by
+ * default; call this to free them eagerly when navigating away from a feature
+ * that won't be revisited. Sessions pinned by a lease or an in-flight call
+ * leave the cache now and are destroyed once the last pin drops.
+ * `createSession()` sessions are caller-owned and unaffected.
  */
-export const getOrCreateLanguageModel = (
+export const clearLanguageModelSessions = (): void => {
+  for (const entry of [...sessionCache.values()]) {
+    detachEntry(entry);
+    settleEntry(entry);
+  }
+};
+
+/**
+ * Drop the cached base session whose create-options match `options`.
+ */
+export const clearLanguageModelSession = (
+  options: LanguageModelCreateOptions,
+): void => {
+  const entry = sessionCache.get(JSON.stringify(options));
+  if (!entry) return;
+  detachEntry(entry);
+  settleEntry(entry);
+};
+
+/**
+ * Get or create the cache entry for the given options. Sessions live for the
+ * tab lifetime so consecutive calls with the same shape skip the ~1-3s cold
+ * start. On `create()` failure the cache slot is purged so the next call
+ * retries instead of returning a poisoned promise.
+ *
+ * The cache is shared across `ask()` and `prepareLanguageModel()` only.
+ * `createSession()` bypasses this cache so chat-shaped apps get independent
+ * sessions per call.
+ */
+const getOrCreateEntry = (
   api: LanguageModelApi,
   options: LanguageModelCreateOptions,
-): Promise<LanguageModelInstance> => {
+): SessionEntry => {
   const key = JSON.stringify(options);
-  let session = sessionCache.get(key);
-  if (session) {
+  const existing = sessionCache.get(key);
+  if (existing) {
     // Bump recency: delete + reinsert so this entry moves to the end of the
     // LRU order.
     sessionCache.delete(key);
-    sessionCache.set(key, session);
-    return session;
+    sessionCache.set(key, existing);
+    return existing;
   }
-  session = api.create(options).catch((err) => {
-    sessionCache.delete(key);
-    throw err;
-  });
-  sessionCache.set(key, session);
-  trim();
-  return session;
+  const entry: SessionEntry = {
+    key,
+    session: api.create(options).catch((err) => {
+      detachEntry(entry);
+      throw err;
+    }),
+    leaseCount: 0,
+    inFlightCount: 0,
+    inMap: true,
+    destroyed: false,
+  };
+  // A prepare-only caller may never observe the session promise; keep the
+  // stored branch handled so failed creation cannot surface as an unhandled
+  // rejection.
+  entry.session.catch(() => {});
+  sessionCache.set(key, entry);
+  return entry;
 };
 
-/** Internal: remove one create-options entry from the warm-session cache. */
+export interface AcquiredLanguageModel {
+  session: Promise<LanguageModelInstance>;
+  /** Release the in-flight pin. Idempotent. */
+  done(): void;
+}
+
+/**
+ * Get or create a base `LanguageModel` session and pin it for one `ask()`
+ * call. The pin defers destruction (final lease release, clear, eviction)
+ * until `done()` runs, so in-flight use can never lose its session.
+ */
+export const acquireLanguageModel = (
+  api: LanguageModelApi,
+  options: LanguageModelCreateOptions,
+): AcquiredLanguageModel => {
+  const entry = getOrCreateEntry(api, options);
+  // Pin before trimming so a fresh entry can never evict itself when every
+  // other entry is pinned.
+  entry.inFlightCount += 1;
+  trim();
+  let released = false;
+  return {
+    session: entry.session,
+    done: () => {
+      if (released) return;
+      released = true;
+      entry.inFlightCount -= 1;
+      settleEntry(entry);
+      // The dropped pin may leave the cache over its cap; re-trim now
+      // instead of waiting for the next create or configure call.
+      trim();
+    },
+  };
+};
+
+export interface LanguageModelSessionLease {
+  /** Settles with the underlying `create()` outcome. */
+  ready: Promise<void>;
+  /** Idempotent. The final release detaches and destroys once safe. */
+  release(): void;
+}
+
+/**
+ * Start (or join) base-session creation for the given options and hold a
+ * lease on the entry. Leases pin the entry against LRU eviction. The final
+ * release removes the entry from the cache and destroys the session as soon
+ * as no in-flight call uses it; released-before-ready sessions are destroyed
+ * when creation later succeeds.
+ */
+export const leaseLanguageModel = (
+  api: LanguageModelApi,
+  options: LanguageModelCreateOptions,
+): LanguageModelSessionLease => {
+  const entry = getOrCreateEntry(api, options);
+  // Pin before trimming so a fresh entry can never evict itself when every
+  // other entry is pinned.
+  entry.leaseCount += 1;
+  trim();
+  let released = false;
+  const ready = entry.session.then(() => undefined);
+  // Keep unobserved leases from surfacing unhandled rejections.
+  ready.catch(() => {});
+  return {
+    ready,
+    release: () => {
+      if (released) return;
+      released = true;
+      entry.leaseCount -= 1;
+      if (entry.leaseCount > 0) return;
+      detachEntry(entry);
+      settleEntry(entry);
+    },
+  };
+};
+
+/**
+ * Internal: remove one create-options entry from the warm-session cache
+ * without destroying it. `ask()` uses this when the base turns out not to
+ * support `clone()`; the entry's own pin drain then destroys the instance.
+ */
 export const dropCachedLanguageModel = (
   options: LanguageModelCreateOptions,
 ): void => {
-  sessionCache.delete(JSON.stringify(options));
+  const entry = sessionCache.get(JSON.stringify(options));
+  if (!entry) return;
+  detachEntry(entry);
 };
 
 export const markLanguageModelCloneUnavailable = (

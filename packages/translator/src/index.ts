@@ -8,14 +8,15 @@
  */
 
 import {
+  acquireTranslator,
   type ConfigureTranslatorCacheOptions,
   checkAvailability,
   clearTranslatorSession,
   clearTranslatorSessions,
   configureTranslatorCache,
-  getOrCreateTranslator,
   getTranslatorApi,
   isAvailable,
+  leaseTranslator,
   type TranslatorApi,
   type TranslatorAvailability,
   type TranslatorAvailabilityOptions,
@@ -111,6 +112,87 @@ export class TranslatorUnavailableError extends Error {
   override readonly name = "TranslatorUnavailableError";
 }
 
+/**
+ * Session-affecting subset of `TranslateOptions`. `prepareTranslator` and
+ * `translate` derive the same native create options from these fields, so a
+ * prepared session is reused by the matching call.
+ * `monitor` observes creation only; it never affects the cache key.
+ */
+export type PrepareTranslatorOptions = Pick<
+  TranslateOptions,
+  "sourceLanguage" | "targetLanguage" | "monitor"
+>;
+
+interface SessionConfig {
+  sourceLanguage: string;
+  targetLanguage: string;
+  createOptions: TranslatorCreateOptions;
+}
+
+/**
+ * Single source of the option-to-session mapping. The session cache keys by
+ * the normalized language pair, so `translate` and `prepareTranslator` must
+ * both go through this derivation.
+ */
+const resolveSessionConfig = (
+  options: PrepareTranslatorOptions,
+): SessionConfig => {
+  const sourceLanguage = NORMALIZE_LANG(options.sourceLanguage);
+  const targetLanguage = NORMALIZE_LANG(options.targetLanguage ?? "en");
+  const createOptions: TranslatorCreateOptions = {
+    sourceLanguage,
+    targetLanguage,
+    ...(options.monitor ? { monitor: options.monitor } : {}),
+  };
+  return { sourceLanguage, targetLanguage, createOptions };
+};
+
+export interface TranslatorLease {
+  /**
+   * Resolves when the native session is created. Rejects with
+   * `TranslatorUnavailableError` when the API is missing or creation fails.
+   */
+  ready: Promise<void>;
+  /**
+   * Idempotent. The final release destroys the session once no other lease
+   * or in-flight call uses it.
+   */
+  release(): void;
+}
+
+/**
+ * Start native session creation as soon as user intent is clear, before the
+ * input exists. The matching `translate` call reuses the prepared session
+ * without a second create. Never throws synchronously; unavailability and
+ * creation failures reject `ready`. Failed preparations leave the cache so a
+ * later call can retry.
+ */
+export const prepareTranslator = (
+  options: PrepareTranslatorOptions,
+): TranslatorLease => {
+  const api = getTranslatorApi();
+  if (!api?.create) {
+    const ready = Promise.reject(
+      new TranslatorUnavailableError(
+        "Translator API is not available in this environment.",
+      ),
+    );
+    // Keep unobserved leases from surfacing unhandled rejections.
+    ready.catch(() => {});
+    return { ready, release: () => {} };
+  }
+  const { createOptions } = resolveSessionConfig(options);
+  const lease = leaseTranslator(api, createOptions);
+  const ready = lease.ready.catch((err) => {
+    const message = (err as Error)?.message ?? String(err);
+    throw new TranslatorUnavailableError(
+      `Translator.create() failed: ${message}`,
+    );
+  });
+  ready.catch(() => {});
+  return { ready, release: lease.release };
+};
+
 class TranslateAbortError extends Error {
   override readonly name = "AbortError";
   constructor() {
@@ -169,8 +251,8 @@ export const translate = async (
   const text = options.input.trim();
   if (!text) return { output: null, cached: false };
 
-  const sourceLanguage = NORMALIZE_LANG(options.sourceLanguage);
-  const targetLanguage = NORMALIZE_LANG(options.targetLanguage ?? "en");
+  const { sourceLanguage, targetLanguage, createOptions } =
+    resolveSessionConfig(options);
   if (sourceLanguage === targetLanguage) {
     return { output: null, cached: false };
   }
@@ -184,12 +266,6 @@ export const translate = async (
     if (cached) return { output: cached, cached: true };
   }
 
-  const createOptions: TranslatorCreateOptions = {
-    sourceLanguage,
-    targetLanguage,
-    ...(options.monitor ? { monitor: options.monitor } : {}),
-  };
-
   const availability = await api
     .availability({ sourceLanguage, targetLanguage })
     .catch(() => "unavailable" as const);
@@ -198,57 +274,65 @@ export const translate = async (
   }
   if (options.signal?.aborted) throw new TranslateAbortError();
 
-  const sessionPromise = getOrCreateTranslator(api, createOptions);
-
-  let session: TranslatorInstance;
+  // The pin defers destruction (lease release, clear, eviction) until this
+  // call finishes, including the streaming and abort paths below.
+  const acquired = acquireTranslator(api, createOptions);
   try {
-    // raceAbort rejects only this caller; the cached session promise stays
-    // untouched so other callers can still reuse it.
-    session = await raceAbort(sessionPromise, options.signal);
-  } catch (err) {
-    if (err instanceof TranslateAbortError) throw err;
-    const message = (err as Error)?.message ?? String(err);
-    throw new TranslatorUnavailableError(
-      `Translator.create() failed: ${message}`,
-    );
-  }
-
-  const taskOptions: TranslatorTranslateOptions = {
-    ...(options.signal ? { signal: options.signal } : {}),
-  };
-
-  // Browser implementations may emit delta or cumulative chunks. Detect the
-  // shape per chunk and merge accordingly.
-  const mergeChunk = (buffer: string, chunk: string): string =>
-    chunk.startsWith(buffer) ? chunk : buffer + chunk;
-
-  let output: string;
-  if (options.onUpdate && typeof session.translateStreaming === "function") {
-    const reader = session.translateStreaming(text, taskOptions).getReader();
-    let buffer = "";
+    let session: TranslatorInstance;
     try {
-      for (;;) {
-        const { done, value } = await raceAbort(reader.read(), options.signal);
-        if (done) break;
-        buffer = mergeChunk(buffer, value);
-        options.onUpdate(buffer);
-      }
+      // raceAbort rejects only this caller; the cached session promise stays
+      // untouched so other callers can still reuse it.
+      session = await raceAbort(acquired.session, options.signal);
     } catch (err) {
-      // Stop native work; the reader may already be errored, so best-effort.
-      reader.cancel().catch(() => {});
-      throw err;
+      if (err instanceof TranslateAbortError) throw err;
+      const message = (err as Error)?.message ?? String(err);
+      throw new TranslatorUnavailableError(
+        `Translator.create() failed: ${message}`,
+      );
     }
-    output = buffer;
-  } else {
-    output = await raceAbort(
-      session.translate(text, taskOptions),
-      options.signal,
-    );
-    // No native streaming: deliver the one-shot result as one final update.
-    if (output) options.onUpdate?.(output);
-  }
-  if (options.signal?.aborted) throw new TranslateAbortError();
 
-  if (output && cache) cache.set(cacheKey, output);
-  return { output: output || null, cached: false };
+    const taskOptions: TranslatorTranslateOptions = {
+      ...(options.signal ? { signal: options.signal } : {}),
+    };
+
+    // Browser implementations may emit delta or cumulative chunks. Detect the
+    // shape per chunk and merge accordingly.
+    const mergeChunk = (buffer: string, chunk: string): string =>
+      chunk.startsWith(buffer) ? chunk : buffer + chunk;
+
+    let output: string;
+    if (options.onUpdate && typeof session.translateStreaming === "function") {
+      const reader = session.translateStreaming(text, taskOptions).getReader();
+      let buffer = "";
+      try {
+        for (;;) {
+          const { done, value } = await raceAbort(
+            reader.read(),
+            options.signal,
+          );
+          if (done) break;
+          buffer = mergeChunk(buffer, value);
+          options.onUpdate(buffer);
+        }
+      } catch (err) {
+        // Stop native work; the reader may already be errored, so best-effort.
+        reader.cancel().catch(() => {});
+        throw err;
+      }
+      output = buffer;
+    } else {
+      output = await raceAbort(
+        session.translate(text, taskOptions),
+        options.signal,
+      );
+      // No native streaming: deliver the one-shot result as one final update.
+      if (output) options.onUpdate?.(output);
+    }
+    if (options.signal?.aborted) throw new TranslateAbortError();
+
+    if (output && cache) cache.set(cacheKey, output);
+    return { output: output || null, cached: false };
+  } finally {
+    acquired.done();
+  }
 };

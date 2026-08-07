@@ -7,6 +7,8 @@ This package wraps the built-in [Proofreader API](https://developer.chrome.com/d
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for preserving originals, Accept/Reject/Undo flows, safe rendering, and cache freshness.
 
+Use `prepareProofreader` to warm a session on user intent and release it when the feature closes. See the [Session lifecycle guide](/docs/guides/session-lifecycle/).
+
 ## Usage
 
 ```ts

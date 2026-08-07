@@ -9,6 +9,8 @@ React adapter for `@web-ai-sdk/prompt`. Runs single-shot prompts on demand via `
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for intent-driven preparation, safe streaming, progress, user control, and cache freshness.
 
+To warm the session before the hook first runs, call `prepareLanguageModel` from the core package on user intent. See the [Session lifecycle guide](/docs/guides/session-lifecycle/).
+
 ## Live demo
 
 <PromptDemo client:only="react" />

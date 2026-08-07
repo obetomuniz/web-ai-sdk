@@ -8,11 +8,16 @@
  */
 
 import {
+  acquireSummarizer,
+  type ConfigureSummarizerCacheOptions,
   type CreateMonitor,
   checkAvailability,
-  getOrCreateSummarizer,
+  clearSummarizerSession,
+  clearSummarizerSessions,
+  configureSummarizerCache,
   getSummarizerApi,
   isAvailable,
+  leaseSummarizer,
   type SummarizerApi,
   type SummarizerAvailability,
   type SummarizerAvailabilityOptions,
@@ -30,6 +35,7 @@ import { cleanSummary } from "./skeleton.js";
 
 export type {
   CacheOption,
+  ConfigureSummarizerCacheOptions,
   CreateMonitor,
   SummarizerApi,
   SummarizerAvailability,
@@ -38,7 +44,14 @@ export type {
   SummarizerInstance,
   SummaryCache,
 };
-export { checkAvailability, DEFAULT_CACHE_TTL_MS, isAvailable };
+export {
+  checkAvailability,
+  clearSummarizerSession,
+  clearSummarizerSessions,
+  configureSummarizerCache,
+  DEFAULT_CACHE_TTL_MS,
+  isAvailable,
+};
 
 export interface SummarizeOptions {
   /** Text to summarize. Empty / whitespace input resolves to `{ output: null }`. */
@@ -112,6 +125,117 @@ export class SummarizerUnavailableError extends Error {
 }
 
 /**
+ * Session-affecting subset of `SummarizeOptions`. `prepareSummarizer` and
+ * `summarize` derive the same native create options from these fields, so a
+ * prepared session is reused by the matching call.
+ * `monitor` observes creation only; it never affects the cache key.
+ */
+export type PrepareSummarizerOptions = Pick<
+  SummarizeOptions,
+  | "language"
+  | "supportedLanguages"
+  | "type"
+  | "length"
+  | "format"
+  | "preference"
+  | "sharedContext"
+  | "monitor"
+>;
+
+interface SessionConfig {
+  lang: string;
+  languageHints: boolean;
+  createOptions: SummarizerCreateOptions;
+}
+
+/**
+ * Single source of the option-to-session mapping. The session cache key derives from
+ * the stable fields of `createOptions` (`monitor` never fragments reuse),
+ * so `summarize` and `prepareSummarizer` must both go
+ * through this derivation.
+ */
+const resolveSessionConfig = (
+  options: PrepareSummarizerOptions,
+): SessionConfig => {
+  const lang = NORMALIZE_LANG(options.language);
+  const supported = new Set(
+    (options.supportedLanguages ?? DEFAULT_SUPPORTED_LANGUAGES).map(
+      NORMALIZE_LANG,
+    ),
+  );
+  const languageHints = supported.has(lang);
+
+  const langOptions: Pick<
+    SummarizerCreateOptions,
+    "expectedInputLanguages" | "expectedContextLanguages" | "outputLanguage"
+  > = languageHints
+    ? {
+        expectedInputLanguages: [lang],
+        expectedContextLanguages: [lang],
+        outputLanguage: lang,
+      }
+    : {};
+
+  const createOptions: SummarizerCreateOptions = {
+    type: options.type ?? "tldr",
+    format: options.format ?? "plain-text",
+    length: options.length ?? "medium",
+    preference: options.preference ?? "auto",
+    sharedContext: options.sharedContext ?? "",
+    ...langOptions,
+    ...(options.monitor ? { monitor: options.monitor } : {}),
+  };
+
+  return { lang, languageHints, createOptions };
+};
+
+export interface SummarizerLease {
+  /**
+   * Resolves when the native session is created. Rejects with
+   * `SummarizerUnavailableError` when the API is missing or creation fails.
+   */
+  ready: Promise<void>;
+  /**
+   * Idempotent. The final release destroys the session once no other lease
+   * or in-flight call uses it.
+   */
+  release(): void;
+}
+
+/**
+ * Start native session creation as soon as user intent is clear, before the
+ * input exists. The matching `summarize` call reuses the prepared session
+ * without a second create. Never throws synchronously; unavailability and
+ * creation failures reject `ready`. Failed preparations leave the cache so a
+ * later call can retry.
+ */
+export const prepareSummarizer = (
+  options: PrepareSummarizerOptions,
+): SummarizerLease => {
+  const api = getSummarizerApi();
+  if (!api?.create) {
+    const ready = Promise.reject(
+      new SummarizerUnavailableError(
+        "Summarizer API is not available in this environment.",
+      ),
+    );
+    // Keep unobserved leases from surfacing unhandled rejections.
+    ready.catch(() => {});
+    return { ready, release: () => {} };
+  }
+  const { createOptions } = resolveSessionConfig(options);
+  const lease = leaseSummarizer(api, createOptions);
+  const ready = lease.ready.catch((err) => {
+    const message = (err as Error)?.message ?? String(err);
+    throw new SummarizerUnavailableError(
+      `Summarizer.create() failed: ${message}`,
+    );
+  });
+  ready.catch(() => {});
+  return { ready, release: lease.release };
+};
+
+/**
  * Generate a summary. Uses streaming when the underlying instance supports
  * it, one-shot otherwise. Returns `{ output: null }` for empty input.
  * Throws `SummarizerUnavailableError` when the API isn't present in the
@@ -135,12 +259,7 @@ export const summarize = async (
   const text = options.input.trim();
   if (!text) return { output: null, cached: false };
 
-  const lang = NORMALIZE_LANG(options.language);
-  const supportedLanguages = (
-    options.supportedLanguages ?? DEFAULT_SUPPORTED_LANGUAGES
-  ).map(NORMALIZE_LANG);
-  const supported = new Set(supportedLanguages);
-  const languageHints = supported.has(lang);
+  const { lang, languageHints, createOptions } = resolveSessionConfig(options);
   const cache = resolveCache(options.cache, options.cacheTtl);
   const cacheKey =
     options.cacheKey ??
@@ -159,50 +278,28 @@ export const summarize = async (
     if (cached) return { output: cached, cached: true };
   }
 
-  const langOptions: Pick<
-    SummarizerCreateOptions,
-    "expectedInputLanguages" | "expectedContextLanguages" | "outputLanguage"
-  > = languageHints
-    ? {
-        expectedInputLanguages: [lang],
-        expectedContextLanguages: [lang],
-        outputLanguage: lang,
-      }
-    : {};
-
-  const baseCreateOptions: SummarizerCreateOptions = {
-    type: options.type ?? "tldr",
-    format: options.format ?? "plain-text",
-    length: options.length ?? "medium",
-    preference: options.preference ?? "auto",
-    sharedContext: options.sharedContext ?? "",
-    ...langOptions,
-    ...(options.monitor ? { monitor: options.monitor } : {}),
-  };
-
   // Pass the relevant create options to availability() so the probe describes
   // the configuration we are about to create. The narrower
   // SummarizerAvailabilityOptions shape filters out create-only fields such as
   // `sharedContext`.
   const availability = await api
     .availability({
-      ...(baseCreateOptions.type ? { type: baseCreateOptions.type } : {}),
-      ...(baseCreateOptions.format ? { format: baseCreateOptions.format } : {}),
-      ...(baseCreateOptions.length ? { length: baseCreateOptions.length } : {}),
-      ...(baseCreateOptions.preference
-        ? { preference: baseCreateOptions.preference }
+      ...(createOptions.type ? { type: createOptions.type } : {}),
+      ...(createOptions.format ? { format: createOptions.format } : {}),
+      ...(createOptions.length ? { length: createOptions.length } : {}),
+      ...(createOptions.preference
+        ? { preference: createOptions.preference }
         : {}),
-      ...(baseCreateOptions.expectedInputLanguages
-        ? { expectedInputLanguages: baseCreateOptions.expectedInputLanguages }
+      ...(createOptions.expectedInputLanguages
+        ? { expectedInputLanguages: createOptions.expectedInputLanguages }
         : {}),
-      ...(baseCreateOptions.expectedContextLanguages
+      ...(createOptions.expectedContextLanguages
         ? {
-            expectedContextLanguages:
-              baseCreateOptions.expectedContextLanguages,
+            expectedContextLanguages: createOptions.expectedContextLanguages,
           }
         : {}),
-      ...(baseCreateOptions.outputLanguage
-        ? { outputLanguage: baseCreateOptions.outputLanguage }
+      ...(createOptions.outputLanguage
+        ? { outputLanguage: createOptions.outputLanguage }
         : {}),
     })
     .catch(() => "unavailable" as const);
@@ -211,51 +308,59 @@ export const summarize = async (
   }
   if (options.signal?.aborted) throw new AbortError();
 
-  const sessionPromise = getOrCreateSummarizer(api, baseCreateOptions);
-
-  // Wrap session-create failures with context so consumers can branch on
-  // a single typed error instead of parsing browser-specific messages.
-  let summarizer: SummarizerInstance;
+  // The pin defers destruction (lease release, clear, eviction) until this
+  // call finishes.
+  const acquired = acquireSummarizer(api, createOptions);
   try {
-    summarizer = await sessionPromise;
-  } catch (err) {
-    if (err instanceof AbortError) throw err;
-    const message = (err as Error)?.message ?? String(err);
-    throw new SummarizerUnavailableError(
-      `Summarizer.create() failed: ${message}`,
-    );
-  }
-  if (options.signal?.aborted) throw new AbortError();
-
-  // Browser implementations may emit delta or cumulative chunks. Detect the
-  // shape per chunk and merge accordingly.
-  const mergeChunk = (buffer: string, chunk: string): string =>
-    chunk.startsWith(buffer) ? chunk : buffer + chunk;
-
-  let finalText: string;
-  if (typeof summarizer.summarizeStreaming === "function" && options.onUpdate) {
-    let buffer = "";
-    for await (const chunk of summarizer.summarizeStreaming(text)) {
-      if (options.signal?.aborted) throw new AbortError();
-      buffer = mergeChunk(buffer, chunk);
-      options.onUpdate(cleanSummary(buffer));
+    // Wrap session-create failures with context so consumers can branch on
+    // a single typed error instead of parsing browser-specific messages.
+    let summarizer: SummarizerInstance;
+    try {
+      summarizer = await acquired.session;
+    } catch (err) {
+      if (err instanceof AbortError) throw err;
+      const message = (err as Error)?.message ?? String(err);
+      throw new SummarizerUnavailableError(
+        `Summarizer.create() failed: ${message}`,
+      );
     }
-    finalText = cleanSummary(buffer);
-  } else if (typeof summarizer.summarizeStreaming === "function") {
-    let buffer = "";
-    for await (const chunk of summarizer.summarizeStreaming(text)) {
-      if (options.signal?.aborted) throw new AbortError();
-      buffer = mergeChunk(buffer, chunk);
-    }
-    finalText = cleanSummary(buffer);
-  } else {
-    const raw = await summarizer.summarize(text);
     if (options.signal?.aborted) throw new AbortError();
-    finalText = cleanSummary(raw);
-  }
 
-  if (finalText && cache) cache.set(cacheKey, finalText);
-  return { output: finalText || null, cached: false };
+    // Browser implementations may emit delta or cumulative chunks. Detect the
+    // shape per chunk and merge accordingly.
+    const mergeChunk = (buffer: string, chunk: string): string =>
+      chunk.startsWith(buffer) ? chunk : buffer + chunk;
+
+    let finalText: string;
+    if (
+      typeof summarizer.summarizeStreaming === "function" &&
+      options.onUpdate
+    ) {
+      let buffer = "";
+      for await (const chunk of summarizer.summarizeStreaming(text)) {
+        if (options.signal?.aborted) throw new AbortError();
+        buffer = mergeChunk(buffer, chunk);
+        options.onUpdate(cleanSummary(buffer));
+      }
+      finalText = cleanSummary(buffer);
+    } else if (typeof summarizer.summarizeStreaming === "function") {
+      let buffer = "";
+      for await (const chunk of summarizer.summarizeStreaming(text)) {
+        if (options.signal?.aborted) throw new AbortError();
+        buffer = mergeChunk(buffer, chunk);
+      }
+      finalText = cleanSummary(buffer);
+    } else {
+      const raw = await summarizer.summarize(text);
+      if (options.signal?.aborted) throw new AbortError();
+      finalText = cleanSummary(raw);
+    }
+
+    if (finalText && cache) cache.set(cacheKey, finalText);
+    return { output: finalText || null, cached: false };
+  } finally {
+    acquired.done();
+  }
 };
 
 class AbortError extends Error {

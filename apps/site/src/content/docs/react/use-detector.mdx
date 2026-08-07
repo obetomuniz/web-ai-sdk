@@ -9,6 +9,8 @@ React adapter for `@web-ai-sdk/detector`. Auto-detects the language of `input` o
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for task-relevant input, progress, and cache freshness.
 
+To warm the session before the hook first runs, call `prepareLanguageDetector` from the core package on user intent. See the [Session lifecycle guide](/docs/guides/session-lifecycle/).
+
 ## Live demo
 
 <DetectorDemo client:only="react" />

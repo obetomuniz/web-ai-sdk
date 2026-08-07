@@ -484,8 +484,10 @@ Forwards to `LanguageModel.availability()`. Returns `null` if the global is miss
 
 Two layers, same as `@web-ai-sdk/summarizer`:
 
-- **Session cache** (internal, in-memory, on for `ask()`): a bounded LRU of base instances keyed by serialized creation options. When supported, each call uses an isolated clone. `createSession()` bypasses this cache.
+- **Session cache** (in-memory, on for `ask()`): a bounded LRU of base instances keyed by serialized creation options. When supported, each call uses an isolated clone. `prepareLanguageModel()` warms this cache. `createSession()` bypasses it.
 - **Result cache** (opt-in): pass a `cache` (anything matching `{ get, set }`) to memoize final responses by `(input, systemPrompt, samplingMode / temperature / topK)`. Omit it for a fresh model call every time.
+
+The session cache has public controls. `configureLanguageModelCache({ max })` bounds the base-session LRU; the default is 8. `clearLanguageModelSessions()` drops every cached base. `clearLanguageModelSession(createOptions)` drops one. Clearing detaches bases pinned by a lease or an in-flight `ask()` and destroys them when the last pin drops.
 
 ```ts
 // Off by default; every call hits the model.
@@ -500,6 +502,39 @@ ask({ input: "hi", cache: "local" });
 // Or roll your own.
 ask({ input: "hi", cache: myMap, cacheKey: "greeting" });
 ```
+
+### Prepare and release
+
+`prepareLanguageModel(options)` starts base-session creation when user intent is clear, before the first `ask()` input exists. It returns a `LanguageModelLease`: `{ ready: Promise<void>; release(): void }`.
+
+```ts
+import { ask, prepareLanguageModel } from "@web-ai-sdk/prompt";
+
+const systemPrompt = "You are a concise support assistant.";
+
+// User opened the panel; intent is clear, no input yet.
+const languageModel = prepareLanguageModel({ systemPrompt });
+
+// The matching call clones from the warm base with no second create().
+const result = await ask({ input, systemPrompt });
+
+// User dismissed the panel without asking anything.
+languageModel.release();
+```
+
+Semantics:
+
+- `prepareLanguageModel()` never throws synchronously.
+- Unavailability and creation failure reject `ready` with `PromptUnavailableError`.
+- Invalid sampling options reject `ready` with the same error `ask()` would throw.
+- `release()` is idempotent. The final release destroys the base once no other lease or in-flight `ask()` uses it.
+- Releasing before creation settles destroys the base after creation succeeds.
+- Failed creation evicts the entry, so a later prepare retries.
+- Leased bases never evict from the LRU cache.
+
+Reuse requires the same session-affecting options as `ask()`. `PrepareLanguageModelOptions` covers `systemPrompt`, `samplingMode`, `temperature`, `topK`, `language`, `supportedLanguages`, `expectedInputs`, `expectedOutputs`, and `tools`. `monitor` observes creation only and never affects reuse.
+
+`createSession()` is unaffected. It always creates a caller-owned session outside this cache.
 
 ### Expiry and refresh
 
