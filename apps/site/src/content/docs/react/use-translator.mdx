@@ -37,17 +37,20 @@ The hook auto-runs whenever any input changes. Empty input or matching source/ta
 ## State machine
 
 ```
-idle ───► loading ───► done
-                         │
-unavailable ◄── (no API) │
-                         ▼
-              input empty ─► idle
+idle ───► loading ───► streaming ───► done
+                                        │
+unavailable ◄── (no API)                │
+                                        ▼
+                             input empty ─► idle
 ```
 
 - **`idle`**: hook mounted, input empty or `sourceLanguage === targetLanguage`.
 - **`loading`**: translation in flight (~1-3s cold for a new language pair, sub-second warm).
+- **`streaming`**: partial output arriving. `output` holds the cumulative translation and grows as chunks land.
 - **`done`**: translation complete. `output` is the translated text or `null`.
 - **`unavailable`**: API missing. Render nothing or a fallback.
+
+Implementations without native `translateStreaming()` skip `"streaming"` and move straight to `"done"`.
 
 ## Caching
 
@@ -64,7 +67,7 @@ const { output, fromCache } = useTranslator({
 
 ## Aborting
 
-The hook aborts any in-flight call when inputs change or the component unmounts. You don't need to manage `AbortController` directly.
+The hook aborts any in-flight call when inputs change or the component unmounts. You don't need to manage `AbortController` directly. The abort signal is forwarded to the native operation, so browsers that honor it stop translating promptly. Stale partial output from a cancelled run is never published.
 
 
 ## Reference
@@ -72,9 +75,9 @@ The hook aborts any in-flight call when inputs change or the component unmounts.
 ```ts
 import type { UseTranslatorOptions, UseTranslatorReturn, TranslatorStatus } from "@web-ai-sdk/translator/react";
 
-type TranslatorStatus = "idle" | "loading" | "done" | "unavailable";
+type TranslatorStatus = "idle" | "loading" | "streaming" | "done" | "unavailable";
 
-interface UseTranslatorOptions extends Omit<TranslateOptions, "signal"> {
+interface UseTranslatorOptions extends Omit<TranslateOptions, "onUpdate" | "signal"> {
   enabled?: boolean;       // default: true
   // Inherited from TranslateOptions:
   input: string;
