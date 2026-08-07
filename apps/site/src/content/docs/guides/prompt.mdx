@@ -3,11 +3,19 @@ title: Prompt API
 description: Use ask() for one-shot prompts or createSession() for multi-turn conversations with the built-in LanguageModel API.
 ---
 
+import { PromptDemo } from "../../../features/docs/components/PromptDemo.tsx";
+
 This package wraps the built-in [Prompt API](https://developer.chrome.com/docs/ai/prompt-api) (`LanguageModel`). Use `ask()` for one-shot prompts. Use `createSession()` for multi-turn conversations.
 
 The package [README](https://github.com/obetomuniz/web-ai-sdk/tree/main/packages/prompt#readme) covers installation and the API reference. This page explains the vanilla API. For React, see [usePrompt](/docs/react/use-prompt/) and [useSession](/docs/react/use-session/).
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for intent-driven preparation, session isolation, input selection, safe rendering, progress, reversible edits, and cache freshness.
+
+## Live demo
+
+<PromptDemo client:only="react" />
+
+Type a question and click "Ask". Tokens stream in as the model produces them. The demo runs on this page through the React adapter; the vanilla `ask()` below has the same behavior.
 
 ## One-shot: `ask()`
 
@@ -206,7 +214,59 @@ They compose: prefill the opening brace, set `responseConstraint` for the full s
 
 **Spec rule:** `prefix: true` is valid only on the final `assistant` message. Other uses cause a `"SyntaxError"` `DOMException`. The SDK passes this error to the caller.
 
-> **Note on `content`:** `LanguageModelMessage.content` is currently `string` only. Multimodal `ContentPart[]` content (images, audio) is tracked as a future enhancement; no timeline is promised.
+`LanguageModelMessage.content` also accepts an array of multimodal content parts. See [Multimodal input](#multimodal-input-text-image-audio).
+
+## Multimodal input (text, image, audio)
+
+Chrome 148+ documents multimodal sessions with text, image, and audio expected inputs. `LanguageModelMessage.content` accepts a plain string or an ordered array of content parts:
+
+```ts
+type LanguageModelMessageContent =
+  | { type: "text"; value: string }
+  | { type: "image"; value: ImageBitmapSource | BufferSource }
+  | { type: "audio"; value: AudioBuffer | Blob | BufferSource };
+```
+
+Image parts accept browser-native image values: `Blob`, `ImageData`, `ImageBitmap`, `VideoFrame`, `OffscreenCanvas`, canvas / image / video elements, and `BufferSource`. Audio parts accept `AudioBuffer`, `Blob`, and `BufferSource`.
+
+Declare non-text modalities at creation with `expectedInputs`. Probe support first with `checkAvailability()` and pass the same `expectedInputs` and `expectedOutputs` you will use for creation:
+
+```ts
+import { checkAvailability, createSession } from "@web-ai-sdk/prompt";
+
+const expectedInputs = [
+  { type: "text" as const },
+  { type: "image" as const },
+  { type: "audio" as const },
+];
+
+const availability = await checkAvailability({ expectedInputs });
+if (availability === null || availability === "unavailable") {
+  // The browser cannot serve these modalities; fall back.
+}
+
+const session = createSession({ expectedInputs });
+
+const description = await session.send([
+  {
+    role: "user",
+    content: [
+      { type: "text", value: "Describe this image." },
+      { type: "image", value: imageBlob },
+    ],
+  },
+]);
+```
+
+Content parts work everywhere messages flow: `initialPrompts` (through `createOptions.initialPrompts`), `send()`, `sendStreaming()`, and `append()`. The SDK forwards media values losslessly to the browser. It never serializes, clones, transcodes, inspects, or reorders them.
+
+A media-only message is never treated as empty. Empty strings, empty message arrays, and messages with only blank text parts still resolve to `null` without a model call.
+
+Chrome requires a GPU for audio input. The browser throws a `"NotSupportedError"` `DOMException` for undeclared or unsupported modalities. The SDK passes that error through unchanged; it does not convert it into `PromptUnavailableError`.
+
+On browsers without multimodal support, `checkAvailability({ expectedInputs })` reports `"unavailable"` (or `null` without the API). Session creation then fails, and the first `send()` surfaces the error.
+
+`ask()` stays text-only: `AskOptions.input` is a `string`, and its result cache keys assume text. Use `createSession()` for multimodal prompts; it owns an explicit session lifecycle and bypasses the one-shot result cache. In React, `useSession` returns the same multimodal-capable `Session`. Try the [live demo](/docs/react/use-session/#live-demo-multimodal-session) on the `useSession` page.
 
 ## Context-window introspection
 

@@ -5,6 +5,7 @@ import {
 } from "./api.js";
 import {
   ask,
+  checkAvailability,
   createSession,
   isAvailable,
   PromptAbortError,
@@ -1245,6 +1246,335 @@ describe("Session.send with message arrays", () => {
     expect(childPrompt.mock.calls[0]?.[0]).toEqual(messages);
     turn.destroy();
     base.destroy();
+  });
+});
+
+describe("Session multimodal content", () => {
+  const imageValue = new Blob(["fake-image-bytes"], { type: "image/png" });
+  const audioValue = new Uint8Array([1, 2, 3, 4]);
+
+  it("send forwards mixed text/image/audio content losslessly, by reference", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const session = createSession();
+    const messages = [
+      {
+        role: "user" as const,
+        content: [
+          { type: "text" as const, value: "Describe this image and audio." },
+          { type: "image" as const, value: imageValue },
+          { type: "audio" as const, value: audioValue },
+        ],
+      },
+    ];
+    await session.send(messages);
+    // Lossless pass-through: the exact same array and media values, with no
+    // serialization, cloning, coercion, or reordering.
+    expect(fake.promptSpy.mock.calls[0]?.[0]).toBe(messages);
+    const forwarded = fake.promptSpy.mock.calls[0]?.[0] as typeof messages;
+    expect(forwarded[0]?.content[1]?.value).toBe(imageValue);
+    expect(forwarded[0]?.content[2]?.value).toBe(audioValue);
+    session.destroy();
+  });
+
+  it("does not treat an image-only message as empty", async () => {
+    const fake = installFakeLanguageModel({ response: "A red square." });
+    const session = createSession();
+    const result = await session.send([
+      { role: "user", content: [{ type: "image", value: imageValue }] },
+    ]);
+    expect(result).toBe("A red square.");
+    expect(fake.promptSpy).toHaveBeenCalledTimes(1);
+    session.destroy();
+  });
+
+  it("does not treat an audio-only message as empty", async () => {
+    const fake = installFakeLanguageModel({ response: "A short chime." });
+    const session = createSession();
+    const result = await session.send([
+      { role: "user", content: [{ type: "audio", value: audioValue }] },
+    ]);
+    expect(result).toBe("A short chime.");
+    expect(fake.promptSpy).toHaveBeenCalledTimes(1);
+    session.destroy();
+  });
+
+  it("short-circuits a message whose parts are only empty text", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const session = createSession();
+    const result = await session.send([
+      {
+        role: "user",
+        content: [
+          { type: "text", value: "   " },
+          { type: "text", value: "" },
+        ],
+      },
+    ]);
+    expect(result).toBeNull();
+    expect(fake.promptSpy).not.toHaveBeenCalled();
+    session.destroy();
+  });
+
+  it("short-circuits an empty content array", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const session = createSession();
+    const result = await session.send([{ role: "user", content: [] }]);
+    expect(result).toBeNull();
+    expect(fake.promptSpy).not.toHaveBeenCalled();
+    session.destroy();
+  });
+
+  it("sends a message that mixes an empty text part with media", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const session = createSession();
+    const result = await session.send([
+      {
+        role: "user",
+        content: [
+          { type: "text", value: "   " },
+          { type: "image", value: imageValue },
+        ],
+      },
+    ]);
+    expect(result).toBe("ok");
+    expect(fake.promptSpy).toHaveBeenCalledTimes(1);
+    session.destroy();
+  });
+
+  it("sendStreaming forwards multimodal messages and yields deltas", async () => {
+    const fake = installFakeLanguageModel({ chunks: ["A red ", "square."] });
+    const session = createSession();
+    const messages = [
+      {
+        role: "user" as const,
+        content: [
+          { type: "text" as const, value: "Describe:" },
+          { type: "image" as const, value: imageValue },
+        ],
+      },
+    ];
+    const deltas: string[] = [];
+    for await (const d of session.sendStreaming(messages)) deltas.push(d);
+    expect(deltas).toEqual(["A red ", "square."]);
+    expect(fake.streamingSpy?.mock.calls[0]?.[0]).toBe(messages);
+    session.destroy();
+  });
+
+  it("sendStreaming does not stream a media-only message as empty", async () => {
+    const fake = installFakeLanguageModel({ chunks: ["chime"] });
+    const session = createSession();
+    const deltas: string[] = [];
+    for await (const d of session.sendStreaming([
+      { role: "user", content: [{ type: "audio", value: audioValue }] },
+    ])) {
+      deltas.push(d);
+    }
+    expect(deltas).toEqual(["chime"]);
+    expect(fake.streamingSpy).toHaveBeenCalledTimes(1);
+    session.destroy();
+  });
+
+  it("forwards multimodal initialPrompts and expectedInputs to create()", async () => {
+    const fake = installFakeLanguageModel({ response: "ok" });
+    const expectedInputs = [
+      { type: "text" as const },
+      { type: "image" as const },
+      { type: "audio" as const },
+    ];
+    const initialPrompts = [
+      { role: "system" as const, content: "Describe media." },
+      {
+        role: "user" as const,
+        content: [
+          { type: "text" as const, value: "Prior turn." },
+          { type: "image" as const, value: imageValue },
+        ],
+      },
+    ];
+    const session = createSession({
+      expectedInputs,
+      createOptions: { initialPrompts },
+    });
+    await session.send("warm");
+    const createOpts = fake.create.mock.calls[0]?.[0] as {
+      initialPrompts: unknown;
+      expectedInputs: unknown;
+    };
+    expect(createOpts.initialPrompts).toBe(initialPrompts);
+    expect(createOpts.expectedInputs).toBe(expectedInputs);
+    session.destroy();
+  });
+
+  it("checkAvailability forwards the same expectedInputs used for creation", async () => {
+    const fake = installFakeLanguageModel();
+    const expectedInputs = [
+      { type: "text" as const },
+      { type: "image" as const },
+      { type: "audio" as const },
+    ];
+    const availability = await checkAvailability({ expectedInputs });
+    expect(availability).toBe("available");
+    expect(fake.availability).toHaveBeenCalledWith({ expectedInputs });
+  });
+
+  it("append forwards multimodal messages losslessly", async () => {
+    const appendSpy = vi.fn(async (_messages: unknown, _opts?: unknown) => {});
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => "ok"),
+        append: appendSpy,
+        destroy: vi.fn(),
+      }),
+    });
+    const session = createSession();
+    await session.send("warm");
+    const messages = [
+      {
+        role: "user" as const,
+        content: [
+          { type: "text" as const, value: "Reference screenshot:" },
+          { type: "image" as const, value: imageValue },
+        ],
+      },
+    ];
+    await session.append(messages);
+    expect(appendSpy.mock.calls[0]?.[0]).toBe(messages);
+    session.destroy();
+  });
+
+  it("rejects a pre-aborted multimodal send with PromptAbortError", async () => {
+    installFakeLanguageModel({ response: "ok" });
+    const session = createSession();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      session.send(
+        [{ role: "user", content: [{ type: "image", value: imageValue }] }],
+        { signal: controller.signal },
+      ),
+    ).rejects.toBeInstanceOf(PromptAbortError);
+    session.destroy();
+  });
+
+  it("aborts an in-flight multimodal sendStreaming with PromptAbortError", async () => {
+    let resolveGate: () => void = () => {};
+    const gate = new Promise<void>((r) => {
+      resolveGate = r;
+    });
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(),
+        promptStreaming: vi.fn(async function* () {
+          yield "a";
+          await gate;
+          yield "b";
+        }),
+        destroy: vi.fn(),
+      }),
+    });
+    const session = createSession();
+    const collected: string[] = [];
+    let rejection: unknown;
+    const drain = (async () => {
+      try {
+        for await (const d of session.sendStreaming([
+          {
+            role: "user",
+            content: [
+              { type: "text", value: "Describe:" },
+              { type: "image", value: imageValue },
+            ],
+          },
+        ])) {
+          collected.push(d);
+        }
+      } catch (e) {
+        rejection = e;
+      }
+    })();
+    for (let i = 0; i < 50 && collected.length === 0; i++) {
+      await Promise.resolve();
+    }
+    expect(collected).toEqual(["a"]);
+    session.abort();
+    resolveGate();
+    await drain;
+    expect(rejection).toBeInstanceOf(PromptAbortError);
+    session.destroy();
+  });
+
+  it("propagates a native NotSupportedError from prompt() unchanged", async () => {
+    const notSupported = new DOMException(
+      "Audio input is not supported without a GPU.",
+      "NotSupportedError",
+    );
+    installFakeLanguageModel({
+      sessionFactory: () => ({
+        prompt: vi.fn(async () => {
+          throw notSupported;
+        }),
+        destroy: vi.fn(),
+      }),
+    });
+    const session = createSession();
+    let caught: unknown;
+    try {
+      await session.send([
+        { role: "user", content: [{ type: "audio", value: audioValue }] },
+      ]);
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBe(notSupported);
+    expect(caught).not.toBeInstanceOf(PromptUnavailableError);
+    session.destroy();
+  });
+
+  it("propagates a native NotSupportedError from create() unchanged", async () => {
+    const notSupported = new DOMException(
+      "The requested input modality is not supported.",
+      "NotSupportedError",
+    );
+    const fake = installFakeLanguageModel();
+    fake.create.mockRejectedValue(notSupported);
+    const session = createSession({
+      expectedInputs: [{ type: "audio" }],
+    });
+    let caught: unknown;
+    try {
+      await session.send([
+        { role: "user", content: [{ type: "audio", value: audioValue }] },
+      ]);
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBe(notSupported);
+    expect(caught).not.toBeInstanceOf(PromptUnavailableError);
+    session.destroy();
+  });
+
+  it("maps an aborted create() to PromptAbortError, not PromptUnavailableError", async () => {
+    const fake = installFakeLanguageModel();
+    fake.create.mockRejectedValue(
+      new DOMException("Creation was aborted.", "AbortError"),
+    );
+    const session = createSession({
+      createOptions: { signal: new AbortController().signal },
+    });
+    await expect(session.send("hi")).rejects.toBeInstanceOf(PromptAbortError);
+    session.destroy();
+  });
+
+  it("throws SessionDestroyedError for a multimodal send after destroy()", async () => {
+    installFakeLanguageModel({ response: "ok" });
+    const session = createSession();
+    await session.send("warm");
+    session.destroy();
+    await expect(
+      session.send([
+        { role: "user", content: [{ type: "image", value: imageValue }] },
+      ]),
+    ).rejects.toMatchObject({ name: "SessionDestroyedError" });
   });
 });
 

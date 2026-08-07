@@ -17,6 +17,8 @@ The package normalizes stream chunks, removes selected control characters, and w
 
 Prompt API is [stable in Chrome 148+](https://developer.chrome.com/docs/ai/prompt-api). It does not require a flag.
 
+Chrome 148+ also documents multimodal sessions with text, image, and audio expected inputs. Audio input requires a GPU. See [Multimodal input](#multimodal-input-text-image-audio).
+
 Edge provides a [Canary/Dev preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api) from 138.0.3309.2. Enable "Prompt API for on-device language model." Edge uses Phi-4-mini by default on High-class devices.
 
 Canary/Dev 150.0.4070+ can use prerelease Aion-1.0-Instruct on Medium/Low devices. This path requires the "Enable prerelease on-device language model" flag.
@@ -357,7 +359,67 @@ They compose: prefill the opening brace, set `responseConstraint` for the full s
 
 **Spec rule:** `prefix: true` is valid only on the final `assistant` message. Other uses cause a `"SyntaxError"` `DOMException`. The SDK passes this error to the caller.
 
-> **Note on `content`:** `LanguageModelMessage.content` is currently `string` only. Multimodal `ContentPart[]` content (images, audio) is tracked as a future enhancement; no timeline is promised.
+`LanguageModelMessage.content` also accepts an array of multimodal content parts. See [Multimodal input](#multimodal-input-text-image-audio).
+
+### Multimodal input (text, image, audio)
+
+`LanguageModelMessage.content` accepts a plain string or an ordered array of content parts:
+
+```ts
+type LanguageModelMessageContent =
+  | { type: "text"; value: string }
+  | { type: "image"; value: ImageBitmapSource | BufferSource }
+  | { type: "audio"; value: AudioBuffer | Blob | BufferSource };
+
+interface LanguageModelMessage {
+  role: "system" | "user" | "assistant";
+  content: string | LanguageModelMessageContent[];
+  prefix?: boolean;
+}
+```
+
+Image parts accept browser-native image values: `Blob`, `ImageData`, `ImageBitmap`, `VideoFrame`, `OffscreenCanvas`, canvas / image / video elements, and `BufferSource`. Audio parts accept `AudioBuffer`, `Blob`, and `BufferSource`.
+
+Declare non-text modalities at creation with `expectedInputs`. Probe support first with `checkAvailability()` and pass the same `expectedInputs` and `expectedOutputs` you will use for creation:
+
+```ts
+import { checkAvailability, createSession } from "@web-ai-sdk/prompt";
+
+const expectedInputs = [
+  { type: "text" as const },
+  { type: "image" as const },
+  { type: "audio" as const },
+];
+
+const availability = await checkAvailability({ expectedInputs });
+if (availability === null || availability === "unavailable") {
+  // The browser cannot serve these modalities; fall back.
+}
+
+const session = createSession({ expectedInputs });
+
+const description = await session.send([
+  {
+    role: "user",
+    content: [
+      { type: "text", value: "Describe this image." },
+      { type: "image", value: imageBlob },
+    ],
+  },
+]);
+```
+
+Content parts work everywhere messages flow: `initialPrompts` (through `createOptions.initialPrompts`), `send()`, `sendStreaming()`, and `append()`.
+
+The SDK forwards media values losslessly to the browser. It never serializes, clones, transcodes, inspects, or reorders them.
+
+A media-only message is never treated as empty. Empty strings, empty message arrays, and messages with only blank text parts still resolve to `null` without a model call.
+
+Chrome requires a GPU for audio input. The browser throws a `"NotSupportedError"` `DOMException` for undeclared or unsupported modalities. The SDK passes that error through unchanged; it does not convert it into `PromptUnavailableError`.
+
+On browsers without multimodal support, `checkAvailability({ expectedInputs })` reports `"unavailable"` (or `null` without the API). Session creation then fails, and the first `send()` surfaces the error.
+
+`ask()` stays text-only: `AskOptions.input` is a `string`, and its result cache keys assume text. Use `createSession()` for multimodal prompts; it owns an explicit session lifecycle and bypasses the one-shot result cache.
 
 ### Context-window introspection
 

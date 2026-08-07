@@ -3,7 +3,15 @@ title: useSession
 description: Lifecycle-only React adapter for createSession. Each call owns one never-shared LanguageModel session; UI state is the consumer's concern.
 ---
 
+import { SessionDemo } from "../../../features/docs/components/SessionDemo.tsx";
+
 `useSession` is the React adapter for [`createSession()`](/docs/guides/prompt/#chat-createsession). Each call owns one native instance. The hook detects support, waits for creation, destroys on unmount, and recreates after option changes.
+
+## Live demo: multimodal session
+
+<SessionDemo client:only="react" />
+
+Pick an image and click "Describe". The session sends one message with a text part and an image part, then streams the description back. The selected `File` is a browser-native image value; the SDK forwards it to the model unchanged. See [Multimodal input](/docs/guides/prompt/#multimodal-input-text-image-audio) for the content-part contract.
 
 The hook does not track responses, history, or streaming status. Keep that state in your component.
 
@@ -191,8 +199,9 @@ interface Session {
   readonly destroyed: boolean;
   readonly contextWindow?: number;
   readonly contextUsage?: number;
-  send(input: string, options?: SessionSendOptions): Promise<string | null>;
-  sendStreaming(input: string, options?: SessionSendOptions): AsyncIterable<string>; // yields deltas, not cumulative
+  send(input: string | LanguageModelMessage[], options?: SessionSendOptions): Promise<string | null>;
+  sendStreaming(input: string | LanguageModelMessage[], options?: SessionSendOptions): AsyncIterable<string>; // yields deltas, not cumulative
+  append(messages: LanguageModelMessage[], options?: { signal?: AbortSignal }): Promise<void>; // context without a turn
   abort(): void;
   clone(options?: { signal?: AbortSignal }): Promise<Session>;
   onContextOverflow(listener: () => void): () => void;
