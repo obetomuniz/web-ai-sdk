@@ -1511,6 +1511,18 @@ describe("Session multimodal content", () => {
     session.destroy();
   });
 
+  it("maps an aborted create() to PromptAbortError, not PromptUnavailableError", async () => {
+    const fake = installFakeLanguageModel();
+    fake.create.mockRejectedValue(
+      new DOMException("Creation was aborted.", "AbortError"),
+    );
+    const session = createSession({
+      createOptions: { signal: new AbortController().signal },
+    });
+    await expect(session.send("hi")).rejects.toBeInstanceOf(PromptAbortError);
+    session.destroy();
+  });
+
   it("throws SessionDestroyedError for a multimodal send after destroy()", async () => {
     installFakeLanguageModel({ response: "ok" });
     const session = createSession();

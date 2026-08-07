@@ -373,16 +373,19 @@ interface SessionInternal {
 }
 
 /**
- * Type a `LanguageModel.create()` failure. Aborts and native modality
- * validation errors (`"NotSupportedError"`, e.g. an unsupported `expectedInputs`
- * modality or audio without a GPU) pass through unchanged so callers can
- * branch on them; everything else becomes `PromptUnavailableError`.
+ * Type a `LanguageModel.create()` failure. Aborts map to `PromptAbortError`
+ * (a native abort via `createOptions.signal` rejects with an `"AbortError"`
+ * `DOMException`, matching the `send()` / `sendStreaming()` contract). Native
+ * modality validation errors (`"NotSupportedError"`, e.g. an unsupported
+ * `expectedInputs` modality or audio without a GPU) pass through unchanged so
+ * callers can branch on them; everything else becomes
+ * `PromptUnavailableError`.
  */
 const toCreateError = (err: unknown): Error => {
   if (err instanceof PromptAbortError) return err;
-  if ((err as { name?: string })?.name === "NotSupportedError") {
-    return err as Error;
-  }
+  const name = (err as { name?: string })?.name;
+  if (name === "AbortError") return new PromptAbortError();
+  if (name === "NotSupportedError") return err as Error;
   const message = (err as Error)?.message ?? String(err);
   return new PromptUnavailableError(
     `LanguageModel.create() failed: ${message}`,
