@@ -38,6 +38,12 @@ export const clockNowTool: AgentTool<ClockInput, ClockOutput> = {
   acceptCall(_input, ctx) {
     return isCurrentTimeRequest(ctx.userInput);
   },
+  // Same predicate both ways: a current-time question is the only reason
+  // to run this tool (acceptCall), and once the user asks one, an answer
+  // without a successful run would be a guessed time (requiredCallIf).
+  requiredCallIf(ctx) {
+    return isCurrentTimeRequest(ctx.userInput);
+  },
   async execute({ timeZone }) {
     const now = new Date();
     const resolved =

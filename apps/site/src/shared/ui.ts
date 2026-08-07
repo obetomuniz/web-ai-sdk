@@ -597,7 +597,7 @@ export const playground = {
   panelToggle:
     "inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-sm bg-transparent text-fg-4 transition-[color,background-color,transform] hover:bg-surface hover:text-fg-2 active:scale-95 focus-visible:bg-surface focus-visible:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent motion-reduce:transform-none max-[760px]:size-9",
   panelToggleIcon: "size-4",
-  modeSelector: "relative shrink-0",
+  modeSelector: "relative min-w-0 [grid-area:mode]",
   modeTrigger:
     "inline-flex min-h-9 max-w-52 cursor-pointer items-center gap-2 rounded-pill bg-bg px-3 py-2 text-left transition-colors data-[accent=info]:bg-[color-mix(in_oklch,var(--color-info)_9%,var(--color-bg))] data-[accent=ok]:bg-[color-mix(in_oklch,var(--color-ok)_9%,var(--color-bg))] data-[accent=warn]:bg-[color-mix(in_oklch,var(--color-warn)_9%,var(--color-bg))] data-[accent=violet]:bg-[color-mix(in_oklch,var(--color-info)_5%,color-mix(in_oklch,var(--color-err)_5%,var(--color-bg)))] hover:data-[accent=info]:bg-[color-mix(in_oklch,var(--color-info)_14%,var(--color-bg))] hover:data-[accent=ok]:bg-[color-mix(in_oklch,var(--color-ok)_14%,var(--color-bg))] hover:data-[accent=warn]:bg-[color-mix(in_oklch,var(--color-warn)_14%,var(--color-bg))] hover:data-[accent=violet]:bg-[color-mix(in_oklch,var(--color-info)_8%,color-mix(in_oklch,var(--color-err)_8%,var(--color-bg)))] focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 data-[accent=info]:focus-visible:outline-info data-[accent=ok]:focus-visible:outline-ok data-[accent=warn]:focus-visible:outline-warn data-[accent=violet]:focus-visible:outline-[color-mix(in_oklch,var(--color-info)_45%,var(--color-err))] disabled:cursor-not-allowed disabled:opacity-45 max-[640px]:min-h-8 max-[640px]:max-w-40 max-[640px]:gap-1.5 max-[640px]:px-2.5 max-[640px]:py-1.5",
   modeTriggerName:
@@ -639,7 +639,7 @@ export const playground = {
     "mb-4 rounded-sm border border-[color-mix(in_oklch,var(--color-err)_35%,transparent)] bg-[color-mix(in_oklch,var(--color-err)_10%,var(--color-bg))] px-3.5 py-3 font-mono text-[11px] leading-relaxed text-err",
   jump: "absolute right-4 bottom-4 inline-flex size-8 cursor-pointer items-center justify-center rounded-full bg-[color-mix(in_oklch,var(--color-surface-3)_92%,transparent)] font-mono text-[13px] text-fg-2 shadow-card backdrop-blur-sm transition-colors hover:text-fg",
   composer:
-    "relative z-10 grid gap-2 rounded-xl bg-surface p-2.5 shadow-[0_-14px_30px_-18px_rgba(0,0,0,0.95)] transition-colors focus-within:bg-surface-2 max-[640px]:gap-1.5 max-[640px]:p-2",
+    "relative z-10 grid grid-cols-[auto_minmax(0,1fr)_auto] [grid-template-areas:'mode_input_actions'] items-end gap-x-1.5 rounded-3xl bg-surface p-2 shadow-[0_-14px_30px_-18px_rgba(0,0,0,0.95)] transition-colors focus-within:bg-surface-2 max-[640px]:grid-cols-[minmax(0,1fr)_auto] max-[640px]:[grid-template-areas:'input_input'_'mode_actions'] max-[640px]:gap-y-1.5",
   composerDock: "relative z-20",
   composerNotices:
     "pointer-events-none absolute bottom-[calc(100%+0.65rem)] left-0 z-30 grid w-full gap-1.5",
@@ -656,21 +656,19 @@ export const playground = {
   composerNoticeErrorIcon:
     "inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklch,var(--color-err)_14%,transparent)] text-err [&_svg]:size-3.5 [&_svg_*]:stroke-current [&_svg_*]:stroke-[1.5] [&_svg_*]:[stroke-linecap:round] [&_svg_*]:[stroke-linejoin:round]",
   composerInput:
-    "min-h-20 w-full resize-none border-0 bg-transparent px-1 py-1 font-sans text-[14px] leading-[1.55] text-fg outline-none placeholder:text-fg-4 disabled:cursor-not-allowed disabled:opacity-55 max-[640px]:min-h-16",
+    "[grid-area:input] max-h-40 w-full resize-none overflow-y-auto border-0 bg-transparent px-1.5 py-2 font-sans text-[14px] leading-[1.55] text-fg outline-none [field-sizing:content] [scrollbar-width:thin] placeholder:text-fg-4 disabled:cursor-not-allowed disabled:opacity-55 max-[640px]:max-h-32",
   fallbackMuted: "text-fg-4",
-  composerRow: "flex min-w-0 items-center justify-between gap-2",
-  composerLeading:
-    "flex min-w-0 flex-1 items-center gap-2 max-[720px]:w-full max-[640px]:w-auto",
-  exampleRail: "flex min-w-0 flex-1 items-center gap-1 max-[640px]:hidden",
-  examples: "flex min-w-0 flex-[0_1_auto] flex-nowrap gap-1 overflow-hidden",
+  exampleFloat:
+    "pointer-events-none absolute bottom-full left-0 flex w-full flex-wrap items-center gap-1 bg-[linear-gradient(to_top,var(--color-bg)_62%,transparent)] px-1 pt-8 pb-2.5 max-[640px]:hidden",
+  examples: "flex min-w-0 flex-wrap items-center gap-1",
   example:
-    "max-w-48 cursor-pointer truncate rounded-pill bg-bg px-2.5 py-1.5 font-mono text-[8px] text-fg-4 transition-[color,background-color,transform] hover:bg-surface-3 hover:text-fg-2 active:scale-[0.98] motion-reduce:transform-none disabled:cursor-not-allowed disabled:opacity-45",
-  exampleRegenerateWrap: "group relative shrink-0",
+    "pointer-events-auto max-w-48 cursor-pointer truncate rounded-pill bg-surface-2 px-2 py-1 font-mono text-[8px] text-fg-4 transition-[color,background-color,transform] hover:bg-surface-3 hover:text-fg-2 active:scale-[0.98] motion-reduce:transform-none disabled:cursor-not-allowed disabled:opacity-45",
+  exampleRegenerateWrap: "group pointer-events-auto relative shrink-0",
   exampleRegenerate:
-    "inline-flex size-7 cursor-pointer items-center justify-center rounded-full bg-bg font-mono text-sm leading-none text-fg-3 transition-colors hover:bg-surface-3 hover:text-fg focus-visible:bg-surface-3 focus-visible:text-fg focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35",
+    "inline-flex size-6 cursor-pointer items-center justify-center rounded-full bg-surface-2 font-mono text-[13px] leading-none text-fg-3 transition-colors hover:bg-surface-3 hover:text-fg focus-visible:bg-surface-3 focus-visible:text-fg focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35",
   exampleRegenerateTooltip:
     "pointer-events-none invisible absolute bottom-[calc(100%+0.5rem)] left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-md bg-surface-3 px-2.5 py-1.5 font-mono text-[8px] text-fg-2 opacity-0 shadow-card transition-opacity group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100",
-  composerActions: "flex shrink-0 items-center gap-1.5",
+  composerActions: "flex shrink-0 items-center gap-1.5 [grid-area:actions]",
   toolPill: "group relative",
   toolSummaryTrigger:
     "inline-flex min-h-9 cursor-help items-center rounded-pill bg-bg px-3 py-2 font-mono text-[10px] text-fg-3 transition-colors hover:bg-surface-3 hover:text-fg focus-visible:bg-surface-3 focus-visible:text-fg focus-visible:outline-none",
