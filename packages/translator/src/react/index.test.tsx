@@ -254,6 +254,25 @@ describe("useTranslator", () => {
     expect(result.current.output).toBe("fresh-B");
   });
 
+  it("never commits 'streaming' when the implementation lacks translateStreaming", async () => {
+    // The one-shot fallback delivers a single final update; React batches that
+    // update with the promise resolution, so status must go loading → done.
+    installFakeTranslator();
+    const statuses: string[] = [];
+    const { result } = renderHook(() => {
+      const r = useTranslator({
+        input: "Olá",
+        sourceLanguage: "pt",
+        targetLanguage: "en",
+      });
+      statuses.push(r.status);
+      return r;
+    });
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    expect(result.current.output).toBe("[t]Olá");
+    expect(statuses).not.toContain("streaming");
+  });
+
   it("cancels the stream on unmount", async () => {
     const { streams } = installStreamingTranslator();
     const { unmount } = renderHook(() =>
