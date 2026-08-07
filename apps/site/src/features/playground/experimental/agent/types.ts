@@ -76,6 +76,16 @@ export interface AgentTool<TInput = AgentToolInput, TOutput = AgentToolOutput> {
    */
   acceptCall?(input: Record<string, unknown>, ctx: AgentRunContext): boolean;
   /**
+   * Evidence gate: return true when the user's request needs a
+   * successful call of this tool before the run may answer (e.g.
+   * `clock_now` for "what time is it"). When true and the model tries to
+   * finalize without one, the loop steers one corrective turn and then
+   * reports the missing value as unavailable instead of letting a
+   * guessed live value stand. The URL-fetching tool is exempt - eager
+   * fetching and its per-URL failure notices already cover it.
+   */
+  requiredCallIf?(ctx: AgentRunContext): boolean;
+  /**
    * End the run by returning this tool's output directly (skip the
    * post-tool synthesis model turn). Use for deterministic tools whose
    * output is already user-facing.

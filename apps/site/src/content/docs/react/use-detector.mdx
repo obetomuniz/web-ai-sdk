@@ -81,6 +81,8 @@ const result = useDetector({ input: text, cache: "session" });
 
 `result.fromCache` is `true` when the cache served the result. Pass `"session"` / `"local"` for the matching web-storage shortcut, or any `{ get, set }`-shaped object for a custom backend (memoize it so React doesn't restart on every render).
 
+Built-in `"session"` / `"local"` entries expire after one hour by default. Pass `cacheTtl` (milliseconds) to change the TTL per call. Pass `cacheRefresh: true` to skip the read and replace the cached value after a successful run. Custom `{ get, set }` caches own their expiry policy.
+
 ## Aborting
 
 The hook aborts any in-flight call when `input` changes or the component unmounts. You don't need to manage `AbortController` directly.
@@ -101,6 +103,8 @@ interface UseDetectorOptions extends Omit<DetectOptions, "input" | "signal"> {
   monitor?: (m: CreateMonitor) => void;
   cache?: "session" | "local" | { get, set };
   cacheKey?: string;
+  cacheTtl?: number;       // built-in shortcut TTL in ms; default 1 hour
+  cacheRefresh?: boolean;  // skip the cache read, write the fresh result
 }
 
 interface UseDetectorReturn {

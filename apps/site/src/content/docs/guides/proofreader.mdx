@@ -38,6 +38,8 @@ interface ProofreadOptions {
   monitor?: (m: CreateMonitor) => void;
   cache?: "session" | "local" | { get, set };
   cacheKey?: string;
+  cacheTtl?: number;      // built-in shortcut TTL in ms; default 1 hour
+  cacheRefresh?: boolean; // skip the cache read, write the fresh result
   signal?: AbortSignal;
 }
 ```
@@ -51,6 +53,8 @@ interface ProofreadOptions {
 | `monitor` | `(m) => void` | Observe the first-call model download. |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache (stores the serialized output). |
 | `cacheKey` | `string` | Override the default cache key. |
+| `cacheTtl` | `number` | TTL in milliseconds for entries written by the built-in `"session"` / `"local"` shortcuts. Defaults to one hour. Ignored by custom `{ get, set }` caches. |
+| `cacheRefresh` | `boolean` | Skip the cache read and replace the cached value after a successful run. The refreshed run reports `cached: false`. |
 | `signal` | `AbortSignal` | Abort signal. |
 
 </div>

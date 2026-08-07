@@ -128,6 +128,64 @@ describe("proofread", () => {
     expect(api.create).not.toHaveBeenCalled();
   });
 
+  it("bypasses the cache read and replaces the value on cacheRefresh", async () => {
+    const api = installFakeProofreader({ correctedInput: "Fresh." });
+    const cache = inMemoryCache();
+    cache.set(
+      '["hello",[]]',
+      JSON.stringify({ correctedInput: "Cached.", corrections: [] }),
+    );
+    const result = await proofread({
+      input: "hello",
+      cache,
+      cacheRefresh: true,
+    });
+    expect(result.cached).toBe(false);
+    expect(result.output?.correctedInput).toBe("Fresh.");
+    expect(api.create).toHaveBeenCalled();
+    expect(JSON.parse(cache.get('["hello",[]]') as string).correctedInput).toBe(
+      "Fresh.",
+    );
+  });
+
+  it("does not overwrite a cached value when the run is aborted", async () => {
+    installFakeProofreader();
+    const cache = inMemoryCache();
+    const seeded = JSON.stringify({
+      correctedInput: "Cached.",
+      corrections: [],
+    });
+    cache.set('["hello",[]]', seeded);
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      proofread({
+        input: "hello",
+        cache,
+        cacheRefresh: true,
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(cache.get('["hello",[]]')).toBe(seeded);
+  });
+
+  it("does not touch the cache when the input is empty", async () => {
+    installFakeProofreader();
+    const cache = inMemoryCache();
+    const seeded = JSON.stringify({
+      correctedInput: "Cached.",
+      corrections: [],
+    });
+    cache.set('["hello",[]]', seeded);
+    const result = await proofread({
+      input: "   ",
+      cache,
+      cacheRefresh: true,
+    });
+    expect(result).toEqual({ output: null, cached: false });
+    expect(cache.get('["hello",[]]')).toBe(seeded);
+  });
+
   it("writes results to the cache", async () => {
     installFakeProofreader({ correctedInput: "Fixed." });
     const cache = inMemoryCache();
@@ -313,10 +371,10 @@ describe("proofread", () => {
       });
       expect(first.cached).toBe(false);
       expect(first.output?.correctedInput).toBe("Fixed.");
-      expect(storage.setItem).toHaveBeenCalledWith(
-        "proofreader:k",
-        '{"correctedInput":"Fixed.","corrections":[]}',
-      );
+      const stored = JSON.parse(store.get("proofreader:k") ?? "");
+      expect(stored.v).toBe(1);
+      expect(stored.value).toBe('{"correctedInput":"Fixed.","corrections":[]}');
+      expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
       const createsAfterFirst = api.create.mock.calls.length;
       const second = await proofread({
@@ -350,10 +408,10 @@ describe("proofread", () => {
       });
       expect(first.cached).toBe(false);
       expect(first.output?.correctedInput).toBe("Fixed.");
-      expect(storage.setItem).toHaveBeenCalledWith(
-        "proofreader:k",
-        '{"correctedInput":"Fixed.","corrections":[]}',
-      );
+      const stored = JSON.parse(store.get("proofreader:k") ?? "");
+      expect(stored.v).toBe(1);
+      expect(stored.value).toBe('{"correctedInput":"Fixed.","corrections":[]}');
+      expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
       const createsAfterFirst = api.create.mock.calls.length;
       const second = await proofread({

@@ -126,6 +126,42 @@ describe("ask", () => {
     expect(fake.create).not.toHaveBeenCalled();
   });
 
+  it("bypasses the cache read and replaces the value on cacheRefresh", async () => {
+    const fake = installFakeLanguageModel({ response: "fresh answer" });
+    const cache = inMemoryCache();
+    cache.set('["hello","",null,null]', "cached answer");
+    const result = await ask({ input: "hello", cache, cacheRefresh: true });
+    expect(result).toEqual({ output: "fresh answer", cached: false });
+    expect(fake.create).toHaveBeenCalled();
+    expect(cache.get('["hello","",null,null]')).toBe("fresh answer");
+  });
+
+  it("does not overwrite a cached value when the run is aborted", async () => {
+    installFakeLanguageModel();
+    const cache = inMemoryCache();
+    cache.set('["hello","",null,null]', "cached answer");
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      ask({
+        input: "hello",
+        cache,
+        cacheRefresh: true,
+        signal: controller.signal,
+      }),
+    ).rejects.toBeInstanceOf(PromptAbortError);
+    expect(cache.get('["hello","",null,null]')).toBe("cached answer");
+  });
+
+  it("does not overwrite a cached value when the response is empty", async () => {
+    installFakeLanguageModel({ response: "   " });
+    const cache = inMemoryCache();
+    cache.set('["hello","",null,null]', "cached answer");
+    const result = await ask({ input: "hello", cache, cacheRefresh: true });
+    expect(result).toEqual({ output: null, cached: false });
+    expect(cache.get('["hello","",null,null]')).toBe("cached answer");
+  });
+
   it("does not collide cache entries when language hints differ", async () => {
     let calls = 0;
     installFakeLanguageModel({
@@ -699,7 +735,10 @@ describe("ask", () => {
         cacheKey: "k",
       });
       expect(first).toEqual({ output: "Hello, world.", cached: false });
-      expect(storage.setItem).toHaveBeenCalledWith("prompt:k", "Hello, world.");
+      const stored = JSON.parse(store.get("prompt:k") ?? "");
+      expect(stored.v).toBe(1);
+      expect(stored.value).toBe("Hello, world.");
+      expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
       const createsAfterFirst = fake.create.mock.calls.length;
       const second = await ask({
@@ -731,7 +770,10 @@ describe("ask", () => {
         cacheKey: "k",
       });
       expect(first).toEqual({ output: "Hello, world.", cached: false });
-      expect(storage.setItem).toHaveBeenCalledWith("prompt:k", "Hello, world.");
+      const stored = JSON.parse(store.get("prompt:k") ?? "");
+      expect(stored.v).toBe(1);
+      expect(stored.value).toBe("Hello, world.");
+      expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
       const createsAfterFirst = fake.create.mock.calls.length;
       const second = await ask({

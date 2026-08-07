@@ -209,62 +209,60 @@ const truncateExample = (value: string, limit = 60) =>
 
         <div class={ui.composerDock}>
           <div class={ui.composer}>
+            <div class={ui.modeSelector}>
+              <span class={ui.modeTrigger} data-playground-mode-trigger data-accent="warn">
+                <span
+                  class={ui.modeTriggerName}
+                  data-playground-mode-name
+                  data-accent="warn"
+                >
+                  Platform reach
+                </span>
+                <svg
+                  class={ui.modeTriggerChevron}
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="m4.5 6 3.5 3.5L11.5 6"
+                    stroke="currentColor"
+                    stroke-width="1.4"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"></path>
+                </svg>
+              </span>
+            </div>
             <div class:list={[ui.composerInput, ui.fallbackMuted]}>
               Ask anything
             </div>
-            <div class={ui.composerRow}>
-              <div class={ui.composerLeading}>
-                <span class={ui.modeTrigger} data-playground-mode-trigger data-accent="warn">
-                  <span
-                    class={ui.modeTriggerName}
-                    data-playground-mode-name
-                    data-accent="warn"
-                  >
-                    Platform reach
-                  </span>
-                  <svg
-                    class={ui.modeTriggerChevron}
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="m4.5 6 3.5 3.5L11.5 6"
-                      stroke="currentColor"
-                      stroke-width="1.4"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"></path>
-                  </svg>
-                </span>
-                <div class={ui.exampleRail}>
-                  <div class={ui.examples} data-playground-examples>
-                    {
-                      defaultMode.examples.slice(0, 3).map((example) => (
-                        <span class={ui.example} title={example}>
-                          {truncateExample(example)}
-                        </span>
-                      ))
-                    }
-                  </div>
-                  <span class={ui.exampleRegenerateWrap}>
-                    <span class={ui.exampleRegenerate} aria-hidden="true">+</span>
-                  </span>
-                </div>
-              </div>
-              <div class={ui.composerActions}>
-                <span class={ui.toolSummaryTrigger} data-playground-tool-count>
-                  5 tools
-                </span>
-                <button
-                  type="button"
-                  class={ui.sendButton}
-                  aria-label="Send message"
-                  disabled
-                >
-                  ↑
-                </button>
-              </div>
+            <div class={ui.composerActions}>
+              <span class={ui.toolSummaryTrigger} data-playground-tool-count>
+                5 tools
+              </span>
+              <button
+                type="button"
+                class={ui.sendButton}
+                aria-label="Send message"
+                disabled
+              >
+                ↑
+              </button>
             </div>
+          </div>
+          <div class={ui.exampleFloat}>
+            <div class={ui.examples} data-playground-examples>
+              {
+                defaultMode.examples.slice(0, 3).map((example) => (
+                  <span class={ui.example} title={example}>
+                    {truncateExample(example)}
+                  </span>
+                ))
+              }
+            </div>
+            <span class={ui.exampleRegenerateWrap}>
+              <span class={ui.exampleRegenerate} aria-hidden="true">+</span>
+            </span>
           </div>
         </div>
       </div>

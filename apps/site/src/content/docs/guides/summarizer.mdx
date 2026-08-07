@@ -40,6 +40,8 @@ interface SummarizeOptions {
   monitor?: (m: CreateMonitor) => void;
   cache?: "session" | "local" | { get, set };
   cacheKey?: string;
+  cacheTtl?: number;      // built-in shortcut TTL in ms; default 1 hour
+  cacheRefresh?: boolean; // skip the cache read, write the fresh result
   onUpdate?: (text: string) => void;
   signal?: AbortSignal;
 }
@@ -60,6 +62,8 @@ interface SummarizeOptions {
 | `monitor` | `(m) => void` | Observe first-call model download progress. |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
 | `cacheKey` | `string` | Override the default cache key (defaults to `JSON.stringify([pathname, trimmed input, normalizedLanguage, languageHints, type, length, format, preference, sharedContext])`; `normalizedLanguage` is `language`'s lowercase primary subtag (for example, `pt-BR` becomes `pt`), and `languageHints` is a boolean for whether that language is in `supportedLanguages`). |
+| `cacheTtl` | `number` | TTL in milliseconds for entries written by the built-in `"session"` / `"local"` shortcuts. Defaults to one hour. Ignored by custom `{ get, set }` caches. |
+| `cacheRefresh` | `boolean` | Skip the cache read and replace the cached value after a successful run. The refreshed run reports `cached: false`. |
 | `onUpdate` | `(text: string) => void` | Streaming update callback. Receives the cumulative buffer, not deltas. |
 | `signal` | `AbortSignal` | Abort signal. |
 
@@ -86,6 +90,8 @@ interface SummarizeResult {
 **Session cache** (internal, in-memory, always on): a bounded LRU of `Summarizer` instances so the second call with the same `{ language, type, length, sharedContext, … }` reuses the warm session. Cold-start is ~1-3s; warm sessions are sub-second. Cleared on full page reload.
 
 **Result cache** (opt-in): off by default; every call hits the model. Pass `cache: "session"` for `sessionStorage`, `cache: "local"` for `localStorage`, or any `{ get, set }`-shaped object to memoize the final summary string by `cacheKey`.
+
+Built-in `"session"` / `"local"` entries expire after one hour by default. Pass `cacheTtl` (milliseconds) to change the TTL per call. Pass `cacheRefresh: true` to skip the read and replace the cached value after a successful run. Custom `{ get, set }` caches own their expiry policy.
 
 ```ts
 import { summarize } from "@web-ai-sdk/summarizer";

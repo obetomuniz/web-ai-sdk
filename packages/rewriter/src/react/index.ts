@@ -55,6 +55,8 @@ export const useRewriter = (options: UseRewriterOptions): UseRewriterReturn => {
     monitor,
     cache,
     cacheKey,
+    cacheTtl,
+    cacheRefresh,
     enabled = true,
   } = options;
 
@@ -86,6 +88,8 @@ export const useRewriter = (options: UseRewriterOptions): UseRewriterReturn => {
       monitor,
       cache,
       cacheKey,
+      cacheTtl,
+      cacheRefresh,
       signal: controller.signal,
       onUpdate: (chunk) => {
         if (controller.signal.aborted) return;
@@ -126,6 +130,8 @@ export const useRewriter = (options: UseRewriterOptions): UseRewriterReturn => {
     monitor,
     cache,
     cacheKey,
+    cacheTtl,
+    cacheRefresh,
   ]);
 
   const dismiss = () => {

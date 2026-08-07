@@ -34,6 +34,7 @@ import {
 } from "./api.js";
 import {
   type CacheOption,
+  DEFAULT_CACHE_TTL_MS,
   type DefaultCacheKeyInput,
   defaultCacheKey,
   type ResponseCache,
@@ -78,6 +79,7 @@ export type {
 export {
   checkAvailability,
   createSession,
+  DEFAULT_CACHE_TTL_MS,
   isAvailable,
   PromptAbortError,
   PromptUnavailableError,
@@ -129,6 +131,19 @@ export interface AskOptions {
   cache?: CacheOption;
   /** Cache key. Default: JSON string of the prompt and output-shaping options. */
   cacheKey?: string;
+  /**
+   * Time-to-live in milliseconds for entries written by the built-in
+   * `"session"` / `"local"` storage shortcuts. Default: one hour
+   * (`DEFAULT_CACHE_TTL_MS`). Ignored for custom `{ get, set }` caches, which
+   * own their expiry policy.
+   */
+  cacheTtl?: number;
+  /**
+   * Force a fresh inference. Skips the cache read, runs the model, and
+   * replaces the cached value after a successful run. Applies to built-in
+   * and custom caches.
+   */
+  cacheRefresh?: boolean;
   /**
    * Streaming update callback. Receives the **cumulative** buffer (full text so
    * far), not deltas. For delta-shaped streaming, use `createSession()` and
@@ -215,7 +230,7 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
   // Mirror buildLangHints() exactly: supportedLanguages are intentionally not
   // normalized in the cache key unless they produce runtime language hints.
   const effectiveLanguageHint = languageHintedInput ?? languageHintedOutput;
-  const cache = resolveCache(options.cache);
+  const cache = resolveCache(options.cache, options.cacheTtl);
   const cacheKey =
     options.cacheKey ??
     defaultCacheKey({
@@ -232,7 +247,7 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
       responseConstraint: options.responseConstraint,
       omitResponseConstraintInput: options.omitResponseConstraintInput,
     });
-  if (cache) {
+  if (cache && !options.cacheRefresh) {
     const cached = cache.get(cacheKey);
     if (cached) return { output: cached, cached: true };
   }

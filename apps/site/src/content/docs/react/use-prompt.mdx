@@ -100,6 +100,8 @@ interface UsePromptOptions extends Omit<AskOptions, "input" | "onUpdate" | "sign
   monitor?: (m: CreateMonitor) => void;
   cache?: "session" | "local" | { get, set };
   cacheKey?: string;
+  cacheTtl?: number;                  // built-in shortcut TTL in ms; default 1 hour
+  cacheRefresh?: boolean;             // skip the cache read, write the fresh result
 }
 
 interface UsePromptReturn {

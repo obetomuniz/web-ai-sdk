@@ -179,6 +179,137 @@ describe("createAgentLoop", () => {
     expect(result.text).toContain("clock_now failed: Clock unavailable");
   });
 
+  it("steers a plain-language live-value request to its required tool", async () => {
+    const fixture = createSessionFixture([
+      "It is 3:45 PM.",
+      "```tool_code\nclock_now()\n```",
+      "It is 12:34.",
+    ]);
+    createSessionMock.mockReturnValue(fixture.base);
+    const calls: string[] = [];
+    const agent = createAgentLoop({
+      tools: [createFetchFixtureTool(calls), createClockFixtureTool(calls)],
+    });
+
+    const result = await agent.run("What time is it right now?");
+    agent.destroy();
+
+    expect(calls).toEqual(["clock_now"]);
+    expect(result.stopReason).toBe("done");
+    expect(result.text).toBe("It is 12:34.");
+  });
+
+  it("reports a guessed live value when its tool never runs", async () => {
+    const fixture = createSessionFixture(["It is 3:45 PM.", "It is 3:45 PM."]);
+    createSessionMock.mockReturnValue(fixture.base);
+    const calls: string[] = [];
+    const agent = createAgentLoop({
+      tools: [createFetchFixtureTool(calls), createClockFixtureTool(calls)],
+    });
+
+    const result = await agent.run("What time is it right now?");
+    agent.destroy();
+
+    expect(calls).toEqual([]);
+    expect(result.stopReason).toBe("done");
+    expect(result.text).toContain("clock_now was not called");
+  });
+
+  it("reports a live value as unavailable when its tool fails", async () => {
+    const fixture = createSessionFixture([
+      "```tool_code\nclock_now()\n```",
+      "The current time is unavailable.",
+    ]);
+    createSessionMock.mockReturnValue(fixture.base);
+    const calls: string[] = [];
+    const agent = createAgentLoop({
+      tools: [
+        createFetchFixtureTool(calls),
+        createClockFixtureTool(calls, new Error("Clock unavailable")),
+      ],
+    });
+
+    const result = await agent.run("What time is it right now?");
+    agent.destroy();
+
+    expect(calls).toEqual(["clock_now"]);
+    expect(result.stopReason).toBe("done");
+    expect(result.text).toContain("clock_now failed: Clock unavailable");
+    expect(result.text).toContain("The current time is unavailable.");
+  });
+
+  it("rewrites an answer that contradicts fetched evidence", async () => {
+    const fixture = createSessionFixture([
+      "The repository has 1,238 stars.",
+      "The repository has 19 stars.",
+    ]);
+    createSessionMock.mockReturnValue(fixture.base);
+    const calls: string[] = [];
+    const agent = createAgentLoop({
+      tools: [
+        createFetchFixtureTool(calls, undefined, "stargazers_count: 19"),
+        createClockFixtureTool(calls),
+      ],
+    });
+
+    const result = await agent.run(
+      "How many stars does https://one.test have?",
+    );
+    agent.destroy();
+
+    expect(calls).toEqual(["fetch_url"]);
+    expect(fixture.inputs).toHaveLength(2);
+    expect(fixture.inputs[1]).toContain("1,238");
+    expect(result.stopReason).toBe("done");
+    expect(result.text).toBe("The repository has 19 stars.");
+  });
+
+  it("flags values that stay unsupported after the rewrite", async () => {
+    const fixture = createSessionFixture([
+      "The repository has 1,238 stars.",
+      "It still has 1,238 stars.",
+    ]);
+    createSessionMock.mockReturnValue(fixture.base);
+    const calls: string[] = [];
+    const agent = createAgentLoop({
+      tools: [
+        createFetchFixtureTool(calls, undefined, "stargazers_count: 19"),
+        createClockFixtureTool(calls),
+      ],
+    });
+
+    const result = await agent.run(
+      "How many stars does https://one.test have?",
+    );
+    agent.destroy();
+
+    expect(result.stopReason).toBe("done");
+    expect(result.text).toContain("1,238 is not supported by any tool result");
+    expect(result.text).toContain("treat it as unavailable");
+    expect(result.text).toContain("It still has 1,238 stars.");
+  });
+
+  it("keeps grounded tool-backed answers untouched", async () => {
+    const fixture = createSessionFixture(["The repository has 19 stars."]);
+    createSessionMock.mockReturnValue(fixture.base);
+    const calls: string[] = [];
+    const agent = createAgentLoop({
+      tools: [
+        createFetchFixtureTool(calls, undefined, "stargazers_count: 19"),
+        createClockFixtureTool(calls),
+      ],
+    });
+
+    const result = await agent.run(
+      "How many stars does https://one.test have?",
+    );
+    agent.destroy();
+
+    expect(fixture.inputs).toHaveLength(1);
+    expect(result.stopReason).toBe("done");
+    expect(result.text).toBe("The repository has 19 stars.");
+  });
+
   it("uses the existing step budget for the remaining-tool correction", async () => {
     const fixture = createSessionFixture(["The URLs are done."]);
     createSessionMock.mockReturnValue(fixture.base);
@@ -203,6 +334,7 @@ describe("createAgentLoop", () => {
 function createFetchFixtureTool(
   calls: string[],
   fetchedUrls?: string[],
+  pageText?: string,
 ): AgentTool<{ url: string }, { status: number; url: string; text: string }> {
   return {
     name: "fetch_url",
@@ -215,7 +347,7 @@ function createFetchFixtureTool(
     async execute({ url }) {
       calls.push("fetch_url");
       fetchedUrls?.push(url);
-      return { status: 200, url, text: `Content from ${url}` };
+      return { status: 200, url, text: pageText ?? `Content from ${url}` };
     },
   };
 }
@@ -228,6 +360,9 @@ function createClockFixtureTool(
     name: "clock_now",
     description: "Return the current time.",
     inputSchema: { type: "object" },
+    requiredCallIf(ctx) {
+      return /\btime\b/i.test(ctx.userInput);
+    },
     async execute() {
       calls.push("clock_now");
       if (failure) throw failure;
