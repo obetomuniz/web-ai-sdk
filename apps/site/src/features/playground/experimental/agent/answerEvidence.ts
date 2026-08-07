@@ -23,8 +23,7 @@ import type { AgentToolCallRecord } from "./types.js";
  * RegExp lacks lookbehind (Safari before 16.4), where this module loads
  * only to show the unavailability messaging.
  */
-const NUMBER_TOKEN =
-  /(^|[^0-9])(-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)/g;
+const NUMBER_TOKEN = /(^|[^0-9])(-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)/g;
 
 function matchNumberTokens(text: string): string[] {
   const tokens: string[] = [];
