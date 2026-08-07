@@ -290,3 +290,12 @@
   line-height: 1;
   color: var(--sl-color-text);
 }
+
+.demo-preview {
+  display: block;
+  max-width: 240px;
+  max-height: 160px;
+  border: 1px solid var(--demo-card-border);
+  border-radius: 4px;
+  object-fit: contain;
+}

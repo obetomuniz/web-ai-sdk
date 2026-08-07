@@ -282,4 +282,120 @@ describe("useSession", () => {
     const createOpts = api.create.mock.calls[0]?.[0];
     expect(createOpts).toMatchObject({ monitor });
   });
+
+  it("exposes a session that forwards multimodal messages losslessly", async () => {
+    const promptSpy = vi.fn(async (_input: unknown) => "A red square.");
+    const api = {
+      availability: vi.fn(async () => "available"),
+      create: vi.fn(async (_opts?: unknown) => ({
+        prompt: promptSpy,
+        destroy: vi.fn(),
+      })),
+    };
+    (globalThis as { LanguageModel?: typeof api }).LanguageModel = api;
+    const expectedInputs = [
+      { type: "text" as const },
+      { type: "image" as const },
+    ];
+    const { result } = renderHook(() => useSession({ expectedInputs }));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(api.create.mock.calls[0]?.[0]).toMatchObject({ expectedInputs });
+
+    const imageValue = new Blob(["fake-image-bytes"], { type: "image/png" });
+    const messages = [
+      {
+        role: "user" as const,
+        content: [
+          { type: "text" as const, value: "Describe this:" },
+          { type: "image" as const, value: imageValue },
+        ],
+      },
+    ];
+    // Media-only content must not be treated as empty, and the exact same
+    // array and media values must reach the native instance.
+    const reply = await result.current.session?.send(messages);
+    expect(reply).toBe("A red square.");
+    expect(promptSpy.mock.calls[0]?.[0]).toBe(messages);
+    const forwarded = promptSpy.mock.calls[0]?.[0] as typeof messages;
+    expect(forwarded[0]?.content[1]?.value).toBe(imageValue);
+  });
+
+  it("unmount destroys the session and aborts an in-flight multimodal stream", async () => {
+    let resolveGate: () => void = () => {};
+    const gate = new Promise<void>((r) => {
+      resolveGate = r;
+    });
+    let destroyed = false;
+    const api = {
+      availability: vi.fn(async () => "available"),
+      create: vi.fn(async () => ({
+        prompt: vi.fn(async () => "ok"),
+        promptStreaming: async function* () {
+          yield "a";
+          await gate;
+          yield "b";
+        },
+        destroy: () => {
+          destroyed = true;
+        },
+      })),
+    };
+    (globalThis as { LanguageModel?: typeof api }).LanguageModel = api;
+    // Stable reference: an inline literal would change identity every render
+    // and make the effect recreate the session forever.
+    const expectedInputs = [{ type: "audio" as const }];
+    const { result, unmount } = renderHook(() =>
+      useSession({ expectedInputs }),
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    const session = result.current.session;
+    expect(session).not.toBeNull();
+
+    const collected: string[] = [];
+    let rejection: unknown;
+    const drain = (async () => {
+      try {
+        if (!session) return;
+        for await (const delta of session.sendStreaming([
+          {
+            role: "user",
+            content: [{ type: "audio", value: new Uint8Array([1, 2, 3]) }],
+          },
+        ])) {
+          collected.push(delta);
+        }
+      } catch (e) {
+        rejection = e;
+      }
+    })();
+    for (let i = 0; i < 50 && collected.length === 0; i++) {
+      await Promise.resolve();
+    }
+    expect(collected).toEqual(["a"]);
+
+    unmount();
+    resolveGate();
+    await drain;
+    await Promise.resolve();
+    expect(destroyed).toBe(true);
+    expect((rejection as { name?: string })?.name).toBe("AbortError");
+    expect(session?.destroyed).toBe(true);
+  });
+
+  it("recreates the session when the expectedInputs reference changes", () => {
+    const api = installFakeLanguageModel();
+    const textOnly: Array<{ type: "text" | "image" }> = [{ type: "text" }];
+    const withImage: Array<{ type: "text" | "image" }> = [
+      { type: "text" },
+      { type: "image" },
+    ];
+    const { rerender } = renderHook(
+      ({ inputs }: { inputs: Array<{ type: "text" | "image" }> }) =>
+        useSession({ expectedInputs: inputs }),
+      { initialProps: { inputs: textOnly } },
+    );
+    expect(api.create).toHaveBeenCalledTimes(1);
+    rerender({ inputs: withImage });
+    expect(api.create).toHaveBeenCalledTimes(2);
+  });
 });

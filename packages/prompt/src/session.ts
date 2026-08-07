@@ -120,6 +120,25 @@ export const cleanResponse = (raw: string): string =>
  * Returns `{ buffer, delta }` so streaming surfaces can decide whether to
  * hand callers cumulative text (`buffer`) or the new piece (`delta`).
  */
+/**
+ * A message is empty when its content is a blank string, an empty content
+ * array, or an array of only blank text parts. Image and audio parts always
+ * count as content: the SDK never inspects media values, so a media-only
+ * message must reach the model.
+ */
+const isMessageEmpty = (message: LanguageModelMessage): boolean =>
+  typeof message.content === "string"
+    ? !message.content.trim()
+    : message.content.length === 0 ||
+      message.content.every(
+        (part) => part.type === "text" && !part.value.trim(),
+      );
+
+const isEmptyInput = (input: string | LanguageModelMessage[]): boolean =>
+  typeof input === "string"
+    ? !input.trim()
+    : input.length === 0 || input.every(isMessageEmpty);
+
 export const mergeStreamChunk = (
   buffer: string,
   chunk: string,
@@ -353,6 +372,23 @@ interface SessionInternal {
   api: LanguageModelApi;
 }
 
+/**
+ * Type a `LanguageModel.create()` failure. Aborts and native modality
+ * validation errors (`"NotSupportedError"`, e.g. an unsupported `expectedInputs`
+ * modality or audio without a GPU) pass through unchanged so callers can
+ * branch on them; everything else becomes `PromptUnavailableError`.
+ */
+const toCreateError = (err: unknown): Error => {
+  if (err instanceof PromptAbortError) return err;
+  if ((err as { name?: string })?.name === "NotSupportedError") {
+    return err as Error;
+  }
+  const message = (err as Error)?.message ?? String(err);
+  return new PromptUnavailableError(
+    `LanguageModel.create() failed: ${message}`,
+  );
+};
+
 const wrapInstance = (
   internal: Promise<SessionInternal>,
   resolvedInstance?: LanguageModelInstance,
@@ -367,11 +403,7 @@ const wrapInstance = (
 
   // Wrap the create-failure promise once so awaiters get the typed error.
   const ready: Promise<SessionInternal> = internal.catch((err) => {
-    if (err instanceof PromptAbortError) throw err;
-    const message = (err as Error)?.message ?? String(err);
-    throw new PromptUnavailableError(
-      `LanguageModel.create() failed: ${message}`,
-    );
+    throw toCreateError(err);
   });
   // Swallow the rejection on the internal promise so unhandled-rejection
   // warnings don't fire when callers never touch `ready`.
@@ -416,11 +448,7 @@ const wrapInstance = (
     options?: SessionSendOptions,
   ): Promise<string | null> => {
     ensureLive();
-    const isEmpty =
-      typeof input === "string"
-        ? !input.trim()
-        : input.length === 0 || input.every((m) => !m.content?.trim());
-    if (isEmpty) return null;
+    if (isEmptyInput(input)) return null;
     const { instance } = await ready;
     ensureLive();
 
@@ -457,11 +485,7 @@ const wrapInstance = (
   ): AsyncIterable<string> => ({
     [Symbol.asyncIterator]: async function* () {
       ensureLive();
-      const isEmpty =
-        typeof input === "string"
-          ? !input.trim()
-          : input.length === 0 || input.every((m) => !m.content?.trim());
-      if (isEmpty) return;
+      if (isEmptyInput(input)) return;
       const { instance } = await ready;
       ensureLive();
 
@@ -681,11 +705,7 @@ export const createSessionWithReady = (
   const ready = internal
     .then(() => {})
     .catch((err) => {
-      if (err instanceof PromptAbortError) throw err;
-      const message = (err as Error)?.message ?? String(err);
-      throw new PromptUnavailableError(
-        `LanguageModel.create() failed: ${message}`,
-      );
+      throw toCreateError(err);
     });
   ready.catch(() => {});
   return { session: wrapInstance(internal), ready };

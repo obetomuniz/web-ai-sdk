@@ -7,9 +7,38 @@
 
 export type LanguageModelRole = "system" | "user" | "assistant";
 
+/**
+ * Browser-native image value accepted by multimodal prompt content. Mirrors
+ * the spec's `LanguageModelMessageValue` image shapes (`ImageBitmapSource`
+ * covers `Blob`, `ImageData`, canvas/image/video elements, `ImageBitmap`,
+ * `OffscreenCanvas`, and `VideoFrame`).
+ */
+export type LanguageModelImageValue = ImageBitmapSource | BufferSource;
+
+/**
+ * Browser-native audio value accepted by multimodal prompt content.
+ */
+export type LanguageModelAudioValue = AudioBuffer | Blob | BufferSource;
+
+/**
+ * One content part of a multimodal message. Discriminated on `type` so each
+ * modality keeps its native value type. The SDK forwards `value` losslessly to
+ * the browser; it never serializes, clones, transcodes, or inspects media.
+ */
+export type LanguageModelMessageContent =
+  | { type: "text"; value: string }
+  | { type: "image"; value: LanguageModelImageValue }
+  | { type: "audio"; value: LanguageModelAudioValue };
+
 export interface LanguageModelMessage {
   role: LanguageModelRole;
-  content: string;
+  /**
+   * A plain text turn, or an ordered array of text / image / audio content
+   * parts. Non-text parts require a session created with matching
+   * `expectedInputs`; the browser throws a `"NotSupportedError"`
+   * `DOMException` for undeclared or unsupported modalities.
+   */
+  content: string | LanguageModelMessageContent[];
   /**
    * When `true` on the trailing `assistant` message, the model treats
    * `content` as a prefix to complete rather than a turn to respond to.
