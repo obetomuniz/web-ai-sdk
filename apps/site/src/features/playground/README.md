@@ -206,6 +206,25 @@ registration hook so behavior can be tested without mounting a browser UI.
 Read operations remain available while a response is running. Mutations return
 an explicit busy result instead of racing the active run.
 
+### 14. The composer is a compact inline surface
+
+The composer places the mode trigger, prompt input, tool summary, and send or
+stop action in one row, styled as a single rounded surface. Example
+suggestions float above the surface and never narrow the prompt input.
+
+The floating example list renders only while the prompt is available, idle,
+and empty. The list container uses one background gradient into the page
+color, so transcript content fades out behind the suggestions.
+
+The input starts at one line. It grows with wrapped or multiline text through
+`field-sizing: content`, up to a capped height, then scrolls internally. The
+primary controls stay anchored to the bottom of the row while the input grows.
+
+The row composition comes from named grid areas in `ui.composer`. Below 640px
+the input takes its own full-width row, the mode trigger and actions move to a
+compact second row, and examples stay hidden. The Astro boot shell mirrors the
+same structure and classes.
+
 ## Maintenance invariants
 
 - Do not add browser API lifecycle code when an SDK package already owns it.
