@@ -49,7 +49,8 @@ export const TranslatorDemo = ({
                 ? "Translating…"
                 : status === "idle"
                   ? "Waiting for input"
-                  : `Translation (${targetLanguage})`}
+                  : `Translation (${targetLanguage})`}{" "}
+            {status === "streaming" && <em>(streaming…)</em>}
           </span>
         </header>
         <p className="demo-response__body">

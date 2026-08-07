@@ -6,8 +6,20 @@
  * Spec: https://developer.chrome.com/docs/ai/translator-api
  */
 
+export interface TranslatorTranslateOptions {
+  /** Standard `AbortSignal` forwarded to the native operation. */
+  signal?: AbortSignal;
+}
+
 export interface TranslatorInstance {
-  translate(text: string): Promise<string>;
+  translate(
+    text: string,
+    options?: TranslatorTranslateOptions,
+  ): Promise<string>;
+  translateStreaming?(
+    text: string,
+    options?: TranslatorTranslateOptions,
+  ): ReadableStream<string>;
   destroy?(): void;
 }
 

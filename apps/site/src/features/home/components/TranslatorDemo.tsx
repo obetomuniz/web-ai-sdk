@@ -71,6 +71,11 @@ export const TranslatorDemo = () => {
         targetLanguage: to,
         monitor,
         signal: ac.signal,
+        onUpdate: (chunk) => {
+          if (ac.signal.aborted) return;
+          setOutput(chunk);
+          update(chunk);
+        },
       });
       if (ac.signal.aborted) return;
       if (result.output) {

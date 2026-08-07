@@ -1,9 +1,9 @@
 ---
 title: Translator API
-description: Translate text with the built-in Translator API, pair-based session reuse, and optional result caching.
+description: Translate text with the built-in Translator API, streaming, pair-based session reuse, and optional result caching.
 ---
 
-This package wraps the built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api). It adds pair-based session reuse, optional result caching, and abort cleanup. For React, see [useTranslator](/docs/react/use-translator/).
+This package wraps the built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api). It adds streaming, pair-based session reuse, optional result caching, and abort cleanup. For React, see [useTranslator](/docs/react/use-translator/).
 
 Before shipping, review the [Production checklist](/docs/production-checklist/) for task-relevant input, safe rendering, progress, reversible changes, and cache freshness.
 
@@ -36,6 +36,7 @@ interface TranslateOptions {
   cacheKey?: string;
   cacheTtl?: number;      // built-in shortcut TTL in ms; default 1 hour
   cacheRefresh?: boolean; // skip the cache read, write the fresh result
+  onUpdate?: (text: string) => void;
   signal?: AbortSignal;
 }
 ```
@@ -52,7 +53,8 @@ interface TranslateOptions {
 | `cacheKey` | `string` | Override the default cache key (JSON array string of normalized `[sourceLanguage, targetLanguage, input]`). |
 | `cacheTtl` | `number` | TTL in milliseconds for entries written by the built-in `"session"` / `"local"` shortcuts. Defaults to one hour. Ignored by custom `{ get, set }` caches. |
 | `cacheRefresh` | `boolean` | Skip the cache read and replace the cached value after a successful run. The refreshed run reports `cached: false`. |
-| `signal` | `AbortSignal` | Abort signal. |
+| `onUpdate` | `(text: string) => void` | Streaming update callback. Receives the cumulative buffer, not deltas. |
+| `signal` | `AbortSignal` | Abort signal. Forwarded to the native translation operation. |
 
 </div>
 
@@ -64,6 +66,23 @@ interface TranslateResult {
   cached: boolean;
 }
 ```
+
+## Streaming
+
+Pass `onUpdate` to receive partial output while the model translates. The wrapper consumes the native [`translateStreaming()`](https://developer.mozilla.org/en-US/docs/Web/API/Translator/translateStreaming) method when the implementation provides it.
+
+```ts
+const result = await translate({
+  input: "Hello, world.",
+  sourceLanguage: "en",
+  targetLanguage: "pt",
+  onUpdate: (text) => console.log("partial", text),
+});
+```
+
+`onUpdate` receives the cumulative translation so far, not raw deltas. Each update contains every previous update as a prefix, so you can render it directly. On implementations without `translateStreaming()`, the wrapper runs the one-shot method and delivers the result as a single final update.
+
+Only the final completed output enters the result cache. Partial, aborted, or failed output is never cached.
 
 ## How it works
 
@@ -104,7 +123,7 @@ Built-in `"session"` / `"local"` entries expire after one hour by default. Pass 
 
 ## Aborting
 
-`AbortSignal` is supported. Aborting mid-call throws `AbortError`; the cache is not written for aborted runs.
+`AbortSignal` is supported. The wrapper forwards it to the native [`translate()` and `translateStreaming()` operations](https://webmachinelearning.github.io/translation-api/), so browsers that honor the operation signal stop native work promptly. Aborting mid-call throws `AbortError`; the cache is not written for aborted runs. Aborting one call keeps the shared warm session usable for other callers.
 
 ```ts
 const controller = new AbortController();

@@ -22,6 +22,7 @@ import {
   type TranslatorCreateOptions,
   type TranslatorInstance,
   type TranslatorMonitor,
+  type TranslatorTranslateOptions,
 } from "./api.js";
 import {
   type CacheOption,
@@ -41,6 +42,7 @@ export type {
   TranslatorCreateOptions,
   TranslatorInstance,
   TranslatorMonitor,
+  TranslatorTranslateOptions,
 };
 export {
   checkAvailability,
@@ -84,7 +86,14 @@ export interface TranslateOptions {
    * and custom caches.
    */
   cacheRefresh?: boolean;
-  /** Abort signal. */
+  /**
+   * Streaming update callback (cumulative buffer, monotonically growing).
+   * Receives the **cumulative** translation so far, not raw deltas. On
+   * implementations without `translateStreaming()`, the one-shot result is
+   * delivered as a single final update.
+   */
+  onUpdate?: (text: string) => void;
+  /** Abort signal. Forwarded to the native translation operation. */
   signal?: AbortSignal;
 }
 
@@ -110,10 +119,41 @@ class TranslateAbortError extends Error {
 }
 
 /**
+ * Await `promise`, but reject with an `AbortError` as soon as `signal`
+ * aborts. Used around shared-session waits and stream reads so one caller's
+ * abort rejects promptly without destroying work another caller may reuse.
+ */
+const raceAbort = <T>(
+  promise: Promise<T>,
+  signal: AbortSignal | undefined,
+): Promise<T> => {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(new TranslateAbortError());
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(new TranslateAbortError());
+    signal.addEventListener("abort", onAbort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(value);
+      },
+      (err: unknown) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(err);
+      },
+    );
+  });
+};
+
+/**
  * Translate a string from `sourceLanguage` to `targetLanguage`. Returns
  * `{ output: null }` when the input is empty or when source and target
  * match. Throws `TranslatorUnavailableError` when the API isn't present in
  * the environment or reports `availability: "unavailable"`.
+ *
+ * With `onUpdate`, consumes `translateStreaming()` when the implementation
+ * provides it and reports the cumulative translation after each chunk. The
+ * caller's `signal` is forwarded to the native operation on both paths.
  */
 export const translate = async (
   options: TranslateOptions,
@@ -124,6 +164,7 @@ export const translate = async (
       "Translator API is not available in this environment.",
     );
   }
+  if (options.signal?.aborted) throw new TranslateAbortError();
 
   const text = options.input.trim();
   if (!text) return { output: null, cached: false };
@@ -161,7 +202,9 @@ export const translate = async (
 
   let session: TranslatorInstance;
   try {
-    session = await sessionPromise;
+    // raceAbort rejects only this caller; the cached session promise stays
+    // untouched so other callers can still reuse it.
+    session = await raceAbort(sessionPromise, options.signal);
   } catch (err) {
     if (err instanceof TranslateAbortError) throw err;
     const message = (err as Error)?.message ?? String(err);
@@ -169,9 +212,41 @@ export const translate = async (
       `Translator.create() failed: ${message}`,
     );
   }
-  if (options.signal?.aborted) throw new TranslateAbortError();
 
-  const output = await session.translate(text);
+  const taskOptions: TranslatorTranslateOptions = {
+    ...(options.signal ? { signal: options.signal } : {}),
+  };
+
+  // Browser implementations may emit delta or cumulative chunks. Detect the
+  // shape per chunk and merge accordingly.
+  const mergeChunk = (buffer: string, chunk: string): string =>
+    chunk.startsWith(buffer) ? chunk : buffer + chunk;
+
+  let output: string;
+  if (options.onUpdate && typeof session.translateStreaming === "function") {
+    const reader = session.translateStreaming(text, taskOptions).getReader();
+    let buffer = "";
+    try {
+      for (;;) {
+        const { done, value } = await raceAbort(reader.read(), options.signal);
+        if (done) break;
+        buffer = mergeChunk(buffer, value);
+        options.onUpdate(buffer);
+      }
+    } catch (err) {
+      // Stop native work; the reader may already be errored, so best-effort.
+      reader.cancel().catch(() => {});
+      throw err;
+    }
+    output = buffer;
+  } else {
+    output = await raceAbort(
+      session.translate(text, taskOptions),
+      options.signal,
+    );
+    // No native streaming: deliver the one-shot result as one final update.
+    if (output) options.onUpdate?.(output);
+  }
   if (options.signal?.aborted) throw new TranslateAbortError();
 
   if (output && cache) cache.set(cacheKey, output);

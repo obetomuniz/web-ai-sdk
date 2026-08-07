@@ -103,8 +103,8 @@ const PACKAGE_ROWS: PackageInfo[] = [
     tag: "Translate a string between a source and target language.",
     bullets: [
       ["Pair caching.", "Sessions are cached by source and target language."],
+      ["Streaming first.", "Receive cumulative text as the model responds."],
       ["String input.", "The SDK does not walk or mutate the DOM."],
-      ["Typed fallback.", "Unavailable environments return a state or error."],
     ],
   },
   {

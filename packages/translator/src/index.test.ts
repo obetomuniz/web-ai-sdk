@@ -573,4 +573,319 @@ describe("translate", () => {
     ).rejects.toMatchObject({ name: "AbortError" });
     expect(cache.set).not.toHaveBeenCalled();
   });
+
+  it("does not touch the native API when the signal is already aborted", async () => {
+    const { api } = installFakeTranslator();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      translate({
+        input: "Olá",
+        sourceLanguage: "pt",
+        targetLanguage: "en",
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(api.availability).not.toHaveBeenCalled();
+    expect(api.create).not.toHaveBeenCalled();
+  });
+
+  it("forwards the caller's signal to the native one-shot translate", async () => {
+    const { sessions } = installFakeTranslator();
+    const controller = new AbortController();
+    await translate({
+      input: "Olá",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+      signal: controller.signal,
+    });
+    expect(sessions[0]?.translate).toHaveBeenCalledWith("Olá", {
+      signal: controller.signal,
+    });
+  });
+});
+
+interface StreamingSession {
+  translate: ReturnType<typeof vi.fn>;
+  translateStreaming: ReturnType<typeof vi.fn>;
+  destroy: ReturnType<typeof vi.fn>;
+}
+
+const streamOf = (chunks: string[]): ReadableStream<string> =>
+  new ReadableStream<string>({
+    start(controller) {
+      for (const c of chunks) controller.enqueue(c);
+      controller.close();
+    },
+  });
+
+const installStreamingTranslator = (
+  makeStream: (text: string) => ReadableStream<string>,
+  oneShot: (text: string) => Promise<string> = async (text) => `[t]${text}`,
+) => {
+  const session: StreamingSession = {
+    translate: vi.fn(oneShot),
+    translateStreaming: vi.fn((text: string) => makeStream(text)),
+    destroy: vi.fn(),
+  };
+  const api = {
+    availability: vi.fn(async () => "available" as const),
+    create: vi.fn(async () => session),
+  };
+  (globalThis as { Translator?: typeof api }).Translator = api;
+  return { api, session };
+};
+
+describe("translate streaming", () => {
+  it("reports cumulative updates for incremental (delta) chunks", async () => {
+    const { session } = installStreamingTranslator(() =>
+      streamOf(["Olá", " mundo"]),
+    );
+    const updates: string[] = [];
+    const result = await translate({
+      input: "Hello world",
+      sourceLanguage: "en",
+      targetLanguage: "pt",
+      onUpdate: (text) => updates.push(text),
+    });
+    expect(updates).toEqual(["Olá", "Olá mundo"]);
+    expect(result).toEqual({ output: "Olá mundo", cached: false });
+    expect(session.translate).not.toHaveBeenCalled();
+  });
+
+  it("handles cumulative chunk sequences without duplicating text", async () => {
+    installStreamingTranslator(() => streamOf(["Olá", "Olá mundo"]));
+    const updates: string[] = [];
+    const result = await translate({
+      input: "Hello world",
+      sourceLanguage: "en",
+      targetLanguage: "pt",
+      onUpdate: (text) => updates.push(text),
+    });
+    expect(updates).toEqual(["Olá", "Olá mundo"]);
+    expect(result.output).toBe("Olá mundo");
+  });
+
+  it("forwards the caller's signal to translateStreaming", async () => {
+    const { session } = installStreamingTranslator(() => streamOf(["Olá"]));
+    const controller = new AbortController();
+    await translate({
+      input: "Hello",
+      sourceLanguage: "en",
+      targetLanguage: "pt",
+      signal: controller.signal,
+      onUpdate: () => {},
+    });
+    expect(session.translateStreaming).toHaveBeenCalledWith("Hello", {
+      signal: controller.signal,
+    });
+  });
+
+  it("stays one-shot when onUpdate is not supplied", async () => {
+    const { session } = installStreamingTranslator(() => streamOf(["x"]));
+    const result = await translate({
+      input: "Hello",
+      sourceLanguage: "en",
+      targetLanguage: "pt",
+    });
+    expect(session.translateStreaming).not.toHaveBeenCalled();
+    expect(result.output).toBe("[t]Hello");
+  });
+
+  it("falls back to one-shot with a single final update when streaming is missing", async () => {
+    installFakeTranslator(async () => "Olá");
+    const updates: string[] = [];
+    const result = await translate({
+      input: "Hello",
+      sourceLanguage: "en",
+      targetLanguage: "pt",
+      onUpdate: (text) => updates.push(text),
+    });
+    expect(updates).toEqual(["Olá"]);
+    expect(result).toEqual({ output: "Olá", cached: false });
+  });
+
+  it("caches only the final streamed output", async () => {
+    installStreamingTranslator(() => streamOf(["Olá", " mundo"]));
+    const cache = { get: vi.fn(() => null), set: vi.fn() };
+    await translate({
+      input: "Hello world",
+      sourceLanguage: "en",
+      targetLanguage: "pt",
+      cache,
+      cacheKey: "k",
+      onUpdate: () => {},
+    });
+    expect(cache.set).toHaveBeenCalledTimes(1);
+    expect(cache.set).toHaveBeenCalledWith("k", "Olá mundo");
+  });
+
+  it("serves a cached result without opening a stream", async () => {
+    const { api, session } = installStreamingTranslator(() => streamOf(["x"]));
+    const cache = inMemoryCache();
+    cache.set("k", "From cache.");
+    const updates: string[] = [];
+    const result = await translate({
+      input: "Hello",
+      sourceLanguage: "en",
+      targetLanguage: "pt",
+      cache,
+      cacheKey: "k",
+      onUpdate: (text) => updates.push(text),
+    });
+    expect(result).toEqual({ output: "From cache.", cached: true });
+    expect(updates).toEqual([]);
+    expect(api.create).not.toHaveBeenCalled();
+    expect(session.translateStreaming).not.toHaveBeenCalled();
+  });
+
+  it("resolves an empty stream to null output without caching", async () => {
+    installStreamingTranslator(() => streamOf([]));
+    const cache = { get: vi.fn(() => null), set: vi.fn() };
+    const updates: string[] = [];
+    const result = await translate({
+      input: "Hello",
+      sourceLanguage: "en",
+      targetLanguage: "pt",
+      cache,
+      onUpdate: (text) => updates.push(text),
+    });
+    expect(result).toEqual({ output: null, cached: false });
+    expect(updates).toEqual([]);
+    expect(cache.set).not.toHaveBeenCalled();
+  });
+
+  it("propagates stream failure without writing the cache", async () => {
+    installStreamingTranslator(
+      () =>
+        new ReadableStream<string>({
+          start(controller) {
+            controller.enqueue("Olá");
+            controller.error(new Error("stream failed"));
+          },
+        }),
+    );
+    const cache = { get: vi.fn(() => null), set: vi.fn() };
+    await expect(
+      translate({
+        input: "Hello",
+        sourceLanguage: "en",
+        targetLanguage: "pt",
+        cache,
+        onUpdate: () => {},
+      }),
+    ).rejects.toThrow("stream failed");
+    expect(cache.set).not.toHaveBeenCalled();
+  });
+});
+
+describe("translate abort timings", () => {
+  it("rejects while waiting for a shared session without destroying it", async () => {
+    const session = {
+      translate: vi.fn(async (text: string) => `[t]${text}`),
+      destroy: vi.fn(),
+    };
+    let resolveCreate: (s: typeof session) => void = () => {};
+    const api = {
+      availability: vi.fn(async () => "available" as const),
+      create: vi.fn(
+        () =>
+          new Promise<typeof session>((resolve) => {
+            resolveCreate = resolve;
+          }),
+      ),
+    };
+    (globalThis as { Translator?: typeof api }).Translator = api;
+
+    const controller = new AbortController();
+    const pending = translate({
+      input: "Olá",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+      signal: controller.signal,
+    });
+    await vi.waitFor(() => expect(api.create).toHaveBeenCalledTimes(1));
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+
+    resolveCreate(session);
+    const second = await translate({
+      input: "Olá",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+    expect(second.output).toBe("[t]Olá");
+    expect(api.create).toHaveBeenCalledTimes(1);
+    expect(session.destroy).not.toHaveBeenCalled();
+  });
+
+  it("rejects promptly during a hanging one-shot translation and keeps the session reusable", async () => {
+    let call = 0;
+    const { api, sessions } = installFakeTranslator(
+      (text) =>
+        new Promise<string>((resolve) => {
+          call += 1;
+          if (call > 1) resolve(`[t]${text}`);
+        }),
+    );
+    const cache = { get: vi.fn(() => null), set: vi.fn() };
+    const controller = new AbortController();
+    const pending = translate({
+      input: "Olá",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+      cache,
+      signal: controller.signal,
+    });
+    await vi.waitFor(() => expect(call).toBe(1));
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(cache.set).not.toHaveBeenCalled();
+    expect(sessions[0]?.destroy).not.toHaveBeenCalled();
+
+    const second = await translate({
+      input: "Olá",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+    });
+    expect(second.output).toBe("[t]Olá");
+    expect(api.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects mid-stream, stops updates, cancels the stream, and skips the cache", async () => {
+    let cancelled = false;
+    let emit: (chunk: string) => void = () => {};
+    const { session } = installStreamingTranslator(
+      () =>
+        new ReadableStream<string>({
+          start(controller) {
+            emit = (chunk) => controller.enqueue(chunk);
+          },
+          cancel() {
+            cancelled = true;
+          },
+        }),
+    );
+    const cache = { get: vi.fn(() => null), set: vi.fn() };
+    const updates: string[] = [];
+    const controller = new AbortController();
+    const pending = translate({
+      input: "Hello",
+      sourceLanguage: "en",
+      targetLanguage: "pt",
+      cache,
+      signal: controller.signal,
+      onUpdate: (text) => updates.push(text),
+    });
+    await vi.waitFor(() =>
+      expect(session.translateStreaming).toHaveBeenCalled(),
+    );
+    emit("Olá");
+    await vi.waitFor(() => expect(updates).toEqual(["Olá"]));
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(updates).toEqual(["Olá"]);
+    expect(cache.set).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(cancelled).toBe(true));
+  });
 });

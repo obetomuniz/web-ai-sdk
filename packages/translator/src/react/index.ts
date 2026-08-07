@@ -6,16 +6,22 @@ import {
   translate,
 } from "../index.js";
 
-export type TranslatorStatus = "idle" | "loading" | "done" | "unavailable";
+export type TranslatorStatus =
+  | "idle"
+  | "loading"
+  | "streaming"
+  | "done"
+  | "unavailable";
 
-export interface UseTranslatorOptions extends Omit<TranslateOptions, "signal"> {
+export interface UseTranslatorOptions
+  extends Omit<TranslateOptions, "onUpdate" | "signal"> {
   /** Whether to automatically run on mount / option change. Default: `true`. */
   enabled?: boolean;
 }
 
 export interface UseTranslatorReturn {
   status: TranslatorStatus;
-  /** Translated text, or `null` while idle / unavailable. */
+  /** Translated text (grows during streaming), or `null` while idle / unavailable. */
   output: string | null;
   error: Error | null;
   /** Whether the result was loaded from cache (no model call). */
@@ -75,6 +81,11 @@ export const useTranslator = (
       cacheTtl,
       cacheRefresh,
       signal: controller.signal,
+      onUpdate: (chunk) => {
+        if (controller.signal.aborted) return;
+        setOutput(chunk);
+        setStatus("streaming");
+      },
     })
       .then((result) => {
         if (controller.signal.aborted) return;

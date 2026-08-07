@@ -1,6 +1,6 @@
 ---
 title: "@web-ai-sdk/translator"
-description: "This package wraps the Web's Built-in Translator API. It caches sessions by language pair and supports optional result caching and abort signals."
+description: "This package wraps the Web's Built-in Translator API. It caches sessions by language pair and supports streaming, optional result caching, and abort signals."
 editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/translator/README.md
 ---
 
@@ -8,7 +8,7 @@ editUrl: https://github.com/obetomuniz/web-ai-sdk/edit/main/packages/translator/
 This page is synced from [`packages/translator/README.md`](https://github.com/obetomuniz/web-ai-sdk/blob/main/packages/translator/README.md) by `pnpm --filter @web-ai-sdk-apps/site docs:sync`. Edits should go to the README.
 :::
 
-This package wraps the Web's Built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api). It caches sessions by language pair and supports optional result caching and abort signals.
+This package wraps the Web's Built-in [Translator API](https://developer.chrome.com/docs/ai/translator-api). It caches sessions by language pair and supports streaming, optional result caching, and abort signals.
 
 
 ## Status
@@ -43,6 +43,23 @@ console.log(result.cached); // result: false
 
 `result.output` is the translated text, or `null` when the input is empty or when `sourceLanguage` and `targetLanguage` normalize to the same base language.
 
+## Streaming
+
+Pass `onUpdate` to receive partial output while the model translates. The wrapper consumes the native [`translateStreaming()`](https://developer.mozilla.org/en-US/docs/Web/API/Translator/translateStreaming) method when the implementation provides it.
+
+```ts
+const result = await translate({
+  input: "Hello, world.",
+  sourceLanguage: "en",
+  targetLanguage: "pt",
+  onUpdate: (text) => console.log("partial", text),
+});
+```
+
+`onUpdate` receives the cumulative translation so far, not raw deltas. Each update contains every previous update as a prefix. On implementations without `translateStreaming()`, the wrapper runs the one-shot method and delivers the result as a single final update.
+
+Only the final completed output enters the result cache. Partial, aborted, or failed output is never cached.
+
 ## React
 
 ```tsx
@@ -68,7 +85,7 @@ export function ReadInEnglish({
 }
 ```
 
-State machine: `idle | loading | done | unavailable`. The hook auto-runs when `input` is non-empty and the language pair differs, and it re-runs whenever its options change.
+State machine: `idle | loading | streaming | done | unavailable`. The hook auto-runs when `input` is non-empty and the language pair differs, and it re-runs whenever its options change. `status` becomes `"streaming"` after the first partial update, and `output` grows as chunks land.
 
 ## API
 
@@ -86,7 +103,8 @@ interface TranslateOptions {
   cacheKey?: string;
   cacheTtl?: number;      // built-in shortcut TTL in ms; default 1 hour
   cacheRefresh?: boolean; // skip the cache read, write the fresh result
-  signal?: AbortSignal;
+  onUpdate?: (text: string) => void; // cumulative buffer, not deltas
+  signal?: AbortSignal; // forwarded to the native operation
 }
 
 interface TranslateResult {
@@ -169,7 +187,7 @@ This package intentionally translates strings only. DOM walking, text extraction
 
 The vanilla `translate()` throws `TranslatorUnavailableError` when the API is missing or reports `availability: "unavailable"`. The React hook absorbs this and returns `status: "unavailable"` instead.
 
-`AbortSignal` is supported on both surfaces. The result cache is not written for aborted runs.
+`AbortSignal` is supported on both surfaces, and the wrapper forwards it to the native [`translate()` and `translateStreaming()` operations](https://webmachinelearning.github.io/translation-api/). Browsers that honor the operation signal stop native work promptly. Aborting rejects with an `AbortError` and keeps the shared session usable for other callers. The result cache is not written for aborted runs.
 
 ## License
 

@@ -157,4 +157,137 @@ describe("useTranslator", () => {
     await waitFor(() => expect(result.current.status).toBe("done"));
     expect(result.current.output).toBe("fresh-B");
   });
+
+  interface FakeStream {
+    input: string;
+    emit(chunk: string): void;
+    close(): void;
+    cancelled: boolean;
+  }
+
+  const installStreamingTranslator = () => {
+    const streams: FakeStream[] = [];
+    const translateStreaming = vi.fn((input: string) => {
+      const handle: FakeStream = {
+        input,
+        emit: () => {},
+        close: () => {},
+        cancelled: false,
+      };
+      const stream = new ReadableStream<string>({
+        start(controller) {
+          handle.emit = (chunk) => controller.enqueue(chunk);
+          handle.close = () => controller.close();
+        },
+        cancel() {
+          handle.cancelled = true;
+        },
+      });
+      streams.push(handle);
+      return stream;
+    });
+    const api = {
+      availability: vi.fn(async () => "available" as const),
+      create: vi.fn(async () => ({
+        translate: vi.fn(async (text: string) => `[t]${text}`),
+        translateStreaming,
+      })),
+    };
+    (globalThis as { Translator?: typeof api }).Translator = api;
+    return { api, streams };
+  };
+
+  it("reports 'streaming' with cumulative output, then 'done'", async () => {
+    const { streams } = installStreamingTranslator();
+    const { result } = renderHook(() =>
+      useTranslator({
+        input: "Hello world",
+        sourceLanguage: "en",
+        targetLanguage: "pt",
+      }),
+    );
+    await waitFor(() => expect(streams).toHaveLength(1));
+    expect(result.current.status).toBe("loading");
+
+    await act(async () => {
+      streams[0]?.emit("Olá");
+    });
+    await waitFor(() => expect(result.current.status).toBe("streaming"));
+    expect(result.current.output).toBe("Olá");
+
+    await act(async () => {
+      streams[0]?.emit(" mundo");
+    });
+    await waitFor(() => expect(result.current.output).toBe("Olá mundo"));
+    expect(result.current.status).toBe("streaming");
+
+    await act(async () => {
+      streams[0]?.close();
+    });
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    expect(result.current.output).toBe("Olá mundo");
+    expect(result.current.error).toBeNull();
+  });
+
+  it("cancels an in-flight stream when input changes and suppresses stale updates", async () => {
+    const { streams } = installStreamingTranslator();
+    const { result, rerender } = renderHook(
+      ({ input }: { input: string }) =>
+        useTranslator({ input, sourceLanguage: "en", targetLanguage: "pt" }),
+      { initialProps: { input: "A" } },
+    );
+    await waitFor(() => expect(streams).toHaveLength(1));
+    await act(async () => {
+      streams[0]?.emit("partial-A");
+    });
+    await waitFor(() => expect(result.current.output).toBe("partial-A"));
+
+    rerender({ input: "B" });
+    await waitFor(() => expect(streams).toHaveLength(2));
+    await waitFor(() => expect(streams[0]?.cancelled).toBe(true));
+
+    await act(async () => {
+      streams[1]?.emit("fresh-B");
+      streams[1]?.close();
+    });
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    expect(result.current.output).toBe("fresh-B");
+  });
+
+  it("never commits 'streaming' when the implementation lacks translateStreaming", async () => {
+    // The one-shot fallback delivers a single final update; React batches that
+    // update with the promise resolution, so status must go loading → done.
+    installFakeTranslator();
+    const statuses: string[] = [];
+    const { result } = renderHook(() => {
+      const r = useTranslator({
+        input: "Olá",
+        sourceLanguage: "pt",
+        targetLanguage: "en",
+      });
+      statuses.push(r.status);
+      return r;
+    });
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    expect(result.current.output).toBe("[t]Olá");
+    expect(statuses).not.toContain("streaming");
+  });
+
+  it("cancels the stream on unmount", async () => {
+    const { streams } = installStreamingTranslator();
+    const { unmount } = renderHook(() =>
+      useTranslator({
+        input: "Hello",
+        sourceLanguage: "en",
+        targetLanguage: "pt",
+      }),
+    );
+    await waitFor(() => expect(streams).toHaveLength(1));
+    await act(async () => {
+      streams[0]?.emit("Olá");
+    });
+
+    unmount();
+    await waitFor(() => expect(streams[0]?.cancelled).toBe(true));
+  });
 });
