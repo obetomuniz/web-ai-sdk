@@ -154,6 +154,15 @@ describe("Composer", () => {
     expect(idle.container.querySelector("[title*='Summarize']")).not.toBeNull();
   });
 
+  it("keeps primary controls before example suggestions in tab order", () => {
+    const { container } = renderComposer();
+    const input = queryInput(container);
+    const example = container.querySelector("[title*='Summarize']");
+    if (!example) throw new Error("example button not found");
+    const position = input.compareDocumentPosition(example);
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("submits an example suggestion directly", () => {
     const { container, props } = renderComposer();
     const example = [...container.querySelectorAll("button")].find((button) =>

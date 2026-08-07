@@ -208,20 +208,6 @@ const truncateExample = (value: string, limit = 60) =>
         </section>
 
         <div class={ui.composerDock}>
-          <div class={ui.exampleFloat}>
-            <div class={ui.examples} data-playground-examples>
-              {
-                defaultMode.examples.slice(0, 3).map((example) => (
-                  <span class={ui.example} title={example}>
-                    {truncateExample(example)}
-                  </span>
-                ))
-              }
-            </div>
-            <span class={ui.exampleRegenerateWrap}>
-              <span class={ui.exampleRegenerate} aria-hidden="true">+</span>
-            </span>
-          </div>
           <div class={ui.composer}>
             <div class={ui.modeSelector}>
               <span class={ui.modeTrigger} data-playground-mode-trigger data-accent="warn">
@@ -263,6 +249,20 @@ const truncateExample = (value: string, limit = 60) =>
                 ↑
               </button>
             </div>
+          </div>
+          <div class={ui.exampleFloat}>
+            <div class={ui.examples} data-playground-examples>
+              {
+                defaultMode.examples.slice(0, 3).map((example) => (
+                  <span class={ui.example} title={example}>
+                    {truncateExample(example)}
+                  </span>
+                ))
+              }
+            </div>
+            <span class={ui.exampleRegenerateWrap}>
+              <span class={ui.exampleRegenerate} aria-hidden="true">+</span>
+            </span>
           </div>
         </div>
       </div>

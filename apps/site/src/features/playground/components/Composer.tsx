@@ -84,39 +84,6 @@ export function Composer({
         )}
       </div>
 
-      {promptOn && !busy && !error && !draft.trim() && (
-        <div className={ui.exampleFloat}>
-          <div className={ui.examples}>
-            {examples.map((example) => (
-              <button
-                key={example}
-                type="button"
-                className={ui.example}
-                onClick={() => onSubmitExample(example)}
-                title={example}
-              >
-                {truncate(example)}
-              </button>
-            ))}
-          </div>
-          <span className={ui.exampleRegenerateWrap}>
-            <button
-              type="button"
-              className={ui.exampleRegenerate}
-              onClick={onRegenerateExamples}
-              disabled={generatingExamples || !canRegenerateExamples}
-              aria-label="Generate new examples"
-              aria-busy={generatingExamples}
-            >
-              <span aria-hidden="true">+</span>
-            </button>
-            <span role="tooltip" className={ui.exampleRegenerateTooltip}>
-              Generate new examples
-            </span>
-          </span>
-        </div>
-      )}
-
       <form className={ui.composer} onSubmit={submit}>
         <div className={ui.modeSelector} ref={modeMenuRef}>
           <button
@@ -256,6 +223,39 @@ export function Composer({
           )}
         </div>
       </form>
+
+      {promptOn && !busy && !error && !draft.trim() && (
+        <div className={ui.exampleFloat}>
+          <div className={ui.examples}>
+            {examples.map((example) => (
+              <button
+                key={example}
+                type="button"
+                className={ui.example}
+                onClick={() => onSubmitExample(example)}
+                title={example}
+              >
+                {truncate(example)}
+              </button>
+            ))}
+          </div>
+          <span className={ui.exampleRegenerateWrap}>
+            <button
+              type="button"
+              className={ui.exampleRegenerate}
+              onClick={onRegenerateExamples}
+              disabled={generatingExamples || !canRegenerateExamples}
+              aria-label="Generate new examples"
+              aria-busy={generatingExamples}
+            >
+              <span aria-hidden="true">+</span>
+            </button>
+            <span role="tooltip" className={ui.exampleRegenerateTooltip}>
+              Generate new examples
+            </span>
+          </span>
+        </div>
+      )}
     </div>
   );
 }
