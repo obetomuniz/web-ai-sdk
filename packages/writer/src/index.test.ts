@@ -142,6 +142,53 @@ describe("write", () => {
     expect(api.create).not.toHaveBeenCalled();
   });
 
+  it("bypasses the cache read and replaces the value on cacheRefresh", async () => {
+    const api = installFakeWriter({ output: "Fresh draft." });
+    const cache = inMemoryCache();
+    cache.set("k", "Stale draft.");
+    const result = await write({
+      input: "Draft an email.",
+      cache,
+      cacheKey: "k",
+      cacheRefresh: true,
+    });
+    expect(result).toEqual({ output: "Fresh draft.", cached: false });
+    expect(api.create).toHaveBeenCalled();
+    expect(cache.get("k")).toBe("Fresh draft.");
+  });
+
+  it("does not overwrite a cached value when the run is aborted", async () => {
+    installFakeWriter();
+    const cache = inMemoryCache();
+    cache.set("k", "Stale draft.");
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      write({
+        input: "Draft an email.",
+        cache,
+        cacheKey: "k",
+        cacheRefresh: true,
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(cache.get("k")).toBe("Stale draft.");
+  });
+
+  it("does not overwrite a cached value when the response is empty", async () => {
+    installFakeWriter({ output: "   " });
+    const cache = inMemoryCache();
+    cache.set("k", "Stale draft.");
+    const result = await write({
+      input: "Draft an email.",
+      cache,
+      cacheKey: "k",
+      cacheRefresh: true,
+    });
+    expect(result).toEqual({ output: null, cached: false });
+    expect(cache.get("k")).toBe("Stale draft.");
+  });
+
   it("does not collide cache entries when sharedContext differs", async () => {
     let calls = 0;
     const api = installFakeWriter();
@@ -311,7 +358,10 @@ describe("write", () => {
         cacheKey: "k",
       });
       expect(first).toEqual({ output: "Stored.", cached: false });
-      expect(storage.setItem).toHaveBeenCalledWith("writer:k", "Stored.");
+      const stored = JSON.parse(store.get("writer:k") ?? "");
+      expect(stored.v).toBe(1);
+      expect(stored.value).toBe("Stored.");
+      expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
       const createsAfterFirst = api.create.mock.calls.length;
       const second = await write({
@@ -343,7 +393,10 @@ describe("write", () => {
         cacheKey: "k",
       });
       expect(first).toEqual({ output: "Stored.", cached: false });
-      expect(storage.setItem).toHaveBeenCalledWith("writer:k", "Stored.");
+      const stored = JSON.parse(store.get("writer:k") ?? "");
+      expect(stored.v).toBe(1);
+      expect(stored.value).toBe("Stored.");
+      expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
       const createsAfterFirst = api.create.mock.calls.length;
       const second = await write({

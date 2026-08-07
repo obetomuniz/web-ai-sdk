@@ -165,6 +165,55 @@ describe("detect", () => {
     expect(cache.get("k")).toContain("ja");
   });
 
+  it("bypasses the cache read and replaces the value on cacheRefresh", async () => {
+    const api = installFakeDetector();
+    const cache = inMemoryCache();
+    cache.set(
+      '["hello",[]]',
+      JSON.stringify([{ detectedLanguage: "fr", confidence: 0.99 }]),
+    );
+    const result = await detect({ input: "hello", cache, cacheRefresh: true });
+    expect(result.output?.language).toBe("en");
+    expect(result.cached).toBe(false);
+    expect(api.create).toHaveBeenCalled();
+    expect(JSON.parse(cache.get('["hello",[]]') ?? "")).toEqual([
+      { detectedLanguage: "en", confidence: 0.95 },
+      { detectedLanguage: "es", confidence: 0.04 },
+    ]);
+  });
+
+  it("does not overwrite a cached value when the run is aborted", async () => {
+    installFakeDetector();
+    const cache = inMemoryCache();
+    const seeded = JSON.stringify([
+      { detectedLanguage: "fr", confidence: 0.99 },
+    ]);
+    cache.set('["hello",[]]', seeded);
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      detect({
+        input: "hello",
+        cache,
+        cacheRefresh: true,
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(cache.get('["hello",[]]')).toBe(seeded);
+  });
+
+  it("does not overwrite a cached value when the run yields no results", async () => {
+    installFakeDetector({ results: [] });
+    const cache = inMemoryCache();
+    const seeded = JSON.stringify([
+      { detectedLanguage: "fr", confidence: 0.99 },
+    ]);
+    cache.set('["hello",[]]', seeded);
+    const result = await detect({ input: "hello", cache, cacheRefresh: true });
+    expect(result).toEqual({ output: null, cached: false });
+    expect(cache.get('["hello",[]]')).toBe(seeded);
+  });
+
   it("forwards expectedInputLanguages to create()", async () => {
     const api = installFakeDetector();
     await detect({ input: "hi", expectedInputLanguages: ["en", "es"] });
@@ -328,10 +377,10 @@ describe("detect", () => {
       });
       expect(first.cached).toBe(false);
       expect(first.output?.language).toBe("en");
-      expect(storage.setItem).toHaveBeenCalledWith(
-        "detector:k",
-        expect.any(String),
-      );
+      const stored = JSON.parse(store.get("detector:k") ?? "");
+      expect(stored.v).toBe(1);
+      expect(JSON.parse(stored.value)[0]?.detectedLanguage).toBe("en");
+      expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
       const createsAfterFirst = api.create.mock.calls.length;
       const second = await detect({
@@ -365,10 +414,10 @@ describe("detect", () => {
       });
       expect(first.cached).toBe(false);
       expect(first.output?.language).toBe("en");
-      expect(storage.setItem).toHaveBeenCalledWith(
-        "detector:k",
-        expect.any(String),
-      );
+      const stored = JSON.parse(store.get("detector:k") ?? "");
+      expect(stored.v).toBe(1);
+      expect(JSON.parse(stored.value)[0]?.detectedLanguage).toBe("en");
+      expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
       const createsAfterFirst = api.create.mock.calls.length;
       const second = await detect({

@@ -25,6 +25,7 @@ import {
 } from "./api.js";
 import {
   type CacheOption,
+  DEFAULT_CACHE_TTL_MS,
   defaultCacheKey,
   resolveCache,
   type TranslationCache,
@@ -46,6 +47,7 @@ export {
   clearTranslatorSession,
   clearTranslatorSessions,
   configureTranslatorCache,
+  DEFAULT_CACHE_TTL_MS,
   isAvailable,
 };
 
@@ -69,6 +71,19 @@ export interface TranslateOptions {
   cache?: CacheOption;
   /** Cache key. Default: JSON array string of `[sourceLanguage, targetLanguage, input]`. */
   cacheKey?: string;
+  /**
+   * Time-to-live in milliseconds for entries written by the built-in
+   * `"session"` / `"local"` storage shortcuts. Default: one hour
+   * (`DEFAULT_CACHE_TTL_MS`). Ignored for custom `{ get, set }` caches, which
+   * own their expiry policy.
+   */
+  cacheTtl?: number;
+  /**
+   * Force a fresh translation. Skips the cache read, runs the model, and
+   * replaces the cached value after a successful run. Applies to built-in
+   * and custom caches.
+   */
+  cacheRefresh?: boolean;
   /** Abort signal. */
   signal?: AbortSignal;
 }
@@ -119,11 +134,11 @@ export const translate = async (
     return { output: null, cached: false };
   }
 
-  const cache = resolveCache(options.cache);
+  const cache = resolveCache(options.cache, options.cacheTtl);
   const cacheKey =
     options.cacheKey ??
     defaultCacheKey({ sourceLanguage, targetLanguage, text });
-  if (cache) {
+  if (cache && !options.cacheRefresh) {
     const cached = cache.get(cacheKey);
     if (cached) return { output: cached, cached: true };
   }

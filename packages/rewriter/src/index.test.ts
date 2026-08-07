@@ -134,6 +134,53 @@ describe("rewrite", () => {
     expect(api.create).not.toHaveBeenCalled();
   });
 
+  it("bypasses the cache read and replaces the value on cacheRefresh", async () => {
+    const api = installFakeRewriter({ output: "Fresh rewrite." });
+    const cache = inMemoryCache();
+    cache.set("k", "Cached rewrite.");
+    const result = await rewrite({
+      input: "irrelevant",
+      cache,
+      cacheKey: "k",
+      cacheRefresh: true,
+    });
+    expect(result).toEqual({ output: "Fresh rewrite.", cached: false });
+    expect(api.create).toHaveBeenCalled();
+    expect(cache.get("k")).toBe("Fresh rewrite.");
+  });
+
+  it("does not overwrite a cached value when the run is aborted", async () => {
+    installFakeRewriter();
+    const cache = inMemoryCache();
+    cache.set("k", "Cached rewrite.");
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      rewrite({
+        input: "irrelevant",
+        cache,
+        cacheKey: "k",
+        cacheRefresh: true,
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(cache.get("k")).toBe("Cached rewrite.");
+  });
+
+  it("does not overwrite a cached value when the response is empty", async () => {
+    installFakeRewriter({ output: "   " });
+    const cache = inMemoryCache();
+    cache.set("k", "Cached rewrite.");
+    const result = await rewrite({
+      input: "irrelevant",
+      cache,
+      cacheKey: "k",
+      cacheRefresh: true,
+    });
+    expect(result).toEqual({ output: null, cached: false });
+    expect(cache.get("k")).toBe("Cached rewrite.");
+  });
+
   it("does not collide cache entries when sharedContext differs", async () => {
     let calls = 0;
     const api = installFakeRewriter();
@@ -287,7 +334,10 @@ describe("rewrite", () => {
         cacheKey: "k",
       });
       expect(first).toEqual({ output: "Stored.", cached: false });
-      expect(storage.setItem).toHaveBeenCalledWith("rewriter:k", "Stored.");
+      const stored = JSON.parse(store.get("rewriter:k") ?? "");
+      expect(stored.v).toBe(1);
+      expect(stored.value).toBe("Stored.");
+      expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
       const createsAfterFirst = api.create.mock.calls.length;
       const second = await rewrite({
@@ -319,7 +369,10 @@ describe("rewrite", () => {
         cacheKey: "k",
       });
       expect(first).toEqual({ output: "Stored.", cached: false });
-      expect(storage.setItem).toHaveBeenCalledWith("rewriter:k", "Stored.");
+      const stored = JSON.parse(store.get("rewriter:k") ?? "");
+      expect(stored.v).toBe(1);
+      expect(stored.value).toBe("Stored.");
+      expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
       const createsAfterFirst = api.create.mock.calls.length;
       const second = await rewrite({
