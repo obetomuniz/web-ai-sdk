@@ -30,6 +30,7 @@ import {
   PromptUnavailableError,
   type Session,
 } from "@web-ai-sdk/prompt";
+import { findUnsupportedAnswerValues } from "./answerEvidence.js";
 import { runDispatcher } from "./dispatcher.js";
 import {
   DIRECT_ANSWER_RETRY,
@@ -318,12 +319,30 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
       knownUrls: knownFetchUrls,
       fetchedSources,
     };
+    // Evidence-required tool work: tools the user named explicitly, plus
+    // tools that declared (via `requiredCallIf`) that this request needs
+    // their output - e.g. `clock_now` for a current-time question asked
+    // in plain words. Both feed the same retry-and-report machinery, so
+    // a live value is never presented as factual when its supporting
+    // tool was skipped or failed.
+    const requiredToolNames = [
+      ...new Set([
+        ...explicitlyRequestedToolNames,
+        ...tools
+          .filter((tool) => tool.name !== fetchTool?.name)
+          .filter((tool) => tool.requiredCallIf?.(runCtx) === true)
+          .map((tool) => tool.name),
+      ]),
+    ];
     let autoFetchDone = false;
     // Guards the one-time "answer directly, no tools" self-heal below.
     let directRetryDone = false;
     // Guards the one-time correction when eager fetches are followed by a
     // premature final answer that skips explicitly requested tool work.
     let remainingToolRetryDone = false;
+    // Guards the one-time rewrite when the answer states values that no
+    // tool result from this run supports.
+    let unsupportedValueRetryDone = false;
     const recordFetches = (records: AgentToolCallRecord[]) => {
       for (const r of records) {
         const src = extractFetchSourceText(r);
@@ -347,14 +366,14 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
       recordFetches(records);
     };
     const uncompletedRequestedTools = () =>
-      explicitlyRequestedToolNames.filter(
+      requiredToolNames.filter(
         (name) =>
           !toolCallRecords.some(
             (record) => record.name === name && !record.error,
           ),
       );
     const unattemptedRequestedTools = () =>
-      explicitlyRequestedToolNames.filter(
+      requiredToolNames.filter(
         (name) => !toolCallRecords.some((record) => record.name === name),
       );
 
@@ -545,19 +564,48 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
           } else {
             answer = stripToolCode(reply) || reply.trim();
           }
+
+          // Evidence check for tool-backed runs: numeric values in the
+          // answer must appear in this run's tool records or the user's
+          // message. A fabricated figure beside real tool output reads
+          // as grounded fact (observed: a star count contradicting the
+          // fetched response), so steer ONE rewrite while a step
+          // remains; whatever stays unsupported is flagged below as
+          // unavailable rather than presented as factual.
+          const unsupportedValues =
+            toolCallRecords.length > 0
+              ? findUnsupportedAnswerValues(answer, input, toolCallRecords)
+              : [];
+          if (
+            unsupportedValues.length > 0 &&
+            !unsupportedValueRetryDone &&
+            stepIndex + 1 < maxSteps
+          ) {
+            unsupportedValueRetryDone = true;
+            if (streamedAnswerText) {
+              yield { type: "step_reset", index: stepIndex };
+            }
+            yield { type: "step_end", index: stepIndex };
+            turnInput = buildUnsupportedValueRetryTurn(unsupportedValues);
+            continue;
+          }
+
           // Flag any user URL that never fetched successfully (after the
           // auto-fetch backstop, that means a real CORS/network failure).
           const unfetched = fetchTool
             ? inputUrls.filter((u) => !fetchedOk.has(normUrl(u)))
             : [];
           finalText = maybeReportIncompleteToolRequests(
-            maybeFlagUnverifiedUrl(answer, {
-              hasFetchTool: !!fetchTool,
-              totalUrls: inputUrls.length,
-              unfetched,
-              anyTried: fetchTried.size > 0,
-            }),
-            explicitlyRequestedToolNames,
+            maybeFlagUnverifiedUrl(
+              maybeFlagUnsupportedValues(answer, unsupportedValues),
+              {
+                hasFetchTool: !!fetchTool,
+                totalUrls: inputUrls.length,
+                unfetched,
+                anyTried: fetchTried.size > 0,
+              },
+            ),
+            requiredToolNames,
             toolCallRecords,
           );
           yield {
@@ -682,7 +730,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
         if (incomplete.length > 0) {
           finalText = maybeReportIncompleteToolRequests(
             "",
-            explicitlyRequestedToolNames,
+            requiredToolNames,
             toolCallRecords,
           );
           failure = {
@@ -1048,10 +1096,41 @@ function buildRemainingToolTurn(names: readonly string[]): string {
   const formatted = names.map((name) => `\`${name}\``).join(", ");
   const noun = names.length === 1 ? "tool has" : "tools have";
   return [
-    `The user explicitly requested ${formatted}, but the ${noun} not been called yet.`,
+    `The user's request requires ${formatted}, but the ${noun} not been called yet.`,
     "Emit ONLY a tool_code block that calls the remaining tool work now.",
     "Do not answer the user until that work has completed; if a call fails, report the failure instead of silently skipping it.",
   ].join(" ");
+}
+
+function buildUnsupportedValueRetryTurn(values: readonly string[]): string {
+  const formatted = values.map((value) => `\`${value}\``).join(", ");
+  const noun = values.length === 1 ? "a value" : "values";
+  return [
+    `Your previous answer states ${noun} that no tool result from this run supports: ${formatted}.`,
+    "Rewrite the answer now using ONLY values that appear in the tool results or in the user's message.",
+    "If a requested value has no supporting tool result, say that value is unavailable - do not guess it.",
+  ].join(" ");
+}
+
+/**
+ * Deterministic disclaimer for values that survived the rewrite without
+ * a supporting tool result: name them and mark them unavailable, so a
+ * guess is never presented as a grounded fact. The transcript's tool
+ * records identify what the run DID support.
+ */
+function maybeFlagUnsupportedValues(
+  answer: string,
+  unsupported: readonly string[],
+): string {
+  if (unsupported.length === 0) return answer;
+  const trimmed = answer.trim();
+  if (!trimmed) return answer;
+  const list = unsupported.join(", ");
+  const note =
+    unsupported.length === 1
+      ? `> ⚠ The value ${list} is not supported by any tool result from this run - treat it as unavailable.\n\n`
+      : `> ⚠ These values are not supported by any tool result from this run - treat them as unavailable: ${list}.\n\n`;
+  return `${note}${trimmed}`;
 }
 
 function maybeReportIncompleteToolRequests(
