@@ -21,6 +21,7 @@ import {
 } from "./api.js";
 import {
   type CacheOption,
+  DEFAULT_CACHE_TTL_MS,
   defaultCacheKey,
   resolveCache,
   type SummaryCache,
@@ -37,7 +38,7 @@ export type {
   SummarizerInstance,
   SummaryCache,
 };
-export { checkAvailability, isAvailable };
+export { checkAvailability, DEFAULT_CACHE_TTL_MS, isAvailable };
 
 export interface SummarizeOptions {
   /** Text to summarize. Empty / whitespace input resolves to `{ output: null }`. */
@@ -72,6 +73,19 @@ export interface SummarizeOptions {
   cache?: CacheOption;
   /** Cache key. Default: JSON string of route, input, and summary options. */
   cacheKey?: string;
+  /**
+   * Time-to-live in milliseconds for entries written by the built-in
+   * `"session"` / `"local"` storage shortcuts. Default: one hour
+   * (`DEFAULT_CACHE_TTL_MS`). Ignored for custom `{ get, set }` caches, which
+   * own their expiry policy.
+   */
+  cacheTtl?: number;
+  /**
+   * Force a fresh summary. Skips the cache read, runs the model, and
+   * replaces the cached value after a successful run. Applies to built-in
+   * and custom caches.
+   */
+  cacheRefresh?: boolean;
   /**
    * Streaming update callback (cleaned text, monotonically growing).
    * Receives the **cumulative** buffer, not deltas.
@@ -127,7 +141,7 @@ export const summarize = async (
   ).map(NORMALIZE_LANG);
   const supported = new Set(supportedLanguages);
   const languageHints = supported.has(lang);
-  const cache = resolveCache(options.cache);
+  const cache = resolveCache(options.cache, options.cacheTtl);
   const cacheKey =
     options.cacheKey ??
     defaultCacheKey({
@@ -140,7 +154,7 @@ export const summarize = async (
       preference: options.preference,
       sharedContext: options.sharedContext,
     });
-  if (cache) {
+  if (cache && !options.cacheRefresh) {
     const cached = cache.get(cacheKey);
     if (cached) return { output: cached, cached: true };
   }

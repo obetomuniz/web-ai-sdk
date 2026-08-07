@@ -70,6 +70,8 @@ interface ProofreadOptions {
   monitor?: (m: CreateMonitor) => void;
   cache?: "session" | "local" | { get, set };
   cacheKey?: string;
+  cacheTtl?: number;      // built-in shortcut TTL in ms; default 1 hour
+  cacheRefresh?: boolean; // skip the cache read, write the fresh result
   signal?: AbortSignal;
 }
 
@@ -107,6 +109,26 @@ Drop every cached proofreader session. Sessions live for the tab lifetime by def
 ### Session cache controls
 
 `configureProofreaderCache({ max })` bounds the internal warm `Proofreader` session cache (default `8`). `clearProofreaderSessions()` drops every warm session, and `clearProofreaderSession({ expectedInputLanguages })` drops one matching proofreader configuration.
+
+## Result caching
+
+Off by default; every call hits the model. Pass `cache: "session"` for `sessionStorage`, `cache: "local"` for `localStorage`, or any `{ get, set }`-shaped object for a custom backend. The cache stores the serialized `ProofreadOutput`.
+
+### Expiry and refresh
+
+The built-in `"session"` / `"local"` shortcuts store each entry in a versioned envelope with an expiry time. Entries expire after one hour (`DEFAULT_CACHE_TTL_MS`) by default. Pass `cacheTtl` (milliseconds) to override the TTL per call. Expired entries, legacy raw strings, and malformed envelopes count as misses and are removed.
+
+Pass `cacheRefresh: true` to force a fresh inference. The call skips the cache read, runs the model, and replaces the cached value after a successful run. Failed and aborted runs leave the cached value in place.
+
+Custom `{ get, set }` caches own their expiry policy. `cacheTtl` does not apply to them; `cacheRefresh` still bypasses their read and updates them after success.
+
+```ts
+// Cache for five minutes instead of one hour.
+proofread({ input: text, cache: "local", cacheTtl: 5 * 60 * 1000 });
+
+// Force a fresh inference; later calls reuse the new value.
+proofread({ input: text, cache: "local", cacheRefresh: true });
+```
 
 ## Rendering corrections
 

@@ -50,6 +50,8 @@ export const useTranslator = (
     monitor,
     cache,
     cacheKey,
+    cacheTtl,
+    cacheRefresh,
     enabled = true,
   } = options;
 
@@ -76,6 +78,8 @@ export const useTranslator = (
       monitor,
       cache,
       cacheKey,
+      cacheTtl,
+      cacheRefresh,
       signal: controller.signal,
       onUpdate: (chunk) => {
         if (controller.signal.aborted) return;
@@ -111,6 +115,8 @@ export const useTranslator = (
     monitor,
     cache,
     cacheKey,
+    cacheTtl,
+    cacheRefresh,
   ]);
 
   return { status, output, error, fromCache };

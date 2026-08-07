@@ -171,36 +171,26 @@ For multi-step edits, provide version navigation or a diff.
 
 ## Expire caches and offer refresh
 
-The `"session"` and `"local"` caches do not expire entries. Use a custom cache when results need a time-to-live (TTL). Add a visible Refresh action.
+The `"session"` and `"local"` caches expire entries after one hour (`DEFAULT_CACHE_TTL_MS`). Pass `cacheTtl` (milliseconds) to change the TTL per call. Add a visible Refresh action wired to `cacheRefresh`.
 
 ```ts
-import type { ResponseCache } from "@web-ai-sdk/prompt";
 import { ask } from "@web-ai-sdk/prompt";
 
-const entries = new Map<string, { value: string; expiresAt: number }>();
-const ttlCache = {
-  get(key: string) {
-    const entry = entries.get(key);
-    if (!entry || entry.expiresAt <= Date.now()) {
-      entries.delete(key);
-      return null;
-    }
-    return entry.value;
-  },
-  set(key: string, value: string) {
-    entries.set(key, { value, expiresAt: Date.now() + 60 * 60 * 1000 });
-  },
-  delete(key: string) {
-    entries.delete(key);
-  },
-} satisfies ResponseCache & { delete(key: string): void };
-
-async function summarizeFresh(input: string, refresh = false) {
+async function summarizeArticle(input: string, refresh = false) {
   const cacheKey = JSON.stringify(["article-summary-v1", input]);
-  if (refresh) ttlCache.delete(cacheKey);
-  return ask({ input, cache: ttlCache, cacheKey });
+  return ask({
+    input,
+    cache: "local",
+    cacheKey,
+    cacheTtl: 15 * 60 * 1000, // 15 minutes for fast-moving content
+    cacheRefresh: refresh, // skip the read, replace the value on success
+  });
 }
 ```
+
+`cacheRefresh` runs the model and replaces the cached value only after a successful run. Failed, aborted, and empty runs keep the previous value.
+
+Custom `{ get, set }` caches own their expiry policy; `cacheTtl` does not apply to them. `cacheRefresh` still bypasses their read and updates them after success.
 
 Include every output-changing input and option in the key. Do not let a background refresh overwrite user edits.
 

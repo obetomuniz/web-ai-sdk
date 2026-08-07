@@ -182,6 +182,59 @@ describe("translate", () => {
     expect(cache.get("k")).toBe("Hello");
   });
 
+  it("bypasses the cache read and replaces the value on cacheRefresh", async () => {
+    const { api } = installFakeTranslator();
+    const cache = inMemoryCache();
+    cache.set("k", "cached value");
+    const result = await translate({
+      input: "Olá",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+      cache,
+      cacheKey: "k",
+      cacheRefresh: true,
+    });
+    expect(result).toEqual({ output: "[t]Olá", cached: false });
+    expect(api.create).toHaveBeenCalled();
+    expect(cache.get("k")).toBe("[t]Olá");
+  });
+
+  it("does not overwrite a cached value when the run is aborted", async () => {
+    installFakeTranslator();
+    const cache = inMemoryCache();
+    cache.set("k", "cached value");
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      translate({
+        input: "Olá",
+        sourceLanguage: "pt",
+        targetLanguage: "en",
+        cache,
+        cacheKey: "k",
+        cacheRefresh: true,
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(cache.get("k")).toBe("cached value");
+  });
+
+  it("does not overwrite a cached value when the response is empty", async () => {
+    installFakeTranslator(async () => "");
+    const cache = inMemoryCache();
+    cache.set("k", "cached value");
+    const result = await translate({
+      input: "Olá",
+      sourceLanguage: "pt",
+      targetLanguage: "en",
+      cache,
+      cacheKey: "k",
+      cacheRefresh: true,
+    });
+    expect(result).toEqual({ output: null, cached: false });
+    expect(cache.get("k")).toBe("cached value");
+  });
+
   it("reuses sessions across same-pair calls", async () => {
     const { api } = installFakeTranslator();
     await translate({
@@ -445,7 +498,10 @@ describe("translate", () => {
         cacheKey: "k",
       });
       expect(first).toEqual({ output: "[t]Olá", cached: false });
-      expect(storage.setItem).toHaveBeenCalledWith("translator:k", "[t]Olá");
+      const stored = JSON.parse(store.get("translator:k") ?? "");
+      expect(stored.v).toBe(1);
+      expect(stored.value).toBe("[t]Olá");
+      expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
       const createsAfterFirst = api.create.mock.calls.length;
       const second = await translate({
@@ -481,7 +537,10 @@ describe("translate", () => {
         cacheKey: "k",
       });
       expect(first).toEqual({ output: "[t]Olá", cached: false });
-      expect(storage.setItem).toHaveBeenCalledWith("translator:k", "[t]Olá");
+      const stored = JSON.parse(store.get("translator:k") ?? "");
+      expect(stored.v).toBe(1);
+      expect(stored.value).toBe("[t]Olá");
+      expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
       const createsAfterFirst = api.create.mock.calls.length;
       const second = await translate({

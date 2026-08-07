@@ -81,6 +81,8 @@ interface SummarizeOptions {
   monitor?: (m: CreateMonitor) => void;
   cache?: "session" | "local" | { get, set };
   cacheKey?: string; // default: JSON.stringify([pathname, trimmed input, normalizedLanguage, languageHints, type, length, format, preference, sharedContext]); normalizedLanguage = language's lowercase primary subtag (pt-BR becomes pt), languageHints = boolean (normalized language is in supportedLanguages)
+  cacheTtl?: number;      // built-in shortcut TTL in ms; default 1 hour
+  cacheRefresh?: boolean; // skip the cache read, write the fresh result
   onUpdate?: (text: string) => void;
   signal?: AbortSignal;
 }
@@ -122,6 +124,22 @@ summarize({ language: "en", input: text, cache: "session" });
 
 // Persistent caching across tabs.
 summarize({ language: "en", input: text, cache: "local" });
+```
+
+### Expiry and refresh
+
+The built-in `"session"` / `"local"` shortcuts store each entry in a versioned envelope with an expiry time. Entries expire after one hour (`DEFAULT_CACHE_TTL_MS`) by default. Pass `cacheTtl` (milliseconds) to override the TTL per call. Expired entries, legacy raw strings, and malformed envelopes count as misses and are removed.
+
+Pass `cacheRefresh: true` to force a fresh inference. The call skips the cache read, runs the model, and replaces the cached value after a successful run. Failed, aborted, or empty runs leave the cached value in place.
+
+Custom `{ get, set }` caches own their expiry policy. `cacheTtl` does not apply to them; `cacheRefresh` still bypasses their read and updates them after success.
+
+```ts
+// Cache for five minutes instead of one hour.
+summarize({ language: "en", input: text, cache: "local", cacheTtl: 5 * 60 * 1000 });
+
+// Force a fresh inference; later calls reuse the new value.
+summarize({ language: "en", input: text, cache: "local", cacheRefresh: true });
 ```
 
 The internal session cache (warm `Summarizer` instances) is separate and always on, so same-config calls skip the ~1-3s cold start within a tab.

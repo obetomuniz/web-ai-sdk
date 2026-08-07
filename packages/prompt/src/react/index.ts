@@ -273,6 +273,8 @@ export type {
   AskResult,
   CacheOption,
   CreateSessionOptions,
+  LanguageModelMessage,
+  LanguageModelMessageContent,
   LanguageModelSamplingMode,
   LanguageModelTool,
   ResponseCache,

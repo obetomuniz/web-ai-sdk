@@ -65,6 +65,8 @@ const { output, fromCache } = useTranslator({
 
 `fromCache` is `true` when the cache served the result. Pass `"session"` / `"local"` for the matching web-storage shortcut, or any `{ get, set }`-shaped object for a custom backend.
 
+Built-in `"session"` / `"local"` entries expire after one hour by default. Pass `cacheTtl` (milliseconds) to change the TTL per call. Pass `cacheRefresh: true` to skip the read and replace the cached value after a successful run. Custom `{ get, set }` caches own their expiry policy.
+
 ## Aborting
 
 The hook aborts any in-flight call when inputs change or the component unmounts. You don't need to manage `AbortController` directly. The abort signal is forwarded to the native operation, so browsers that honor it stop translating promptly. Stale partial output from a cancelled run is never published.
@@ -86,6 +88,8 @@ interface UseTranslatorOptions extends Omit<TranslateOptions, "onUpdate" | "sign
   monitor?: (m: TranslatorMonitor) => void;
   cache?: "session" | "local" | { get, set };
   cacheKey?: string;
+  cacheTtl?: number;       // built-in shortcut TTL in ms; default 1 hour
+  cacheRefresh?: boolean;  // skip the cache read, write the fresh result
 }
 
 interface UseTranslatorReturn {

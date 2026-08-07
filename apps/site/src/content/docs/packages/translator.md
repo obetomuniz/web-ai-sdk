@@ -101,6 +101,8 @@ interface TranslateOptions {
   monitor?: (m: TranslatorMonitor) => void;
   cache?: "session" | "local" | { get, set };
   cacheKey?: string;
+  cacheTtl?: number;      // built-in shortcut TTL in ms; default 1 hour
+  cacheRefresh?: boolean; // skip the cache read, write the fresh result
   onUpdate?: (text: string) => void; // cumulative buffer, not deltas
   signal?: AbortSignal; // forwarded to the native operation
 }
@@ -148,6 +150,34 @@ translate({
 ```
 
 The default result cache key is a JSON array string of normalized `[sourceLanguage, targetLanguage, input]`. Pass `cacheKey` explicitly for finer-grained invalidation.
+
+### Expiry and refresh
+
+The built-in `"session"` / `"local"` shortcuts store each entry in a versioned envelope with an expiry time. Entries expire after one hour (`DEFAULT_CACHE_TTL_MS`) by default. Pass `cacheTtl` (milliseconds) to override the TTL per call. Expired entries, legacy raw strings, and malformed envelopes count as misses and are removed.
+
+Pass `cacheRefresh: true` to force a fresh inference. The call skips the cache read, runs the model, and replaces the cached value after a successful run. Failed, aborted, or empty runs leave the cached value in place.
+
+Custom `{ get, set }` caches own their expiry policy. `cacheTtl` does not apply to them; `cacheRefresh` still bypasses their read and updates them after success.
+
+```ts
+// Cache for five minutes instead of one hour.
+translate({
+  input: text,
+  sourceLanguage: "en",
+  targetLanguage: "pt",
+  cache: "local",
+  cacheTtl: 5 * 60 * 1000,
+});
+
+// Force a fresh inference; later calls reuse the new value.
+translate({
+  input: text,
+  sourceLanguage: "en",
+  targetLanguage: "pt",
+  cache: "local",
+  cacheRefresh: true,
+});
+```
 
 ## DOM composition
 
