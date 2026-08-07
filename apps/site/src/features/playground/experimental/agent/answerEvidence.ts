@@ -15,12 +15,25 @@ import type { AgentToolCallRecord } from "./types.js";
 
 /**
  * Grouped ("1,238"), decimal ("3.14"), plain ("1238"), or negative
- * ("-15") numeric tokens. A leading "-" counts as a sign only when it
- * does not follow a digit, so ranges ("10-15") and dates ("2026-08-06")
- * still split into unsigned parts instead of fake negatives.
+ * ("-15") numeric tokens, captured in group 2. A leading "-" counts as
+ * a sign only when it does not follow a digit, so ranges ("10-15") and
+ * dates ("2026-08-06") still split into unsigned parts instead of fake
+ * negatives. That boundary is a consumed prefix capture rather than a
+ * lookbehind: the playground bundle must still PARSE in browsers whose
+ * RegExp lacks lookbehind (Safari before 16.4), where this module loads
+ * only to show the unavailability messaging.
  */
 const NUMBER_TOKEN =
-  /(?<!\d)-?\d{1,3}(?:,\d{3})+(?:\.\d+)?|(?<!\d)-?\d+(?:\.\d+)?/g;
+  /(^|[^0-9])(-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)/g;
+
+function matchNumberTokens(text: string): string[] {
+  const tokens: string[] = [];
+  for (const match of text.matchAll(NUMBER_TOKEN)) {
+    const token = match[2];
+    if (token !== undefined) tokens.push(token);
+  }
+  return tokens;
+}
 
 /**
  * Single-digit mentions ("3 items", list markers, "the 2 pages") are
@@ -42,7 +55,7 @@ export function findUnsupportedAnswerValues(
   const evidence = collectEvidenceNumbers(userInput, records);
   const unsupported: string[] = [];
   const seen = new Set<string>();
-  for (const token of answer.match(NUMBER_TOKEN) ?? []) {
+  for (const token of matchNumberTokens(answer)) {
     const normalized = normalizeNumber(token);
     if (countDigits(normalized) < MIN_CLAIM_DIGITS) continue;
     if (evidence.has(normalized)) continue;
@@ -76,7 +89,7 @@ function collectEvidenceNumbers(
 }
 
 function addNumbers(target: Set<string>, text: string): void {
-  for (const token of text.match(NUMBER_TOKEN) ?? []) {
+  for (const token of matchNumberTokens(text)) {
     target.add(normalizeNumber(token));
   }
   // Raw digit runs as well, so a claim like "12" is supported by evidence

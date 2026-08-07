@@ -96,6 +96,20 @@ describe("findUnsupportedAnswerValues", () => {
     ).toEqual([]);
   });
 
+  it("captures a signed value at the start of the answer", () => {
+    const positiveOnly = record({
+      output: { status: 200, url: "https://one.test", text: "delta: 25" },
+    });
+
+    expect(
+      findUnsupportedAnswerValues(
+        "-25 is the delta.",
+        "What is the delta on https://one.test?",
+        [positiveOnly],
+      ),
+    ).toEqual(["-25"]);
+  });
+
   it("does not read ranges or dates as negative values", () => {
     const dated = record({
       output: {
