@@ -68,6 +68,52 @@ describe("findUnsupportedAnswerValues", () => {
     expect(unsupported).toEqual(["1,238"]);
   });
 
+  it("flags a negative value when the evidence only has the positive form", () => {
+    const positiveOnly = record({
+      output: { status: 200, url: "https://one.test", text: "delta: 25" },
+    });
+
+    expect(
+      findUnsupportedAnswerValues(
+        "The delta is -25.",
+        "What is the delta on https://one.test?",
+        [positiveOnly],
+      ),
+    ).toEqual(["-25"]);
+  });
+
+  it("supports a negative value present in the tool output", () => {
+    const negative = record({
+      output: { status: 200, url: "https://one.test", delta: -25 },
+    });
+
+    expect(
+      findUnsupportedAnswerValues(
+        "The delta is -25.",
+        "What is the delta on https://one.test?",
+        [negative],
+      ),
+    ).toEqual([]);
+  });
+
+  it("does not read ranges or dates as negative values", () => {
+    const dated = record({
+      output: {
+        status: 200,
+        url: "https://one.test",
+        text: "Pages 10-15, updated 2026-08-06",
+      },
+    });
+
+    expect(
+      findUnsupportedAnswerValues(
+        "Covers pages 10-15, last updated 2026-08-06.",
+        "Check https://one.test",
+        [dated],
+      ),
+    ).toEqual([]);
+  });
+
   it("counts numbers in failed-call error messages as evidence", () => {
     const failed = record({
       output: undefined,

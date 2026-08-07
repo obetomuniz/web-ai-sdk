@@ -13,8 +13,14 @@
 
 import type { AgentToolCallRecord } from "./types.js";
 
-/** Grouped ("1,238"), decimal ("3.14"), or plain ("1238") numeric tokens. */
-const NUMBER_TOKEN = /\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?/g;
+/**
+ * Grouped ("1,238"), decimal ("3.14"), plain ("1238"), or negative
+ * ("-15") numeric tokens. A leading "-" counts as a sign only when it
+ * does not follow a digit, so ranges ("10-15") and dates ("2026-08-06")
+ * still split into unsigned parts instead of fake negatives.
+ */
+const NUMBER_TOKEN =
+  /(?<!\d)-?\d{1,3}(?:,\d{3})+(?:\.\d+)?|(?<!\d)-?\d+(?:\.\d+)?/g;
 
 /**
  * Single-digit mentions ("3 items", list markers, "the 2 pages") are
@@ -75,6 +81,9 @@ function addNumbers(target: Set<string>, text: string): void {
   }
   // Raw digit runs as well, so a claim like "12" is supported by evidence
   // that only carries it embedded ("12:34:56", "2026-08-06", id fields).
+  // These runs are unsigned on purpose: a NEGATIVE claim ("-15") is only
+  // supported by explicitly negative evidence, while an unsigned claim
+  // stays supported by any embedded run.
   for (const run of text.match(/\d+/g) ?? []) {
     target.add(run);
   }
