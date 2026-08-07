@@ -75,6 +75,48 @@ translatorModel.ready
 
 Failure is a real path. Chrome refuses some downloads without a user gesture, storage can be full, and a device can be unsupported. A failed preparation leaves the cache, so a later prepare retries cleanly.
 
+## With the React hooks
+
+The React hooks need no extra wiring. Hold a lease in an effect; the hook's matching call reuses the warm session, and unmount releases it.
+
+`usePrompt` runs on demand, which makes the payoff visible: the model warms while the panel is open, so the first `ask()` starts instantly.
+
+```tsx
+import { useEffect } from "react";
+import { prepareLanguageModel } from "@web-ai-sdk/prompt";
+import { usePrompt } from "@web-ai-sdk/prompt/react";
+
+const SYSTEM_PROMPT = "Answer in one short paragraph.";
+
+export function AnswerPanel() {
+  // Hold a lease for the panel's lifetime. Unmount releases the base session.
+  useEffect(() => {
+    const languageModel = prepareLanguageModel({ systemPrompt: SYSTEM_PROMPT });
+    return languageModel.release;
+  }, []);
+
+  // ask() clones from the warm base; no second create.
+  const { status, output, ask } = usePrompt({ systemPrompt: SYSTEM_PROMPT });
+
+  if (status === "unavailable") return null;
+  return (
+    <section>
+      <button
+        onClick={() => ask("Why is the sky blue?")}
+        disabled={status === "loading" || status === "streaming"}
+      >
+        Ask
+      </button>
+      {output ? <p>{output}</p> : null}
+    </section>
+  );
+}
+```
+
+Leases are shared, so you can also prepare earlier, for example in the hover handler of the button that mounts this panel. Releasing that earlier lease cannot destroy the session while the panel still holds its own.
+
+`useSession` is the one exception: it wraps `createSession()`, which creates a caller-owned session outside the warm cache. It manages its own lifecycle, so `prepareLanguageModel` does not warm it.
+
 ## Function names per package
 
 | Package | Prepare | Lease type |
