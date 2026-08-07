@@ -143,7 +143,7 @@ proofreaderModel.release();
 - Failed creation evicts the entry, so a later prepare retries.
 - Sessions with active leases never evict from the LRU cache.
 
-Reuse requires the same session-affecting options as the `proofread` call. `PrepareProofreaderOptions` covers `expectedInputLanguages` and `monitor`.
+Reuse requires the same session-affecting options as the `proofread` call. `PrepareProofreaderOptions` covers `expectedInputLanguages`. `monitor` observes creation only and never affects reuse.
 
 ## Result caching
 

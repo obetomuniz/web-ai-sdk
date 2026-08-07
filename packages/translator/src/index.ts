@@ -116,6 +116,7 @@ export class TranslatorUnavailableError extends Error {
  * Session-affecting subset of `TranslateOptions`. `prepareTranslator` and
  * `translate` derive the same native create options from these fields, so a
  * prepared session is reused by the matching call.
+ * `monitor` observes creation only; it never affects the cache key.
  */
 export type PrepareTranslatorOptions = Pick<
   TranslateOptions,

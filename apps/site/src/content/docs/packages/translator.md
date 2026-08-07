@@ -152,7 +152,7 @@ translatorModel.release();
 - Failed creation evicts the entry, so a later prepare retries.
 - Sessions with active leases never evict from the LRU cache.
 
-Reuse requires the same session-affecting options as the `translate` call. For this package those are `sourceLanguage`, `targetLanguage`, and `monitor` (`PrepareTranslatorOptions`).
+Reuse requires the same session-affecting options as the `translate` call. For this package those are `sourceLanguage` and `targetLanguage` (`PrepareTranslatorOptions`). `monitor` observes creation only and never affects reuse.
 
 ## Caching
 

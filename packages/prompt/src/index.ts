@@ -181,6 +181,7 @@ const wrapCreateError = (err: unknown): PromptUnavailableError => {
  * Session-affecting subset of `AskOptions`. `prepareLanguageModel` and
  * `ask` derive the same native create options from these fields, so a
  * prepared base session is reused by the matching call.
+ * `monitor` observes creation only; it never affects the cache key.
  */
 export type PrepareLanguageModelOptions = Pick<
   AskOptions,
@@ -202,8 +203,9 @@ interface BaseSessionConfig {
 }
 
 /**
- * Single source of the option-to-base-session mapping. The session cache keys
- * by `createOptions`, so `ask` and `prepareLanguageModel` must both go
+ * Single source of the option-to-base-session mapping. The session cache key derives
+ * from the stable fields of `createOptions` (`monitor` never fragments
+ * reuse), so `ask` and `prepareLanguageModel` must both go
  * through this derivation.
  */
 const resolveBaseSessionConfig = (

@@ -128,6 +128,7 @@ export class SummarizerUnavailableError extends Error {
  * Session-affecting subset of `SummarizeOptions`. `prepareSummarizer` and
  * `summarize` derive the same native create options from these fields, so a
  * prepared session is reused by the matching call.
+ * `monitor` observes creation only; it never affects the cache key.
  */
 export type PrepareSummarizerOptions = Pick<
   SummarizeOptions,
@@ -148,8 +149,9 @@ interface SessionConfig {
 }
 
 /**
- * Single source of the option-to-session mapping. The session cache keys by
- * `createOptions`, so `summarize` and `prepareSummarizer` must both go
+ * Single source of the option-to-session mapping. The session cache key derives from
+ * the stable fields of `createOptions` (`monitor` never fragments reuse),
+ * so `summarize` and `prepareSummarizer` must both go
  * through this derivation.
  */
 const resolveSessionConfig = (

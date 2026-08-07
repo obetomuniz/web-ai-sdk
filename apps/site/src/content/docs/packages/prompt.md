@@ -532,7 +532,7 @@ Semantics:
 - Failed creation evicts the entry, so a later prepare retries.
 - Leased bases never evict from the LRU cache.
 
-Reuse requires the same session-affecting options as `ask()`. `PrepareLanguageModelOptions` covers `systemPrompt`, `samplingMode`, `temperature`, `topK`, `language`, `supportedLanguages`, `expectedInputs`, `expectedOutputs`, `tools`, and `monitor`.
+Reuse requires the same session-affecting options as `ask()`. `PrepareLanguageModelOptions` covers `systemPrompt`, `samplingMode`, `temperature`, `topK`, `language`, `supportedLanguages`, `expectedInputs`, `expectedOutputs`, and `tools`. `monitor` observes creation only and never affects reuse.
 
 `createSession()` is unaffected. It always creates a caller-owned session outside this cache.
 

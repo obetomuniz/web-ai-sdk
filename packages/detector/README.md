@@ -107,7 +107,7 @@ detectorModel.release();
 - Failed creation evicts the entry, so a later prepare retries.
 - Sessions with active leases never evict from the LRU cache.
 
-Reuse requires the same session-affecting options as the `detect` call. For this package those are `expectedInputLanguages` and `monitor` (`PrepareLanguageDetectorOptions`).
+Reuse requires the same session-affecting options as the `detect` call. For this package that is `expectedInputLanguages` (`PrepareLanguageDetectorOptions`). `monitor` observes creation only and never affects reuse.
 
 ## Caching
 

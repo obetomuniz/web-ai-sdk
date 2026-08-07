@@ -135,7 +135,7 @@ summarizerModel.release();
 - Failed creation evicts the entry, so a later prepare retries.
 - Sessions with active leases never evict from the LRU cache.
 
-Reuse requires the same session-affecting options as the `summarize` call. For this package those are `language`, `supportedLanguages`, `type`, `length`, `format`, `preference`, `sharedContext`, and `monitor` (`PrepareSummarizerOptions`).
+Reuse requires the same session-affecting options as the `summarize` call. For this package those are `language`, `supportedLanguages`, `type`, `length`, `format`, `preference`, and `sharedContext` (`PrepareSummarizerOptions`). `monitor` observes creation only and never affects reuse.
 
 ### Session cache controls
 

@@ -123,6 +123,7 @@ class DetectorAbortError extends Error {
  * Session-affecting subset of `DetectOptions`. `prepareLanguageDetector` and
  * `detect` derive the same native create options from these fields, so a
  * prepared session is reused by the matching call.
+ * `monitor` observes creation only; it never affects the cache key.
  */
 export type PrepareLanguageDetectorOptions = Pick<
   DetectOptions,
@@ -135,8 +136,9 @@ interface SessionConfig {
 }
 
 /**
- * Single source of the option-to-session mapping. The session cache keys by
- * `createOptions`, so `detect` and `prepareLanguageDetector` must both go
+ * Single source of the option-to-session mapping. The session cache key derives from
+ * the stable fields of `createOptions` (`monitor` never fragments reuse),
+ * so `detect` and `prepareLanguageDetector` must both go
  * through this derivation.
  */
 const resolveSessionConfig = (
