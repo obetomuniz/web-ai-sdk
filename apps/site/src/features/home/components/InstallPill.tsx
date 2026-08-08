@@ -27,7 +27,7 @@ export const InstallPill = ({
   return (
     <button
       type="button"
-      className={`inline-flex h-10 max-w-full items-center gap-3.5 rounded-pill border border-hairline bg-surface pl-4 pr-1 font-mono text-[13px] text-fg-2 transition-colors hover:border-accent-line max-[480px]:gap-2 max-[480px]:pl-3 max-[480px]:text-xs ${className}`}
+      className={`inline-flex h-10 max-w-full items-center gap-3.5 rounded-sm border border-hairline bg-surface pl-4 pr-0 font-mono text-[13px] text-fg-2 transition-colors hover:border-accent-line max-[480px]:gap-2 max-[480px]:pl-3 max-[480px]:text-xs ${className}`}
       onClick={copy}
     >
       <span className="select-none text-fg-4">$</span>
