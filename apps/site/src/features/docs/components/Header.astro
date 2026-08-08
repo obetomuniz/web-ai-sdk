@@ -1,0 +1,52 @@
+---
+// Custom Starlight Header: the search lives inside the right action cluster
+// (theme toggle → search → Playground → Docs → GitHub) instead of Starlight's
+// centered middle column. Class names (.title-wrapper, .right-group,
+// .social-icons) mirror Starlight's defaults so the shared header CSS in
+// web-ai-sdk.css and the mobile rules in SocialIcons.astro keep applying.
+import Search from "@astrojs/starlight/components/Search.astro";
+import SiteTitle from "./SiteTitle.astro";
+import SocialIcons from "./SocialIcons.astro";
+import ThemeToggle from "./ThemeToggle.astro";
+---
+
+<div class="header sl-flex">
+  <div class="title-wrapper sl-flex">
+    <SiteTitle />
+  </div>
+  <div class="sl-hidden md:sl-flex print:hidden right-group">
+    <ThemeToggle />
+    <Search />
+    <div class="sl-flex social-icons">
+      <SocialIcons />
+    </div>
+  </div>
+</div>
+
+<style>
+  .header {
+    gap: var(--sl-nav-gap);
+    justify-content: space-between;
+    align-items: center;
+    height: 100%;
+  }
+
+  .title-wrapper {
+    /* Prevent long titles overflowing and covering the controls on narrow
+       viewports, while leaving room for the focus ring around the link. */
+    overflow: clip;
+    padding: 0.25rem;
+    margin: -0.25rem;
+    min-width: 0;
+  }
+
+  /* One uniform gap across the whole cluster — the same rhythm as the home
+     nav's action group. The borderless controls (theme toggle, docs icon)
+     contribute their own inner padding, which reads as the wider breathing
+     room around glyph-only items, exactly like on the home page. */
+  .right-group,
+  .social-icons {
+    align-items: center;
+    gap: 0.5rem;
+  }
+</style>
