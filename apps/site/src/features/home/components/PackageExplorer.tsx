@@ -250,9 +250,7 @@ const InstallCommand = ({ pkg }: { pkg: string }) => {
     <button type="button" className={pkgInstall} onClick={copy}>
       <span className={pkgInstallPrompt}>$</span> npm install{" "}
       <span className={pkgInstallPkg}>{pkg}</span>
-      <span
-        className={`${pkgInstallCopy} ${copied ? "text-ok" : "text-fg-3"}`}
-      >
+      <span className={`${pkgInstallCopy} ${copied ? "text-ok" : "text-fg-3"}`}>
         {copied ? "copied" : "copy"}
       </span>
     </button>

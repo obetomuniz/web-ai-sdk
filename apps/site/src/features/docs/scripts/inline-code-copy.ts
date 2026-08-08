@@ -53,7 +53,11 @@ async function copyText(text: string): Promise<boolean> {
 
 function enhanceInlineCode() {
   for (const code of document.querySelectorAll<HTMLElement>(CODE_SELECTOR)) {
-    if (code.closest("pre") || code.closest("a") || code.closest(".expressive-code")) {
+    if (
+      code.closest("pre") ||
+      code.closest("a") ||
+      code.closest(".expressive-code")
+    ) {
       continue;
     }
 
