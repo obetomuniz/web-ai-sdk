@@ -1,5 +1,27 @@
 # @web-ai-sdk/all
 
+## 0.9.0
+
+### Minor Changes
+
+- 06d6f61: Support multimodal message content in Prompt sessions. `LanguageModelMessage.content` now accepts an array of exported text / image / audio content parts, forwarded losslessly through `initialPrompts`, `send()`, `sendStreaming()`, and `append()`. Media-only messages are no longer treated as empty, and native `NotSupportedError` modality errors propagate unchanged. `ask()` stays text-only.
+- de9b36b: Add TTL and forced refresh to result caches. Built-in "session" / "local" entries now use a versioned envelope and expire after one hour (DEFAULT_CACHE_TTL_MS). New cacheTtl option overrides the TTL per call; new cacheRefresh option skips the cache read and replaces the value after a successful run. Legacy raw entries and malformed envelopes count as misses and are replaced. Custom { get, set } caches keep their contract and own their expiry policy.
+- 8644ed2: Add intent-driven prepare and release leases to every task package. New prepareLanguageModel / prepareSummarizer / prepareTranslator / prepareLanguageDetector / prepareWriter / prepareRewriter / prepareProofreader start native session creation when user intent is clear and return a lease ({ ready, release }). The matching operation reuses the prepared session without a second create. Leases pin sessions against LRU eviction; release is idempotent and the final release destroys the session once no other lease or in-flight call uses it. Session cache controls are now uniform: prompt gains configureLanguageModelCache / clearLanguageModelSession(s), and summarizer now exports its configureSummarizerCache / clearSummarizerSession(s). Clearing detaches leased sessions and destroys them when the last pin drops. Breaking: writer, rewriter, and proofreader no longer export getOrCreateWriter / getOrCreateRewriter / getOrCreateProofreader, getWriterApi / getRewriterApi / getProofreaderApi, defaultCacheKey, or resolveCache; use the prepare lease and cache controls instead.
+
+### Patch Changes
+
+- Updated dependencies [06d6f61]
+- Updated dependencies [de9b36b]
+- Updated dependencies [8644ed2]
+- Updated dependencies [bfcb0f1]
+  - @web-ai-sdk/prompt@0.10.0
+  - @web-ai-sdk/summarizer@0.7.0
+  - @web-ai-sdk/translator@0.7.0
+  - @web-ai-sdk/detector@0.7.0
+  - @web-ai-sdk/writer@0.7.0
+  - @web-ai-sdk/rewriter@0.7.0
+  - @web-ai-sdk/proofreader@0.7.0
+
 ## 0.8.0
 
 ### Minor Changes
