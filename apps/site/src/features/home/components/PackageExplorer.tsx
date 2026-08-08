@@ -240,7 +240,9 @@ const InstallCommand = ({ pkg }: { pkg: string }) => {
     try {
       await navigator.clipboard.writeText(`npm install ${pkg}`);
     } catch {
-      // Clipboard unavailable in some browsers / contexts; silently no-op.
+      // Clipboard unavailable in some browsers / contexts; keep the resting
+      // cue rather than claiming a copy happened.
+      return;
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 1400);

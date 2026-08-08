@@ -169,3 +169,69 @@ describe("PackageExplorer preparation intent", () => {
     expect(mocks.prepareTranslator).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("PackageExplorer install command", () => {
+  const getInstallButton = () => {
+    const button = [
+      ...container.querySelectorAll<HTMLButtonElement>(
+        '[role="tabpanel"]:not([hidden]) button',
+      ),
+    ].find((candidate) => candidate.textContent?.includes("npm install"));
+    expect(button).toBeDefined();
+    return button as HTMLButtonElement;
+  };
+
+  const stubClipboard = (writeText: ReturnType<typeof vi.fn>) => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+  };
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("copies the command and flips the cue until the timeout", async () => {
+    vi.useFakeTimers();
+    const writeText = vi.fn(async () => undefined);
+    stubClipboard(writeText);
+
+    act(() => root?.render(<PackageExplorer />));
+    const button = getInstallButton();
+    expect(button.textContent).toContain("copy");
+
+    await act(async () => {
+      button.click();
+      await Promise.resolve();
+    });
+
+    expect(writeText).toHaveBeenCalledWith("npm install @web-ai-sdk/prompt");
+    expect(button.textContent).toContain("copied");
+
+    act(() => {
+      vi.advanceTimersByTime(1400);
+    });
+    expect(button.textContent).not.toContain("copied");
+    expect(button.textContent).toContain("copy");
+  });
+
+  it("keeps the resting cue when the clipboard write fails", async () => {
+    const writeText = vi.fn(async () => {
+      throw new Error("denied");
+    });
+    stubClipboard(writeText);
+
+    act(() => root?.render(<PackageExplorer />));
+    const button = getInstallButton();
+
+    await act(async () => {
+      button.click();
+      await Promise.resolve();
+    });
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(button.textContent).not.toContain("copied");
+    expect(button.textContent).toContain("copy");
+  });
+});
