@@ -15,7 +15,7 @@ To warm the session before the hook first runs, call `prepareLanguageDetector` f
 
 <DetectorDemo client:only="react" />
 
-Edit the input; the badge updates as you type. The list under the badge shows the top candidates with their confidences.
+Edit the input. The demo debounces typing: detection runs 600 ms after you pause, not on every keystroke. The list under the badge shows the top candidates with their confidences.
 
 ## Usage
 

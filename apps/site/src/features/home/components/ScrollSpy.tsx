@@ -28,6 +28,13 @@ export const ScrollSpy = () => {
       document.querySelector<HTMLElement>(`[data-section="${id}"]`),
     );
 
+    // Same handoff signal the floating Back-to-top button uses: once the
+    // footer's own "Back to top" link scrolls into view, the visitor left
+    // the section flow and no nav item stays highlighted.
+    const footerLink = document.querySelector<HTMLElement>(
+      "[data-footer-top-link]",
+    );
+
     let frame = 0;
 
     const syncActive = () => {
@@ -41,19 +48,23 @@ export const ScrollSpy = () => {
         if (section.getBoundingClientRect().top <= marker) activeIndex = i;
       }
 
-      const root = document.documentElement;
-      const atDocumentEnd =
-        root.scrollHeight > window.innerHeight &&
-        Math.ceil(window.scrollY + window.innerHeight) >= root.scrollHeight - 2;
-
-      if (atDocumentEnd) {
-        for (let i = sections.length - 1; i >= 0; i--) {
-          if (sections[i]) {
-            activeIndex = i;
-            break;
-          }
-        }
+      // The short last section cannot reach the top marker before the page
+      // ends, so it activates once it fills the lower half of the viewport.
+      const lastSection = sections[sections.length - 1];
+      if (
+        lastSection &&
+        lastSection.getBoundingClientRect().top <= window.innerHeight / 2
+      ) {
+        activeIndex = sections.length - 1;
       }
+
+      // Same handoff signal that hides the floating Back-to-top button:
+      // once the footer's own link is in view, the visitor left the section
+      // flow and no nav item stays highlighted.
+      const footerLinkInView = footerLink
+        ? footerLink.getBoundingClientRect().top <= window.innerHeight
+        : false;
+      if (footerLinkInView) activeIndex = -1;
 
       links.forEach((link, i) => {
         const isActive = i === activeIndex;

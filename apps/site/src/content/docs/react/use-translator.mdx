@@ -15,7 +15,7 @@ To warm the session before the hook first runs, call `prepareTranslator` from th
 
 <TranslatorDemo client:only="react" />
 
-Type in the source field; the translation updates whenever the text changes.
+Type in the source field. The demo debounces typing: translation runs 600 ms after you pause, not on every keystroke. Repeat inputs come from a ten-minute result cache; use "Fresh run" to bypass it.
 
 ## Usage
 

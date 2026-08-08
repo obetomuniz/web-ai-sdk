@@ -3,6 +3,7 @@ import {
   usePrompt,
 } from "@web-ai-sdk/prompt/react";
 import { type ComponentProps, useState } from "react";
+import { ModelMarkdown } from "../../../shared/components/ModelMarkdown.js";
 import { UnavailableHint } from "./UnavailableHint.js";
 
 export interface PromptDemoProps {
@@ -15,7 +16,7 @@ export const PromptDemo = ({
   samplingMode = "balanced",
 }: PromptDemoProps) => {
   const [input, setInput] = useState("What is React.js, in one sentence?");
-  const { status, output, error, fromCache, ask, abort, reset } = usePrompt({
+  const { status, output, error, ask, abort, reset } = usePrompt({
     systemPrompt,
     samplingMode,
   });
@@ -74,14 +75,12 @@ export const PromptDemo = ({
       {(output || busy) && (
         <article className="demo-response">
           <header className="demo-response__header">
-            <span>
-              {fromCache
-                ? "Cached"
-                : status === "streaming"
-                  ? "Streaming…"
-                  : status === "loading"
-                    ? "Thinking…"
-                    : "Answer"}
+            <span role="status">
+              {status === "streaming"
+                ? "Streaming…"
+                : status === "loading"
+                  ? "Thinking…"
+                  : "Answer"}
             </span>
             {output && (
               <button
@@ -95,7 +94,9 @@ export const PromptDemo = ({
             )}
           </header>
           {output ? (
-            <p className="demo-response__body">{output}</p>
+            <div className="demo-response__body">
+              <ModelMarkdown content={output} streaming={busy} />
+            </div>
           ) : (
             <p className="demo-muted" style={{ margin: 0 }}>
               …

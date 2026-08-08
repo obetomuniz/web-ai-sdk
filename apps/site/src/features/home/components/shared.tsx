@@ -2,12 +2,28 @@ import { type ReactNode, useCallback, useRef, useState } from "react";
 import { ModelMarkdown } from "../../../shared/components/ModelMarkdown.js";
 import {
   caret,
+  demoIconBtn,
+  demoTooltip,
+  demoTooltipBelow,
+  demoTooltipWrap,
   markdownProse,
   markdownProseEmpty,
   outputBox,
 } from "../../../shared/ui.js";
 
 const browserSupportHref = `${import.meta.env.BASE_URL}docs/browser-support/`;
+
+/**
+ * TTL for demo result caches. Deterministic demos reuse a result for ten
+ * minutes, then expire it. Creative demos do not cache at all.
+ */
+export const DEMO_RESULT_TTL_MS = 10 * 60 * 1000;
+
+/** Props every package demo accepts from the explorer tab strip. */
+export interface DemoIntentProps {
+  /** True once the user selected this package tab. */
+  intent?: boolean;
+}
 
 interface DownloadProgressEvent extends Event {
   readonly loaded: number;
@@ -23,26 +39,26 @@ interface CreateMonitor {
  * Wire a Built-in AI `monitor` callback to React state. Returns the
  * monitor function to pass into `createOptions.monitor`, plus the current
  * progress (a fraction from 0..1) or `null` when no download is in flight.
+ * Warm-model creations emit `downloadprogress` with loaded 0 and 1 only;
+ * those events are ignored so the indicator surfaces for real downloads.
  */
 export const useDownloadMonitor = () => {
   const [progress, setProgress] = useState<number | null>(null);
 
   const monitor = useCallback((m: CreateMonitor) => {
-    // Some implementations emit a single `downloadprogress` with loaded=1 on
-    // warm starts. Suppress that case so the notice only surfaces for a real
-    // download in progress.
-    let firstEvent = true;
     m.addEventListener("downloadprogress", (e) => {
-      if (firstEvent && e.loaded >= 1) {
-        firstEvent = false;
+      if (e.loaded <= 0) return;
+      if (e.loaded >= 1) {
+        // Settle to "complete" briefly, then clear; stay hidden when no
+        // fractional progress ever showed (warm start).
+        setProgress((current) => {
+          if (current === null) return null;
+          setTimeout(() => setProgress(null), 900);
+          return 1;
+        });
         return;
       }
-      firstEvent = false;
       setProgress(e.loaded);
-      if (e.loaded >= 1) {
-        // Settle to "complete" briefly, then clear.
-        setTimeout(() => setProgress(null), 600);
-      }
     });
   }, []);
 
@@ -79,22 +95,57 @@ export const WarnNotice = ({ message }: { message: string | null }) => {
   );
 };
 
-export const DownloadNotice = ({ progress }: { progress: number | null }) => {
+const DONUT_RADIUS = 5.5;
+const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
+
+/**
+ * Minimal donut progress indicator for model downloads. Lives in the card
+ * header, so it never shifts the demo layout. A custom tooltip carries the
+ * detail on hover or focus.
+ */
+export const DownloadDonut = ({ progress }: { progress: number | null }) => {
   if (progress === null) return null;
   const pct = Math.round(progress * 100);
+  const filled = (
+    Math.min(Math.max(progress, 0), 1) * DONUT_CIRCUMFERENCE
+  ).toFixed(2);
   return (
-    <div className="flex flex-col gap-0 rounded-sm border border-hairline bg-surface px-3 py-[9px] font-mono text-[11.5px] text-fg-3">
-      <div className="mb-1.5 flex justify-between">
-        <span>Downloading on-device model…</span>
-        <span className="tabular-nums">{pct}%</span>
-      </div>
-      <div className="h-1 overflow-hidden rounded-sm bg-surface-3">
-        <div
-          className="h-full bg-accent transition-[width] duration-200 ease-out"
-          style={{ width: `${pct}%` }}
+    // The aria-label on the live region carries the detail for keyboard and
+    // screen-reader users; the tooltip is pointer-hover supplementary text.
+    <span className={demoTooltipWrap}>
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 15 15"
+        role="status"
+        aria-label={`Downloading on-device model ${pct}%`}
+        className="shrink-0"
+      >
+        <circle
+          cx="7.5"
+          cy="7.5"
+          r={DONUT_RADIUS}
+          fill="none"
+          stroke="var(--color-hairline-2)"
+          strokeWidth="2.5"
         />
-      </div>
-    </div>
+        <circle
+          cx="7.5"
+          cy="7.5"
+          r={DONUT_RADIUS}
+          fill="none"
+          stroke="var(--color-accent)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeDasharray={`${filled} ${DONUT_CIRCUMFERENCE.toFixed(2)}`}
+          transform="rotate(-90 7.5 7.5)"
+          className="transition-[stroke-dasharray] duration-200 ease-out"
+        />
+      </svg>
+      <span className={demoTooltipBelow}>
+        Downloading on-device model {pct}%
+      </span>
+    </span>
   );
 };
 
@@ -132,8 +183,20 @@ export const useStreamStats = () => {
   const finish = (status = "done") => {
     setStats((s) => ({ ...s, status }));
   };
+  const reset = () => {
+    setStats({ chars: 0, ms: 0, tps: 0, status: "idle" });
+  };
 
-  return { stats, start, update, finish };
+  return { stats, start, update, finish, reset };
+};
+
+// Status colors follow DESIGN.md: warn for stale input, err for failures,
+// accent for live work, neutral foreground otherwise.
+const statusToneClass = (status: string): string => {
+  if (status === "running") return "text-accent";
+  if (status === "stale") return "text-warn";
+  if (status === "error" || status === "unavailable") return "text-err";
+  return "text-fg-2";
 };
 
 export const StatusBar = ({
@@ -147,11 +210,9 @@ export const StatusBar = ({
 }) => (
   <div className="flex flex-wrap items-center justify-between gap-x-3.5 gap-y-2 font-mono text-[11px] tracking-[0.04em] text-fg-4 max-[480px]:gap-x-3.5 max-[480px]:gap-y-2">
     <div className="flex items-center gap-3.5">
-      <span className="inline-flex items-center gap-1.5">
+      <span role="status" className="inline-flex items-center gap-1.5">
         <span className="text-fg-4">status</span>
-        <span
-          className={`tabular-nums text-fg-2 ${stats.status === "running" ? "text-accent" : ""}`}
-        >
+        <span className={`tabular-nums ${statusToneClass(stats.status)}`}>
           {stats.status}
         </span>
       </span>
@@ -236,6 +297,102 @@ export const MarkdownOutput = ({
         className="whitespace-normal"
       />
       {cursor}
+    </div>
+  );
+};
+
+/**
+ * Icon-only fresh-generation control shown once a run has completed.
+ * Skips the cache read and replaces the stored value.
+ */
+export const FreshRunButton = ({
+  show,
+  onClick,
+}: {
+  show: boolean;
+  onClick: () => void;
+}) => {
+  if (!show) return null;
+  return (
+    <span className={demoTooltipWrap}>
+      <button
+        type="button"
+        className={demoIconBtn}
+        onClick={onClick}
+        aria-label="Fresh run"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+          <path d="M21 3v5h-5" />
+        </svg>
+      </button>
+      <span className={demoTooltip}>
+        Skip the cached result and run the model again
+      </span>
+    </span>
+  );
+};
+
+/**
+ * Wraps a demo's primary Run control. While a cached result is on screen,
+ * hovering the control explains that the run serves from the cache.
+ */
+export const CacheAwareRun = ({
+  cached,
+  children,
+}: {
+  cached: boolean;
+  children: ReactNode;
+}) => {
+  if (!cached) return <>{children}</>;
+  return (
+    <span className={demoTooltipWrap}>
+      {children}
+      <span className={demoTooltip}>
+        Serves the cached result instantly. Use ⟳ for a fresh generation.
+      </span>
+    </span>
+  );
+};
+
+/**
+ * Shown when the input changed after a completed run. The previous result
+ * stays visible until a new run starts or the user dismisses it.
+ */
+export const StaleNotice = ({
+  show,
+  onDismiss,
+}: {
+  show: boolean;
+  onDismiss: () => void;
+}) => {
+  if (!show) return null;
+  return (
+    <div
+      role="status"
+      className="flex items-center justify-between gap-3 rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_40%,var(--color-hairline))] bg-surface px-3 py-[9px] font-mono text-[11.5px] text-warn"
+    >
+      <span className="text-[11px]">
+        The input changed after this result. Run again to update it.
+      </span>
+      <button
+        type="button"
+        className="shrink-0 cursor-pointer rounded-sm border border-hairline-2 px-1.5 py-0.5 text-[12px] leading-none text-fg-2 hover:bg-surface-3"
+        onClick={onDismiss}
+        aria-label="Dismiss result"
+      >
+        ×
+      </button>
     </div>
   );
 };

@@ -142,6 +142,16 @@
     }
   }
 
+  /* Feedback pulse when a demo run serves from the result cache. */
+  @keyframes demo-cache-flash {
+    from {
+      opacity: 0.25;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
   @keyframes playground-enter {
     from {
       opacity: 0;

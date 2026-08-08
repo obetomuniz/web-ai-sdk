@@ -18,6 +18,10 @@ const mocks = vi.hoisted(() => {
   return {
     ask: vi.fn(async (_options: { input: string }) => ({ output: "" })),
     executeTool: vi.fn(async () => '{"ok":true}'),
+    prepareLanguageModel: vi.fn(() => ({
+      ready: Promise.resolve(),
+      release: vi.fn(),
+    })),
     promptAvailable: false,
     refresh: vi.fn(async () => tools),
     tools,
@@ -28,6 +32,7 @@ vi.mock("@web-ai-sdk/prompt", () => ({
   ask: mocks.ask,
   isAvailable: () => mocks.promptAvailable,
   PromptUnavailableError: class PromptUnavailableError extends Error {},
+  prepareLanguageModel: mocks.prepareLanguageModel,
 }));
 
 vi.mock("@web-ai-sdk/webmcp", () => ({
@@ -55,6 +60,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   mocks.ask.mockClear();
   mocks.executeTool.mockClear();
+  mocks.prepareLanguageModel.mockClear();
   mocks.promptAvailable = false;
   mocks.refresh.mockClear();
 });
@@ -116,7 +122,7 @@ describe("WebMCPDemo", () => {
     });
 
     const request = mocks.ask.mock.calls[0]?.[0] as
-      | { input: string }
+      | { input: string; responseConstraint?: object }
       | undefined;
     expect(request?.input).toContain("input schema:");
     expect(request?.input).toContain('"quantity"');
@@ -124,5 +130,98 @@ describe("WebMCPDemo", () => {
       sku: "MX-200",
       quantity: 2,
     });
+  });
+
+  it("constrains the router response and parses it without scraping", async () => {
+    mocks.promptAvailable = true;
+    mocks.ask.mockResolvedValue({
+      output:
+        '{"tool":"add_to_cart","args":{"sku":"MX-200","quantity":2},"reason":"Add the requested item."}',
+    });
+    const container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    act(() => root?.render(<WebMCPDemo />));
+    const runButton = [...container.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Run agent"),
+    );
+
+    await act(async () => {
+      runButton?.click();
+      await vi.runAllTimersAsync();
+    });
+
+    const request = mocks.ask.mock.calls[0]?.[0] as {
+      responseConstraint?: { properties?: Record<string, unknown> };
+    };
+    expect(request.responseConstraint).toBeDefined();
+    expect(request.responseConstraint?.properties).toHaveProperty("tool");
+    expect(request.responseConstraint?.properties).toHaveProperty("reason");
+    expect(mocks.executeTool).toHaveBeenCalledWith(mocks.tools[1], {
+      sku: "MX-200",
+      quantity: 2,
+    });
+  });
+
+  it("refuses when the model names a tool outside the registered set", async () => {
+    mocks.promptAvailable = true;
+    mocks.ask.mockResolvedValue({
+      output: '{"tool":"delete_account","args":{},"reason":"Best match."}',
+    });
+    const container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    act(() => root?.render(<WebMCPDemo />));
+    const runButton = [...container.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Run agent"),
+    );
+
+    await act(async () => {
+      runButton?.click();
+      await vi.runAllTimersAsync();
+    });
+
+    expect(container.textContent).toContain(
+      `LM picked "delete_account" which isn't registered`,
+    );
+    expect(mocks.executeTool).not.toHaveBeenCalled();
+  });
+
+  it("refuses when the model's arguments fail the tool's input schema", async () => {
+    mocks.promptAvailable = true;
+    mocks.ask.mockResolvedValue({
+      output: '{"tool":"add_to_cart","args":{"quantity":0},"reason":"Add it."}',
+    });
+    const container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    act(() => root?.render(<WebMCPDemo />));
+    const runButton = [...container.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Run agent"),
+    );
+
+    await act(async () => {
+      runButton?.click();
+      await vi.runAllTimersAsync();
+    });
+
+    expect(container.textContent).toContain("failed schema validation");
+    expect(mocks.executeTool).not.toHaveBeenCalled();
+  });
+
+  it("prepares the routing session only after tab intent", async () => {
+    mocks.promptAvailable = true;
+    const container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+
+    act(() => root?.render(<WebMCPDemo />));
+    expect(mocks.prepareLanguageModel).not.toHaveBeenCalled();
+
+    act(() => root?.render(<WebMCPDemo intent />));
+    expect(mocks.prepareLanguageModel).toHaveBeenCalledTimes(1);
   });
 });

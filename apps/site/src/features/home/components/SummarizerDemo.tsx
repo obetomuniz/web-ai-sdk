@@ -1,11 +1,17 @@
 import {
   isAvailable as isSummarizerAvailable,
+  prepareSummarizer,
   SummarizerUnavailableError,
   summarize,
 } from "@web-ai-sdk/summarizer";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCapabilityLease,
+  useDemoIntent,
+} from "../../../shared/demoLifecycle.js";
 import {
   btnSm,
+  btnSmGhost,
   card,
   cardBody,
   cardDotLive,
@@ -24,10 +30,15 @@ import {
   textarea,
 } from "../../../shared/ui.js";
 import {
-  DownloadNotice,
+  CacheAwareRun,
+  DEMO_RESULT_TTL_MS,
+  type DemoIntentProps,
+  DownloadDonut,
   ErrorNotice,
+  FreshRunButton,
   InfoNotice,
   MarkdownOutput,
+  StaleNotice,
   StatusBar,
   UnavailableNotice,
   useDownloadMonitor,
@@ -74,7 +85,7 @@ const ChipSelect = <T extends string>({
   </span>
 );
 
-export const SummarizerDemo = () => {
+export const SummarizerDemo = ({ intent: tabIntent }: DemoIntentProps) => {
   const [text, setText] = useState(SAMPLE_ARTICLE);
   const [type, setType] = useState<SummaryType>("key-points");
   const [length, setLength] = useState<SummaryLength>("short");
@@ -83,20 +94,43 @@ export const SummarizerDemo = () => {
   const [streaming, setStreaming] = useState(false);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { stats, start, update, finish } = useStreamStats();
+  const [ranWith, setRanWith] = useState<string | null>(null);
+  // Bumped when a run serves from the cache, replaying a short pulse so the
+  // instant result still gives visible feedback.
+  const [cacheFlash, setCacheFlash] = useState(0);
+  const { stats, start, update, finish, reset } = useStreamStats();
   const { progress, monitor } = useDownloadMonitor();
+  const { intent, markInteracted } = useDemoIntent(tabIntent);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setAvailable(isSummarizerAvailable());
   }, []);
 
-  const info = preference !== "auto" ? preferenceInfo(preference) : null;
+  // Abort in-flight work when the demo unmounts (for example on tab change).
+  useEffect(() => () => abortRef.current?.abort(), []);
 
-  const run = async () => {
+  // Prepare the session for the current configuration once the user shows
+  // intent. The options mirror the run call, so the first Run reuses the
+  // prepared session. Option edits release the old lease and prepare anew.
+  const createLease = useCallback(
+    () =>
+      prepareSummarizer({ language: "en", type, length, preference, monitor }),
+    [type, length, preference, monitor],
+  );
+  useCapabilityLease(intent && available === true, createLease);
+
+  const info = preference !== "auto" ? preferenceInfo(preference) : null;
+  const runKey = JSON.stringify([text, type, length, preference]);
+  const stale =
+    !streaming && !!output && ranWith !== null && ranWith !== runKey;
+
+  const run = async (refresh = false) => {
     if (streaming) return;
+    const key = runKey;
     setOutput("");
     setError(null);
+    setRanWith(null);
     setStreaming(true);
     start();
     const ac = new AbortController();
@@ -109,6 +143,9 @@ export const SummarizerDemo = () => {
         length,
         preference,
         monitor,
+        cache: "session",
+        cacheTtl: DEMO_RESULT_TTL_MS,
+        cacheRefresh: refresh,
         signal: ac.signal,
         onUpdate: (chunk) => {
           if (ac.signal.aborted) return;
@@ -120,10 +157,12 @@ export const SummarizerDemo = () => {
         setOutput(result.output);
         update(result.output);
       }
+      setRanWith(key);
+      if (result.cached) setCacheFlash((n) => n + 1);
       finish(result.cached ? "cached" : "done");
     } catch (err: unknown) {
       if (ac.signal.aborted) {
-        finish("aborted");
+        finish("stopped");
       } else if (err instanceof SummarizerUnavailableError) {
         setError(err.message || "Summarizer API reported unavailable.");
         finish("unavailable");
@@ -137,21 +176,37 @@ export const SummarizerDemo = () => {
     }
   };
 
+  const stop = () => abortRef.current?.abort();
+  const dismissResult = () => {
+    setOutput("");
+    setRanWith(null);
+    reset();
+  };
+
   const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+  const displayStats = stale ? { ...stats, status: "stale" } : stats;
 
   return (
-    <div className={card}>
+    // Focus and pointer interaction inside the card count as intent, so a
+    // visitor who starts with the demo (not the tab) still gets preparation.
+    <div
+      className={card}
+      onFocusCapture={markInteracted}
+      onPointerDownCapture={markInteracted}
+    >
       <div className={cardHead}>
         <span className={cardHeadTitle}>
           <span className={streaming ? cardDotLive : cardDotOk} />
           summarize() · local
         </span>
-        <span>{wordCount} words in</span>
+        <span className="inline-flex items-center gap-2">
+          <DownloadDonut progress={progress} />
+          {wordCount} words in
+        </span>
       </div>
       <div className={cardBody}>
         {available === false && <UnavailableNotice api="Summarizer API" />}
         <InfoNotice message={info} />
-        <DownloadNotice progress={progress} />
         <ErrorNotice error={error} />
         <div className={fieldSpaced}>
           <label className={label} htmlFor="summarizer-demo-input">
@@ -166,14 +221,29 @@ export const SummarizerDemo = () => {
           />
         </div>
         <div className={demoControls}>
-          <button
-            type="button"
-            className={btnSm}
-            onClick={run}
-            disabled={streaming || !available}
-          >
-            <span>{streaming ? "…" : "▶"}</span> Summarize
-          </button>
+          {!streaming ? (
+            <CacheAwareRun cached={stats.status === "cached"}>
+              <button
+                type="button"
+                className={btnSm}
+                onClick={() => run()}
+                disabled={!available}
+              >
+                <span>▶</span> Summarize
+              </button>
+            </CacheAwareRun>
+          ) : (
+            <button type="button" className={btnSmGhost} onClick={stop}>
+              <span>■</span> Stop
+            </button>
+          )}
+          <FreshRunButton
+            show={
+              !streaming &&
+              (stats.status === "done" || stats.status === "cached")
+            }
+            onClick={() => run(true)}
+          />
           <div className={`${chipRowInline} ${chipRowEnd}`}>
             <ChipSelect
               label="Summary type"
@@ -197,17 +267,25 @@ export const SummarizerDemo = () => {
             />
           </div>
         </div>
-        <MarkdownOutput
-          text={output}
-          streaming={streaming}
-          placeholder={
-            available === false
-              ? "Open in Chrome 138+ or Edge 138+ to summarize."
-              : "Run to summarize the article above."
+        <StaleNotice show={stale} onDismiss={dismissResult} />
+        <div
+          key={cacheFlash}
+          className={
+            cacheFlash > 0 ? "animate-[demo-cache-flash_0.5s_ease-out]" : ""
           }
-        />
+        >
+          <MarkdownOutput
+            text={output}
+            streaming={streaming}
+            placeholder={
+              available === false
+                ? "Open in Chrome 138+ or Edge 138+ to summarize."
+                : "Run to summarize the article above."
+            }
+          />
+        </div>
         <StatusBar
-          stats={stats}
+          stats={displayStats}
           label={`type: ${type} · preference: ${preference}`}
         />
       </div>

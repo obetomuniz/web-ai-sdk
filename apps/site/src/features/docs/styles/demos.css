@@ -299,3 +299,61 @@
   border-radius: 4px;
   object-fit: contain;
 }
+
+/* Icon-only demo action with a custom hover/focus tooltip, matching the
+   home demos' fresh-run treatment. */
+.demo-tip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.demo-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--demo-muted-fg);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.demo-icon-button:hover,
+.demo-icon-button:focus-visible {
+  background: var(--demo-hint-bg);
+  color: var(--sl-color-text);
+}
+
+.demo-tooltip {
+  pointer-events: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  white-space: nowrap;
+  border-radius: 6px;
+  background: var(--demo-hint-bg);
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--sl-color-text);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease;
+}
+
+.demo-tooltip--right {
+  left: auto;
+  right: 0;
+}
+
+.demo-tip-wrap:hover .demo-tooltip,
+.demo-tip-wrap:focus-within .demo-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
