@@ -6,7 +6,7 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "types": ["astro/client"]
+    "types": ["astro/client", "@astrojs/starlight/locals"]
   },
   "include": [".astro/types.d.ts", "astro.config.mjs", "src"]
 }

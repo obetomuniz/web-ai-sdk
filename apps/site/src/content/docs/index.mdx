@@ -1,35 +1,45 @@
 ---
-title: Documentation
-description: TypeScript lifecycle wrappers for browser AI APIs.
-template: splash
-hero:
-  title: web-ai-sdk
-  tagline: TypeScript lifecycle wrappers for browser AI APIs. No runtime dependencies.
-  actions:
-    - text: Browser support
-      link: /docs/browser-support/
-    - text: Prompt guide
-      link: /docs/guides/prompt/
-      variant: minimal
+title: Introduction
+description: TypeScript lifecycle wrappers for browser AI APIs. No runtime dependencies.
 ---
 
 import PackageIndex from "../../features/docs/components/PackageIndex.astro";
 
-## What it is
+`web-ai-sdk` provides one TypeScript package for each supported browser AI capability: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. The packages have no runtime dependencies.
 
-`web-ai-sdk` provides one TypeScript package for each supported browser capability. The packages have no runtime dependencies. See [Architecture](/docs/architecture/) for the package boundaries.
+The SDK does not replace the browser APIs. It manages session reuse, streaming, abort signals, cleanup, and unavailable states. It does not compose capabilities or walk the DOM — application code owns tasks such as article extraction and detect-then-summarize flows.
 
-The SDK does not replace the browser APIs. It manages session reuse, streaming, abort signals, cleanup, and unavailable states.
+## How to use these docs
 
-Before shipping a feature, use the [Production checklist](/docs/production-checklist/) to cover user intent, input selection, safe rendering, progress, reversible edits, and cache freshness.
+The sidebar on the left is organized into three sections:
 
-The SDK does not compose capabilities or walk the DOM. Application code owns tasks such as article extraction and detect-then-summarize flows.
+- **Start** — the concepts that apply to every package: [why the SDK exists](/docs/why-web-ai-sdk/), [which browsers support each API](/docs/browser-support/), the [production checklist](/docs/production-checklist/), and the [architecture](/docs/architecture/) behind the package boundaries.
+- **Guides** — one guide per capability, covering the vanilla API surface, streaming, and lifecycle patterns. Start with the guide for the capability you need; they do not depend on each other.
+- **React Hooks** — the `@web-ai-sdk/<pkg>/react` hooks that wrap each vanilla API for React applications.
 
-## One capability per package
+If you are new, read [Browser support](/docs/browser-support/) first to confirm the capability you want is available where you ship, then jump to that capability's guide.
 
-Only Prompt uses the general `LanguageModel` API. The other capabilities have different inputs and results. WebMCP exposes page tools instead of generating text.
+## Installation
 
-See [Why web-ai-sdk](/docs/why-web-ai-sdk/) for a detailed comparison.
+Install one package or the full set:
+
+```sh
+pnpm add @web-ai-sdk/prompt        # one block
+pnpm add @web-ai-sdk/all           # all eight blocks
+```
+
+Each package ships two entry points:
+
+- **Vanilla** (`@web-ai-sdk/<pkg>`): TypeScript and DOM APIs with no framework dependency.
+- **React** (`@web-ai-sdk/<pkg>/react`): hooks over the vanilla API. `react` is an optional peer dependency.
+
+The [meta-package guide](/docs/guides/meta-package/) documents subpath and namespaced imports for `@web-ai-sdk/all`.
+
+## Packages
+
+Each package owns one browser capability. Only Prompt uses the general `LanguageModel` API; the other capabilities have different inputs and results, and WebMCP exposes page tools instead of generating text. UI, polyfills, DOM traversal, and cross-capability workflows remain outside the core wrappers.
+
+<PackageIndex />
 
 ## Why use a wrapper?
 
@@ -40,28 +50,10 @@ You can use the browser APIs directly. The SDK handles lifecycle code that appli
 - delta and cumulative stream normalization;
 - `AbortSignal` wiring.
 
-[Architecture guide](/docs/architecture/)
+See [Why web-ai-sdk](/docs/why-web-ai-sdk/) for a detailed comparison and the [Architecture guide](/docs/architecture/) for how the packages are structured.
 
-## Packages
+## Next steps
 
-<PackageIndex />
-
-## Install
-
-Install one package or the full set:
-
-```sh
-pnpm add @web-ai-sdk/prompt        # one block
-pnpm add @web-ai-sdk/all           # all eight blocks
-```
-
-The [meta-package guide](/docs/guides/meta-package/) documents subpath and namespaced imports.
-
-Each package ships:
-
-- **Vanilla** (`@web-ai-sdk/<pkg>`): TypeScript and DOM APIs with no framework dependency.
-- **React** (`@web-ai-sdk/<pkg>/react`): hooks over the vanilla API. `react` is an optional peer dependency.
-
-## Package scope
-
-Each package owns one browser capability. UI, polyfills, DOM traversal, and cross-capability workflows remain outside the core wrappers.
+- [Browser support](/docs/browser-support/) — availability matrix per API and browser.
+- [Prompt guide](/docs/guides/prompt/) — the most general capability, a good first read.
+- [Production checklist](/docs/production-checklist/) — user intent, input selection, safe rendering, progress, reversible edits, and cache freshness before you ship.

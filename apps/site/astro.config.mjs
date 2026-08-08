@@ -60,6 +60,7 @@ export default defineConfig({
         SiteTitle: "./src/features/docs/components/SiteTitle.astro",
         SocialIcons: "./src/features/docs/components/SocialIcons.astro",
         ThemeSelect: "./src/features/docs/components/ThemeToggle.astro",
+        TableOfContents: "./src/features/docs/components/TableOfContents.astro",
       },
       favicon: "/favicon.svg",
       head: [
@@ -162,6 +163,7 @@ export default defineConfig({
         {
           label: "Start",
           items: [
+            { label: "Introduction", slug: "docs" },
             { label: "Why web-ai-sdk", slug: "docs/why-web-ai-sdk" },
             { label: "Browser support", slug: "docs/browser-support" },
             {

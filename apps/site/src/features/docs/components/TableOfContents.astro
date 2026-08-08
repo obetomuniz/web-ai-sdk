@@ -1,0 +1,23 @@
+---
+// Override of Starlight's desktop `TableOfContents`: same markup, but the
+// active-link highlighting comes from the proportional scroll spy in
+// `toc-scroll-spy.ts` instead of Starlight's IntersectionObserver, which never
+// activates short sections near the end of a page. The mobile TOC keeps
+// Starlight's default component.
+import TocList from './TocList.astro';
+
+const { toc } = Astro.locals.starlightRoute;
+---
+
+{
+	toc && (
+		<waisdk-toc>
+			<nav aria-labelledby="starlight__on-this-page">
+				<h2 id="starlight__on-this-page">{Astro.locals.t('tableOfContents.onThisPage')}</h2>
+				<TocList toc={toc.items} />
+			</nav>
+		</waisdk-toc>
+	)
+}
+
+<script src="./toc-scroll-spy.ts"></script>

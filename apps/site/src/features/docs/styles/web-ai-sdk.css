@@ -153,12 +153,12 @@
   text-decoration-color: currentColor;
 }
 
-/* Minor tightening: monospaced inline code with hairline border so it
-   reads as a chip, not just colored text. Matches the site demos. */
+/* Minor tightening: monospaced inline code as a borderless chip — its
+   background alone carries the shape, on the shared radius scale. */
 .sl-markdown-content :not(pre) > code {
-  border: 1px solid var(--sl-color-hairline);
+  border: 0;
   padding: 0.05rem 0.4rem;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   font-size: 0.85em;
 }
 
@@ -175,6 +175,28 @@
 .sidebar-pane,
 .right-sidebar {
   border: 0;
+}
+
+/* Center the docs shell. Starlight pins the fixed left sidebar to the viewport
+   edge and centers only the content column in the leftover space, so on wide
+   screens a growing gap opens between the sidebar and the content while the
+   right TOC hugs it. Cap the shell and shift the fixed sidebar and the main
+   frame together so both sidenavs stay tight to the content. The header
+   container below shares the same cap. */
+:root {
+  --docs-shell-max: 87.5rem;
+  --docs-shell-offset: max(0rem, calc((100vw - var(--docs-shell-max)) / 2));
+}
+@media (min-width: 50rem) {
+  .sidebar-pane {
+    inset-inline-start: var(--docs-shell-offset);
+  }
+  .main-frame {
+    padding-inline-start: calc(
+      var(--sl-content-inline-start, 0rem) + var(--docs-shell-offset)
+    );
+    padding-inline-end: var(--docs-shell-offset);
+  }
 }
 
 .page > .header {
@@ -198,7 +220,7 @@
 
   .page > .header > .header {
     grid-template-columns: minmax(0, 1fr) minmax(0, 27.5rem) minmax(0, 1fr);
-    max-width: 1180px;
+    max-width: var(--docs-shell-max);
     margin-inline: auto;
     padding-inline: 1.75rem;
     gap: 1rem;
@@ -502,8 +524,9 @@
   font-size: 0.75em;
   font-weight: 500;
   vertical-align: baseline;
-  border: 1px solid var(--sl-color-hairline);
-  border-radius: 4px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--sl-color-text-accent) 6%, transparent);
   color: var(--sl-color-text-accent);
   white-space: nowrap;
 }
@@ -533,7 +556,7 @@
   width: 100%;
   margin: 0.5rem 0 1.25rem;
   border: 1px solid var(--sl-color-hairline);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   border-collapse: collapse;
 }
@@ -576,7 +599,7 @@
    identifier chip in cell 1. Same shape, different mood. Long union
    types (e.g. `"tldr" | "key-points" | "teaser" | "headline"`) are
    allowed to wrap at the spaces between `|` separators so the chip
-   never overflows the card on narrow viewports — the border wraps with
+   never overflows the card on narrow viewports — the chip wraps with
    the content. */
 .sl-markdown-content .options-table tr td:nth-child(2) code {
   display: inline-block;
@@ -584,11 +607,6 @@
   white-space: normal;
   word-break: break-word;
   color: var(--sl-color-text-accent);
-  border-color: color-mix(
-    in oklch,
-    var(--sl-color-text-accent) 35%,
-    var(--sl-color-hairline)
-  );
   background: color-mix(
     in oklch,
     var(--sl-color-text-accent) 6%,
@@ -647,10 +665,13 @@ footer:has(> .pagination-links) {
 }
 
 /* Copy button on code blocks: ship a sensible size and don't dominate the
-   block on mobile. Starlight's default is too large at narrow viewports. */
+   block on mobile. Starlight's default is too large at narrow viewports.
+   Radius matches the code-block frame (`--ec-brdRad`); the button's inner
+   layers inherit it. */
 .expressive-code .copy button {
   width: 1.75rem;
   height: 1.75rem;
+  border-radius: var(--radius-md);
 }
 @media (max-width: 600px) {
   .expressive-code .copy button {
