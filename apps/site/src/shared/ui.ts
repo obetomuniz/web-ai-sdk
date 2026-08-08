@@ -333,12 +333,17 @@ export const pkgBullets =
 
 export const pkgActions = "flex w-fit max-w-full flex-col items-start gap-4";
 
+// Rendered as a button: the whole command is a click-to-copy target, with a
+// trailing "copy"/"copied" cue mirroring the hero InstallPill.
 export const pkgInstall =
-  "w-fit max-w-full whitespace-nowrap rounded-sm border border-hairline bg-surface px-3.5 py-2.5 font-mono text-[12.5px] text-fg-2";
+  "inline-flex w-fit max-w-full items-center whitespace-nowrap rounded-sm border border-hairline bg-surface py-2.5 pl-3.5 pr-0 font-mono text-[12.5px] text-fg-2 transition-colors hover:border-accent-line";
 
 export const pkgInstallPrompt = "mr-2 text-fg-4";
 
 export const pkgInstallPkg = "text-accent";
+
+export const pkgInstallCopy =
+  "ml-3.5 border-l border-hairline px-3.5 font-mono text-[11px] uppercase tracking-[0.08em] transition-colors";
 
 export const pkgDocs =
   "inline-flex items-center font-mono text-[12.5px] text-fg-3 hover:text-accent";
@@ -544,8 +549,10 @@ const playgroundToolCardErrorBase =
 
 /** Playground route: dense, responsive instrument-panel compositions. */
 export const playground = {
+  // Carries the same silver shimmer as the home link labels (see silverText);
+  // under prefers-reduced-motion it settles to the resting silver tone.
   navTrail:
-    "justify-self-center font-mono text-[11px] uppercase tracking-[0.12em] text-fg-2 max-[640px]:hidden",
+    "justify-self-center font-mono text-[11px] uppercase tracking-[0.12em] bg-[image:var(--gradient-silver)] bg-[length:200%_100%] bg-clip-text text-transparent animate-silver motion-reduce:animate-none max-[640px]:hidden",
   bootStack:
     "grid h-[calc(100svh-var(--nav-height))] min-h-0 [&>*]:col-start-1 [&>*]:row-start-1",
   bootLayer: "h-full min-h-0",

@@ -11,29 +11,6 @@ const repoHref = new URL(
 ---
 
 <a
-  class={`${ui.navCtaPrimary} playground-link`}
-  href={playgroundHref}
-  aria-label="Open Playground"
-  title="Playground"
->
-  <span class={ui.navPlaygroundLabel}>Playground</span>
-  <svg
-    class={ui.navPlaygroundMark}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    aria-hidden="true"
-  >
-    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
-    <path d="m7 9 3 3-3 3"></path>
-    <path d="M13 15h4"></path>
-  </svg>
-</a>
-
-<a
   class={ui.navIcon}
   href={docsHref}
   aria-label="Read the web-ai-sdk docs"
@@ -53,6 +30,29 @@ const repoHref = new URL(
   >
     <path d="M12 7v14"></path>
     <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path>
+  </svg>
+</a>
+
+<a
+  class={`${ui.navCtaPrimary} playground-link`}
+  href={playgroundHref}
+  aria-label="Open Playground"
+  title="Playground"
+>
+  <span class={ui.navPlaygroundLabel}>Playground</span>
+  <svg
+    class={ui.navPlaygroundMark}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+    <path d="m7 9 3 3-3 3"></path>
+    <path d="M13 15h4"></path>
   </svg>
 </a>
 
