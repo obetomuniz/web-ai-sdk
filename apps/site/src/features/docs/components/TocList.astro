@@ -1,51 +1,77 @@
 ---
-// Copy of Starlight's internal `TableOfContentsList` markup and styles
-// (desktop variant only), rendered by the `TableOfContents` override so the
-// custom scroll spy in `toc-scroll-spy.ts` can own the highlighting.
+// Copy of Starlight's internal `TableOfContentsList` markup and styles,
+// rendered by the `TableOfContents` and `MobileTableOfContents` overrides so
+// the custom scroll spy in `toc-scroll-spy.ts` can own the highlighting.
 interface TocItem {
-	depth: number;
-	slug: string;
-	text: string;
-	children: TocItem[];
+  depth: number;
+  slug: string;
+  text: string;
+  children: TocItem[];
 }
 
 interface Props {
-	toc: TocItem[];
-	depth?: number;
+  toc: TocItem[];
+  depth?: number;
+  isMobile?: boolean;
 }
 
-const { toc, depth = 0 } = Astro.props;
+const { toc, isMobile = false, depth = 0 } = Astro.props;
 ---
 
-<ul>
-	{
-		toc.map((heading) => (
-			<li>
-				<a href={'#' + heading.slug}>
-					<span>{heading.text}</span>
-				</a>
-				{heading.children.length > 0 && <Astro.self toc={heading.children} depth={depth + 1} />}
-			</li>
-		))
-	}
+<ul class:list={{ isMobile }}>
+  {
+    toc.map((heading) => (
+      <li>
+        <a href={"#" + heading.slug}>
+          <span>{heading.text}</span>
+        </a>
+        {heading.children.length > 0 && (
+          <Astro.self toc={heading.children} depth={depth + 1} isMobile={isMobile} />
+        )}
+      </li>
+    ))
+  }
 </ul>
 
 <style define:vars={{ depth }}>
-	@layer starlight.core {
-		ul {
-			padding: 0;
-			list-style: none;
-		}
-		a {
-			--pad-inline: 0.5rem;
-			display: block;
-			border-radius: 0.25rem;
-			padding-block: 0.25rem;
-			padding-inline: calc(1rem * var(--depth) + var(--pad-inline)) var(--pad-inline);
-			line-height: 1.25;
-		}
-		a[aria-current='true'] {
-			color: var(--sl-color-text-accent);
-		}
-	}
+  @layer starlight.core {
+    ul {
+      padding: 0;
+      list-style: none;
+    }
+    a {
+      --pad-inline: 0.5rem;
+      display: block;
+      border-radius: 0.25rem;
+      padding-block: 0.25rem;
+      padding-inline: calc(1rem * var(--depth) + var(--pad-inline)) var(--pad-inline);
+      line-height: 1.25;
+    }
+    a[aria-current="true"] {
+      color: var(--sl-color-text-accent);
+    }
+    /* Dropdown list rows carry a per-row segment of the progress rail on
+       their left edge: rows above the current one (`data-passed`, set by the
+       scroll spy) and the current row paint it in the accent color, like a
+       reading-progress track. */
+    .isMobile a {
+      --pad-inline: 1rem;
+      display: block;
+      border-inline-start: 2px solid var(--sl-color-gray-6);
+      border-radius: 0;
+      padding-block: 0.5rem;
+      color: var(--sl-color-gray-3);
+      font-size: var(--sl-text-sm);
+      text-decoration: none;
+      outline-offset: var(--sl-outline-offset-inside);
+    }
+    .isMobile a[data-passed],
+    .isMobile a[aria-current="true"],
+    .isMobile a[aria-current="true"]:hover,
+    .isMobile a[aria-current="true"]:focus {
+      color: var(--sl-color-text-accent);
+      border-inline-start-color: var(--sl-color-text-accent);
+      background-color: unset;
+    }
+  }
 </style>

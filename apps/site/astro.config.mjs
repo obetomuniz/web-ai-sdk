@@ -61,6 +61,10 @@ export default defineConfig({
         SocialIcons: "./src/features/docs/components/SocialIcons.astro",
         ThemeSelect: "./src/features/docs/components/ThemeToggle.astro",
         TableOfContents: "./src/features/docs/components/TableOfContents.astro",
+        MobileTableOfContents:
+          "./src/features/docs/components/MobileTableOfContents.astro",
+        MobileMenuFooter:
+          "./src/features/docs/components/MobileMenuFooter.astro",
       },
       favicon: "/favicon.svg",
       head: [

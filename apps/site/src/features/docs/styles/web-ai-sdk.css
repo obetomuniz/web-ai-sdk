@@ -358,31 +358,70 @@
   outline-offset: 2px;
 }
 
-/* Keep the mobile table of contents compact and give its two labels a clear
-   hierarchy: the toggle is a control; the adjacent text is page context. */
-@media (max-width: 49.999rem) {
-  mobile-starlight-toc summary {
-    gap: 0.75rem;
-    height: 2.75rem;
-    padding: 0.375rem 1rem;
-    font-size: 0.75rem;
-  }
+/* Slim reader-bar treatment for the dropdown table of contents (any width
+   below the 72rem desktop TOC breakpoint): the header's own hairline
+   separates it on top, the current section reads as the label on the left,
+   and the caret sits alone at the far end as the affordance. */
 
-  mobile-starlight-toc .toggle {
-    gap: 0.5rem;
-    padding: 0.4375rem 0.5rem 0.4375rem 0.625rem;
-    border-color: var(--sl-color-hairline);
-    border-radius: 0.375rem;
-    font-family: var(--sl-font-mono);
-    font-size: 0.75rem;
-    letter-spacing: -0.01em;
+/* The docs header is slimmer than Starlight's default at this range
+   (3.5rem + 1px vs the global 4rem --sl-nav-height), so re-anchor the fixed
+   bar to the real header height or a strip of content shows in between. */
+@media (min-width: 50rem) {
+  mobile-starlight-toc nav {
+    top: 3.5rem;
   }
+}
 
-  mobile-starlight-toc .display-current {
-    color: var(--sl-color-gray-3);
-    font-size: 0.75rem;
-    line-height: 1.4;
-  }
+mobile-starlight-toc summary {
+  justify-content: space-between;
+  gap: 0.75rem;
+  height: 2.75rem;
+  padding: 0.375rem 1rem;
+  font-size: 0.75rem;
+}
+
+/* The toggle keeps its hit target and caret but drops the chip frame and
+   hides its "On this page" text (font-size: 0 keeps it readable to screen
+   readers); the section name carries the meaning. The caret is sized in
+   rem, so it survives the zeroed font size. */
+mobile-starlight-toc .toggle {
+  order: 2;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font-size: 0;
+}
+
+mobile-starlight-toc .display-current {
+  order: 1;
+  flex: 1;
+  color: var(--sl-color-white);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+/* Scroll-progress ring ahead of the section label. The spy writes the page
+   progress (0–1) to `--waisdk-toc-progress` on the host element; the ring is
+   a conic sweep hollowed into a donut by the radial mask. */
+mobile-starlight-toc .progress-ring {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: conic-gradient(
+    var(--sl-color-text-accent) calc(var(--waisdk-toc-progress, 0) * 1turn),
+    var(--sl-color-gray-5) 0
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2.5px),
+    #000 calc(100% - 2px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2.5px),
+    #000 calc(100% - 2px)
+  );
 }
 
 @keyframes docs-caret-blink {
