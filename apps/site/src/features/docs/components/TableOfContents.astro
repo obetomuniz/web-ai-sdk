@@ -3,9 +3,33 @@
 // active-link highlighting comes from the proportional scroll spy in
 // `toc-scroll-spy.ts` instead of Starlight's IntersectionObserver, which never
 // activates short sections near the end of a page.
+//
+// Below the section list the sidebar carries the page actions: "Copy page"
+// (page link to the clipboard), "Open in chat" (hands the page to an AI chat),
+// "Edit page on GitHub" (moved here from Starlight's footer — see the
+// EditLink override), and "Back to top".
 import TocList from "./TocList.astro";
 
-const { toc } = Astro.locals.starlightRoute;
+const { toc, editUrl } = Astro.locals.starlightRoute;
+
+const pageUrl = new URL(Astro.url.pathname, "https://web-ai-sdk.dev").href;
+const chatQuery = encodeURIComponent(
+  `Read ${pageUrl} and help me with questions about it.`,
+);
+// Gemini's web app has no native URL-prompt support (only via third-party
+// extensions), so Google is represented by AI Mode instead: `udm=50` triggers
+// the conversational AI response with the query prefilled.
+const chatProviders = [
+  { name: "ChatGPT", href: `https://chatgpt.com/?q=${chatQuery}` },
+  { name: "Claude", href: `https://claude.ai/new?q=${chatQuery}` },
+  { name: "Perplexity", href: `https://www.perplexity.ai/search?q=${chatQuery}` },
+  { name: "Scira", href: `https://scira.ai/?q=${chatQuery}` },
+  { name: "T3 Chat", href: `https://t3.chat/new?q=${chatQuery}` },
+  {
+    name: "Google AI Mode",
+    href: `https://www.google.com/search?q=${chatQuery}&udm=50`,
+  },
+];
 ---
 
 {
@@ -15,8 +39,297 @@ const { toc } = Astro.locals.starlightRoute;
         <h2 id="starlight__on-this-page">{Astro.locals.t("tableOfContents.onThisPage")}</h2>
         <TocList toc={toc.items} />
       </nav>
+      <div class="toc-page-actions">
+        <button type="button" class="toc-page-action" data-copy-page>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span data-copy-page-label>Copy page</span>
+        </button>
+        <details class="toc-chat">
+          <summary class="toc-page-action">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path>
+            </svg>
+            Open in chat
+            <svg
+              class="toc-chat-caret"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 9 6 6 6-6"></path>
+            </svg>
+          </summary>
+          <div class="toc-chat-menu">
+            {chatProviders.map((provider) => (
+              <a
+                class="toc-chat-item"
+                href={provider.href}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open in {provider.name}
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M15 3h6v6"></path>
+                  <path d="M10 14 21 3"></path>
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                </svg>
+              </a>
+            ))}
+          </div>
+        </details>
+        {editUrl && (
+          <a
+            class="toc-page-action"
+            href={editUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+              <path d="m15 5 4 4"></path>
+            </svg>
+            Edit page on GitHub
+          </a>
+        )}
+        <button type="button" class="toc-page-action" data-back-to-top>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m5 12 7-7 7 7"></path>
+            <path d="M12 19V5"></path>
+          </svg>
+          Back to top
+        </button>
+      </div>
     </waisdk-toc>
   )
 }
+
+<style>
+  .toc-page-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    margin-top: 0.875rem;
+    padding-top: 0.875rem;
+    border-top: 1px solid var(--sl-color-hairline);
+  }
+
+  .toc-page-action {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border: 0;
+    border-radius: 0.25rem;
+    background: transparent;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-xs);
+    line-height: 1.25;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+
+  .toc-page-action:hover {
+    color: var(--sl-color-white);
+  }
+
+  .toc-page-action:focus-visible {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: 2px;
+  }
+
+  .toc-page-action svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex-shrink: 0;
+  }
+
+  .toc-chat {
+    position: relative;
+  }
+
+  .toc-chat summary {
+    list-style: none;
+    user-select: none;
+    width: 100%;
+  }
+
+  .toc-chat summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .toc-chat-caret {
+    margin-inline-start: auto;
+    transition: transform 0.15s ease;
+  }
+
+  .toc-chat[open] .toc-chat-caret {
+    transform: rotate(180deg);
+  }
+
+  /* The menu spans the exact width of its trigger row, so the popover reads
+     as an extension of the "Open in chat" action instead of a floating box. */
+  .toc-chat-menu {
+    position: absolute;
+    inset-inline: 0;
+    top: calc(100% + 0.25rem);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.25rem;
+    border: 1px solid var(--sl-color-hairline-light);
+    border-radius: 0.5rem;
+    background: var(--sl-color-black);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+  }
+
+  .toc-chat-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.375rem;
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-xs);
+    line-height: 1.25;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .toc-chat-item:hover {
+    color: var(--sl-color-white);
+    background: var(--sl-color-gray-6);
+  }
+
+  .toc-chat-item:focus-visible {
+    outline: 2px solid var(--sl-color-text-accent);
+    outline-offset: -2px;
+  }
+
+  .toc-chat-item svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .toc-chat-caret {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  const copyButton = document.querySelector<HTMLButtonElement>(
+    "[data-copy-page]",
+  );
+  const copyLabel = document.querySelector<HTMLElement>(
+    "[data-copy-page-label]",
+  );
+
+  let resetTimer: ReturnType<typeof setTimeout> | undefined;
+
+  copyButton?.addEventListener("click", async () => {
+    if (!copyLabel) return;
+
+    const text = window.location.origin + window.location.pathname;
+
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(text);
+      copied = true;
+    } catch {
+      // Clipboard API unavailable (permission or insecure context): fall back
+      // to a transient textarea and the legacy copy command.
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.append(textarea);
+      textarea.select();
+      copied = document.execCommand("copy");
+      textarea.remove();
+    }
+
+    copyLabel.textContent = copied ? "Copied!" : "Copy failed";
+
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(() => {
+      copyLabel.textContent = "Copy page";
+    }, 2000);
+  });
+
+  document
+    .querySelector<HTMLButtonElement>("[data-back-to-top]")
+    ?.addEventListener("click", () => {
+      const reduceMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+    });
+
+  // The chat menu is a <details> popover: close it when the pointer leaves
+  // for elsewhere on the page or when a provider is chosen.
+  const chatMenu = document.querySelector<HTMLDetailsElement>(".toc-chat");
+
+  document.addEventListener("click", (event) => {
+    if (!chatMenu?.open) return;
+    const target = event.target as Node;
+    if (!chatMenu.contains(target) || (target as HTMLElement).closest?.("a")) {
+      chatMenu.open = false;
+    }
+  });
+</script>
 
 <script src="./toc-scroll-spy.ts"></script>

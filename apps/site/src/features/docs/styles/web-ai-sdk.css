@@ -182,10 +182,13 @@
    screens a growing gap opens between the sidebar and the content while the
    right TOC hugs it. Cap the shell and shift the fixed sidebar and the main
    frame together so both sidenavs stay tight to the content. The header
-   container below shares the same cap. */
+   container uses the narrower home/playground cap instead so the brand and
+   actions land at the same viewport positions on every page. */
 :root {
   --docs-shell-max: 87.5rem;
   --docs-shell-offset: max(0rem, calc((100vw - var(--docs-shell-max)) / 2));
+  /* Mirrors --container-site (1180px) from the home shell. */
+  --docs-header-max: 73.75rem;
 }
 @media (min-width: 50rem) {
   .sidebar-pane {
@@ -209,8 +212,10 @@
   backdrop-filter: blur(14px) saturate(1.2);
 }
 
-/* Use the same centered container and three-column rhythm as the home and
-   playground shells. The search sits in the shared center of the viewport. */
+/* Use the same centered container rhythm as the home and playground shells.
+   The custom Header override keeps the search inside the right action
+   cluster, so the header reads brand | theme → search → Playground → Docs →
+   GitHub with no center column. */
 @media (min-width: 50rem) {
   .page > .header {
     --sl-nav-height: calc(3.5rem + 1px);
@@ -219,33 +224,13 @@
   }
 
   .page > .header > .header {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 27.5rem) minmax(0, 1fr);
-    max-width: var(--docs-shell-max);
+    max-width: var(--docs-header-max);
     margin-inline: auto;
     padding-inline: 1.75rem;
-    gap: 1rem;
-  }
-
-  .page > .header .title-wrapper {
-    padding: 0.25rem;
-    margin: -0.25rem;
   }
 
   .page > .header .docs-site-title {
     font-weight: 400;
-  }
-
-  .page > .header .sl-flex.print\:hidden {
-    justify-content: flex-start;
-  }
-
-  .page > .header .right-group {
-    justify-content: flex-end;
-    gap: 0.5rem;
-  }
-
-  .page > .header .social-icons {
-    gap: 0.5rem;
   }
 
   .page > .header .social-icons a {
@@ -253,26 +238,39 @@
     font-feature-settings: "ss01", "cv11", "tnum";
   }
 
+  /* Ultra-compact search trigger: magnifier, label, and ⌘K hint sized to
+     their content instead of stretching to a fixed field width. */
   .page > .header site-search button[data-open-modal] {
-    width: min(27.5rem, 100%);
+    width: auto;
     max-width: none;
-    height: 2.375rem;
+    height: 2rem;
+    gap: 0.375rem;
     border-color: var(--sl-color-hairline-light);
     border-radius: var(--radius-sm, 0.5rem);
-    padding: 0 0.625rem 0 0.875rem;
+    padding: 0 0.5rem 0 0.625rem;
     background-color: var(--sl-color-black);
     font-family: var(--sl-font-sans);
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     line-height: 1.5;
-  }
-
-  .page > .header site-search button[data-open-modal] > :last-child {
-    margin-inline-start: auto;
   }
 }
 
-/* Below the wide desktop state, keep the three-column header centered while
-   reducing the actions to the same icon-only treatment used on small screens. */
+/* The home shell tightens its gutter from 28px to 20px at 880px. Track it so
+   the brand and actions keep the same inset on every page; setting the
+   Starlight pad var at root keeps the mobile menu toggle and sidebar pane
+   aligned with the header. */
+@media (max-width: 55rem) {
+  :root {
+    --sl-nav-pad-x: 1.25rem;
+  }
+
+  .page > .header > .header {
+    padding-inline: 1.25rem;
+  }
+}
+
+/* Below the wide desktop state, reduce the actions to the same icon-only
+   treatment used on small screens. */
 @media (min-width: 50rem) and (max-width: 71.999rem) {
   .page > .header .playground-link,
   .page > .header .github-link {
@@ -297,32 +295,44 @@
   }
 }
 
-/* The full search field has no room beside the compact actions at this width.
-   Keep its magnifier as the discoverable control and preserve its label in the
-   button's accessible name. */
-@media (min-width: 50rem) and (max-width: 54.999rem) {
-  .page > .header > .header {
-    grid-template-columns: minmax(0, 1fr) 2.375rem minmax(0, 1fr);
-  }
-
-  .page > .header site-search button[data-open-modal] {
-    width: 2.375rem;
-    padding: 0;
-    justify-content: center;
-  }
-
-  .page > .header site-search button[data-open-modal] > span,
-  .page > .header site-search button[data-open-modal] > kbd {
-    display: none;
-  }
-}
-
 @media (max-width: 49.999rem) {
+  /* Icon-only magnifier: same resting/hover tone as the neighboring theme
+     toggle and docs icons (Starlight's default renders it brighter). */
   .page > .header site-search button[data-open-modal] {
     width: 2rem;
     height: 2rem;
     padding: 0;
     justify-content: center;
+    color: var(--sl-color-gray-3);
+  }
+
+  .page > .header site-search button[data-open-modal]:hover {
+    color: var(--sl-color-white);
+  }
+
+  /* Normalize the Playground and GitHub buttons to the same 2rem square as
+     the neighboring controls (the base nav CTA otherwise keeps its taller
+     36px minimum on small screens). */
+  .page > .header .right-group .playground-link,
+  .page > .header .right-group .github-link {
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
+    padding: 0.5rem;
+    box-sizing: border-box;
+  }
+
+  .page > .header .right-group .playground-link > span:first-child,
+  .page > .header .right-group .github-link > span:first-child {
+    display: none;
+  }
+
+  .page > .header .right-group .playground-link > svg,
+  .page > .header .right-group .github-link > svg {
+    display: block;
+    width: 1rem;
+    height: 1rem;
   }
 }
 
@@ -339,16 +349,6 @@
 
   .page > .header .social-icons {
     gap: 0.5rem;
-  }
-
-  .page > .header .playground-link,
-  .page > .header .github-link {
-    width: 2rem;
-    height: 2rem;
-    min-width: 2rem;
-    min-height: 2rem;
-    padding: 0.5rem;
-    box-sizing: border-box;
   }
 }
 
@@ -700,6 +700,57 @@ footer:has(> .pagination-links) {
 @media (min-width: 50rem) {
   site-search dialog {
     min-height: 0;
+    /* Compact box: Starlight's 40rem dialog dwarfs the slimmed header field. */
+    max-width: 32rem;
+  }
+}
+
+/* Inline-code click-to-copy (see scripts/inline-code-copy.ts): the enhanced
+   spans invite the click, and the shared tooltip floats above the hovered
+   code in a minimal hairline chip. */
+.inline-code-copy {
+  cursor: copy;
+}
+
+/* Union pills (see scripts/type-union-pills.ts): string-literal unions break
+   between whole members instead of wrapping mid-token inside one long chip. */
+.type-union {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.375rem;
+  vertical-align: baseline;
+}
+
+.type-union > code {
+  white-space: nowrap;
+}
+
+.inline-code-tip {
+  position: fixed;
+  z-index: 100;
+  transform: translate(-50%, calc(-100% - 0.375rem));
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--sl-color-hairline-light);
+  border-radius: 0.375rem;
+  background: var(--sl-color-black);
+  color: var(--sl-color-gray-2);
+  font-family: var(--sl-font-sans);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.inline-code-tip[data-show] {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inline-code-tip {
+    transition: none;
   }
 }
 

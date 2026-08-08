@@ -9,6 +9,7 @@ import {
   pkgBullets,
   pkgDocs,
   pkgInstall,
+  pkgInstallCopy,
   pkgInstallPkg,
   pkgInstallPrompt,
   pkgLeft,
@@ -227,6 +228,37 @@ const FIRST_PKG =
   PACKAGE_ROWS[0] ??
   raise("PackageExplorer: PACKAGE_ROWS must contain at least one entry");
 
+/**
+ * Per-demo install command with a click-to-copy CTA, the compact sibling of
+ * the hero InstallPill: the whole command is one button, and the trailing
+ * cue flips to "copied" for a beat after a successful copy.
+ */
+const InstallCommand = ({ pkg }: { pkg: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(`npm install ${pkg}`);
+    } catch {
+      // Clipboard unavailable in some browsers / contexts; silently no-op.
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1400);
+  };
+
+  return (
+    <button type="button" className={pkgInstall} onClick={copy}>
+      <span className={pkgInstallPrompt}>$</span> npm install{" "}
+      <span className={pkgInstallPkg}>{pkg}</span>
+      <span
+        className={`${pkgInstallCopy} ${copied ? "text-ok" : "text-fg-3"}`}
+      >
+        {copied ? "copied" : "copy"}
+      </span>
+    </button>
+  );
+};
+
 function raise(message: string): never {
   throw new Error(message);
 }
@@ -362,10 +394,7 @@ export const PackageExplorer = () => {
                 ))}
               </ul>
               <div className={pkgActions}>
-                <code className={pkgInstall}>
-                  <span className={pkgInstallPrompt}>$</span> npm install{" "}
-                  <span className={pkgInstallPkg}>@web-ai-sdk/{p.title}</span>
-                </code>
+                <InstallCommand pkg={`@web-ai-sdk/${p.title}`} />
                 <a className={pkgDocs} href={guideLink(p.slug)}>
                   <span className={silverText}>
                     {PACKAGE_DOCS_LABELS[p.slug] ?? "Read the docs"}

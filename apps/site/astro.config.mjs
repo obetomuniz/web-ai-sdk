@@ -56,7 +56,9 @@ export default defineConfig({
         "web-ai-sdk is a TypeScript SDK for the Web AI surface: Prompt, Writer, Rewriter, Proofreader, Translator, Summarizer, Language Detector, and WebMCP. Composable, zero runtime deps.",
       disable404Route: true,
       components: {
+        EditLink: "./src/features/docs/components/EditLink.astro",
         Head: "./src/features/docs/components/Head.astro",
+        Header: "./src/features/docs/components/Header.astro",
         SiteTitle: "./src/features/docs/components/SiteTitle.astro",
         SocialIcons: "./src/features/docs/components/SocialIcons.astro",
         ThemeSelect: "./src/features/docs/components/ThemeToggle.astro",
