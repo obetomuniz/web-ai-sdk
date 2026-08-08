@@ -349,8 +349,8 @@ export const heroRepoLink =
 export const shaderBackdrop =
   "pointer-events-none absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_78%_42%,color-mix(in_oklch,var(--color-surface-3)_24%,transparent),transparent_58%)]";
 
-// Short opacity fade only masks the first compiled frame; the visible
-// materialize is the in-shader u_intro ramp (see ShaderBackdrop).
+// The brief opacity fade only hides the first rendered frame; the visible
+// entrance is the in-shader u_intro ramp (see ShaderBackdrop).
 export const shaderCanvas =
   "block h-full w-full opacity-0 transition-opacity duration-300 ease-out data-[ready=true]:opacity-100 motion-reduce:transition-none";
 
