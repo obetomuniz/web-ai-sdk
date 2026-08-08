@@ -2,7 +2,7 @@
 import { BackToTop } from "../features/home/components/BackToTop.js";
 import { HowItWorks } from "../features/home/components/HowItWorks.js";
 import { InstallPill } from "../features/home/components/InstallPill.js";
-import { MeshShader } from "../features/home/components/MeshShader.js";
+import { CityShader } from "../features/home/components/CityShader.js";
 import { PackageExplorer } from "../features/home/components/PackageExplorer.js";
 import { ScrollSpy } from "../features/home/components/ScrollSpy.js";
 import { StarWidget } from "../features/home/components/StarWidget.js";
@@ -480,7 +480,9 @@ const browserColumns = [
 
     <main>
       <header class={`${ui.hero} relative overflow-hidden`} id="top">
-        <MeshShader client:visible />
+        {/* client:load, not client:visible: the hero is above the fold, and
+            deferring hydration is what made the backdrop pop in late. */}
+        <CityShader client:load />
         <div
           aria-hidden="true"
           class="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,var(--color-bg)_0%,var(--color-bg)_34%,color-mix(in_oklch,var(--color-bg)_50%,transparent)_60%,transparent_88%)] max-[880px]:bg-[linear-gradient(180deg,color-mix(in_oklch,var(--color-bg)_64%,transparent)_0%,color-mix(in_oklch,var(--color-bg)_52%,transparent)_100%)]"
@@ -636,7 +638,12 @@ const browserColumns = [
             <a class={ui.permalink} href="#packages"><span aria-hidden="true">↑</span><span class={ui.srOnly}>Link to Packages section</span></a>
           </div>
 
-          <PackageExplorer client:visible />
+          {/* client:idle, not client:visible: visible-hydration depends on
+              IntersectionObserver, which is suspended while a page is hidden
+              (embedded previews, background tabs) — leaving the demo tabs
+              rendered but inert until the page is foregrounded. idle hydrates
+              during load regardless of visibility. */}
+          <PackageExplorer client:idle />
         </div>
       </section>
 
@@ -710,7 +717,7 @@ const browserColumns = [
             <a class={ui.permalink} href="#how"><span aria-hidden="true">↑</span><span class={ui.srOnly}>Link to How it works section</span></a>
           </div>
           <div class={ui.reveal} data-reveal>
-            <HowItWorks client:visible />
+            <HowItWorks client:idle />
           </div>
         </div>
       </section>
