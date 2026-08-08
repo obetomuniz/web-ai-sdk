@@ -97,7 +97,7 @@ export const WebMCPDemo = () => {
   };
 
   return (
-    <div className="demo-card demo-card--narrow">
+    <div className="demo-card">
       <p className="demo-muted">
         Two titled, read-only tools registered against{" "}
         <code>document.modelContext</code>. The echo tool validates its input,

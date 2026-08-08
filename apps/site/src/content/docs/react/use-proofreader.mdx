@@ -4,6 +4,7 @@ description: React adapter for @web-ai-sdk/proofreader. Auto-runs on mount and r
 ---
 
 import { ProofreaderDemo } from "../../../features/docs/components/ProofreaderDemo.tsx";
+import DemoSlot from "../../../features/docs/components/DemoSlot.astro";
 
 React adapter for `@web-ai-sdk/proofreader`. Auto-runs on mount and re-runs when `input` changes. For the conceptual overview see [Proofreader](/docs/guides/proofreader/).
 
@@ -13,7 +14,9 @@ To warm the session before the hook first runs, call `prepareProofreader` from t
 
 ## Live demo
 
-<ProofreaderDemo client:only="react" />
+<DemoSlot minHeight={217}>
+  <ProofreaderDemo client:only="react" />
+</DemoSlot>
 
 Edit the text, then click Proofread. The corrected version and the number of corrections appear once the model resolves; your original text stays unchanged. Results are cached for ten minutes; use "Fresh run" to bypass the cache.
 

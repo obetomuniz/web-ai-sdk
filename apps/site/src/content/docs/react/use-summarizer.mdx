@@ -4,6 +4,7 @@ description: React adapter for @web-ai-sdk/summarizer. Auto-runs on mount and re
 ---
 
 import { SummarizerDemo } from "../../../features/docs/components/SummarizerDemo.tsx";
+import DemoSlot from "../../../features/docs/components/DemoSlot.astro";
 
 React adapter for `@web-ai-sdk/summarizer`. Auto-runs on mount, re-runs when `input` / `language` / config options change, and streams chunks through state updates. For the conceptual overview see [Summarizer](/docs/guides/summarizer/).
 
@@ -13,7 +14,9 @@ To warm the session before the hook first runs, call `prepareSummarizer` from th
 
 ## Live demo
 
-<SummarizerDemo client:only="react" />
+<DemoSlot minHeight={539}>
+  <SummarizerDemo client:only="react" />
+</DemoSlot>
 
 Click "Summarize the article" to run the model on the article below; nothing runs on page load. The summary streams in as the model produces it. Click Stop to cancel. Results are cached for ten minutes; use "Fresh run" to regenerate.
 

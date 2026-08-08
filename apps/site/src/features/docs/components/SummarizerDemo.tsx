@@ -31,7 +31,7 @@ export const SummarizerDemo = ({ language = "en" }: SummarizerDemoProps) => {
   const [stopped, setStopped] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   // Bumping the nonce changes the cache key, so a fresh generation skips the
-  // stored result and replaces it.
+  // stored result and writes under a new key. Old entries expire via TTL.
   const [freshNonce, setFreshNonce] = useState(0);
 
   useEffect(() => {

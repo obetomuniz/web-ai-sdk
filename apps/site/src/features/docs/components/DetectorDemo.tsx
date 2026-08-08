@@ -22,7 +22,7 @@ export const DetectorDemo = ({
   const pending = text !== debounced;
 
   return (
-    <div className="demo-card demo-card--narrow">
+    <div className="demo-card">
       {status === "unavailable" && (
         <UnavailableHint
           api="Language Detector"

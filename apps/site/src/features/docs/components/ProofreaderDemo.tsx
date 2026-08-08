@@ -17,7 +17,7 @@ export const ProofreaderDemo = () => {
   const [enabled, setEnabled] = useState(false);
   const [stopped, setStopped] = useState(false);
   // Bumping the nonce changes the cache key, so a fresh generation skips the
-  // stored result and replaces it.
+  // stored result and writes under a new key. Old entries expire via TTL.
   const [freshNonce, setFreshNonce] = useState(0);
 
   const { status, output, error, fromCache } = useProofreader({

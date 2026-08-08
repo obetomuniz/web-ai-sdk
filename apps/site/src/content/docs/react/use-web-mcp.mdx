@@ -4,12 +4,15 @@ description: Register WebMCP tools and reactively retrieve every tool exposed to
 ---
 
 import { WebMCPDemo } from "../../../features/docs/components/WebMCPDemo.tsx";
+import DemoSlot from "../../../features/docs/components/DemoSlot.astro";
 
 React adapter for `@web-ai-sdk/webmcp`. `useWebMCP` registers tools with component lifecycle cleanup and returns every tool exposed to the current document, refreshing after native `toolchange` events. For the conceptual overview see [WebMCP](/docs/guides/webmcp/).
 
 ## Live demo
 
-<WebMCPDemo client:only="react" />
+<DemoSlot minHeight={562}>
+  <WebMCPDemo client:only="react" />
+</DemoSlot>
 
 Use the invoke controls below to call a registered tool. The demo reads live tools from `useWebMCP()` and dispatches the selected `RegisteredTool` through the SDK's `executeTool()` helper.
 

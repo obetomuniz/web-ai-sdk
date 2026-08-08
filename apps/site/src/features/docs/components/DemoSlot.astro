@@ -1,0 +1,22 @@
+---
+/**
+ * Reserves a live demo's footprint while its client-only island hydrates,
+ * so docs content below the demo does not shift. The placeholder mirrors
+ * the demo card chrome and hides once the real card mounts.
+ */
+interface Props {
+  /** Height in px of the demo card's initial rendering. */
+  minHeight: number;
+  /** Match `.demo-card--narrow` (560px) instead of the 640px default. */
+  narrow?: boolean;
+}
+
+const { minHeight, narrow = false } = Astro.props;
+---
+
+<div
+  class:list={["demo-slot", { "demo-slot--narrow": narrow }]}
+  style={`--demo-slot-min: ${minHeight}px`}
+>
+  <slot />
+</div>

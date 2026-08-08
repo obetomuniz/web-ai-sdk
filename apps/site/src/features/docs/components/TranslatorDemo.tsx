@@ -23,7 +23,7 @@ export const TranslatorDemo = ({
   const [input, setInput] = useState(initial);
   const debounced = useDebouncedValue(input, TRANSLATE_DEBOUNCE_MS);
   // Bumping the nonce changes the cache key, so a fresh generation skips the
-  // stored result and replaces it.
+  // stored result and writes under a new key. Old entries expire via TTL.
   const [freshNonce, setFreshNonce] = useState(0);
   const { status, output, error, fromCache } = useTranslator({
     input: debounced,

@@ -4,6 +4,7 @@ description: React adapter for @web-ai-sdk/translator. Auto-translates text on m
 ---
 
 import { TranslatorDemo } from "../../../features/docs/components/TranslatorDemo.tsx";
+import DemoSlot from "../../../features/docs/components/DemoSlot.astro";
 
 React adapter for `@web-ai-sdk/translator`. Auto-translates `input` from `sourceLanguage` to `targetLanguage` and re-runs whenever the inputs change. For the conceptual overview see [Translator](/docs/guides/translator/).
 
@@ -13,7 +14,9 @@ To warm the session before the hook first runs, call `prepareTranslator` from th
 
 ## Live demo
 
-<TranslatorDemo client:only="react" />
+<DemoSlot minHeight={291}>
+  <TranslatorDemo client:only="react" />
+</DemoSlot>
 
 Type in the source field. The demo debounces typing: translation runs 600 ms after you pause, not on every keystroke. Repeat inputs come from a ten-minute result cache; use "Fresh run" to bypass it.
 

@@ -4,6 +4,7 @@ description: React adapter for @web-ai-sdk/rewriter. Auto-runs on mount and re-r
 ---
 
 import { RewriterDemo } from "../../../features/docs/components/RewriterDemo.tsx";
+import DemoSlot from "../../../features/docs/components/DemoSlot.astro";
 
 React adapter for `@web-ai-sdk/rewriter`. Auto-runs on mount, re-runs when `input` / config options change, and streams chunks through state updates. For the conceptual overview see [Rewriter](/docs/guides/rewriter/).
 
@@ -13,7 +14,9 @@ To warm the session before the hook first runs, call `prepareRewriter` from the 
 
 ## Live demo
 
-<RewriterDemo client:only="react" />
+<DemoSlot minHeight={217}>
+  <RewriterDemo client:only="react" />
+</DemoSlot>
 
 Edit the source text, then click Rewrite. The rewrite streams in as the model produces it and never replaces your original text. Click Stop to cancel a run. Edits after a rewrite mark it stale until you run again or dismiss it.
 

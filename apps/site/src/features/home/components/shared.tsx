@@ -44,6 +44,9 @@ interface CreateMonitor {
  */
 export const useDownloadMonitor = () => {
   const [progress, setProgress] = useState<number | null>(null);
+  // Tracked outside React state so completion can schedule its clear timer
+  // without side effects inside a state updater.
+  const visibleRef = useRef(false);
 
   const monitor = useCallback((m: CreateMonitor) => {
     m.addEventListener("downloadprogress", (e) => {
@@ -51,18 +54,21 @@ export const useDownloadMonitor = () => {
       if (e.loaded >= 1) {
         // Settle to "complete" briefly, then clear; stay hidden when no
         // fractional progress ever showed (warm start).
-        setProgress((current) => {
-          if (current === null) return null;
-          setTimeout(() => setProgress(null), 900);
-          return 1;
-        });
+        if (!visibleRef.current) return;
+        visibleRef.current = false;
+        setProgress(1);
+        setTimeout(() => setProgress(null), 900);
         return;
       }
+      visibleRef.current = true;
       setProgress(e.loaded);
     });
   }, []);
 
-  const clear = useCallback(() => setProgress(null), []);
+  const clear = useCallback(() => {
+    visibleRef.current = false;
+    setProgress(null);
+  }, []);
 
   return { progress, monitor, clear };
 };
