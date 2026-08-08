@@ -1,6 +1,14 @@
-import { isAvailable as isDetectorAvailable } from "@web-ai-sdk/detector";
+import {
+  isAvailable as isDetectorAvailable,
+  prepareLanguageDetector,
+} from "@web-ai-sdk/detector";
 import { useDetector } from "@web-ai-sdk/detector/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  useCapabilityLease,
+  useDebouncedValue,
+  useDemoIntent,
+} from "../../../shared/demoLifecycle.js";
 import {
   card,
   cardBody,
@@ -19,10 +27,12 @@ import {
   textarea,
 } from "../../../shared/ui.js";
 import {
-  DownloadNotice,
+  type DemoIntentProps,
+  DownloadDonut,
   ErrorNotice,
   StatusBar,
   UnavailableNotice,
+  useDownloadMonitor,
   useStreamStats,
 } from "./shared.js";
 
@@ -35,11 +45,23 @@ const DETECT_EXAMPLES = [
 
 const EXAMPLE_LABELS = ["en", "pt", "ja", "es"] as const;
 
-export const DetectorDemo = () => {
+// Detection waits for a typing pause instead of running on every keystroke.
+const DETECT_DEBOUNCE_MS = 600;
+
+export const DetectorDemo = ({ intent: tabIntent }: DemoIntentProps) => {
   const [text, setText] = useState<string>(DETECT_EXAMPLES[0]);
   const [available, setAvailable] = useState<boolean | null>(null);
   const { stats, start, update, finish } = useStreamStats();
-  const { status, output, error } = useDetector({ input: text });
+  const { progress, monitor } = useDownloadMonitor();
+  const { intent, markInteracted } = useDemoIntent(tabIntent);
+  const debouncedText = useDebouncedValue(text, DETECT_DEBOUNCE_MS);
+  // Selecting the detector tab is the intent signal, so detection runs on
+  // the seeded example right away; a hydration-only mount stays idle.
+  const { status, output, error } = useDetector({
+    input: debouncedText,
+    monitor,
+    enabled: intent && available !== false,
+  });
   const language = output?.language ?? null;
   const confidence = output?.confidence ?? 0;
   const all = output?.all ?? [];
@@ -47,6 +69,12 @@ export const DetectorDemo = () => {
   useEffect(() => {
     setAvailable(isDetectorAvailable());
   }, []);
+
+  const createLease = useCallback(
+    () => prepareLanguageDetector({ monitor }),
+    [monitor],
+  );
+  useCapabilityLease(intent && available === true, createLease);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
   useEffect(() => {
@@ -60,19 +88,29 @@ export const DetectorDemo = () => {
   }, [status, language]);
 
   const running = status === "loading";
+  // Pending edits keep the previous result visible but marked stale.
+  const stale = intent && text !== debouncedText && status === "done";
+  const displayStats = stale ? { ...stats, status: "stale" } : stats;
 
   return (
-    <div className={card}>
+    <div
+      className={card}
+      onFocusCapture={markInteracted}
+      onPointerDownCapture={markInteracted}
+    >
       <div className={cardHead}>
         <span className={cardHeadTitle}>
           <span className={running ? cardDotLive : cardDotOk} />
-          detect() · live
+          detect() · debounced
         </span>
-        <span>
+        <span className="inline-flex items-center gap-2">
+          <DownloadDonut progress={progress} />
           {status === "done" && language
             ? `${language} · ${Math.round(confidence * 100)}%`
             : status === "idle"
-              ? "awaiting input"
+              ? intent
+                ? "awaiting input"
+                : "awaiting interaction"
               : status === "loading"
                 ? "detecting…"
                 : "-"}
@@ -82,7 +120,6 @@ export const DetectorDemo = () => {
         {available === false && (
           <UnavailableNotice api="Language Detector API" />
         )}
-        <DownloadNotice progress={null} />
         <ErrorNotice error={error?.message ?? null} />
         <div className={fieldSpaced}>
           <label className={label} htmlFor="detector-demo-input">
@@ -135,15 +172,20 @@ export const DetectorDemo = () => {
             <span className="text-fg-4 italic">
               {available === false
                 ? "Open in Chrome 138+ or Edge 148+ to detect."
-                : status === "idle"
-                  ? "Type or paste text above."
-                  : status === "loading"
-                    ? "Detecting…"
-                    : "No confident match."}
+                : !intent
+                  ? "Focus the input or pick an example to start detection."
+                  : status === "idle"
+                    ? "Type or paste text above."
+                    : status === "loading"
+                      ? "Detecting…"
+                      : "No confident match."}
             </span>
           )}
         </div>
-        <StatusBar stats={stats} label="runtime: language-detection model" />
+        <StatusBar
+          stats={displayStats}
+          label={`debounce: ${DETECT_DEBOUNCE_MS}ms`}
+        />
       </div>
     </div>
   );

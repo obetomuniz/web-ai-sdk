@@ -1,24 +1,28 @@
 import { useDetector } from "@web-ai-sdk/detector/react";
 import { useState } from "react";
+import { useDebouncedValue } from "../../../shared/demoLifecycle.js";
 import { UnavailableHint } from "./UnavailableHint.js";
 
 export interface DetectorDemoProps {
   initial?: string;
 }
 
+// Detection waits for a typing pause instead of running on every keystroke.
+const DETECT_DEBOUNCE_MS = 600;
+
 export const DetectorDemo = ({
   initial = "Olá, mundo! Os blocos modulares são uma boa ideia.",
 }: DetectorDemoProps) => {
   const [text, setText] = useState(initial);
-  const { status, output, error, fromCache } = useDetector({
-    input: text,
-  });
+  const debounced = useDebouncedValue(text, DETECT_DEBOUNCE_MS);
+  const { status, output, error } = useDetector({ input: debounced });
   const language = output?.language ?? null;
   const confidence = output?.confidence ?? 0;
   const all = output?.all ?? [];
+  const pending = text !== debounced;
 
   return (
-    <div className="demo-card demo-card--narrow">
+    <div className="demo-card">
       {status === "unavailable" && (
         <UnavailableHint
           api="Language Detector"
@@ -39,9 +43,9 @@ export const DetectorDemo = ({
       {error && <p className="demo-error">{error.message}</p>}
       <article className="demo-response">
         <header className="demo-response__header">
-          <span>
-            {fromCache
-              ? "Cached"
+          <span role="status">
+            {pending
+              ? "Input changed. Detection runs after you pause."
               : status === "loading"
                 ? "Detecting…"
                 : status === "idle"

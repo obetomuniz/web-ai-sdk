@@ -1,11 +1,17 @@
 import {
   isAvailable as isWriterAvailable,
+  prepareWriter,
   WriterUnavailableError,
   write,
 } from "@web-ai-sdk/writer";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCapabilityLease,
+  useDemoIntent,
+} from "../../../shared/demoLifecycle.js";
 import {
   btnSm,
+  btnSmGhost,
   card,
   cardBody,
   cardDotLive,
@@ -23,9 +29,11 @@ import {
   textarea,
 } from "../../../shared/ui.js";
 import {
-  DownloadNotice,
+  type DemoIntentProps,
+  DownloadDonut,
   ErrorNotice,
   MarkdownOutput,
+  StaleNotice,
   StatusBar,
   UnavailableNotice,
   useDownloadMonitor,
@@ -38,7 +46,7 @@ const SAMPLE_TASK =
 type Tone = "formal" | "neutral" | "casual";
 type Length = "short" | "medium" | "long";
 
-export const WriterDemo = () => {
+export const WriterDemo = ({ intent: tabIntent }: DemoIntentProps) => {
   const [text, setText] = useState(SAMPLE_TASK);
   const [tone, setTone] = useState<Tone>("casual");
   const [length, setLength] = useState<Length>("short");
@@ -46,18 +54,37 @@ export const WriterDemo = () => {
   const [streaming, setStreaming] = useState(false);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { stats, start, update, finish } = useStreamStats();
+  const [ranWith, setRanWith] = useState<string | null>(null);
+  const { stats, start, update, finish, reset } = useStreamStats();
   const { progress, monitor } = useDownloadMonitor();
+  const { intent, markInteracted } = useDemoIntent(tabIntent);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setAvailable(isWriterAvailable());
   }, []);
 
+  // Abort in-flight work when the demo unmounts (for example on tab change).
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Prepare the session for the current tone and length once the user shows
+  // intent. Option edits release the old lease and prepare the new one.
+  const createLease = useCallback(
+    () => prepareWriter({ language: "en", tone, length, monitor }),
+    [tone, length, monitor],
+  );
+  useCapabilityLease(intent && available === true, createLease);
+
+  const runKey = JSON.stringify([text, tone, length]);
+  const stale =
+    !streaming && !!output && ranWith !== null && ranWith !== runKey;
+
   const run = async () => {
     if (streaming) return;
+    const key = runKey;
     setOutput("");
     setError(null);
+    setRanWith(null);
     setStreaming(true);
     start();
     const ac = new AbortController();
@@ -80,10 +107,11 @@ export const WriterDemo = () => {
         setOutput(result.output);
         update(result.output);
       }
-      finish(result.cached ? "cached" : "done");
+      setRanWith(key);
+      finish("done");
     } catch (err: unknown) {
       if (ac.signal.aborted) {
-        finish("aborted");
+        finish("stopped");
       } else if (err instanceof WriterUnavailableError) {
         setError(err.message || "Writer API reported unavailable.");
         finish("unavailable");
@@ -97,20 +125,33 @@ export const WriterDemo = () => {
     }
   };
 
+  const stop = () => abortRef.current?.abort();
+  const dismissResult = () => {
+    setOutput("");
+    setRanWith(null);
+    reset();
+  };
+
+  const displayStats = stale ? { ...stats, status: "stale" } : stats;
+
   return (
-    <div className={card}>
+    <div
+      className={card}
+      onFocusCapture={markInteracted}
+      onPointerDownCapture={markInteracted}
+    >
       <div className={cardHead}>
         <span className={cardHeadTitle}>
           <span className={streaming ? cardDotLive : cardDotOk} />
           write() · local
         </span>
-        <span>
+        <span className="inline-flex items-center gap-2">
+          <DownloadDonut progress={progress} />
           {tone} · {length}
         </span>
       </div>
       <div className={cardBody}>
         {available === false && <UnavailableNotice api="Writer API" />}
-        <DownloadNotice progress={progress} />
         <ErrorNotice error={error} />
         <div className={fieldSpaced}>
           <label className={label} htmlFor="writer-demo-input">
@@ -125,14 +166,20 @@ export const WriterDemo = () => {
           />
         </div>
         <div className={demoControls}>
-          <button
-            type="button"
-            className={btnSm}
-            onClick={run}
-            disabled={streaming || !available}
-          >
-            <span>{streaming ? "…" : "▶"}</span> Write
-          </button>
+          {!streaming ? (
+            <button
+              type="button"
+              className={btnSm}
+              onClick={run}
+              disabled={!available}
+            >
+              <span>▶</span> Write
+            </button>
+          ) : (
+            <button type="button" className={btnSmGhost} onClick={stop}>
+              <span>■</span> Stop
+            </button>
+          )}
           <div className={`${chipRow} ${chipRowEnd}`}>
             {(["formal", "neutral", "casual"] as const).map((t) => (
               <button
@@ -157,6 +204,7 @@ export const WriterDemo = () => {
             ))}
           </div>
         </div>
+        <StaleNotice show={stale} onDismiss={dismissResult} />
         <MarkdownOutput
           text={output}
           streaming={streaming}
@@ -166,7 +214,7 @@ export const WriterDemo = () => {
               : "Run to draft content from the task above."
           }
         />
-        <StatusBar stats={stats} label={`tone: ${tone}`} />
+        <StatusBar stats={displayStats} label={`tone: ${tone}`} />
       </div>
     </div>
   );

@@ -662,3 +662,13 @@ footer:has(> .pagination-links) {
     height: 0.9rem;
   }
 }
+
+/* Code blocks: match the demo surfaces. Radius comes from the shared token
+   scale, frames drop their border, and the padding mirrors the demo cards'
+   28px so code never sits against the frame edges. */
+:root {
+  --ec-brdRad: var(--radius-md);
+  --ec-brdWd: 0px;
+  --ec-codePadBlk: 1.75rem;
+  --ec-codePadInl: 1.75rem;
+}

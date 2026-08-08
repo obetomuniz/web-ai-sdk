@@ -4,6 +4,7 @@ description: React adapter for @web-ai-sdk/writer. Auto-runs on mount and re-run
 ---
 
 import { WriterDemo } from "../../../features/docs/components/WriterDemo.tsx";
+import DemoSlot from "../../../features/docs/components/DemoSlot.astro";
 
 React adapter for `@web-ai-sdk/writer`. Auto-runs on mount, re-runs when `input` / config options change, and streams chunks through state updates. For the conceptual overview see [Writer](/docs/guides/writer/).
 
@@ -13,9 +14,11 @@ To warm the session before the hook first runs, call `prepareWriter` from the co
 
 ## Live demo
 
-<WriterDemo client:only="react" />
+<DemoSlot minHeight={217}>
+  <WriterDemo client:only="react" />
+</DemoSlot>
 
-Edit the writing task; the draft streams in as the model produces it.
+Edit the writing task, then click Write. The draft streams in as the model produces it. Click Stop to cancel a run. If you edit the task after a draft, the draft stays visible and is marked stale until you run again or dismiss it.
 
 ## Usage
 

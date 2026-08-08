@@ -4,12 +4,15 @@ description: Lifecycle-only React adapter for createSession. Each call owns one 
 ---
 
 import { SessionDemo } from "../../../features/docs/components/SessionDemo.tsx";
+import DemoSlot from "../../../features/docs/components/DemoSlot.astro";
 
 `useSession` is the React adapter for [`createSession()`](/docs/guides/prompt/#chat-createsession). Each call owns one native instance. The hook detects support, waits for creation, destroys on unmount, and recreates after option changes.
 
 ## Live demo: multimodal session
 
-<SessionDemo client:only="react" />
+<DemoSlot minHeight={97}>
+  <SessionDemo client:only="react" />
+</DemoSlot>
 
 Pick an image and click "Describe". The session sends one message with a text part and an image part, then streams the description back. The selected `File` is a browser-native image value; the SDK forwards it to the model unchanged. See [Multimodal input](/docs/guides/prompt/#multimodal-input-text-image-audio) for the content-part contract.
 

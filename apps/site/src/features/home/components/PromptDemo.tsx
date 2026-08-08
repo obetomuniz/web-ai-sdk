@@ -1,6 +1,13 @@
-import { isAvailable as isPromptAvailable } from "@web-ai-sdk/prompt";
+import {
+  isAvailable as isPromptAvailable,
+  prepareLanguageModel,
+} from "@web-ai-sdk/prompt";
 import { usePrompt } from "@web-ai-sdk/prompt/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  useCapabilityLease,
+  useDemoIntent,
+} from "../../../shared/demoLifecycle.js";
 import {
   btnSm,
   btnSmGhost,
@@ -20,8 +27,10 @@ import {
   textarea,
 } from "../../../shared/ui.js";
 import {
-  DownloadNotice,
+  type DemoIntentProps,
+  DownloadDonut,
   MarkdownOutput,
+  StaleNotice,
   StatusBar,
   UnavailableNotice,
   useDownloadMonitor,
@@ -34,13 +43,17 @@ const PROMPT_EXAMPLES = [
   "What's the difference between a hook and a wrapper?",
 ] as const;
 
-export const PromptDemo = () => {
+const SYSTEM_PROMPT = "You are concise. Reply briefly and avoid preamble.";
+
+export const PromptDemo = ({ intent: tabIntent }: DemoIntentProps) => {
   const [promptText, setPromptText] = useState<string>(PROMPT_EXAMPLES[0]);
   const [available, setAvailable] = useState<boolean | null>(null);
-  const { stats, start, update, finish } = useStreamStats();
+  const [ranWith, setRanWith] = useState<string | null>(null);
+  const { stats, start, update, finish, reset: resetStats } = useStreamStats();
   const { progress, monitor } = useDownloadMonitor();
+  const { intent, markInteracted } = useDemoIntent(tabIntent);
   const { status, output, ask, abort, reset } = usePrompt({
-    systemPrompt: "You are concise. Reply briefly and avoid preamble.",
+    systemPrompt: SYSTEM_PROMPT,
     samplingMode: "balanced",
     monitor,
   });
@@ -53,7 +66,7 @@ export const PromptDemo = () => {
       if (output) update(output);
       finish("done");
     } else if (status === "idle" && stats.status === "running") {
-      finish("aborted");
+      finish("stopped");
     }
   }, [status, output]);
 
@@ -61,26 +74,57 @@ export const PromptDemo = () => {
     setAvailable(isPromptAvailable());
   }, []);
 
+  // Prepare the base session once the user shows intent. `ask()` runs on the
+  // same configuration, so the first run reuses the prepared session.
+  const createLease = useCallback(
+    () =>
+      prepareLanguageModel({
+        systemPrompt: SYSTEM_PROMPT,
+        samplingMode: "balanced",
+        monitor,
+      }),
+    [monitor],
+  );
+  useCapabilityLease(intent && available === true, createLease);
+
   const streaming = status === "loading" || status === "streaming";
+  const stale =
+    !streaming && !!output && ranWith !== null && ranWith !== promptText;
 
   const run = async () => {
     if (streaming) return;
+    const key = promptText;
     reset();
-    await ask(promptText);
+    setRanWith(key);
+    await ask(key);
   };
 
+  const dismissResult = () => {
+    reset();
+    setRanWith(null);
+    resetStats();
+  };
+
+  const displayStats = stale ? { ...stats, status: "stale" } : stats;
+
   return (
-    <div className={card}>
+    <div
+      className={card}
+      onFocusCapture={markInteracted}
+      onPointerDownCapture={markInteracted}
+    >
       <div className={cardHead}>
         <span className={cardHeadTitle}>
           <span className={streaming ? cardDotLive : cardDotOk} />
           ask() · streaming
         </span>
-        <span>session: cached · balanced</span>
+        <span className="inline-flex items-center gap-2">
+          <DownloadDonut progress={progress} />
+          session: {intent ? "prepared" : "on-demand"} · balanced
+        </span>
       </div>
       <div className={cardBody}>
         {available === false && <UnavailableNotice api="Prompt API" />}
-        <DownloadNotice progress={progress} />
         <div className={fieldSpaced}>
           <label className={label} htmlFor="prompt-demo-input">
             prompt
@@ -121,6 +165,7 @@ export const PromptDemo = () => {
             ))}
           </div>
         </div>
+        <StaleNotice show={stale} onDismiss={dismissResult} />
         <MarkdownOutput
           text={output ?? ""}
           streaming={streaming}
@@ -130,7 +175,10 @@ export const PromptDemo = () => {
               : "Output will stream here…"
           }
         />
-        <StatusBar stats={stats} label="runtime: browser-provided model" />
+        <StatusBar
+          stats={displayStats}
+          label="runtime: browser-provided model"
+        />
       </div>
     </div>
   );

@@ -1,5 +1,7 @@
 import { useSummarizer } from "@web-ai-sdk/summarizer/react";
 import { useEffect, useRef, useState } from "react";
+import { ModelMarkdown } from "../../../shared/components/ModelMarkdown.js";
+import { FreshRunAction } from "./FreshRunAction.js";
 import { UnavailableHint } from "./UnavailableHint.js";
 
 export interface SummarizerDemoProps {
@@ -7,6 +9,10 @@ export interface SummarizerDemoProps {
   title?: string;
   description?: string;
 }
+
+// Summaries of the fixed article are deterministic enough to reuse; expire
+// them after ten minutes.
+const RESULT_TTL_MS = 10 * 60 * 1000;
 
 const DEFAULT_BODY = `
   <h2>The case for a lifecycle layer</h2>
@@ -20,15 +26,43 @@ const DEFAULT_BODY = `
 export const SummarizerDemo = ({ language = "en" }: SummarizerDemoProps) => {
   const articleRef = useRef<HTMLDivElement | null>(null);
   const [input, setInput] = useState("");
+  // The summary runs only on the button, never on page load.
+  const [enabled, setEnabled] = useState(false);
+  const [stopped, setStopped] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  // Bumping the nonce changes the cache key, so a fresh generation skips the
+  // stored result and writes under a new key. Old entries expire via TTL.
+  const [freshNonce, setFreshNonce] = useState(0);
 
   useEffect(() => {
     setInput(articleRef.current?.innerText ?? "");
   }, []);
 
-  const { status, output, error, fromCache, dismiss } = useSummarizer({
+  const { status, output, error, fromCache } = useSummarizer({
     language,
     input,
+    cache: "session",
+    cacheTtl: RESULT_TTL_MS,
+    cacheKey: `docs-summarizer:${language}:${freshNonce}`,
+    enabled: enabled && input.trim().length > 0,
   });
+
+  const busy = !stopped && (status === "loading" || status === "streaming");
+
+  const run = () => {
+    setEnabled(true);
+    setStopped(false);
+    setDismissed(false);
+  };
+  // Disabling the hook aborts the in-flight call; Run re-enables it.
+  const stop = () => {
+    setEnabled(false);
+    setStopped(true);
+  };
+  const freshRun = () => {
+    setFreshNonce((n) => n + 1);
+    run();
+  };
 
   return (
     <div className="demo-card">
@@ -40,23 +74,52 @@ export const SummarizerDemo = ({ language = "en" }: SummarizerDemoProps) => {
         />
       )}
       {error && <p className="demo-error">{error.message}</p>}
-      {output && (
+      <div className="demo-row">
+        {busy ? (
+          <button type="button" onClick={stop} className="demo-button">
+            Stop
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={run}
+            disabled={status === "unavailable"}
+            className="demo-button"
+          >
+            Summarize the article
+          </button>
+        )}
+        <FreshRunAction
+          show={status === "done" && !busy && !dismissed}
+          onClick={freshRun}
+        />
+      </div>
+      {output && !dismissed && (
         <aside className="demo-response">
           <header className="demo-response__header">
-            <span>
-              {fromCache ? "Cached summary" : "Summary"}{" "}
-              {status === "streaming" && <em>(streaming…)</em>}
+            <span role="status">
+              {stopped
+                ? "Stopped"
+                : fromCache && status === "done"
+                  ? "Cached summary"
+                  : "Summary"}{" "}
+              {busy && status === "streaming" && <em>(streaming…)</em>}
             </span>
             <button
               type="button"
-              onClick={dismiss}
+              onClick={() => setDismissed(true)}
               className="demo-dismiss"
               aria-label="dismiss"
             >
               ×
             </button>
           </header>
-          <p className="demo-response__body">{output}</p>
+          <div className="demo-response__body">
+            <ModelMarkdown
+              content={output}
+              streaming={busy && status === "streaming"}
+            />
+          </div>
         </aside>
       )}
       <div

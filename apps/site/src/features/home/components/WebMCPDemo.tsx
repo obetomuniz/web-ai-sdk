@@ -2,6 +2,7 @@ import {
   ask,
   isAvailable as isPromptAvailable,
   PromptUnavailableError,
+  prepareLanguageModel,
 } from "@web-ai-sdk/prompt";
 import {
   executeTool,
@@ -10,10 +11,15 @@ import {
   type StandardSchemaV1,
 } from "@web-ai-sdk/webmcp";
 import { useWebMCP } from "@web-ai-sdk/webmcp/react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import {
+  useCapabilityLease,
+  useDemoIntent,
+} from "../../../shared/demoLifecycle.js";
+import {
   btnSm,
+  btnSmGhost,
   card,
   cardBody,
   cardDotLive,
@@ -37,7 +43,8 @@ import {
   toolToggleTrack,
 } from "../../../shared/ui.js";
 import {
-  DownloadNotice,
+  type DemoIntentProps,
+  DownloadDonut,
   StatusBar,
   UnavailableNotice,
   useDownloadMonitor,
@@ -121,6 +128,48 @@ const MCP_PROMPTS = [
   "Open my notification settings.",
 ] as const;
 
+const ROUTER_SYSTEM_PROMPT =
+  "You are a tool-routing agent. Pick one registered tool for the user " +
+  "intent, or set tool to null when no registered tool fits; don't force " +
+  "a call.";
+
+// JSON Schema passed as `responseConstraint`, so the model emits this shape
+// directly and the demo parses it without scraping.
+const ROUTE_CONSTRAINT = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    tool: { type: ["string", "null"] },
+    args: { type: "object" },
+    reason: { type: "string" },
+  },
+  required: ["tool", "reason"],
+} as const;
+
+interface RoutePlan {
+  tool?: string | null;
+  args?: Record<string, unknown>;
+  reason?: string;
+}
+
+/** Validate LM-chosen args against the tool's registered input schema. */
+const validateArgs = async (
+  spec: ToolSpec,
+  args: Record<string, unknown>,
+): Promise<
+  { ok: true; args: Record<string, unknown> } | { ok: false; message: string }
+> => {
+  if (!spec.input) return { ok: true, args };
+  const result = await spec.input["~standard"].validate(args);
+  if (result.issues) {
+    return {
+      ok: false,
+      message: result.issues.map((issue) => issue.message).join("; "),
+    };
+  }
+  return { ok: true, args: result.value as Record<string, unknown> };
+};
+
 type TraceEvent =
   | { kind: "step"; text: string }
   | { kind: "warn"; text: string }
@@ -128,7 +177,7 @@ type TraceEvent =
   | { kind: "result"; text: string }
   | { kind: "call"; tool: string; args: unknown; reason: string };
 
-export const WebMCPDemo = () => {
+export const WebMCPDemo = ({ intent: tabIntent }: DemoIntentProps) => {
   const [enabledIds, setEnabledIds] = useState<Set<string>>(
     () => new Set(TOOL_SPECS.filter((t) => t.on).map((t) => t.id)),
   );
@@ -138,10 +187,31 @@ export const WebMCPDemo = () => {
   const [available, setAvailable] = useState<boolean | null>(null);
   const { stats, start, update, finish } = useStreamStats();
   const { progress, monitor } = useDownloadMonitor();
+  const { intent, markInteracted } = useDemoIntent(tabIntent);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setAvailable(isWebMcpAvailable());
   }, []);
+
+  // Abort in-flight routing when the demo unmounts (for example tab change).
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  // The router runs on the Prompt API, so intent prepares that base session
+  // with the exact routing configuration the run reuses.
+  const createLease = useCallback(
+    () =>
+      prepareLanguageModel({
+        systemPrompt: ROUTER_SYSTEM_PROMPT,
+        samplingMode: "most-predictable",
+        monitor,
+      }),
+    [monitor],
+  );
+  useCapabilityLease(
+    intent && available === true && isPromptAvailable(),
+    createLease,
+  );
 
   // Build the live definitions from the toggle state. `useWebMCP` re-registers only
   // when discoverable metadata changes and keeps execute callbacks current,
@@ -191,6 +261,8 @@ export const WebMCPDemo = () => {
       return next;
     });
 
+  const stop = () => abortRef.current?.abort();
+
   const run = async () => {
     if (running) return;
     // Defensive bail: on browsers without `document.modelContext` (or the
@@ -204,198 +276,224 @@ export const WebMCPDemo = () => {
     setRunning(true);
     setTrace([]);
     start();
+    const ac = new AbortController();
+    abortRef.current = ac;
+
+    const throwIfStopped = () => {
+      if (ac.signal.aborted) throw new DOMException("Aborted", "AbortError");
+    };
 
     const push = async (ev: TraceEvent, delay = 240) => {
+      throwIfStopped();
       setTrace((t) => [...t, ev]);
       update("x".repeat(JSON.stringify(ev).length));
       await new Promise((r) => setTimeout(r, delay));
+      throwIfStopped();
     };
 
-    const discovered = await refreshDiscoveredTools();
-    const discoveredDemoTools = discovered.filter((tool) =>
-      TOOL_SPECS.some((candidate) => candidate.name === tool.name),
-    );
-    const discoveredNames = new Set(
-      discoveredDemoTools.map(({ name }) => name),
-    );
-    const discoveredCount = discovered.length;
-    const demoToolCount = discoveredDemoTools.length;
-    const enabledSpecs = TOOL_SPECS.filter((tool) =>
-      discoveredNames.has(tool.name),
-    );
-    await push(
-      {
-        kind: "step",
-        text: `getTools() → ${discoveredCount} tool${discoveredCount === 1 ? "" : "s"} (${demoToolCount} in this demo)`,
-      },
-      200,
-    );
-
-    // Try a real on-device agent: ask the Prompt API which tool to call.
-    // Fall back to keyword matching when Prompt isn't available.
-    // Tracks three outcomes: a candidate (use this tool), a refusal
-    // (LM said no tool matches), or a fallback (Prompt API not available;
-    // try keyword matching).
-    let candidate: ToolSpec | null = null;
-    let chosenArgs: Record<string, unknown> = {};
-    let chosenReason = "";
-    let usedRealAgent = false;
-    let agentRefused: { reason: string } | null = null;
-
-    if (isPromptAvailable() && enabledSpecs.length > 0) {
+    try {
+      const discovered = await refreshDiscoveredTools();
+      const discoveredDemoTools = discovered.filter((tool) =>
+        TOOL_SPECS.some((candidate) => candidate.name === tool.name),
+      );
+      const discoveredNames = new Set(
+        discoveredDemoTools.map(({ name }) => name),
+      );
+      const discoveredCount = discovered.length;
+      const demoToolCount = discoveredDemoTools.length;
+      const enabledSpecs = TOOL_SPECS.filter((tool) =>
+        discoveredNames.has(tool.name),
+      );
       await push(
         {
           kind: "step",
-          text: "Prompt API → picking a tool with the on-device LM…",
+          text: `getTools() → ${discoveredCount} tool${discoveredCount === 1 ? "" : "s"} (${demoToolCount} in this demo)`,
         },
-        260,
+        200,
       );
-      const toolBlock = enabledSpecs
-        .map((tool) => {
-          const schema = tool.inputSchema
-            ? JSON.stringify(tool.inputSchema)
-            : "no input schema";
-          return `- ${tool.name}: ${tool.desc}\n  input schema: ${schema}`;
-        })
-        .join("\n");
-      const agentInput = `Registered tools:
+
+      // Try a real on-device agent: ask the Prompt API which tool to call,
+      // constrained to the routing schema so the reply parses directly.
+      // Fall back to keyword matching when Prompt isn't available.
+      // Tracks three outcomes: a candidate (use this tool), a refusal
+      // (LM said no tool matches), or a fallback (Prompt API not available;
+      // try keyword matching).
+      let candidate: ToolSpec | null = null;
+      let chosenArgs: Record<string, unknown> = {};
+      let chosenReason = "";
+      let usedRealAgent = false;
+      let agentRefused: { reason: string } | null = null;
+
+      if (isPromptAvailable() && enabledSpecs.length > 0) {
+        await push(
+          {
+            kind: "step",
+            text: "Prompt API → picking a tool with the on-device LM…",
+          },
+          260,
+        );
+        const toolBlock = enabledSpecs
+          .map((tool) => {
+            const schema = tool.inputSchema
+              ? JSON.stringify(tool.inputSchema)
+              : "no input schema";
+            return `- ${tool.name}: ${tool.desc}\n  input schema: ${schema}`;
+          })
+          .join("\n");
+        const agentInput = `Registered tools:
 ${toolBlock}
 
 User said: "${prompt}"
 
-Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason":"one short sentence"}. Choose one of the registered tool names if the user intent maps to it. If no registered tool matches, set "tool" to null and explain briefly in "reason". No markdown, no backticks.`;
-      try {
-        const result = await ask({
-          input: agentInput,
-          systemPrompt:
-            "You are a tool-routing agent. Reply with valid JSON only. " +
-            "Set tool to null when no registered tool fits the user intent; " +
-            "don't force a call.",
-          samplingMode: "most-predictable",
-          monitor,
-        });
-        const raw = result.output ?? "";
-        const m = raw.match(/\{[\s\S]*\}/);
-        if (m) {
-          const parsed = JSON.parse(m[0]) as {
-            tool?: string | null;
-            args?: Record<string, unknown>;
-            reason?: string;
-          };
-          const reason = parsed.reason ?? "(no reason given)";
-          if (parsed.tool === null || parsed.tool === undefined) {
+Choose one of the registered tool names if the user intent maps to it, and fill "args" from its input schema. If no registered tool matches, set "tool" to null and explain briefly in "reason".`;
+        try {
+          const result = await ask({
+            input: agentInput,
+            systemPrompt: ROUTER_SYSTEM_PROMPT,
+            samplingMode: "most-predictable",
+            responseConstraint: ROUTE_CONSTRAINT,
+            monitor,
+            signal: ac.signal,
+          });
+          // The response constraint guarantees the JSON shape; parse the
+          // output directly instead of scraping it with a regex.
+          const parsed = JSON.parse(result.output ?? "null") as RoutePlan;
+          const reason = parsed?.reason ?? "(no reason given)";
+          if (parsed?.tool === null || parsed?.tool === undefined) {
             agentRefused = { reason };
             usedRealAgent = true;
           } else {
             const found = enabledSpecs.find((t) => t.name === parsed.tool);
-            if (found) {
-              candidate = found;
-              chosenArgs = parsed.args ?? {};
-              chosenReason = reason;
-              usedRealAgent = true;
-            } else {
+            if (!found) {
               // LM named a tool that isn't registered; treat as refusal
               // rather than silently calling something else.
               agentRefused = {
                 reason: `LM picked "${parsed.tool}" which isn't registered. ${reason}`,
               };
               usedRealAgent = true;
+            } else {
+              const checked = await validateArgs(found, parsed.args ?? {});
+              if (!checked.ok) {
+                agentRefused = {
+                  reason: `LM args for "${found.name}" failed schema validation: ${checked.message}`,
+                };
+                usedRealAgent = true;
+              } else {
+                candidate = found;
+                chosenArgs = checked.args;
+                chosenReason = reason;
+                usedRealAgent = true;
+              }
             }
           }
-        }
-      } catch (err) {
-        if (!(err instanceof PromptUnavailableError)) {
-          await push(
-            {
-              kind: "warn",
-              text: `Prompt API error: ${(err as Error)?.message ?? "unknown"}; falling back to keyword match.`,
-            },
-            200,
-          );
+        } catch (err) {
+          throwIfStopped();
+          if (!(err instanceof PromptUnavailableError)) {
+            await push(
+              {
+                kind: "warn",
+                text: `Prompt API error: ${(err as Error)?.message ?? "unknown"}; falling back to keyword match.`,
+              },
+              200,
+            );
+          }
         }
       }
-    }
 
-    if (agentRefused) {
-      await push({
-        kind: "warn",
-        text: `Refused: ${agentRefused.reason}`,
-      });
-      finish("refused");
-      setRunning(false);
-      return;
-    }
-
-    if (!usedRealAgent) {
-      await push(
-        {
-          kind: "step",
-          text: "Falling back to keyword match (enable Prompt API for a real agent).",
-        },
-        200,
-      );
-      const matched = enabledSpecs.find((t) => t.match.test(prompt));
-      if (!matched) {
+      if (agentRefused) {
         await push({
           kind: "warn",
-          text: "Refused: no enabled tool matched the user intent.",
+          text: `Refused: ${agentRefused.reason}`,
         });
         finish("refused");
-        setRunning(false);
         return;
       }
-      candidate = matched;
-      chosenArgs =
-        matched.id === "add_to_cart"
-          ? { sku: "MX-200", quantity: 2 }
-          : matched.id === "search_orders"
-            ? { since: "last-tuesday" }
-            : matched.id === "open_settings"
-              ? { pane: "notifications" }
-              : {};
-      chosenReason = `User intent mentions "${(prompt.match(matched.match)?.[0] ?? "").trim()}"; best match is ${matched.name}.`;
-    }
 
-    if (!candidate) {
-      await push({
-        kind: "warn",
-        text: "Refused: no candidate tool.",
-      });
-      finish("refused");
-      setRunning(false);
-      return;
-    }
-
-    await push(
-      {
-        kind: "call",
-        tool: candidate.name,
-        args: chosenArgs,
-        reason: chosenReason,
-      },
-      280,
-    );
-
-    let resultText = "null";
-    const registeredTool = discoveredDemoTools.find(
-      (tool) => tool.name === candidate.name,
-    );
-    if (!registeredTool) {
-      resultText = `error: ${candidate.name} is no longer registered`;
-    } else {
-      try {
-        const raw = await executeTool(registeredTool, chosenArgs);
-        resultText = raw ?? "navigation triggered";
-      } catch (err) {
-        resultText = `error: ${(err as Error)?.message ?? "unknown"}`;
+      if (!usedRealAgent) {
+        await push(
+          {
+            kind: "step",
+            text: "Falling back to keyword match (enable Prompt API for a real agent).",
+          },
+          200,
+        );
+        const matched = enabledSpecs.find((t) => t.match.test(prompt));
+        if (!matched) {
+          await push({
+            kind: "warn",
+            text: "Refused: no enabled tool matched the user intent.",
+          });
+          finish("refused");
+          return;
+        }
+        candidate = matched;
+        chosenArgs =
+          matched.id === "add_to_cart"
+            ? { sku: "MX-200", quantity: 2 }
+            : matched.id === "search_orders"
+              ? { since: "last-tuesday" }
+              : matched.id === "open_settings"
+                ? { pane: "notifications" }
+                : {};
+        chosenReason = `User intent mentions "${(prompt.match(matched.match)?.[0] ?? "").trim()}"; best match is ${matched.name}.`;
       }
+
+      if (!candidate) {
+        await push({
+          kind: "warn",
+          text: "Refused: no candidate tool.",
+        });
+        finish("refused");
+        return;
+      }
+
+      await push(
+        {
+          kind: "call",
+          tool: candidate.name,
+          args: chosenArgs,
+          reason: chosenReason,
+        },
+        280,
+      );
+
+      let resultText = "null";
+      const registeredTool = discoveredDemoTools.find(
+        (tool) => tool.name === candidate.name,
+      );
+      if (!registeredTool) {
+        resultText = `error: ${candidate.name} is no longer registered`;
+      } else {
+        try {
+          const raw = await executeTool(registeredTool, chosenArgs);
+          resultText = raw ?? "navigation triggered";
+        } catch (err) {
+          resultText = `error: ${(err as Error)?.message ?? "unknown"}`;
+        }
+      }
+      throwIfStopped();
+      await push(
+        { kind: "result", text: `↳ ${candidate.name}(...) → ${resultText}` },
+        200,
+      );
+      finish("done");
+    } catch (err) {
+      if (ac.signal.aborted || (err as Error)?.name === "AbortError") {
+        finish("stopped");
+      } else {
+        setTrace((t) => [
+          ...t,
+          {
+            kind: "err",
+            text: `Run failed: ${(err as Error)?.message ?? "unknown"}`,
+          },
+        ]);
+        finish("error");
+      }
+    } finally {
+      setRunning(false);
+      abortRef.current = null;
     }
-    await push(
-      { kind: "result", text: `↳ ${candidate.name}(...) → ${resultText}` },
-      200,
-    );
-    finish("done");
-    setRunning(false);
   };
 
   const registeredCount = discoveredTools.filter((tool) =>
@@ -403,20 +501,24 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
   ).length;
 
   return (
-    <div className={card}>
+    <div
+      className={card}
+      onFocusCapture={markInteracted}
+      onPointerDownCapture={markInteracted}
+    >
       <div className={cardHead}>
         <span className={cardHeadTitle}>
           <span className={running ? cardDotLive : cardDotOk} />
           registerTool() · agentic
         </span>
-        <span>
+        <span className="inline-flex items-center gap-2">
+          <DownloadDonut progress={progress} />
           {discoveryStatus === "loading" ? "…" : registeredCount} demo tool
           {registeredCount === 1 ? "" : "s"} registered
         </span>
       </div>
       <div className={cardBody}>
         {available === false && <UnavailableNotice api="WebMCP" />}
-        <DownloadNotice progress={progress} />
         <fieldset className={fieldset}>
           <legend className={fieldLegend}>demo tools</legend>
           <ul className={toolList}>
@@ -466,14 +568,20 @@ Reply with ONLY valid JSON of the shape {"tool":"name_or_null","args":{},"reason
           />
         </div>
         <div className={demoControls}>
-          <button
-            type="button"
-            className={btnSm}
-            onClick={run}
-            disabled={running || !available}
-          >
-            <span>{running ? "…" : "▶"}</span> Run agent
-          </button>
+          {!running ? (
+            <button
+              type="button"
+              className={btnSm}
+              onClick={run}
+              disabled={!available}
+            >
+              <span>▶</span> Run agent
+            </button>
+          ) : (
+            <button type="button" className={btnSmGhost} onClick={stop}>
+              <span>■</span> Stop
+            </button>
+          )}
           <div className={`${chipRow} ${chipRowEnd}`}>
             {MCP_PROMPTS.map((p, i) => (
               <button

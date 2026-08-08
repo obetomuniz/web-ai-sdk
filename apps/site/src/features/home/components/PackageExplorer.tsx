@@ -29,6 +29,7 @@ import { PromptDemo } from "./PromptDemo.js";
 import { ProofreaderDemo } from "./ProofreaderDemo.js";
 import { RewriterDemo } from "./RewriterDemo.js";
 import { SummarizerDemo } from "./SummarizerDemo.js";
+import type { DemoIntentProps } from "./shared.js";
 import { TranslatorDemo } from "./TranslatorDemo.js";
 import { WebMCPDemo } from "./WebMCPDemo.js";
 import { WriterDemo } from "./WriterDemo.js";
@@ -57,11 +58,11 @@ const PACKAGE_ROWS: PackageInfo[] = [
       ["Session reuse.", "Compatible calls reuse a cached base session."],
       [
         "Streaming first.",
-        "The vanilla session yields deltas. The React hook exposes cumulative text.",
+        "Sessions yield deltas. ask() exposes cumulative text.",
       ],
       [
         "Clean lifecycle.",
-        "React cleanup aborts work and destroys the session.",
+        "Abort signals cancel runs. Leases release prepared sessions.",
       ],
     ],
   },
@@ -72,7 +73,7 @@ const PACKAGE_ROWS: PackageInfo[] = [
     bullets: [
       [
         "Declarative tools.",
-        "Register from React and clean up with an AbortSignal.",
+        "Register typed tools and clean up with an AbortSignal.",
       ],
       [
         "Last writer wins.",
@@ -207,7 +208,7 @@ const PACKAGE_ICONS: Record<string, string> = {
   proofreader: `<circle pathLength="1" cx="12" cy="12" r="10"/><path pathLength="1" d="m9 12 2 2 4-4"/>`,
 };
 
-const DEMOS: Record<string, ComponentType> = {
+const DEMOS: Record<string, ComponentType<DemoIntentProps>> = {
   prompt: PromptDemo,
   webmcp: WebMCPDemo,
   summarizer: SummarizerDemo,
@@ -232,23 +233,31 @@ function raise(message: string): never {
 
 export const PackageExplorer = () => {
   const [slug, setSlug] = useState(FIRST_PKG.slug);
+  // Intent gate for session preparation. Hydration and load-time hashes only
+  // mount a demo; an in-page tab selection (click, keyboard, or a later hash
+  // change) is the signal that lets the mounted demo prepare its capability.
+  const [userSelected, setUserSelected] = useState(false);
 
   // Hash support (shareability, not compatibility: nothing links to the old
   // per-slug anchors). On mount and on hashchange, a hash matching a slug
   // selects that tab; clicking a tab replaces the hash without a history
   // entry. Runs only in effects, so SSR never touches window.
   useEffect(() => {
-    const applyHash = () => {
+    const applyHash = (fromNavigation: boolean) => {
       const candidate = window.location.hash.slice(1);
-      if (PACKAGE_ROWS.some((p) => p.slug === candidate)) setSlug(candidate);
+      if (!PACKAGE_ROWS.some((p) => p.slug === candidate)) return;
+      setSlug(candidate);
+      if (fromNavigation) setUserSelected(true);
     };
-    applyHash();
-    window.addEventListener("hashchange", applyHash);
-    return () => window.removeEventListener("hashchange", applyHash);
+    applyHash(false);
+    const onHashChange = () => applyHash(true);
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
   const select = (next: string) => {
     setSlug(next);
+    setUserSelected(true);
     history.replaceState(null, "", `#${next}`);
   };
 
@@ -364,7 +373,9 @@ export const PackageExplorer = () => {
                 </a>
               </div>
             </div>
-            <div className={pkgRight}>{active && Demo ? <Demo /> : null}</div>
+            <div className={pkgRight}>
+              {active && Demo ? <Demo intent={userSelected} /> : null}
+            </div>
           </div>
         );
       })}

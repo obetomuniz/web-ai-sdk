@@ -1,18 +1,46 @@
 import { useRewriter } from "@web-ai-sdk/rewriter/react";
 import { useState } from "react";
+import { ModelMarkdown } from "../../../shared/components/ModelMarkdown.js";
 import { UnavailableHint } from "./UnavailableHint.js";
 
 const SAMPLE = "hey, can u send me that doc when u get a sec? thx a bunch";
 
 export const RewriterDemo = ({ language = "en" }: { language?: string }) => {
   const [input, setInput] = useState(SAMPLE);
+  // The hook only sees input committed by the Rewrite button; typing alone
+  // never invokes the model.
+  const [committed, setCommitted] = useState<string | null>(null);
+  const [enabled, setEnabled] = useState(false);
+  const [stopped, setStopped] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
-  const { status, output, error, fromCache, dismiss } = useRewriter({
-    input,
+  const { status, output, error } = useRewriter({
+    input: committed ?? "",
     language,
     tone: "more-formal",
     length: "as-is",
+    enabled: enabled && committed !== null,
   });
+
+  const busy = !stopped && (status === "loading" || status === "streaming");
+  const stale =
+    !busy &&
+    !!output &&
+    committed !== null &&
+    input !== committed &&
+    !dismissed;
+
+  const run = () => {
+    setCommitted(input);
+    setEnabled(true);
+    setStopped(false);
+    setDismissed(false);
+  };
+  // Disabling the hook aborts the in-flight call; Rewrite re-enables it.
+  const stop = () => {
+    setEnabled(false);
+    setStopped(true);
+  };
 
   return (
     <div className="demo-card">
@@ -26,6 +54,22 @@ export const RewriterDemo = ({ language = "en" }: { language?: string }) => {
           spellCheck={false}
         />
       </label>
+      <div className="demo-row">
+        {busy ? (
+          <button type="button" onClick={stop} className="demo-button">
+            Stop
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={run}
+            disabled={status === "unavailable" || !input.trim()}
+            className="demo-button"
+          >
+            Rewrite
+          </button>
+        )}
+      </div>
       {status === "unavailable" && !error && (
         <UnavailableHint
           api="Rewriter API"
@@ -45,23 +89,34 @@ export const RewriterDemo = ({ language = "en" }: { language?: string }) => {
         />
       )}
       {error && <p className="demo-error">{error.message}</p>}
-      {output && (
+      {stale && (
+        <p className="demo-hint" role="status">
+          The text changed after this rewrite. Run Rewrite again to update it,
+          or dismiss the rewrite.
+        </p>
+      )}
+      {output && !dismissed && (
         <aside className="demo-response">
           <header className="demo-response__header">
-            <span>
-              {fromCache ? "Cached rewrite" : "Rewrite"}{" "}
-              {status === "streaming" && <em>(streaming…)</em>}
+            <span role="status">
+              {stopped ? "Stopped" : stale ? "Rewrite (stale)" : "Rewrite"}{" "}
+              {busy && status === "streaming" && <em>(streaming…)</em>}
             </span>
             <button
               type="button"
-              onClick={dismiss}
+              onClick={() => setDismissed(true)}
               className="demo-dismiss"
               aria-label="dismiss"
             >
               ×
             </button>
           </header>
-          <p className="demo-response__body">{output}</p>
+          <div className="demo-response__body">
+            <ModelMarkdown
+              content={output}
+              streaming={busy && status === "streaming"}
+            />
+          </div>
         </aside>
       )}
     </div>

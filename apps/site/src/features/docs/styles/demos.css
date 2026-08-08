@@ -8,20 +8,24 @@
  */
 
 :root {
-  --demo-card-bg: var(--sl-color-bg);
+  /* Borderless cards separate from the page through surface elevation, so
+     light mode needs a raised tint instead of the page background. */
+  --demo-card-bg: var(--sl-color-gray-7, var(--sl-color-bg));
   --demo-card-border: var(--sl-color-hairline);
   --demo-card-shadow:
     0 1px 2px rgba(15, 23, 42, 0.04),
     0 1px 3px rgba(15, 23, 42, 0.06);
-  --demo-card-radius: var(--radius-lg);
+  --demo-card-radius: var(--radius-md);
 
   --demo-input-bg: var(--sl-color-bg);
   --demo-input-fg: var(--sl-color-text);
   --demo-input-border: var(--sl-color-hairline-shade, var(--sl-color-hairline));
 
-  --demo-button-bg: var(--sl-color-bg);
-  --demo-button-border: var(--sl-color-gray-4);
-  --demo-button-fg: var(--sl-color-text);
+  /* Primary action treatment mirroring the home demo buttons: filled with
+     the theme's strongest surface, no border. */
+  --demo-button-bg: #17181c;
+  --demo-button-bg-hover: #2a2b31;
+  --demo-button-fg: #ffffff;
 
   --demo-panel-bg: var(--sl-color-gray-7);
   --demo-panel-border: var(--sl-color-hairline);
@@ -66,8 +70,9 @@
   /* Outer-only raised shadow (no inner shadows), matching the site cards. */
   --demo-card-shadow: var(--shadow-card);
 
-  --demo-button-bg: transparent;
-  --demo-button-border: var(--sl-color-hairline);
+  --demo-button-bg: var(--color-accent);
+  --demo-button-bg-hover: var(--color-accent-bright);
+  --demo-button-fg: var(--color-bg);
 
   --demo-input-bg: var(--sl-color-black, #0a0a0c);
   --demo-input-border: var(--sl-color-hairline);
@@ -82,21 +87,15 @@
 .demo-card {
   font-family: var(--sl-font);
   width: 100%;
-  max-width: 640px;
   margin-top: 24px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 28px;
-  border: 1px solid var(--demo-card-border);
   border-radius: var(--demo-card-radius);
   background: var(--demo-card-bg);
   box-shadow: var(--demo-card-shadow);
   color: var(--sl-color-text);
-}
-
-.demo-card--narrow {
-  max-width: 560px;
 }
 
 .demo-row {
@@ -117,7 +116,7 @@
 .demo-textarea {
   flex: 1;
   padding: 8px 10px;
-  border: 1px solid var(--demo-input-border);
+  border: none;
   border-radius: var(--radius-sm);
   font-size: 14px;
   font-family: inherit;
@@ -129,30 +128,30 @@
   resize: vertical;
 }
 
+/* Borderless inputs keep a crisp focus ring. */
 .demo-input:focus,
 .demo-textarea:focus {
   outline: none;
-  border-color: var(--sl-color-accent);
+  box-shadow: 0 0 0 1px var(--sl-color-accent);
 }
 
 .demo-button {
   padding: 8px 14px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--demo-button-border);
+  border: none;
   background: var(--demo-button-bg);
   color: var(--demo-button-fg);
   cursor: pointer;
   font-size: 14px;
+  font-weight: 600;
   font-family: inherit;
   transition:
-    border-color 0.15s ease,
-    color 0.15s ease,
+    background-color 0.15s ease,
     transform 0.09s ease;
 }
 
 .demo-button:hover:not(:disabled) {
-  border-color: var(--sl-color-accent);
-  color: var(--sl-color-text);
+  background: var(--demo-button-bg-hover);
 }
 
 /* Press drops the button 1px (no inset), matching the site buttons. */
@@ -173,7 +172,7 @@
 .demo-hint {
   background: var(--demo-hint-bg);
   padding: 8px 12px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   color: var(--demo-muted-fg);
   margin: 0;
@@ -182,7 +181,6 @@
 /* Unavailable-API hints reuse the home page's amber warn treatment. */
 .demo-hint--warn {
   background: var(--demo-warn-bg);
-  border: 1px solid var(--demo-warn-border);
   color: var(--demo-warn-fg);
 }
 
@@ -190,10 +188,9 @@
   background: var(--demo-error-bg);
   color: var(--demo-error-fg);
   padding: 8px 12px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   margin: 0;
-  border: 1px solid var(--demo-error-fg);
 }
 
 .demo-muted {
@@ -207,8 +204,7 @@
   gap: 6px;
   background: var(--demo-panel-bg);
   padding: 10px 12px;
-  border-radius: 4px;
-  border: 1px solid var(--demo-panel-border);
+  border-radius: var(--radius-sm);
 }
 
 .demo-panel__title {
@@ -219,8 +215,7 @@
 
 .demo-response {
   background: var(--demo-accent-bg);
-  border: 1px solid var(--demo-accent-border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 12px;
   color: var(--sl-color-text);
 }
@@ -244,8 +239,7 @@
   font-family: var(--sl-font-mono);
   font-size: 12px;
   padding: 2px 8px;
-  background: var(--demo-card-bg);
-  border: 1px solid var(--demo-accent-border);
+  background: var(--demo-hint-bg);
   border-radius: 999px;
   color: var(--sl-color-text);
 }
@@ -271,7 +265,7 @@
   font-family: var(--sl-font-mono);
   font-size: 12px;
   padding: 10px 12px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   min-height: 80px;
   white-space: pre-wrap;
 }
@@ -295,7 +289,107 @@
   display: block;
   max-width: 240px;
   max-height: 160px;
-  border: 1px solid var(--demo-card-border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   object-fit: contain;
+}
+
+/* Icon-only demo action with a custom hover/focus tooltip, matching the
+   home demos' fresh-run treatment. */
+.demo-tip-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.demo-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--demo-muted-fg);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.demo-icon-button:hover,
+.demo-icon-button:focus-visible {
+  background: var(--demo-hint-bg);
+  color: var(--sl-color-text);
+}
+
+.demo-tooltip {
+  pointer-events: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  white-space: nowrap;
+  border-radius: var(--radius-sm);
+  background: var(--demo-hint-bg);
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--sl-color-text);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease;
+}
+
+.demo-tooltip--right {
+  left: auto;
+  right: 0;
+}
+
+.demo-tip-wrap:hover .demo-tooltip,
+.demo-tip-wrap:focus-within .demo-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Reserved footprint for a client-only demo island. The slot keeps the
+   card's height from the first paint and shows a quiet placeholder until
+   the island hydrates, so content below never shifts. */
+.demo-slot {
+  position: relative;
+  margin-top: 24px;
+  min-height: var(--demo-slot-min, 280px);
+}
+
+.demo-slot .demo-card {
+  margin-top: 0;
+}
+
+.demo-slot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--demo-card-radius);
+  background: var(--demo-card-bg);
+  box-shadow: var(--demo-card-shadow);
+  animation: demo-slot-pulse 1.6s ease-in-out infinite;
+}
+
+.demo-slot:has(.demo-card)::before {
+  content: none;
+}
+
+@keyframes demo-slot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-slot::before {
+    animation: none;
+  }
 }

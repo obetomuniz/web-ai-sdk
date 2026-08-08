@@ -26,6 +26,22 @@ export const btnSmGhost =
 export const demoControls =
   "flex flex-wrap items-center gap-2 max-[640px]:gap-2.5";
 
+// Icon-sized demo action with a custom hover/focus tooltip, mirroring the
+// playground's group + absolute tooltip pattern. The tooltip anchors to the
+// trigger's left edge because demo cards clip overflow.
+export const demoTooltipWrap = "group/tip relative inline-flex items-center";
+
+export const demoTooltip =
+  "pointer-events-none invisible absolute bottom-[calc(100%+0.5rem)] left-0 z-50 whitespace-nowrap rounded-md bg-surface-3 px-2.5 py-1.5 font-mono text-[10px] text-fg-2 opacity-0 shadow-card transition-opacity group-hover/tip:visible group-hover/tip:opacity-100 group-focus-within/tip:visible group-focus-within/tip:opacity-100";
+
+// Variant for triggers in a card's top row: opens below and right-aligned so
+// the card's overflow clipping never cuts it.
+export const demoTooltipBelow =
+  "pointer-events-none invisible absolute top-[calc(100%+0.5rem)] right-0 z-50 whitespace-nowrap rounded-md bg-surface-3 px-2.5 py-1.5 font-mono text-[10px] text-fg-2 opacity-0 shadow-card transition-opacity group-hover/tip:visible group-hover/tip:opacity-100 group-focus-within/tip:visible group-focus-within/tip:opacity-100";
+
+export const demoIconBtn =
+  "inline-flex size-8 cursor-pointer items-center justify-center rounded-full bg-transparent text-fg-3 transition-colors hover:bg-surface-3 hover:text-fg focus-visible:bg-surface-3 focus-visible:text-fg focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50";
+
 export const chipRow = "flex flex-wrap items-center gap-1.5";
 
 export const chipRowInline =

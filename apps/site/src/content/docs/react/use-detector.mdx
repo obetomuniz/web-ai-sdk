@@ -4,6 +4,7 @@ description: React adapter for @web-ai-sdk/detector. Auto-detects the language o
 ---
 
 import { DetectorDemo } from "../../../features/docs/components/DetectorDemo.tsx";
+import DemoSlot from "../../../features/docs/components/DemoSlot.astro";
 
 React adapter for `@web-ai-sdk/detector`. Auto-detects the language of `input` on mount and re-runs whenever it changes. For the conceptual overview see [Detector](/docs/guides/detector/).
 
@@ -13,9 +14,11 @@ To warm the session before the hook first runs, call `prepareLanguageDetector` f
 
 ## Live demo
 
-<DetectorDemo client:only="react" />
+<DemoSlot minHeight={309}>
+  <DetectorDemo client:only="react" />
+</DemoSlot>
 
-Edit the input; the badge updates as you type. The list under the badge shows the top candidates with their confidences.
+Edit the input. The demo debounces typing: detection runs 600 ms after you pause, not on every keystroke. The list under the badge shows the top candidates with their confidences.
 
 ## Usage
 

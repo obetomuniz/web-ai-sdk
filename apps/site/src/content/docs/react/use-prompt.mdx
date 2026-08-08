@@ -4,6 +4,7 @@ description: React adapter for @web-ai-sdk/prompt with an idle / loading / strea
 ---
 
 import { PromptDemo } from "../../../features/docs/components/PromptDemo.tsx";
+import DemoSlot from "../../../features/docs/components/DemoSlot.astro";
 
 React adapter for `@web-ai-sdk/prompt`. Runs single-shot prompts on demand via `ask(input)` and exposes status, streaming output text, and abort / reset controls. For the conceptual overview of the underlying API see [Prompt](/docs/guides/prompt/).
 
@@ -13,7 +14,9 @@ To warm the session before the hook first runs, call `prepareLanguageModel` from
 
 ## Live demo
 
-<PromptDemo client:only="react" />
+<DemoSlot minHeight={97}>
+  <PromptDemo client:only="react" />
+</DemoSlot>
 
 Type a question and click "Ask". Tokens stream in as the model produces them. Click "Cancel" to abort mid-stream.
 
