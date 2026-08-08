@@ -18,8 +18,14 @@ import {
  *
  * Shader contract (uniforms the engine feeds every frame):
  *   float u_time, vec2 u_res, vec2 u_mouse, float u_cells,
+ *   float u_intro (0->1 ease-out over the first ~2.2s; gate effect intensity
+ *   on it — as a plain multiplier for a fade, or as the radius of a spatial
+ *   reveal — so the look materializes out of the bg instead of popping),
  *   vec3 u_bg (=--color-bg), u_c1 (=--color-accent-dim), u_c2 (=--color-accent)
  */
+
+// How long the in-shader materialize ramp (u_intro) takes to reach 1.
+const INTRO_MS = 2200;
 
 const VERT = "attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}";
 
@@ -103,6 +109,8 @@ export function ShaderBackdrop({
     const uC2 = gl.getUniformLocation(prog, "u_c2");
     const uBg = gl.getUniformLocation(prog, "u_bg");
     const uCells = gl.getUniformLocation(prog, "u_cells");
+    // Null for shaders that don't declare it; uniform1f(null, ...) is a no-op.
+    const uIntro = gl.getUniformLocation(prog, "u_intro");
 
     // Colors come from the live design tokens: bg matches the page (no seam),
     // the dimmer accent is the flow, the bright accent is the heads.
@@ -160,6 +168,8 @@ export function ShaderBackdrop({
       // rAF loop (stacked loops made the shader flicker badly on mobile).
       mouse[0] += (target[0] - mouse[0]) * 0.05;
       mouse[1] += (target[1] - mouse[1]) * 0.05;
+      const t = Math.min(1, (now - start) / INTRO_MS);
+      gl.uniform1f(uIntro, 1 - (1 - t) * (1 - t) * (1 - t));
       gl.uniform1f(uTime, (now - start) / 1000);
       gl.uniform2f(uRes, canvas.width, canvas.height);
       gl.uniform2f(uMouse, mouse[0], mouse[1]);

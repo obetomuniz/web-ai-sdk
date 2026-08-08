@@ -18,6 +18,7 @@ const FRAG = [
   "#endif",
   "uniform float u_time;uniform vec2 u_res;uniform vec2 u_mouse;",
   "uniform vec3 u_c1;uniform vec3 u_c2;uniform vec3 u_bg;uniform float u_cells;",
+  "uniform float u_intro;",
   "vec2 hash2(vec2 p){p=vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));return fract(sin(p)*43758.5453);}",
   "float hash1(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}",
   // module position + activation for a given cell (drifts slowly)
@@ -65,8 +66,8 @@ const FRAG = [
   "  }}",
   "  float mb=1.0+smoothstep(0.55,0.0,length(p-mp))*0.6;",
   "  vec3 col=u_bg;",
-  "  col=mix(col,u_c1,clamp(wireI*0.28*mb,0.0,1.0));",
-  "  col=mix(col,u_c2,clamp(max(streamI,nodeI)*mb,0.0,1.0));",
+  "  col=mix(col,u_c1,clamp(wireI*0.28*mb,0.0,1.0)*u_intro);",
+  "  col=mix(col,u_c2,clamp(max(streamI,nodeI)*mb,0.0,1.0)*u_intro);",
   "  col*=1.0-0.3*smoothstep(0.5,1.4,length(p));",
   "  col+=(hash1(uv*u_res.xy+u_time)-0.5)*0.012;",
   "  gl_FragColor=vec4(col,1.0);",
