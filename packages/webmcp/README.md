@@ -4,7 +4,7 @@ This package wraps the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/
 
 The package provides typed registration, cleanup, discovery, and execution. It has no framework dependency.
 
-**Docs:** <https://web-ai-sdk.dev/docs/guides/webmcp/> · **React:** [`useWebMCP`](https://web-ai-sdk.dev/docs/react/use-web-mcp/)
+**Docs:** <https://web-ai-sdk.dev/docs/guides/webmcp/> · **React:** [`useWebMCP`](https://web-ai-sdk.dev/docs/react/use-webmcp/)
 
 ## Status
 

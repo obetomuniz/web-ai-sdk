@@ -303,7 +303,7 @@ export const ctaRow =
   "mt-2 flex flex-wrap items-center gap-6 max-[640px]:w-full max-[640px]:flex-col max-[640px]:justify-center max-[640px]:gap-4";
 
 const btnBase =
-  "inline-flex cursor-pointer items-center gap-2.5 rounded-pill border px-5 py-3 font-mono text-[13px] tracking-[-0.005em] no-underline transition-all active:translate-y-px max-[640px]:px-4 max-[640px]:py-2.5 max-[640px]:text-[13px]";
+  "inline-flex cursor-pointer items-center gap-2.5 rounded-sm border px-5 py-3 font-mono text-[13px] tracking-[-0.005em] no-underline transition-all active:translate-y-px max-[640px]:px-4 max-[640px]:py-2.5 max-[640px]:text-[13px]";
 
 export const btn = `${btnBase} border-transparent`;
 
@@ -600,7 +600,7 @@ export const playground = {
   presetDesc:
     "line-clamp-2 font-sans text-[11px] leading-[1.45] text-fg-4 max-[760px]:hidden",
   wideButton:
-    "inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-pill bg-accent px-3 font-mono text-[10px] font-semibold text-brand-dark transition-[background-color,transform] hover:bg-accent-bright active:scale-95 disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transform-none max-[760px]:size-9 max-[760px]:shrink-0 max-[760px]:rounded-full max-[760px]:p-0",
+    "inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-sm bg-accent px-3 font-mono text-[10px] font-semibold text-brand-dark transition-[background-color,transform] hover:bg-accent-bright active:scale-95 disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transform-none max-[760px]:size-9 max-[760px]:shrink-0 max-[760px]:rounded-full max-[760px]:p-0",
   wideButtonIcon: "text-sm leading-none",
   wideButtonLabel: "max-[760px]:hidden",
   main: "flex h-full w-full min-w-0 flex-col overflow-hidden bg-bg max-[760px]:h-auto",
@@ -719,7 +719,7 @@ export const playground = {
   sendButton:
     "inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-accent font-sans text-lg font-medium text-brand-dark transition-[background-color,transform] hover:bg-accent-bright active:scale-95 motion-reduce:transform-none disabled:cursor-not-allowed disabled:opacity-45",
   stopButton:
-    "inline-flex min-h-9 cursor-pointer items-center justify-center rounded-pill bg-[color-mix(in_oklch,var(--color-err)_12%,transparent)] px-3 py-2 font-mono text-[10px] font-semibold text-err transition-colors hover:bg-[color-mix(in_oklch,var(--color-err)_20%,transparent)]",
+    "inline-flex min-h-9 cursor-pointer items-center justify-center rounded-sm bg-[color-mix(in_oklch,var(--color-err)_12%,transparent)] px-3 py-2 font-mono text-[10px] font-semibold text-err transition-colors hover:bg-[color-mix(in_oklch,var(--color-err)_20%,transparent)]",
   workspace:
     "ml-auto flex h-full w-[340px] shrink-0 flex-col overflow-hidden bg-bg transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity] motion-reduce:transition-none max-[760px]:w-full",
   workspaceSlot:
