@@ -978,3 +978,22 @@ site-search .pagefind-ui__drawer:not(.pagefind-ui__hidden) {
   border-color: var(--sl-color-gray-4);
   color: var(--sl-color-text);
 }
+
+/* Mobile: align the search sheet's Cancel button with the slimmer bar. */
+@media (max-width: 49.999rem) {
+  site-search dialog button[data-close-modal] {
+    height: 2.75rem;
+    padding-block: 0;
+  }
+}
+
+/* Mobile: Starlight reserves nav-gap + nav-pad + button width (4rem) of
+   header padding for the fixed hamburger, but the button only spans 1rem to
+   3rem from the edge — the extra nav-gap read as a dead zone between the
+   action cluster and the menu. Reserve just the button plus the cluster's
+   own 0.5rem rhythm. */
+@media (max-width: 49.999rem) {
+  [data-has-sidebar] .page > .header {
+    padding-inline-end: calc(var(--sl-nav-pad-x) + var(--sl-menu-button-size) + 0.5rem);
+  }
+}
