@@ -19,6 +19,10 @@ const preloadedFonts = [
 export default defineConfig({
   base,
   site: "https://web-ai-sdk.dev",
+  // Static meta-refresh stub so links to the pre-rename hook URL keep working.
+  redirects: {
+    "/docs/react/use-web-mcp/": "/docs/react/use-webmcp/",
+  },
   vite: {
     plugins: [tailwindcss()],
     // Keep a single React instance and optimize every SDK `/react` subpath up
@@ -88,13 +92,9 @@ export default defineConfig({
             crossorigin: true,
           },
         })),
-        {
-          tag: "meta",
-          attrs: {
-            property: "og:image",
-            content: "https://web-ai-sdk.dev/og-image.png",
-          },
-        },
+        // og:image / twitter:image / og:image:alt are emitted per page by the
+        // Head override (src/features/docs/components/Head.astro), pointing at
+        // the /og/<entry-id>.png cards rendered by src/pages/og/[...slug].png.ts.
         {
           tag: "meta",
           attrs: { property: "og:image:type", content: "image/png" },
@@ -109,21 +109,7 @@ export default defineConfig({
         },
         {
           tag: "meta",
-          attrs: {
-            property: "og:image:alt",
-            content: "web-ai-sdk — npm install @web-ai-sdk/all",
-          },
-        },
-        {
-          tag: "meta",
           attrs: { name: "twitter:card", content: "summary_large_image" },
-        },
-        {
-          tag: "meta",
-          attrs: {
-            name: "twitter:image",
-            content: "https://web-ai-sdk.dev/og-image.png",
-          },
         },
         {
           tag: "link",
@@ -202,7 +188,7 @@ export default defineConfig({
           items: [
             { label: "usePrompt", slug: "docs/react/use-prompt" },
             { label: "useSession", slug: "docs/react/use-session" },
-            { label: "useWebMCP", slug: "docs/react/use-web-mcp" },
+            { label: "useWebMCP", slug: "docs/react/use-webmcp" },
             { label: "useSummarizer", slug: "docs/react/use-summarizer" },
             { label: "useTranslator", slug: "docs/react/use-translator" },
             { label: "useDetector", slug: "docs/react/use-detector" },

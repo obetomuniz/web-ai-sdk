@@ -13,7 +13,8 @@ const docsUrl = pathFromBase("docs/");
 const playgroundUrl = pathFromBase("playground/");
 const repoUrl = new URL("obetomuniz/web-ai-sdk", "https://github.com/").toString();
 const canonicalUrl = new URL("playground/", SITE_ORIGIN).toString();
-const ogImageUrl = new URL("og-image.png", SITE_ORIGIN).toString();
+// Playground-specific card rendered at build time by src/pages/og/[...slug].png.ts.
+const ogImageUrl = new URL(pathFromBase("og/playground.png"), SITE_ORIGIN).toString();
 ---
 
 <!doctype html>

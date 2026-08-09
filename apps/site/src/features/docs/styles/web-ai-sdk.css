@@ -783,3 +783,183 @@ footer:has(> .pagination-links) {
   --ec-codePadBlk: 1.75rem;
   --ec-codePadInl: 1.75rem;
 }
+
+/* ---------- Search: minimal floating bar, compact results ---------- */
+
+/* The modal reads as a single floating search bar over the dimmed page; the
+   dialog sheds its panel chrome and the results drawer paints its own
+   surface below the bar. Mobile keeps Starlight's full-screen sheet. */
+@media (min-width: 50rem) {
+  site-search dialog {
+    margin-top: clamp(4rem, 16vh, 9rem);
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  site-search dialog .dialog-frame {
+    padding: 0;
+    gap: 0.625rem;
+  }
+}
+
+site-search dialog::backdrop {
+  background: color-mix(in oklch, var(--sl-color-black) 65%, transparent);
+  -webkit-backdrop-filter: blur(8px) saturate(1.1);
+  backdrop-filter: blur(8px) saturate(1.1);
+}
+
+/* Compact density scale for the results tree. Starlight derives paddings,
+   icon columns, and connector art from these vars, so tightening them here
+   compacts the whole drawer coherently. */
+#starlight__search {
+  --sl-search-result-spacing: 0.375rem;
+  --sl-search-result-pad-inline-start: 2.25rem;
+  --sl-search-result-pad-inline-end: 0.75rem;
+  --sl-search-result-pad-block: 0.45rem;
+  --sl-search-result-nested-pad-block: 0.375rem;
+  --sl-search-page-icon-size: 1rem;
+  --sl-search-tree-diagram-size: 1.5rem;
+}
+
+/* The bar itself: theme surface, hairline border, shared radius scale, mono
+   type — the docs shell's language instead of Pagefind's defaults. */
+#starlight__search .pagefind-ui__search-input {
+  height: 2.75rem;
+  background: var(--sl-color-gray-6);
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: var(--radius-md);
+  font-family: var(--sl-font-mono);
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--sl-color-text);
+  box-shadow: 0 18px 44px -18px rgb(0 0 0 / 0.55);
+}
+
+#starlight__search input:focus {
+  --pagefind-ui-border: var(--sl-color-gray-4);
+  outline: none;
+}
+
+#starlight__search .pagefind-ui__search-input::placeholder {
+  color: var(--sl-color-gray-4);
+  opacity: 1;
+}
+
+/* Quiet the magnifier and shrink the oversized clear button. */
+#starlight__search .pagefind-ui__form::before {
+  --pagefind-ui-text: var(--sl-color-gray-4);
+  opacity: 1;
+}
+
+#starlight__search .pagefind-ui__search-clear {
+  width: 2rem;
+  inset-inline-end: calc(var(--sl-search-cancel-space, 0rem) + 0.375rem);
+}
+
+#starlight__search .pagefind-ui__search-clear::before {
+  mask-size: 40%;
+  background-color: var(--sl-color-gray-4);
+}
+
+#starlight__search .pagefind-ui__search-clear:hover::before {
+  background-color: var(--sl-color-text-accent);
+}
+
+/* ESC affordance on the right edge of the bar, mirroring the open shortcut
+   hint in the nav. Desktop only — mobile shows the Cancel button instead.
+   Hidden while the clear button occupies the same corner. */
+@media (min-width: 50rem) {
+  site-search .pagefind-ui__form {
+    position: relative;
+  }
+
+  site-search .pagefind-ui__form::after {
+    content: "esc";
+    position: absolute;
+    top: 50%;
+    inset-inline-end: 0.75rem;
+    transform: translateY(-50%);
+    padding: 0.15rem 0.4rem;
+    border: 1px solid var(--sl-color-hairline);
+    border-radius: calc(var(--radius-sm) - 2px);
+    font-family: var(--sl-font-mono);
+    font-size: 0.5625rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sl-color-gray-4);
+    pointer-events: none;
+  }
+
+  site-search .pagefind-ui__form:has(.pagefind-ui__search-clear:not([hidden]))::after {
+    display: none;
+  }
+}
+
+/* Results drawer: its own compact surface below the bar. */
+site-search .pagefind-ui__drawer:not(.pagefind-ui__hidden) {
+  margin-top: 0.625rem;
+  background: var(--sl-color-gray-6);
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: var(--radius-md);
+  box-shadow: 0 28px 70px -24px rgb(0 0 0 / 0.7);
+  padding: 0.25rem 0.625rem 0.625rem;
+  max-height: min(60vh, 30rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* Compact rows: tighter rhythm, smaller type, calmer hierarchy. */
+#starlight__search .pagefind-ui__message {
+  padding: 0.5rem 0.25rem 0.375rem;
+  font-family: var(--sl-font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 400;
+  color: var(--sl-color-gray-4);
+}
+
+#starlight__search .pagefind-ui__result-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+#starlight__search .pagefind-ui__result-excerpt {
+  font-size: 0.71875rem;
+  line-height: 1.45;
+  color: var(--sl-color-gray-3);
+  min-width: 0;
+}
+
+#starlight__search .pagefind-ui__result-nested .pagefind-ui__result-link {
+  font-size: 0.75rem;
+}
+
+#starlight__search mark {
+  background: transparent;
+  color: var(--sl-color-text-accent);
+  font-weight: 600;
+}
+
+#starlight__search .pagefind-ui__button,
+#starlight__search .pagefind-ui__button:hover {
+  margin-top: 0.5rem;
+  padding: 0.45rem 0;
+  height: auto;
+  border: 1px solid var(--sl-color-hairline-light);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-family: var(--sl-font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 400;
+  color: var(--sl-color-gray-2);
+}
+
+#starlight__search .pagefind-ui__button:hover {
+  border-color: var(--sl-color-gray-4);
+  color: var(--sl-color-text);
+}

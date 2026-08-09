@@ -154,7 +154,7 @@ function buildLlmsIndex() {
     "",
     "- [usePrompt](" + SITE_URL + "/docs/react/use-prompt/)",
     "- [useSession](" + SITE_URL + "/docs/react/use-session/)",
-    "- [useWebMCP](" + SITE_URL + "/docs/react/use-web-mcp/)",
+    "- [useWebMCP](" + SITE_URL + "/docs/react/use-webmcp/)",
     "- [useSummarizer](" + SITE_URL + "/docs/react/use-summarizer/)",
     "- [useTranslator](" + SITE_URL + "/docs/react/use-translator/)",
     "- [useDetector](" + SITE_URL + "/docs/react/use-detector/)",

@@ -12,11 +12,24 @@ import Default from "@astrojs/starlight/components/Head.astro";
 // keep the schema payload conditional.
 const starlightRoute = (
   Astro.locals as {
-    starlightRoute?: { entry?: { data?: { title?: string; description?: string } } };
+    starlightRoute?: {
+      id?: string;
+      entry?: { id?: string; data?: { title?: string; description?: string } };
+    };
   }
 ).starlightRoute;
 const entry = starlightRoute?.entry;
 const data = entry?.data;
+
+// Per-page OG card, rendered at build time by src/pages/og/[...slug].png.ts
+// from the same template as the committed home card. Entry ids are already
+// prefixed ("docs", "docs/guides/prompt", …) by the content.config generateId.
+const entryId = entry?.id ?? starlightRoute?.id;
+const ogImage =
+  entryId && Astro.site
+    ? new URL(`${import.meta.env.BASE_URL.replace(/\/$/, "")}/og/${entryId}.png`, Astro.site).href
+    : undefined;
+const ogImageAlt = data?.title ? `${data.title} — web-ai-sdk docs` : undefined;
 
 const canonical = Astro.site
   ? new URL(Astro.url.pathname, Astro.site).href
@@ -56,6 +69,9 @@ const ld = {
 ---
 
 <Default><slot /></Default>
+{ogImage && <meta property="og:image" content={ogImage} />}
+{ogImage && <meta name="twitter:image" content={ogImage} />}
+{ogImage && ogImageAlt && <meta property="og:image:alt" content={ogImageAlt} />}
 {data && <script is:inline type="application/ld+json" set:html={JSON.stringify(ld)} />}
 <script>
   import "../scripts/table-scroll.js";
