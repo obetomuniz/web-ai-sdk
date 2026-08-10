@@ -194,9 +194,6 @@ export function Playground() {
           liveThought={liveThought}
           stopReason={stopReason}
           busy={busy}
-          conversationsOpen={layout.conversationsOpen}
-          runtimeOpen={layout.runtimeOpen}
-          onShowRuntime={layout.showRuntime}
           composer={{
             draft,
             promptOn,

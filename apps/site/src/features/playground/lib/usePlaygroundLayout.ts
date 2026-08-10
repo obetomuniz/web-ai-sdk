@@ -3,6 +3,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   useCallback,
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -18,14 +19,18 @@ export const MIN_SIDEBAR_WIDTH = 200;
 export const MAX_SIDEBAR_WIDTH = 400;
 const SIDEBAR_RESIZE_STEP = 16;
 const SIDEBAR_WIDTH_STORAGE_KEY = "web-ai-sdk:playground:sidebar-width";
+const MOBILE_LAYOUT_QUERY = "(max-width: 760px)";
 
 export function usePlaygroundLayout() {
   const shellRef = useRef<HTMLDivElement>(null);
   const [initialLayoutState] = useState(loadPlaygroundLayoutState);
   const [sidebarWidth, setSidebarWidth] = useState(loadSidebarWidth);
   const [sidebarResizing, setSidebarResizing] = useState(false);
-  const [conversationsOpen, setConversationsOpen] = useState(
+  const [desktopConversationsOpen, setDesktopConversationsOpen] = useState(
     initialLayoutState.conversationsOpen ?? true,
+  );
+  const [mobileLayout, setMobileLayout] = useState(
+    () => window.matchMedia(MOBILE_LAYOUT_QUERY).matches,
   );
   const [runtimeOpen, setRuntimeOpen] = useState(
     () =>
@@ -38,6 +43,16 @@ export function usePlaygroundLayout() {
     startWidth: number;
   } | null>(null);
   const sidebarWidthRef = useRef(sidebarWidth);
+  const conversationsOpen = mobileLayout || desktopConversationsOpen;
+
+  useEffect(() => {
+    const media = window.matchMedia(MOBILE_LAYOUT_QUERY);
+    const updateMobileLayout = (event: MediaQueryListEvent) => {
+      setMobileLayout(event.matches);
+    };
+    media.addEventListener("change", updateMobileLayout);
+    return () => media.removeEventListener("change", updateMobileLayout);
+  }, []);
 
   const persistSidebarWidth = useCallback((width: number) => {
     try {
@@ -124,7 +139,7 @@ export function usePlaygroundLayout() {
   };
 
   const setConversationsVisibility = useCallback((open: boolean) => {
-    setConversationsOpen(open);
+    setDesktopConversationsOpen(open);
     updatePlaygroundLayoutState({ conversationsOpen: open });
   }, []);
 

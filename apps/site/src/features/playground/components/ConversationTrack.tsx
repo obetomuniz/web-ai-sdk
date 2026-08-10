@@ -40,14 +40,7 @@ export function ConversationTrack({
   const hasLiveTurn =
     Boolean(currentInput) || events.length > 0 || text || busy || stopReason;
   if (turns.length === 0 && !hasLiveTurn) {
-    return (
-      <div className={ui.emptyConversation}>
-        <div className={ui.emptyConversationTitle}>Start a conversation</div>
-        <p className={ui.emptyConversationText}>
-          Messages, tool calls, and answers will appear here.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   const visibleTurns: TranscriptTurn[] = turns.map((turn) => ({

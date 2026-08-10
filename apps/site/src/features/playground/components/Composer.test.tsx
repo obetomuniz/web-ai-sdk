@@ -137,7 +137,7 @@ describe("Composer", () => {
     expect(link?.getAttribute("href")).toContain("docs/browser-support");
   });
 
-  it("floats example suggestions only while the draft is empty and idle", () => {
+  it("shows example suggestions only while the draft is empty and idle", () => {
     const typed = renderComposer({ draft: "hello" });
     expect(typed.container.querySelector("[title*='Summarize']")).toBeNull();
 
@@ -152,6 +152,18 @@ describe("Composer", () => {
 
     const idle = renderComposer();
     expect(idle.container.querySelector("[title*='Summarize']")).not.toBeNull();
+  });
+
+  it("keeps examples in flow without adding top spacing", () => {
+    const { container } = renderComposer();
+    const example = container.querySelector("[title*='Summarize']");
+    const suggestionRow = example?.parentElement?.parentElement;
+    expect(suggestionRow?.className).toContain(
+      "bg-[linear-gradient(to_top,var(--color-bg)_62%,transparent)]",
+    );
+    expect(suggestionRow?.className).not.toContain("absolute");
+    expect(suggestionRow?.className).not.toContain("shadow-");
+    expect(suggestionRow?.className).not.toContain(" pt-");
   });
 
   it("keeps primary controls before example suggestions in tab order", () => {

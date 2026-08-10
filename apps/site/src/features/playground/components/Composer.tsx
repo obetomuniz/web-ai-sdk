@@ -7,6 +7,7 @@ import {
   type PromptReadiness,
   promptReadinessMessage,
 } from "../lib/promptReadiness.js";
+import { ModeIcon } from "./ModeIcon.js";
 
 const browserSupportHref = `${import.meta.env.BASE_URL}docs/browser-support/`;
 
@@ -84,6 +85,39 @@ export function Composer({
         )}
       </div>
 
+      {promptOn && !busy && !error && !draft.trim() && (
+        <div className={ui.exampleFloat}>
+          <div className={ui.examples}>
+            {examples.map((example) => (
+              <button
+                key={example}
+                type="button"
+                className={ui.example}
+                onClick={() => onSubmitExample(example)}
+                title={example}
+              >
+                {truncate(example)}
+              </button>
+            ))}
+          </div>
+          <span className={ui.exampleRegenerateWrap}>
+            <button
+              type="button"
+              className={ui.exampleRegenerate}
+              onClick={onRegenerateExamples}
+              disabled={generatingExamples || !canRegenerateExamples}
+              aria-label="Generate new examples"
+              aria-busy={generatingExamples}
+            >
+              <span aria-hidden="true">+</span>
+            </button>
+            <span role="tooltip" className={ui.exampleRegenerateTooltip}>
+              Generate new examples
+            </span>
+          </span>
+        </div>
+      )}
+
       <form className={ui.composer} onSubmit={submit}>
         <div className={ui.modeSelector} ref={modeMenuRef}>
           <button
@@ -96,28 +130,11 @@ export function Composer({
             aria-expanded={modeMenuOpen}
             aria-controls="playground-mode-menu"
           >
-            <span
-              className={ui.modeTriggerName}
+            <ModeIcon
+              modeId={activeMode.id}
+              className={ui.modeTriggerIcon}
               data-accent={activeMode.accent}
-            >
-              {activeMode.name}
-            </span>
-            <svg
-              className={
-                modeMenuOpen ? ui.modeTriggerChevronOpen : ui.modeTriggerChevron
-              }
-              viewBox="0 0 16 16"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="m4.5 6 3.5 3.5L11.5 6"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            />
           </button>
           {modeMenuOpen && promptOn && (
             <div className={ui.modeMenu}>
@@ -148,10 +165,10 @@ export function Composer({
                       <span className={ui.modeOptionCopy}>
                         <span className={ui.modeOptionTitleRow}>
                           <span className={ui.modeOptionIdentity}>
-                            <span
-                              className={ui.modeAccentDot}
+                            <ModeIcon
+                              modeId={mode.id}
+                              className={ui.modeOptionIcon}
                               data-accent={mode.accent}
-                              aria-hidden="true"
                             />
                             <span
                               className={ui.modeOptionName}
@@ -223,39 +240,6 @@ export function Composer({
           )}
         </div>
       </form>
-
-      {promptOn && !busy && !error && !draft.trim() && (
-        <div className={ui.exampleFloat}>
-          <div className={ui.examples}>
-            {examples.map((example) => (
-              <button
-                key={example}
-                type="button"
-                className={ui.example}
-                onClick={() => onSubmitExample(example)}
-                title={example}
-              >
-                {truncate(example)}
-              </button>
-            ))}
-          </div>
-          <span className={ui.exampleRegenerateWrap}>
-            <button
-              type="button"
-              className={ui.exampleRegenerate}
-              onClick={onRegenerateExamples}
-              disabled={generatingExamples || !canRegenerateExamples}
-              aria-label="Generate new examples"
-              aria-busy={generatingExamples}
-            >
-              <span aria-hidden="true">+</span>
-            </button>
-            <span role="tooltip" className={ui.exampleRegenerateTooltip}>
-              Generate new examples
-            </span>
-          </span>
-        </div>
-      )}
     </div>
   );
 }

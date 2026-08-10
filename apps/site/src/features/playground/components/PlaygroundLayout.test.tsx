@@ -20,6 +20,56 @@ afterEach(() => {
 });
 
 describe("PlaygroundLayout", () => {
+  it("fades transcript content before the scroll boundary", () => {
+    expect(ui.transcriptPanel).toContain(
+      "after:bg-[linear-gradient(to_top,var(--color-bg)_0%,color-mix(in_oklch,var(--color-bg)_82%,transparent)_45%,transparent_100%)]",
+    );
+    expect(ui.answer).toContain("pb-10");
+  });
+
+  it("positions the runtime restore control below the mobile conversation row", () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    const noop = vi.fn();
+    const layout = {
+      shellRef: createRef<HTMLDivElement>(),
+      shellStyle: {},
+      gridClassName: "",
+      sidebarWidth: 260,
+      conversationsOpen: true,
+      runtimeOpen: false,
+      showConversations: noop,
+      hideConversations: noop,
+      showRuntime: noop,
+      hideRuntime: noop,
+      startSidebarResize: noop,
+      resizeSidebar: noop,
+      finishSidebarResize: noop,
+      handleLostPointerCapture: noop,
+      resizeSidebarFromKeyboard: noop,
+      resetSidebarWidth: noop,
+    } satisfies PlaygroundLayoutController;
+
+    act(() => {
+      root?.render(
+        <PlaygroundLayout
+          layout={layout}
+          conversations={null}
+          conversation={null}
+          runtime={null}
+        />,
+      );
+    });
+
+    const restore = container
+      .querySelector('[aria-label="Show runtime panel"]')
+      ?.closest("span");
+    expect(restore?.className).toContain(
+      "max-[760px]:top-[calc(var(--playground-mobile-sidebar-height)+0.625rem)]",
+    );
+  });
+
   it("reveals a restored conversation at the bottom", () => {
     const boot = document.createElement("div");
     boot.dataset.playgroundBoot = "";
