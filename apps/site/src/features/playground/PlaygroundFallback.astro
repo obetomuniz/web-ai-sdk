@@ -39,6 +39,7 @@ const truncateExample = (value: string, limit = 60) =>
   data-markdown-inline-code-class={ui.markdownInlineCode}
   data-boot-message-class={ui.bootMessage}
   data-main-header-scrolled-class={ui.mainHeaderScrolled}
+  data-main-body-class={ui.mainBody}
   data-layout-mobile-with-sidebar-class={ui.shellMobileWithSidebar}
   data-layout-mobile-without-sidebar-class={ui.shellMobileWithoutSidebar}
   data-panel-slot-open-class={ui.panelSlotOpen}
@@ -89,7 +90,10 @@ const truncateExample = (value: string, limit = 60) =>
           </span>
         </header>
         <div class={ui.sidebarBody}>
-          <section class={ui.sidebarSection}>
+          <section
+            class={ui.sidebarSection}
+            data-playground-conversation-rail
+          >
             <span class={ui.wideButton}>
               <span class={ui.wideButtonIcon}>+</span>
               <span class={ui.wideButtonLabel}>New conversation</span>
@@ -105,6 +109,33 @@ const truncateExample = (value: string, limit = 60) =>
               </div>
             </div>
           </section>
+          <span
+            class={ui.sidebarMobileActions}
+            data-playground-mobile-runtime-action
+            hidden
+          >
+            <span class={ui.panelToggle}>
+              <svg
+                class={ui.panelToggleIcon}
+                viewBox="0 0 18 18"
+                fill="none"
+                aria-hidden="true"
+              >
+                <rect
+                  x="2.25"
+                  y="2.75"
+                  width="13.5"
+                  height="12.5"
+                  rx="2.25"
+                  stroke="currentColor"
+                  stroke-width="1.25"></rect>
+                <path
+                  d="M11.5 3.25v11.5"
+                  stroke="currentColor"
+                  stroke-width="1.25"></path>
+              </svg>
+            </span>
+          </span>
         </div>
       </aside>
     </div>
@@ -163,7 +194,14 @@ const truncateExample = (value: string, limit = 60) =>
         data-playground-main-header
       />
 
-      <div class={ui.mainBodyCentered}>
+      <div class={ui.mainBodyCentered} data-playground-main-body>
+        <section
+          class={ui.transcriptPanel}
+          data-playground-transcript-panel
+          hidden
+        >
+          <div class={ui.answer} data-playground-transcript></div>
+        </section>
         <div class={ui.composerDock}>
           <div class={ui.exampleFloat}>
             <div class={ui.examples} data-playground-examples>
@@ -698,6 +736,12 @@ const truncateExample = (value: string, limit = 60) =>
             "[data-playground-right-restore]",
           );
           if (rightRestore instanceof HTMLElement) rightRestore.hidden = false;
+          const mobileRuntimeAction = fallback.querySelector(
+            "[data-playground-mobile-runtime-action]",
+          );
+          if (mobileRuntimeAction instanceof HTMLElement) {
+            mobileRuntimeAction.hidden = false;
+          }
         }
 
         const raw = localStorage.getItem(fallback.dataset.storageKey ?? "");
@@ -947,6 +991,18 @@ const truncateExample = (value: string, limit = 60) =>
 
         if (transcriptThread.childElementCount > 0) {
           transcript.replaceChildren(transcriptThread);
+          const mainBody = fallback.querySelector(
+            "[data-playground-main-body]",
+          );
+          const transcriptPanel = fallback.querySelector(
+            "[data-playground-transcript-panel]",
+          );
+          if (mainBody instanceof HTMLElement) {
+            mainBody.className = fallback.dataset.mainBodyClass ?? "";
+          }
+          if (transcriptPanel instanceof HTMLElement) {
+            transcriptPanel.hidden = false;
+          }
           restoredTranscript = transcript;
         }
       } catch {

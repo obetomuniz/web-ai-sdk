@@ -12,10 +12,12 @@ interface Props {
   promptOn: boolean;
   status: string;
   stopReason: AgentStopReason | null;
+  runtimeOpen: boolean;
   onCreate: () => void;
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
   onHide: () => void;
+  onShowRuntime: () => void;
 }
 
 export function ConversationsPanel({
@@ -26,10 +28,12 @@ export function ConversationsPanel({
   promptOn,
   status,
   stopReason,
+  runtimeOpen,
   onCreate,
   onSelect,
   onClose,
   onHide,
+  onShowRuntime,
 }: Props) {
   const activeStatus = conversationStatus(promptOn, status, stopReason);
   return (
@@ -48,7 +52,10 @@ export function ConversationsPanel({
           <PanelToggle side="left" open onClick={onHide} />
         </header>
         <div className={ui.sidebarBody}>
-          <section className={ui.sidebarSection}>
+          <section
+            className={ui.sidebarSection}
+            data-playground-conversation-rail
+          >
             <button
               type="button"
               className={ui.wideButton}
@@ -121,6 +128,14 @@ export function ConversationsPanel({
               })}
             </div>
           </section>
+          {!runtimeOpen && (
+            <div
+              className={ui.sidebarMobileActions}
+              data-playground-mobile-runtime-action
+            >
+              <PanelToggle side="right" open={false} onClick={onShowRuntime} />
+            </div>
+          )}
         </div>
       </aside>
     </div>
