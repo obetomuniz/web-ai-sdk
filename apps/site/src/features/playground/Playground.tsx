@@ -177,10 +177,12 @@ export function Playground() {
           promptOn={promptOn}
           status={status}
           stopReason={stopReason}
+          runtimeOpen={layout.runtimeOpen}
           onCreate={() => createThread()}
           onSelect={selectThread}
           onClose={closeThread}
           onHide={layout.hideConversations}
+          onShowRuntime={layout.showRuntime}
         />
       }
       conversation={

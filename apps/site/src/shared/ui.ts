@@ -593,9 +593,11 @@ export const playground = {
   sidebarResizeHandle:
     "absolute top-0 left-[var(--playground-sidebar-width)] z-30 m-0 h-full w-3 -translate-x-1/2 cursor-col-resize touch-none border-0 bg-transparent p-0 outline-none before:pointer-events-none before:absolute before:top-1/2 before:left-1/2 before:h-10 before:w-0.5 before:-translate-x-1/2 before:-translate-y-1/2 before:rounded-full before:bg-transparent before:transition-[height,background-color] before:content-[''] hover:before:h-14 hover:before:bg-fg-4 focus-visible:before:h-14 focus-visible:before:bg-accent active:before:h-16 active:before:bg-accent max-[760px]:hidden",
   sidebarBody:
-    "grid min-h-0 flex-1 content-start gap-7 overflow-y-auto px-3 py-4 [scrollbar-width:thin] max-[760px]:block max-[760px]:h-[var(--playground-mobile-sidebar-height)] max-[760px]:flex-none max-[760px]:overflow-x-auto max-[760px]:overflow-y-hidden max-[760px]:py-2.5",
+    "grid min-h-0 flex-1 content-start gap-7 overflow-y-auto px-3 py-4 [scrollbar-width:thin] max-[760px]:h-[var(--playground-mobile-sidebar-height)] max-[760px]:flex-none max-[760px]:grid-cols-[minmax(0,1fr)_auto] max-[760px]:items-center max-[760px]:gap-1 max-[760px]:overflow-hidden max-[760px]:py-2.5",
   sidebarSection:
-    "grid min-w-0 content-start gap-2 max-[760px]:flex max-[760px]:w-max max-[760px]:items-center",
+    "grid min-w-0 content-start gap-2 max-[760px]:flex max-[760px]:h-full max-[760px]:items-center max-[760px]:overflow-x-auto max-[760px]:overflow-y-hidden",
+  sidebarMobileActions:
+    "hidden shrink-0 items-center gap-0.5 max-[760px]:flex max-[760px]:self-center max-[760px]:bg-surface max-[760px]:pl-1",
   sectionTitle:
     "m-0 font-mono text-[10px] font-normal uppercase tracking-[0.14em] text-fg-4 max-[760px]:hidden",
   presets: "grid gap-1 max-[760px]:flex max-[760px]:flex-nowrap",
@@ -627,9 +629,9 @@ export const playground = {
   panelRestoreLeft:
     "absolute top-2.5 left-3 z-40 motion-safe:animate-[playground-fade_180ms_ease-out_100ms_both]",
   panelRestoreRight:
-    "absolute top-2.5 right-3 z-40 motion-safe:animate-[playground-fade_180ms_ease-out_100ms_both] max-[760px]:top-[calc(var(--playground-mobile-sidebar-height)+0.625rem)]",
+    "absolute top-2.5 right-3 z-40 motion-safe:animate-[playground-fade_180ms_ease-out_100ms_both] max-[760px]:hidden",
   panelToggle:
-    "inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-sm bg-transparent text-fg-4 transition-[color,background-color,transform] hover:bg-surface hover:text-fg-2 active:scale-95 focus-visible:bg-surface focus-visible:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent motion-reduce:transform-none max-[760px]:size-9",
+    "inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-sm bg-transparent text-fg-4 transition-[color,background-color,transform] hover:bg-surface-3 hover:text-fg-2 active:scale-95 focus-visible:bg-surface-3 focus-visible:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent motion-reduce:transform-none max-[760px]:size-9",
   panelToggleIcon: "size-4",
   modeSelector: "relative min-w-0 [grid-area:mode]",
   modeTrigger:
@@ -661,7 +663,7 @@ export const playground = {
   mainBody:
     "grid min-h-0 w-full max-w-[960px] flex-1 self-center grid-rows-[minmax(0,1fr)_auto] gap-0 px-3 pb-4 max-[640px]:max-w-none max-[640px]:px-3 max-[640px]:pb-2",
   mainBodyCentered:
-    "flex min-h-0 w-full max-w-[960px] flex-1 flex-col justify-center gap-6 self-center px-3 pb-4 max-[640px]:max-w-none max-[640px]:px-3 max-[640px]:pb-2",
+    "flex min-h-0 w-full max-w-[960px] flex-1 flex-col justify-center gap-6 self-center px-3 pb-4 max-[760px]:justify-end max-[640px]:max-w-none max-[640px]:px-3 max-[640px]:pb-2",
   transcriptPanel:
     "relative min-h-0 overflow-hidden after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:z-10 after:h-10 after:bg-[linear-gradient(to_top,var(--color-bg)_0%,color-mix(in_oklch,var(--color-bg)_82%,transparent)_45%,transparent_100%)] after:content-['']",
   answer:

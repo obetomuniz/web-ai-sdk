@@ -20,6 +20,10 @@ afterEach(() => {
 });
 
 describe("PlaygroundLayout", () => {
+  it("keeps the empty-state composer at the bottom on mobile", () => {
+    expect(ui.mainBodyCentered).toContain("max-[760px]:justify-end");
+  });
+
   it("fades transcript content before the scroll boundary", () => {
     expect(ui.transcriptPanel).toContain(
       "after:bg-[linear-gradient(to_top,var(--color-bg)_0%,color-mix(in_oklch,var(--color-bg)_82%,transparent)_45%,transparent_100%)]",
@@ -27,7 +31,7 @@ describe("PlaygroundLayout", () => {
     expect(ui.answer).toContain("pb-10");
   });
 
-  it("positions the runtime restore control below the mobile conversation row", () => {
+  it("keeps the runtime restore control on the desktop layout rail", () => {
     const container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
@@ -65,9 +69,7 @@ describe("PlaygroundLayout", () => {
     const restore = container
       .querySelector('[aria-label="Show runtime panel"]')
       ?.closest("span");
-    expect(restore?.className).toContain(
-      "max-[760px]:top-[calc(var(--playground-mobile-sidebar-height)+0.625rem)]",
-    );
+    expect(restore?.className).toContain("max-[760px]:hidden");
   });
 
   it("reveals a restored conversation at the bottom", () => {
