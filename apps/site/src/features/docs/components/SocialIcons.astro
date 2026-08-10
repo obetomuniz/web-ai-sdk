@@ -11,15 +11,14 @@ const repoHref = new URL(
 ---
 
 <a
-  class={ui.navIcon}
+  class={`${ui.navCta} docs-link`}
   href={docsHref}
   aria-label="Read the web-ai-sdk docs"
   title="Docs"
 >
+  <span class={ui.navDocsLabel}>Docs</span>
   <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
+    class={ui.navDocsMark}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -91,6 +90,8 @@ const repoHref = new URL(
     background: #000000;
   }
 
+  /* One uniform 0.5rem gap across the whole mobile cluster, matching the
+     Header's desktop rhythm and the 0.5rem reserved before the hamburger. */
   @media (max-width: 49.999rem) {
     :global(.right-group) {
       display: flex;
@@ -98,7 +99,7 @@ const repoHref = new URL(
     }
 
     :global(.right-group .social-icons) {
-      gap: 0.75rem;
+      gap: 0.5rem;
     }
   }
 </style>

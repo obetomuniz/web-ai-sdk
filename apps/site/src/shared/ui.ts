@@ -93,8 +93,14 @@ export const chipSelectCaret =
 export const caret =
   "inline-block h-[0.08em] w-[0.5em] shrink-0 animate-blink rounded-[1px] bg-accent align-baseline ml-[0.06em]";
 
+// Mobile: overflow-y-hidden is required — with only overflow-x set, the spec
+// promotes overflow-y to auto, and the tabs' -1px bottom margin (see tabBase)
+// makes the content 1px taller than the scrollport, creating a phantom
+// vertical scroll. The hairline moves from border-b to an inset shadow there:
+// a border sits outside the scrollport, so the active tab's own border-b
+// could no longer overlay it once the strip scrolls.
 const tabsBase =
-  "flex gap-1 border-b border-hairline max-[880px]:flex-nowrap max-[880px]:overflow-x-auto max-[880px]:[scrollbar-width:thin]";
+  "flex gap-1 border-b border-hairline max-[880px]:flex-nowrap max-[880px]:overflow-x-auto max-[880px]:overflow-y-hidden max-[880px]:border-b-0 max-[880px]:shadow-[inset_0_-1px_0_var(--color-hairline)] max-[880px]:[scrollbar-width:thin]";
 
 export const tabs = `${tabsBase} px-2`;
 
@@ -105,8 +111,12 @@ export const tabs = `${tabsBase} px-2`;
 // merges.
 export const tabsFlush = `${tabsBase}`;
 
+// mb-[-1px] lets the active tab's border-b overlay the strip's hairline on
+// desktop; on mobile the strip scrolls and draws its hairline as an inset
+// shadow instead (see tabsBase), so the tab sits flush (mb-0) and its border-b
+// lands exactly on the shadow line.
 const tabBase =
-  "group/tab mb-[-1px] inline-flex shrink-0 cursor-pointer items-center gap-2 border-x-0 border-t-0 border-b border-solid border-transparent bg-transparent px-4 py-3 font-mono text-[12.5px] transition-colors focus-visible:relative focus-visible:z-1 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent max-[880px]:px-3.5";
+  "group/tab mb-[-1px] inline-flex shrink-0 cursor-pointer items-center gap-2 border-x-0 border-t-0 border-b border-solid border-transparent bg-transparent px-4 py-3 font-mono text-[12.5px] transition-colors focus-visible:relative focus-visible:z-1 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent max-[880px]:mb-0 max-[880px]:px-3.5";
 
 export const tab = `${tabBase} text-fg-3 hover:text-fg`;
 
@@ -207,9 +217,6 @@ export const sectionHead =
 export const sectionEyebrow =
   "inline-flex items-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-4";
 
-export const permalink =
-  "inline-flex size-7 items-center justify-center rounded-sm border border-hairline font-mono text-[13px] leading-none text-fg-4 no-underline transition-[color,border-color] hover:border-[color-mix(in_oklch,var(--color-accent)_40%,var(--color-hairline))] hover:text-accent max-[880px]:size-auto max-[880px]:rounded-none max-[880px]:border-0 max-[880px]:p-1.5 max-[880px]:hover:border-transparent [&>span[aria-hidden=true]]:translate-y-[-0.9px] [&>span[aria-hidden=true]]:opacity-75";
-
 export const srOnly =
   "absolute m-[-1px] h-px w-px overflow-hidden border-0 p-0 whitespace-nowrap [clip:rect(0,0,0,0)]";
 
@@ -220,7 +227,7 @@ export const navInner =
   "grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-4 max-[640px]:grid-cols-[1fr_auto]";
 
 export const navBrand =
-  "flex items-baseline gap-[0.1em] font-mono text-sm tracking-[-0.01em]";
+  "flex items-baseline gap-[0.1em] font-mono text-sm whitespace-nowrap tracking-[-0.01em]";
 
 export const navMinimap =
   "relative flex h-10 w-48 items-center justify-center justify-self-center [&_a.active>span:first-child]:!h-8 [&_a.active>span:first-child]:!w-[3px] [&_a.active>span:first-child]:!bg-accent [&_a.active>span:first-child]:!opacity-100 max-[640px]:hidden";
@@ -243,24 +250,28 @@ export const navMinimapSummary =
 export const navCenterPlaceholder =
   "h-10 w-48 justify-self-center max-[640px]:hidden";
 
+// Compact text CTAs: the same 2rem height as the docs search trigger and
+// theme toggle, sized to their label; on small screens they collapse to the
+// same 2rem square. transition-colors (not -all) so only hover tints animate —
+// with transition-all, any late-applied stylesheet rule that changes geometry
+// (a real hazard while dev-mode CSS streams in) animates as a height bounce.
 const navCtaBase =
-  "inline-flex min-h-9 items-center justify-center whitespace-nowrap rounded-sm border px-3 py-2 font-mono text-[12.5px] leading-[1.55] no-underline transition-all max-[640px]:size-9 max-[640px]:p-0";
+  "inline-flex min-h-8 items-center justify-center whitespace-nowrap rounded-sm border px-2.5 py-1 font-mono text-[12.5px] leading-[1.55] no-underline transition-colors max-[640px]:size-8 max-[640px]:p-0";
 
 export const navCta = `${navCtaBase} border-hairline-2 text-fg-2 hover:border-accent-line hover:text-fg`;
 
 export const navCtaPrimary = `${navCtaBase} border-accent bg-accent font-semibold text-brand-dark hover:border-accent-bright hover:bg-accent-bright`;
 
-// Right-aligned nav action group: the icon-only Docs link plus the GitHub CTA.
+// Right-aligned nav action group: the Docs, Playground, and GitHub CTAs.
 export const navActions = "flex items-center justify-self-end gap-2";
 
 export const navPlaygroundLabel = "max-[640px]:hidden";
 
 export const navPlaygroundMark = "hidden size-4 max-[640px]:block";
 
-// Borderless, icon-only nav button. Sits next to the GitHub CTA; a micro
-// scale + color lift on hover gives it a tactile affordance without a box.
-export const navIcon =
-  "inline-flex items-center justify-center rounded-sm p-2 text-fg-3 transition-all duration-200 ease-out hover:scale-110 hover:text-fg";
+export const navDocsLabel = "max-[640px]:hidden";
+
+export const navDocsMark = "hidden size-4 max-[640px]:block";
 
 export const navGitHubLabel = "max-[640px]:hidden";
 
