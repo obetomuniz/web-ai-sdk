@@ -313,6 +313,11 @@ export const subhead =
 export const ctaRow =
   "mt-2 flex flex-wrap items-center gap-6 max-[640px]:w-full max-[640px]:flex-col max-[640px]:justify-center max-[640px]:gap-4";
 
+// Reduced cousin of ctaGlow behind the hero install pill: same drifting
+// gradient, but tighter and dimmer so it reads as an accent, not a spotlight.
+export const installGlow =
+  "relative z-0 isolate before:pointer-events-none before:absolute before:inset-0 before:-z-1 before:animate-rainbow-glow before:rounded-full before:bg-[linear-gradient(100deg,#d946ef_0%,#8b5cf6_24%,#3b82f6_48%,#06b6d4_70%,#22c55e_100%)] before:bg-[length:180%_100%] before:opacity-35 before:blur-[7px] before:will-change-[background-position] before:content-[''] max-[640px]:before:opacity-30 max-[640px]:before:blur-[5px]";
+
 const btnBase =
   "inline-flex cursor-pointer items-center gap-2.5 rounded-sm border px-5 py-3 font-mono text-[13px] tracking-[-0.005em] no-underline transition-all active:translate-y-px max-[640px]:px-4 max-[640px]:py-2.5 max-[640px]:text-[13px]";
 
