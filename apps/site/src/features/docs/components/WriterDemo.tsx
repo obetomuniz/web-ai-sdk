@@ -45,6 +45,24 @@ export const WriterDemo = ({ language = "en" }: { language?: string }) => {
 
   return (
     <div className="demo-card">
+      {status === "unavailable" && !error && (
+        <UnavailableHint
+          api="Writer API"
+          chrome={
+            <>
+              Chrome labels Writer a Developer trial. For localhost, enable the
+              current Writer setup listed in Browser support.
+            </>
+          }
+          edge={
+            <>
+              Writer API unavailable. In Edge Canary/Dev 138+, open{" "}
+              <code>edge://flags/</code>, search for "Writer API for on-device
+              language model", enable it, and reload.
+            </>
+          }
+        />
+      )}
       <label className="demo-label">
         Writing task
         <textarea
@@ -71,24 +89,6 @@ export const WriterDemo = ({ language = "en" }: { language?: string }) => {
           </button>
         )}
       </div>
-      {status === "unavailable" && !error && (
-        <UnavailableHint
-          api="Writer API"
-          chrome={
-            <>
-              Chrome labels Writer a Developer trial. For localhost, enable the
-              current Writer setup listed in Browser support.
-            </>
-          }
-          edge={
-            <>
-              Writer API unavailable. In Edge Canary/Dev 138+, open{" "}
-              <code>edge://flags/</code>, search for "Writer API for on-device
-              language model", enable it, and reload.
-            </>
-          }
-        />
-      )}
       {error && <p className="demo-error">{error.message}</p>}
       {stale && (
         <p className="demo-hint" role="status">

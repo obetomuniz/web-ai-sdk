@@ -60,11 +60,13 @@ const ChipSelect = <T extends string>({
   value,
   options,
   onChange,
+  disabled,
 }: {
   label: string;
   value: T;
   options: readonly T[];
   onChange: (value: T) => void;
+  disabled?: boolean;
 }) => (
   <span className={chipSelectWrap}>
     <select
@@ -72,6 +74,7 @@ const ChipSelect = <T extends string>({
       value={value}
       aria-label={label}
       onChange={(e) => onChange(e.target.value as T)}
+      disabled={disabled}
     >
       {options.map((option) => (
         <option key={option} value={option}>
@@ -250,6 +253,7 @@ export const SummarizerDemo = ({ intent: tabIntent }: DemoIntentProps) => {
               value={type}
               options={["key-points", "tldr", "headline"]}
               onChange={setType}
+              disabled={available === false}
             />
             <span className={chipSep} aria-hidden="true" />
             <ChipSelect
@@ -257,6 +261,7 @@ export const SummarizerDemo = ({ intent: tabIntent }: DemoIntentProps) => {
               value={length}
               options={["short", "medium", "long"]}
               onChange={setLength}
+              disabled={available === false}
             />
             <span className={chipSep} aria-hidden="true" />
             <ChipSelect
@@ -264,6 +269,7 @@ export const SummarizerDemo = ({ intent: tabIntent }: DemoIntentProps) => {
               value={preference}
               options={["auto", "speed", "capability"]}
               onChange={setPreference}
+              disabled={available === false}
             />
           </div>
         </div>

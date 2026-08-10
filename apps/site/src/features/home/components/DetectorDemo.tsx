@@ -141,6 +141,7 @@ export const DetectorDemo = ({ intent: tabIntent }: DemoIntentProps) => {
                 type="button"
                 className={text === p ? chipActive : chip}
                 onClick={() => setText(p)}
+                disabled={available === false}
               >
                 {EXAMPLE_LABELS[i]}
               </button>

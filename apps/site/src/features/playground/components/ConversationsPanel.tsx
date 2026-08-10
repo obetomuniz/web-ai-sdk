@@ -53,7 +53,7 @@ export function ConversationsPanel({
               type="button"
               className={ui.wideButton}
               onClick={onCreate}
-              disabled={busy}
+              disabled={busy || !promptOn}
               aria-label="New conversation"
               title="New conversation"
             >

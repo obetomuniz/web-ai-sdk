@@ -44,6 +44,24 @@ export const RewriterDemo = ({ language = "en" }: { language?: string }) => {
 
   return (
     <div className="demo-card">
+      {status === "unavailable" && !error && (
+        <UnavailableHint
+          api="Rewriter API"
+          chrome={
+            <>
+              Chrome labels Rewriter a Developer trial. For localhost, enable
+              the current Rewriter setup listed in Browser support.
+            </>
+          }
+          edge={
+            <>
+              Rewriter API unavailable. In Edge Canary/Dev 138+, open{" "}
+              <code>edge://flags/</code>, search for "Rewriter API for on-device
+              language model", enable it, and reload.
+            </>
+          }
+        />
+      )}
       <label className="demo-label">
         Text to rewrite (more formal)
         <textarea
@@ -70,24 +88,6 @@ export const RewriterDemo = ({ language = "en" }: { language?: string }) => {
           </button>
         )}
       </div>
-      {status === "unavailable" && !error && (
-        <UnavailableHint
-          api="Rewriter API"
-          chrome={
-            <>
-              Chrome labels Rewriter a Developer trial. For localhost, enable
-              the current Rewriter setup listed in Browser support.
-            </>
-          }
-          edge={
-            <>
-              Rewriter API unavailable. In Edge Canary/Dev 138+, open{" "}
-              <code>edge://flags/</code>, search for "Rewriter API for on-device
-              language model", enable it, and reload.
-            </>
-          }
-        />
-      )}
       {error && <p className="demo-error">{error.message}</p>}
       {stale && (
         <p className="demo-hint" role="status">
