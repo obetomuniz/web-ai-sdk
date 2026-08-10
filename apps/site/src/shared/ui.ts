@@ -541,7 +541,7 @@ export const footerColList =
   "grid list-none gap-2.5 p-0 [&_a]:relative [&_a]:inline-block [&_a]:font-mono [&_a]:text-[13px] [&_a]:text-fg-2 [&_a]:transition-colors [&_a:hover]:text-accent [&_a]:after:pointer-events-none [&_a]:after:absolute [&_a]:after:-bottom-0.5 [&_a]:after:left-0 [&_a]:after:h-px [&_a]:after:w-full [&_a]:after:origin-left [&_a]:after:scale-x-0 [&_a]:after:bg-accent [&_a]:after:transition-transform [&_a]:after:duration-200 [&_a]:after:content-[''] [&_a:hover]:after:scale-x-100";
 
 export const footerMeta =
-  "mt-14 flex flex-wrap justify-between gap-5 border-t border-hairline pt-6 font-mono text-[11.5px] tracking-[0.04em] text-fg-4 [&_a]:text-fg-3 [&_a:hover]:text-accent";
+  "mt-14 flex flex-wrap justify-between gap-5 pt-6 font-mono text-[11.5px] tracking-[0.04em] text-fg-4 [&_a]:text-fg-3 [&_a:hover]:text-accent";
 
 export const backToTop =
   "fixed bottom-5 left-1/2 z-40 inline-flex -translate-x-1/2 cursor-pointer items-center gap-1.5 rounded-pill border border-hairline-2 bg-[color-mix(in_oklch,var(--color-surface)_82%,transparent)] py-1.5 pr-3 pl-2.5 font-mono text-[11px] leading-none tracking-[0.02em] text-fg-3 shadow-card backdrop-blur-[14px] backdrop-saturate-[1.2] transition-[opacity,transform,color,border-color] duration-300 ease-[cubic-bezier(0.2,0.6,0.2,1)] hover:-translate-y-px hover:border-accent-line hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent data-[visible=false]:pointer-events-none data-[visible=false]:translate-y-3 data-[visible=false]:opacity-0";
