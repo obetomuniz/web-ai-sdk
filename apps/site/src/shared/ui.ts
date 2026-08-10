@@ -619,34 +619,23 @@ export const playground = {
     "inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-sm bg-accent px-3 font-mono text-[10px] font-semibold text-brand-dark transition-[background-color,transform] hover:bg-accent-bright active:scale-95 disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transform-none max-[760px]:size-9 max-[760px]:shrink-0 max-[760px]:rounded-full max-[760px]:p-0",
   wideButtonIcon: "text-sm leading-none",
   wideButtonLabel: "max-[760px]:hidden",
-  main: "flex h-full w-full min-w-0 flex-col overflow-hidden bg-bg max-[760px]:h-auto",
+  main: "relative flex h-full w-full min-w-0 flex-col overflow-hidden bg-bg max-[760px]:h-auto",
   mainHeader:
-    "relative z-20 flex h-12 w-full min-w-0 shrink-0 bg-bg after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-9 after:bg-[linear-gradient(to_bottom,var(--color-bg)_0%,color-mix(in_oklch,var(--color-bg)_78%,transparent)_48%,transparent_100%)] after:opacity-0 after:transition-opacity after:duration-200 after:ease-out after:content-[''] max-[640px]:h-11",
-  mainHeaderInner:
-    "mx-auto flex h-full w-full max-w-[960px] min-w-0 items-center gap-2.5 px-3 max-[640px]:max-w-none max-[640px]:px-4",
-  mainHeaderBoot: "after:transition-none",
-  mainHeaderScrolled: "after:opacity-100",
-  mainHeaderWithLeftRestore: "max-[760px]:pl-8",
-  title:
-    "m-0 min-w-0 flex-1 truncate font-display text-base font-medium leading-none tracking-[-0.02em] text-fg",
+    "pointer-events-none absolute inset-x-0 top-0 z-20 h-16 bg-[linear-gradient(to_bottom,var(--color-bg)_0%,color-mix(in_oklch,var(--color-bg)_78%,transparent)_48%,transparent_100%)] opacity-0 transition-opacity duration-200 ease-out",
+  mainHeaderBoot: "transition-none",
+  mainHeaderScrolled: "opacity-100",
   panelRestoreLeft:
     "absolute top-2.5 left-3 z-40 motion-safe:animate-[playground-fade_180ms_ease-out_100ms_both]",
   panelRestoreRight:
-    "absolute top-2.5 right-3 z-40 motion-safe:animate-[playground-fade_180ms_ease-out_100ms_both] max-[760px]:hidden",
-  panelRestoreRightMobile:
-    "hidden shrink-0 motion-safe:animate-[playground-fade_180ms_ease-out_100ms_both] max-[760px]:inline-flex",
+    "absolute top-2.5 right-3 z-40 motion-safe:animate-[playground-fade_180ms_ease-out_100ms_both] max-[760px]:top-[calc(var(--playground-mobile-sidebar-height)+0.625rem)]",
   panelToggle:
     "inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-sm bg-transparent text-fg-4 transition-[color,background-color,transform] hover:bg-surface hover:text-fg-2 active:scale-95 focus-visible:bg-surface focus-visible:text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-accent motion-reduce:transform-none max-[760px]:size-9",
   panelToggleIcon: "size-4",
   modeSelector: "relative min-w-0 [grid-area:mode]",
   modeTrigger:
-    "inline-flex min-h-9 max-w-52 cursor-pointer items-center gap-2 rounded-pill bg-bg px-3 py-2 text-left transition-colors data-[accent=info]:bg-[color-mix(in_oklch,var(--color-info)_9%,var(--color-bg))] data-[accent=ok]:bg-[color-mix(in_oklch,var(--color-ok)_9%,var(--color-bg))] data-[accent=warn]:bg-[color-mix(in_oklch,var(--color-warn)_9%,var(--color-bg))] data-[accent=violet]:bg-[color-mix(in_oklch,var(--color-info)_5%,color-mix(in_oklch,var(--color-err)_5%,var(--color-bg)))] hover:data-[accent=info]:bg-[color-mix(in_oklch,var(--color-info)_14%,var(--color-bg))] hover:data-[accent=ok]:bg-[color-mix(in_oklch,var(--color-ok)_14%,var(--color-bg))] hover:data-[accent=warn]:bg-[color-mix(in_oklch,var(--color-warn)_14%,var(--color-bg))] hover:data-[accent=violet]:bg-[color-mix(in_oklch,var(--color-info)_8%,color-mix(in_oklch,var(--color-err)_8%,var(--color-bg)))] focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 data-[accent=info]:focus-visible:outline-info data-[accent=ok]:focus-visible:outline-ok data-[accent=warn]:focus-visible:outline-warn data-[accent=violet]:focus-visible:outline-[color-mix(in_oklch,var(--color-info)_45%,var(--color-err))] disabled:cursor-not-allowed disabled:opacity-45 max-[640px]:min-h-8 max-[640px]:max-w-40 max-[640px]:gap-1.5 max-[640px]:px-2.5 max-[640px]:py-1.5",
-  modeTriggerName:
-    "truncate font-mono text-[10px] data-[accent=info]:text-info data-[accent=ok]:text-ok data-[accent=warn]:text-warn data-[accent=violet]:text-[color-mix(in_oklch,var(--color-info)_45%,var(--color-err))]",
-  modeTriggerChevron:
-    "size-3.5 shrink-0 text-fg-4 transition-transform duration-150",
-  modeTriggerChevronOpen:
-    "size-3.5 shrink-0 rotate-180 text-fg-4 transition-transform duration-150",
+    "inline-flex size-9 shrink-0 cursor-pointer items-center justify-center gap-1 rounded-pill bg-bg px-2 py-2 text-left transition-colors data-[accent=info]:bg-[color-mix(in_oklch,var(--color-info)_9%,var(--color-bg))] data-[accent=ok]:bg-[color-mix(in_oklch,var(--color-ok)_9%,var(--color-bg))] data-[accent=warn]:bg-[color-mix(in_oklch,var(--color-warn)_9%,var(--color-bg))] data-[accent=violet]:bg-[color-mix(in_oklch,var(--color-info)_5%,color-mix(in_oklch,var(--color-err)_5%,var(--color-bg)))] hover:data-[accent=info]:bg-[color-mix(in_oklch,var(--color-info)_14%,var(--color-bg))] hover:data-[accent=ok]:bg-[color-mix(in_oklch,var(--color-ok)_14%,var(--color-bg))] hover:data-[accent=warn]:bg-[color-mix(in_oklch,var(--color-warn)_14%,var(--color-bg))] hover:data-[accent=violet]:bg-[color-mix(in_oklch,var(--color-info)_8%,color-mix(in_oklch,var(--color-err)_8%,var(--color-bg)))] focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 data-[accent=info]:focus-visible:outline-info data-[accent=ok]:focus-visible:outline-ok data-[accent=warn]:focus-visible:outline-warn data-[accent=violet]:focus-visible:outline-[color-mix(in_oklch,var(--color-info)_45%,var(--color-err))] disabled:cursor-not-allowed disabled:opacity-45 max-[640px]:size-8",
+  modeTriggerIcon:
+    "size-4 shrink-0 data-[accent=info]:text-info data-[accent=ok]:text-ok data-[accent=warn]:text-warn data-[accent=violet]:text-[color-mix(in_oklch,var(--color-info)_45%,var(--color-err))]",
   modeMenu:
     "absolute bottom-[calc(100%+0.65rem)] left-0 z-50 w-[min(440px,calc(100vw-2rem))] overflow-x-hidden rounded-xl bg-surface-3 p-2 shadow-2xl max-[640px]:fixed max-[640px]:top-auto max-[640px]:right-3 max-[640px]:bottom-3 max-[640px]:left-3 max-[640px]:max-h-[calc(100svh-var(--nav-height)-1.5rem)] max-[640px]:w-auto max-[640px]:overflow-y-auto",
   modeMenuHeader: "grid gap-1 px-3 py-3 max-[640px]:pt-2.5 max-[640px]:pb-2",
@@ -659,9 +648,9 @@ export const playground = {
     "grid w-full cursor-pointer rounded-lg bg-surface-2 px-3 py-3 text-left max-[640px]:py-2.5",
   modeOptionCopy: "grid min-w-0 gap-1",
   modeOptionTitleRow: "flex min-w-0 items-center justify-between gap-3",
-  modeOptionIdentity: "flex min-w-0 items-center gap-2.5",
-  modeAccentDot:
-    "size-2 shrink-0 rounded-full data-[accent=info]:bg-info data-[accent=ok]:bg-ok data-[accent=warn]:bg-warn data-[accent=violet]:bg-[color-mix(in_oklch,var(--color-info)_45%,var(--color-err))]",
+  modeOptionIdentity: "flex min-w-0 items-center gap-1.5",
+  modeOptionIcon:
+    "size-4 shrink-0 data-[accent=info]:text-info data-[accent=ok]:text-ok data-[accent=warn]:text-warn data-[accent=violet]:text-[color-mix(in_oklch,var(--color-info)_45%,var(--color-err))]",
   modeOptionName:
     "truncate font-sans text-[13px] font-medium data-[accent=info]:text-info data-[accent=ok]:text-ok data-[accent=warn]:text-warn data-[accent=violet]:text-[color-mix(in_oklch,var(--color-info)_45%,var(--color-err))]",
   modeOptionToolCount:
@@ -671,14 +660,17 @@ export const playground = {
     "rounded-md bg-bg px-3 py-2.5 font-mono text-[8px] leading-relaxed text-fg-4",
   mainBody:
     "grid min-h-0 w-full max-w-[960px] flex-1 self-center grid-rows-[minmax(0,1fr)_auto] gap-0 px-3 pb-4 max-[640px]:max-w-none max-[640px]:px-3 max-[640px]:pb-2",
-  transcriptPanel: "relative min-h-0 overflow-hidden",
+  mainBodyCentered:
+    "flex min-h-0 w-full max-w-[960px] flex-1 flex-col justify-center gap-6 self-center px-3 pb-4 max-[640px]:max-w-none max-[640px]:px-3 max-[640px]:pb-2",
+  transcriptPanel:
+    "relative min-h-0 overflow-hidden after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:z-10 after:h-10 after:bg-[linear-gradient(to_top,var(--color-bg)_0%,color-mix(in_oklch,var(--color-bg)_82%,transparent)_45%,transparent_100%)] after:content-['']",
   answer:
-    "h-full min-h-0 overflow-y-auto px-6 pt-5 pb-6 [scrollbar-width:thin] max-[640px]:px-4 max-[640px]:pt-4 max-[640px]:pb-5",
+    "h-full min-h-0 overflow-y-auto px-6 pt-5 pb-10 [scrollbar-width:thin] max-[640px]:px-4 max-[640px]:pt-4 max-[640px]:pb-10",
   banner:
     "mb-4 rounded-sm border border-[color-mix(in_oklch,var(--color-warn)_35%,transparent)] bg-[color-mix(in_oklch,var(--color-warn)_10%,var(--color-bg))] px-3.5 py-3 font-mono text-[11px] leading-relaxed text-warn [&_code]:text-fg",
   bannerError:
     "mb-4 rounded-sm border border-[color-mix(in_oklch,var(--color-err)_35%,transparent)] bg-[color-mix(in_oklch,var(--color-err)_10%,var(--color-bg))] px-3.5 py-3 font-mono text-[11px] leading-relaxed text-err",
-  jump: "absolute right-4 bottom-4 inline-flex size-8 cursor-pointer items-center justify-center rounded-full bg-[color-mix(in_oklch,var(--color-surface-3)_92%,transparent)] font-mono text-[13px] text-fg-2 shadow-card backdrop-blur-sm transition-colors hover:text-fg",
+  jump: "absolute right-4 bottom-4 z-20 inline-flex size-8 cursor-pointer items-center justify-center rounded-full bg-[color-mix(in_oklch,var(--color-surface-3)_92%,transparent)] font-mono text-[13px] text-fg-2 shadow-card backdrop-blur-sm transition-colors hover:text-fg",
   composer:
     "relative z-10 grid grid-cols-[auto_minmax(0,1fr)_auto] [grid-template-areas:'mode_input_actions'] items-end gap-x-1.5 rounded-3xl bg-surface p-2 shadow-[0_-14px_30px_-18px_rgba(0,0,0,0.95)] transition-colors focus-within:bg-surface-2 max-[640px]:grid-cols-[minmax(0,1fr)_auto] max-[640px]:[grid-template-areas:'input_input'_'mode_actions'] max-[640px]:gap-y-1.5",
   composerDock: "relative z-20",
@@ -700,7 +692,7 @@ export const playground = {
     "[grid-area:input] max-h-40 w-full resize-none overflow-y-auto border-0 bg-transparent px-1.5 py-2 font-sans text-[14px] leading-[1.55] text-fg outline-none [field-sizing:content] [scrollbar-width:thin] placeholder:text-fg-4 disabled:cursor-not-allowed disabled:opacity-55 max-[640px]:max-h-32",
   fallbackMuted: "text-fg-4",
   exampleFloat:
-    "pointer-events-none absolute bottom-full left-0 flex w-full flex-wrap items-center gap-1 bg-[linear-gradient(to_top,var(--color-bg)_62%,transparent)] px-1 pt-8 pb-2.5 max-[640px]:hidden",
+    "flex w-full flex-wrap items-center gap-1 bg-[linear-gradient(to_top,var(--color-bg)_62%,transparent)] px-1 pb-2.5 max-[640px]:hidden",
   examples: "flex min-w-0 flex-wrap items-center gap-1",
   example:
     "pointer-events-auto max-w-48 cursor-pointer truncate rounded-pill bg-surface-2 px-2 py-1 font-mono text-[8px] text-fg-4 transition-[color,background-color,transform] hover:bg-surface-3 hover:text-fg-2 active:scale-[0.98] motion-reduce:transform-none disabled:cursor-not-allowed disabled:opacity-45",
@@ -761,12 +753,6 @@ export const playground = {
   workspaceAdvice: "font-sans text-[10px] leading-relaxed text-fg-4",
   empty:
     "px-4 py-5 text-center font-mono text-[10px] leading-relaxed text-fg-4",
-  emptyConversation:
-    "grid min-h-full place-content-center gap-2 px-6 py-12 text-center",
-  emptyConversationTitle:
-    "font-display text-xl font-semibold leading-tight tracking-[-0.025em] text-fg",
-  emptyConversationText:
-    "m-0 max-w-md font-sans text-[13px] leading-relaxed text-fg-4",
   activity: "grid list-none divide-y divide-hairline p-0",
   activityItem:
     "grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 px-3 py-2.5 font-mono text-[8px] leading-relaxed",

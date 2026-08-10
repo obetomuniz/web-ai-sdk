@@ -9,7 +9,6 @@ import type { AgentThread } from "../lib/agentThreads.js";
 import { useStickToBottom } from "../lib/useStickToBottom.js";
 import { Composer, type ComposerProps } from "./Composer.js";
 import { ConversationTrack } from "./ConversationTrack.js";
-import { PanelToggle } from "./PanelToggle.js";
 
 interface Props {
   thread: AgentThread;
@@ -21,9 +20,6 @@ interface Props {
   liveThought: { index: number; text: string } | null;
   stopReason: AgentStopReason | null;
   busy: boolean;
-  conversationsOpen: boolean;
-  runtimeOpen: boolean;
-  onShowRuntime: () => void;
   composer: ComposerProps;
 }
 
@@ -37,9 +33,6 @@ export function ConversationView({
   liveThought,
   stopReason,
   busy,
-  conversationsOpen,
-  runtimeOpen,
-  onShowRuntime,
   composer,
 }: Props) {
   const transcriptRef = useRef<HTMLDivElement>(null);
@@ -54,6 +47,14 @@ export function ConversationView({
     events.length,
     liveThought?.text,
   ]);
+
+  const hasLiveTurn =
+    Boolean(currentInput) ||
+    events.length > 0 ||
+    Boolean(text) ||
+    busy ||
+    Boolean(stopReason);
+  const isEmpty = thread.turns.length === 0 && !hasLiveTurn;
 
   // Persisted local conversations should render at their final scroll
   // position. Streaming updates can then follow without animating through the
@@ -75,31 +76,13 @@ export function ConversationView({
   return (
     <div className={ui.main}>
       <header
-        className={`${ui.mainHeader} ${
-          hasScrolled ? ui.mainHeaderScrolled : ""
-        } ${conversationsOpen ? "" : ui.mainHeaderWithLeftRestore}`}
+        className={`${ui.mainHeader} ${hasScrolled ? ui.mainHeaderScrolled : ""}`}
         data-playground-main-header
-      >
-        <div className={ui.mainHeaderInner}>
-          <h2 className={ui.title}>{thread.name}</h2>
-          {!runtimeOpen && (
-            <span className={ui.panelRestoreRightMobile}>
-              <PanelToggle side="right" open={false} onClick={onShowRuntime} />
-            </span>
-          )}
-        </div>
-      </header>
+      />
 
-      <div className={ui.mainBody}>
-        <section className={ui.transcriptPanel}>
-          <div
-            ref={transcriptRef}
-            className={ui.answer}
-            data-playground-transcript
-            onScroll={(event) =>
-              setHasScrolled(event.currentTarget.scrollTop > 1)
-            }
-          >
+      <div className={isEmpty ? ui.mainBodyCentered : ui.mainBody}>
+        {isEmpty ? (
+          <>
             <ConversationTrack
               turns={thread.turns}
               currentTurnId={currentTurnId}
@@ -112,21 +95,48 @@ export function ConversationView({
               transcriptRendererId={mode.transcriptRendererId}
               toolRendererId={mode.toolRendererId}
             />
-          </div>
-          {!isPinned && (
-            <button
-              type="button"
-              className={ui.jump}
-              onClick={() => scrollToBottom()}
-              aria-label="Scroll to latest"
-              title="Scroll to latest"
-            >
-              <span aria-hidden="true">↓</span>
-            </button>
-          )}
-        </section>
+            <Composer {...composer} />
+          </>
+        ) : (
+          <>
+            <section className={ui.transcriptPanel}>
+              <div
+                ref={transcriptRef}
+                className={ui.answer}
+                data-playground-transcript
+                onScroll={(event) =>
+                  setHasScrolled(event.currentTarget.scrollTop > 1)
+                }
+              >
+                <ConversationTrack
+                  turns={thread.turns}
+                  currentTurnId={currentTurnId}
+                  currentInput={currentInput}
+                  events={events}
+                  text={text}
+                  liveThought={liveThought}
+                  stopReason={stopReason}
+                  busy={busy}
+                  transcriptRendererId={mode.transcriptRendererId}
+                  toolRendererId={mode.toolRendererId}
+                />
+              </div>
+              {!isPinned && (
+                <button
+                  type="button"
+                  className={ui.jump}
+                  onClick={() => scrollToBottom()}
+                  aria-label="Scroll to latest"
+                  title="Scroll to latest"
+                >
+                  <span aria-hidden="true">↓</span>
+                </button>
+              )}
+            </section>
 
-        <Composer {...composer} />
+            <Composer {...composer} />
+          </>
+        )}
       </div>
     </div>
   );

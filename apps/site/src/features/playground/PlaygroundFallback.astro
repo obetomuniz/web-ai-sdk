@@ -39,7 +39,6 @@ const truncateExample = (value: string, limit = 60) =>
   data-markdown-inline-code-class={ui.markdownInlineCode}
   data-boot-message-class={ui.bootMessage}
   data-main-header-scrolled-class={ui.mainHeaderScrolled}
-  data-main-header-left-restore-class={ui.mainHeaderWithLeftRestore}
   data-layout-mobile-with-sidebar-class={ui.shellMobileWithSidebar}
   data-layout-mobile-without-sidebar-class={ui.shellMobileWithoutSidebar}
   data-panel-slot-open-class={ui.panelSlotOpen}
@@ -162,73 +161,45 @@ const truncateExample = (value: string, limit = 60) =>
       <header
         class:list={[ui.mainHeader, ui.mainHeaderBoot]}
         data-playground-main-header
-      >
-        <div class={ui.mainHeaderInner}>
-          <h2 class={ui.title} data-playground-title>New conversation</h2>
-          <span
-            class={ui.panelRestoreRightMobile}
-            data-playground-right-restore-mobile
-            hidden
-          >
-            <span class={ui.panelToggle}>
-              <svg
-                class={ui.panelToggleIcon}
-                viewBox="0 0 18 18"
-                fill="none"
-                aria-hidden="true"
-              >
-                <rect
-                  x="2.25"
-                  y="2.75"
-                  width="13.5"
-                  height="12.5"
-                  rx="2.25"
-                  stroke="currentColor"
-                  stroke-width="1.25"></rect>
-                <path
-                  d="M11.5 3.25v11.5"
-                  stroke="currentColor"
-                  stroke-width="1.25"></path>
-              </svg>
-            </span>
-          </span>
-        </div>
-      </header>
+      />
 
-      <div class={ui.mainBody}>
-        <section class={ui.transcriptPanel}>
-          <div class={ui.answer} data-playground-transcript>
-            <div class={ui.emptyConversation}>
-              <h2 class={ui.emptyConversationTitle}>Start a conversation</h2>
-              <p class={ui.emptyConversationText}>
-                Messages, tool calls, and answers will appear here.
-              </p>
-            </div>
-          </div>
-        </section>
-
+      <div class={ui.mainBodyCentered}>
         <div class={ui.composerDock}>
+          <div class={ui.exampleFloat}>
+            <div class={ui.examples} data-playground-examples>
+              {
+                defaultMode.examples.slice(0, 3).map((example) => (
+                  <span class={ui.example} title={example}>
+                    {truncateExample(example)}
+                  </span>
+                ))
+              }
+            </div>
+            <span class={ui.exampleRegenerateWrap}>
+              <span class={ui.exampleRegenerate} aria-hidden="true">+</span>
+            </span>
+          </div>
           <div class={ui.composer}>
             <div class={ui.modeSelector}>
-              <span class={ui.modeTrigger} data-playground-mode-trigger data-accent="warn">
-                <span
-                  class={ui.modeTriggerName}
-                  data-playground-mode-name
-                  data-accent="warn"
-                >
-                  Platform reach
-                </span>
+              <span
+                class={ui.modeTrigger}
+                data-playground-mode-trigger
+                data-accent="warn"
+                aria-label="Mode: Platform reach"
+              >
                 <svg
-                  class={ui.modeTriggerChevron}
+                  class={ui.modeTriggerIcon}
+                  data-playground-mode-icon
+                  data-accent="warn"
                   viewBox="0 0 16 16"
                   fill="none"
                   aria-hidden="true"
                 >
+                  <circle cx="8" cy="8" r="5.75" stroke="currentColor" stroke-width="1.2"></circle>
                   <path
-                    d="m4.5 6 3.5 3.5L11.5 6"
+                    d="M2.5 8h11M8 2.25c1.7 1.6 2.65 3.6 2.65 5.75S9.7 12.15 8 13.75c-1.7-1.6-2.65-3.6-2.65-5.75S6.3 3.85 8 2.25Z"
                     stroke="currentColor"
-                    stroke-width="1.4"
-                    stroke-linecap="round"
+                    stroke-width="1.1"
                     stroke-linejoin="round"></path>
                 </svg>
               </span>
@@ -249,20 +220,6 @@ const truncateExample = (value: string, limit = 60) =>
                 ↑
               </button>
             </div>
-          </div>
-          <div class={ui.exampleFloat}>
-            <div class={ui.examples} data-playground-examples>
-              {
-                defaultMode.examples.slice(0, 3).map((example) => (
-                  <span class={ui.example} title={example}>
-                    {truncateExample(example)}
-                  </span>
-                ))
-              }
-            </div>
-            <span class={ui.exampleRegenerateWrap}>
-              <span class={ui.exampleRegenerate} aria-hidden="true">+</span>
-            </span>
           </div>
         </div>
       </div>
@@ -624,6 +581,7 @@ const truncateExample = (value: string, limit = 60) =>
 
       try {
         const desktopRuntime = matchMedia("(min-width: 1181px)").matches;
+        const mobileLayout = matchMedia("(max-width: 760px)").matches;
         let conversationsOpen = true;
         let runtimeOpen = desktopRuntime;
         try {
@@ -642,6 +600,7 @@ const truncateExample = (value: string, limit = 60) =>
         } catch {
           // Invalid layout state falls back to the responsive defaults.
         }
+        if (mobileLayout) conversationsOpen = true;
 
         const sidebarWidth = Number(
           localStorage.getItem(fallback.dataset.sidebarStorageKey ?? ""),
@@ -668,9 +627,6 @@ const truncateExample = (value: string, limit = 60) =>
           const sidebar = fallback.querySelector("[data-playground-sidebar]");
           const workspaceSlot = fallback.querySelector(
             "[data-playground-workspace-slot]",
-          );
-          const mainHeader = fallback.querySelector(
-            "[data-playground-main-header]",
           );
           layoutGrid?.classList.remove(
             ...(fallback.dataset.layoutMobileWithSidebarClass ?? "")
@@ -704,11 +660,6 @@ const truncateExample = (value: string, limit = 60) =>
           );
           workspaceSlot?.classList.remove(
             ...(fallback.dataset.workspaceBelowMobileSidebarClass ?? "")
-              .split(" ")
-              .filter(Boolean),
-          );
-          mainHeader?.classList.add(
-            ...(fallback.dataset.mainHeaderLeftRestoreClass ?? "")
               .split(" ")
               .filter(Boolean),
           );
@@ -746,13 +697,7 @@ const truncateExample = (value: string, limit = 60) =>
           const rightRestore = fallback.querySelector(
             "[data-playground-right-restore]",
           );
-          const rightRestoreMobile = fallback.querySelector(
-            "[data-playground-right-restore-mobile]",
-          );
           if (rightRestore instanceof HTMLElement) rightRestore.hidden = false;
-          if (rightRestoreMobile instanceof HTMLElement) {
-            rightRestoreMobile.hidden = false;
-          }
         }
 
         const raw = localStorage.getItem(fallback.dataset.storageKey ?? "");
@@ -789,20 +734,17 @@ const truncateExample = (value: string, limit = 60) =>
         const mode = modes[modeId] ?? modes.platform;
         if (!mode) return;
 
-        const title = fallback.querySelector("[data-playground-title]");
-        if (title) title.textContent = active.name;
-
         const modeTrigger = fallback.querySelector(
           "[data-playground-mode-trigger]",
         );
-        const modeName = fallback.querySelector("[data-playground-mode-name]");
+        const modeIcon = fallback.querySelector("[data-playground-mode-icon]");
         const toolCount = fallback.querySelector("[data-playground-tool-count]");
         if (modeTrigger instanceof HTMLElement) {
           modeTrigger.dataset.accent = mode.accent;
+          modeTrigger.setAttribute("aria-label", `Mode: ${mode.name}`);
         }
-        if (modeName instanceof HTMLElement) {
-          modeName.textContent = mode.name;
-          modeName.dataset.accent = mode.accent;
+        if (modeIcon instanceof HTMLElement) {
+          modeIcon.dataset.accent = mode.accent;
         }
         if (toolCount) {
           toolCount.textContent =
