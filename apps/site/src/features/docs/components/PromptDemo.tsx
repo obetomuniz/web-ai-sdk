@@ -4,6 +4,8 @@ import {
 } from "@web-ai-sdk/prompt/react";
 import { type ComponentProps, useState } from "react";
 import { ModelMarkdown } from "../../../shared/components/ModelMarkdown.js";
+import { useDownloadMonitor } from "../../../shared/demoLifecycle.js";
+import { DownloadProgress } from "./DownloadProgress.js";
 import { UnavailableHint } from "./UnavailableHint.js";
 
 export interface PromptDemoProps {
@@ -16,9 +18,11 @@ export const PromptDemo = ({
   samplingMode = "balanced",
 }: PromptDemoProps) => {
   const [input, setInput] = useState("What is React.js, in one sentence?");
+  const { progress, monitor } = useDownloadMonitor();
   const { status, output, error, ask, abort, reset } = usePrompt({
     systemPrompt,
     samplingMode,
+    monitor,
   });
 
   const onSubmit: ComponentProps<"form">["onSubmit"] = (e) => {
@@ -70,6 +74,7 @@ export const PromptDemo = ({
             Ask
           </button>
         )}
+        <DownloadProgress progress={progress} />
       </form>
       {error && <p className="demo-error">{error.message}</p>}
       {(output || busy) && (

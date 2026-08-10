@@ -1,6 +1,8 @@
 import { useWriter } from "@web-ai-sdk/writer/react";
 import { useState } from "react";
 import { ModelMarkdown } from "../../../shared/components/ModelMarkdown.js";
+import { useDownloadMonitor } from "../../../shared/demoLifecycle.js";
+import { DownloadProgress } from "./DownloadProgress.js";
 import { UnavailableHint } from "./UnavailableHint.js";
 
 const SAMPLE =
@@ -15,11 +17,13 @@ export const WriterDemo = ({ language = "en" }: { language?: string }) => {
   const [stopped, setStopped] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
+  const { progress, monitor } = useDownloadMonitor();
   const { status, output, error } = useWriter({
     input: committed ?? "",
     language,
     tone: "casual",
     length: "short",
+    monitor,
     enabled: enabled && committed !== null,
   });
 
@@ -88,6 +92,7 @@ export const WriterDemo = ({ language = "en" }: { language?: string }) => {
             Write
           </button>
         )}
+        <DownloadProgress progress={progress} />
       </div>
       {error && <p className="demo-error">{error.message}</p>}
       {stale && (

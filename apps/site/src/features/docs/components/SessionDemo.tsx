@@ -1,5 +1,7 @@
 import { useSession } from "@web-ai-sdk/prompt/react";
 import { type ChangeEvent, useEffect, useState } from "react";
+import { useDownloadMonitor } from "../../../shared/demoLifecycle.js";
+import { DownloadProgress } from "./DownloadProgress.js";
 import { UnavailableHint } from "./UnavailableHint.js";
 
 // Stable reference: an inline literal would recreate the session every render.
@@ -12,9 +14,11 @@ const EXPECTED_INPUTS = [{ type: "text" as const }, { type: "image" as const }];
  * forwarded to the model as-is.
  */
 export const SessionDemo = () => {
+  const { progress, monitor } = useDownloadMonitor();
   const { status, session, error } = useSession({
     systemPrompt: "You describe images. Reply with one short sentence.",
     expectedInputs: EXPECTED_INPUTS,
+    monitor,
   });
 
   const [file, setFile] = useState<File | null>(null);
@@ -120,6 +124,7 @@ export const SessionDemo = () => {
             Describe
           </button>
         )}
+        <DownloadProgress progress={progress} />
       </div>
       {previewUrl && (
         <img src={previewUrl} alt="selected preview" className="demo-preview" />

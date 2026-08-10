@@ -1,6 +1,10 @@
 import { useTranslator } from "@web-ai-sdk/translator/react";
 import { useState } from "react";
-import { useDebouncedValue } from "../../../shared/demoLifecycle.js";
+import {
+  useDebouncedValue,
+  useDownloadMonitor,
+} from "../../../shared/demoLifecycle.js";
+import { DownloadProgress } from "./DownloadProgress.js";
 import { FreshRunAction } from "./FreshRunAction.js";
 import { UnavailableHint } from "./UnavailableHint.js";
 
@@ -25,6 +29,7 @@ export const TranslatorDemo = ({
   // Bumping the nonce changes the cache key, so a fresh generation skips the
   // stored result and writes under a new key. Old entries expire via TTL.
   const [freshNonce, setFreshNonce] = useState(0);
+  const { progress, monitor } = useDownloadMonitor();
   const { status, output, error, fromCache } = useTranslator({
     input: debounced,
     sourceLanguage,
@@ -32,6 +37,7 @@ export const TranslatorDemo = ({
     cache: "session",
     cacheTtl: RESULT_TTL_MS,
     cacheKey: `docs-translator:${sourceLanguage}:${targetLanguage}:${freshNonce}:${debounced}`,
+    monitor,
   });
   const pending = input !== debounced;
 
@@ -69,11 +75,14 @@ export const TranslatorDemo = ({
                     : `Translation (${targetLanguage})`}{" "}
             {status === "streaming" && <em>(streaming…)</em>}
           </span>
-          <FreshRunAction
-            show={status === "done" && !pending}
-            onClick={() => setFreshNonce((n) => n + 1)}
-            tooltipSide="right"
-          />
+          <span className="demo-response__actions">
+            <DownloadProgress progress={progress} />
+            <FreshRunAction
+              show={status === "done" && !pending}
+              onClick={() => setFreshNonce((n) => n + 1)}
+              tooltipSide="right"
+            />
+          </span>
         </header>
         <p className="demo-response__body">
           {output ?? (

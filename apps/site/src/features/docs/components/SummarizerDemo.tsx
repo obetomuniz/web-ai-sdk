@@ -1,6 +1,8 @@
 import { useSummarizer } from "@web-ai-sdk/summarizer/react";
 import { useEffect, useRef, useState } from "react";
 import { ModelMarkdown } from "../../../shared/components/ModelMarkdown.js";
+import { useDownloadMonitor } from "../../../shared/demoLifecycle.js";
+import { DownloadProgress } from "./DownloadProgress.js";
 import { FreshRunAction } from "./FreshRunAction.js";
 import { UnavailableHint } from "./UnavailableHint.js";
 
@@ -38,12 +40,14 @@ export const SummarizerDemo = ({ language = "en" }: SummarizerDemoProps) => {
     setInput(articleRef.current?.innerText ?? "");
   }, []);
 
+  const { progress, monitor } = useDownloadMonitor();
   const { status, output, error, fromCache } = useSummarizer({
     language,
     input,
     cache: "session",
     cacheTtl: RESULT_TTL_MS,
     cacheKey: `docs-summarizer:${language}:${freshNonce}`,
+    monitor,
     enabled: enabled && input.trim().length > 0,
   });
 
@@ -93,6 +97,7 @@ export const SummarizerDemo = ({ language = "en" }: SummarizerDemoProps) => {
           show={status === "done" && !busy && !dismissed}
           onClick={freshRun}
         />
+        <DownloadProgress progress={progress} />
       </div>
       {output && !dismissed && (
         <aside className="demo-response">

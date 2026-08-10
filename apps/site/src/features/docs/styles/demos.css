@@ -229,6 +229,12 @@
   margin-bottom: 6px;
 }
 
+.demo-response__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .demo-response__body {
   margin: 0;
   white-space: pre-wrap;
@@ -349,6 +355,16 @@
 .demo-tip-wrap:focus-within .demo-tooltip {
   opacity: 1;
   visibility: visible;
+}
+
+/* Model-download donut shown while a demo's first run pulls the on-device
+   model. The dasharray transition smooths progress-event jumps. */
+.demo-donut {
+  flex-shrink: 0;
+}
+
+.demo-donut circle:last-child {
+  transition: stroke-dasharray 0.2s ease-out;
 }
 
 /* Reserved footprint for a client-only demo island. The slot keeps the
