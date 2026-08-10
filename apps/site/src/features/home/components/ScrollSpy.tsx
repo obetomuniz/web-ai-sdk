@@ -8,7 +8,6 @@ const IDS = [
   "support",
   "how",
   "philosophy",
-  "start",
 ] as const;
 
 const scrollMarker = (): number => {
