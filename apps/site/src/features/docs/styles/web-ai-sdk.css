@@ -210,6 +210,10 @@
     transparent
   );
   backdrop-filter: blur(14px) saturate(1.2);
+  /* The inner header container owns the horizontal gutter (1.75rem desktop,
+     1.25rem below 55rem — the home shell's rhythm). Starlight's own pad-x here
+     would stack on top of it and push the brand/actions out of alignment. */
+  padding-inline: 0;
 }
 
 /* Use the same centered container rhythm as the home and playground shells.
@@ -272,6 +276,7 @@
 /* Below the wide desktop state, reduce the actions to the same icon-only
    treatment used on small screens. */
 @media (min-width: 50rem) and (max-width: 71.999rem) {
+  .page > .header .docs-link,
   .page > .header .playground-link,
   .page > .header .github-link {
     width: 2rem;
@@ -282,11 +287,13 @@
     box-sizing: border-box;
   }
 
+  .page > .header .docs-link > span:first-child,
   .page > .header .playground-link > span:first-child,
   .page > .header .github-link > span:first-child {
     display: none;
   }
 
+  .page > .header .docs-link > svg,
   .page > .header .playground-link > svg,
   .page > .header .github-link > svg {
     display: block;
@@ -310,9 +317,10 @@
     color: var(--sl-color-white);
   }
 
-  /* Normalize the Playground and GitHub buttons to the same 2rem square as
-     the neighboring controls (the base nav CTA otherwise keeps its taller
-     36px minimum on small screens). */
+  /* Normalize the Docs, Playground, and GitHub buttons to the same 2rem
+     square as the neighboring controls (the base nav CTA otherwise keeps its
+     taller 36px minimum on small screens). */
+  .page > .header .right-group .docs-link,
   .page > .header .right-group .playground-link,
   .page > .header .right-group .github-link {
     width: 2rem;
@@ -323,11 +331,13 @@
     box-sizing: border-box;
   }
 
+  .page > .header .right-group .docs-link > span:first-child,
   .page > .header .right-group .playground-link > span:first-child,
   .page > .header .right-group .github-link > span:first-child {
     display: none;
   }
 
+  .page > .header .right-group .docs-link > svg,
   .page > .header .right-group .playground-link > svg,
   .page > .header .right-group .github-link > svg {
     display: block;
@@ -336,19 +346,18 @@
   }
 }
 
-/* Preserve the complete header at the narrowest phone widths. The controls
-   stay discoverable, while the reduced gaps leave room for the brand. */
-@media (max-width: 23.999rem) {
+/* Preserve the complete header at the narrowest phone widths (below the
+   368px where the full 0.5rem rhythm plus the brand no longer fit). The
+   controls stay discoverable, while the reduced (but still uniform) gaps
+   leave room for the brand. */
+@media (max-width: 22.999rem) {
   .page > .header > .header {
     column-gap: 0.5rem;
   }
 
-  .page > .header .right-group {
-    gap: 0.25rem;
-  }
-
+  .page > .header .right-group,
   .page > .header .social-icons {
-    gap: 0.5rem;
+    gap: 0.25rem;
   }
 }
 
@@ -979,6 +988,26 @@ site-search .pagefind-ui__drawer:not(.pagefind-ui__hidden) {
   color: var(--sl-color-text);
 }
 
+/* Prev/next pagination: give the arrow more breathing room from the label
+   block (Starlight's 0.5rem reads cramped next to the card's 1rem padding). */
+.pagination-links a {
+  gap: 1rem;
+}
+
+/* Pin the grid to two fixed columns so a lone link keeps its half-width card
+   instead of stretching across the content column (Starlight's auto-fit
+   collapses to one full-width track). A lone "next" stays on the right,
+   where readers expect it. */
+@media (min-width: 40rem) {
+  .pagination-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pagination-links > a[rel="next"]:only-child {
+    grid-column: 2;
+  }
+}
+
 /* Mobile: align the search sheet's Cancel button with the slimmer bar. */
 @media (max-width: 49.999rem) {
   site-search dialog button[data-close-modal] {
@@ -988,12 +1017,20 @@ site-search .pagefind-ui__drawer:not(.pagefind-ui__hidden) {
 }
 
 /* Mobile: Starlight reserves nav-gap + nav-pad + button width (4rem) of
-   header padding for the fixed hamburger, but the button only spans 1rem to
-   3rem from the edge — the extra nav-gap read as a dead zone between the
-   action cluster and the menu. Reserve just the button plus the cluster's
-   own 0.5rem rhythm. */
+   header padding for the fixed hamburger, but the button only spans
+   pad-x to pad-x + 2rem from the edge — the extra nav-gap read as a dead
+   zone between the action cluster and the menu. The inner container already
+   pads the content by the pad-x gutter, so reserve just the button plus the
+   cluster's own 0.5rem rhythm and every control sits one even gap apart. */
 @media (max-width: 49.999rem) {
   [data-has-sidebar] .page > .header {
-    padding-inline-end: calc(var(--sl-nav-pad-x) + var(--sl-menu-button-size) + 0.5rem);
+    padding-inline-end: calc(var(--sl-menu-button-size) + 0.5rem);
+  }
+}
+
+/* Track the tighter 0.25rem cluster rhythm of the narrowest phones. */
+@media (max-width: 21.999rem) {
+  [data-has-sidebar] .page > .header {
+    padding-inline-end: calc(var(--sl-menu-button-size) + 0.25rem);
   }
 }
