@@ -1,6 +1,8 @@
 import { useRewriter } from "@web-ai-sdk/rewriter/react";
 import { useState } from "react";
 import { ModelMarkdown } from "../../../shared/components/ModelMarkdown.js";
+import { useDownloadMonitor } from "../../../shared/demoLifecycle.js";
+import { DownloadProgress } from "./DownloadProgress.js";
 import { UnavailableHint } from "./UnavailableHint.js";
 
 const SAMPLE = "hey, can u send me that doc when u get a sec? thx a bunch";
@@ -14,11 +16,13 @@ export const RewriterDemo = ({ language = "en" }: { language?: string }) => {
   const [stopped, setStopped] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
+  const { progress, monitor } = useDownloadMonitor();
   const { status, output, error } = useRewriter({
     input: committed ?? "",
     language,
     tone: "more-formal",
     length: "as-is",
+    monitor,
     enabled: enabled && committed !== null,
   });
 
@@ -87,6 +91,7 @@ export const RewriterDemo = ({ language = "en" }: { language?: string }) => {
             Rewrite
           </button>
         )}
+        <DownloadProgress progress={progress} />
       </div>
       {error && <p className="demo-error">{error.message}</p>}
       {stale && (

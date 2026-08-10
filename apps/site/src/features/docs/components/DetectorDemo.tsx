@@ -1,6 +1,10 @@
 import { useDetector } from "@web-ai-sdk/detector/react";
 import { useState } from "react";
-import { useDebouncedValue } from "../../../shared/demoLifecycle.js";
+import {
+  useDebouncedValue,
+  useDownloadMonitor,
+} from "../../../shared/demoLifecycle.js";
+import { DownloadProgress } from "./DownloadProgress.js";
 import { UnavailableHint } from "./UnavailableHint.js";
 
 export interface DetectorDemoProps {
@@ -15,7 +19,8 @@ export const DetectorDemo = ({
 }: DetectorDemoProps) => {
   const [text, setText] = useState(initial);
   const debounced = useDebouncedValue(text, DETECT_DEBOUNCE_MS);
-  const { status, output, error } = useDetector({ input: debounced });
+  const { progress, monitor } = useDownloadMonitor();
+  const { status, output, error } = useDetector({ input: debounced, monitor });
   const language = output?.language ?? null;
   const confidence = output?.confidence ?? 0;
   const all = output?.all ?? [];
@@ -57,6 +62,7 @@ export const DetectorDemo = ({
               {language} · {Math.round(confidence * 100)}%
             </span>
           )}
+          <DownloadProgress progress={progress} />
         </header>
         {status === "done" && all.length > 0 ? (
           <ol className="demo-list">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /** Shape shared by every `prepare*()` lease across the SDK packages. */
 export interface CapabilityLease {
@@ -41,6 +41,54 @@ export const useCapabilityLease = (
     lease.ready.catch(() => {});
     return () => lease.release();
   }, [intent, createLease]);
+};
+
+interface DownloadProgressEvent extends Event {
+  readonly loaded: number;
+}
+interface CreateMonitor {
+  addEventListener(
+    type: "downloadprogress",
+    listener: (event: DownloadProgressEvent) => void,
+  ): void;
+}
+
+/**
+ * Wire a Built-in AI `monitor` callback to React state. Returns the
+ * monitor function to pass into `createOptions.monitor`, plus the current
+ * progress (a fraction from 0..1) or `null` when no download is in flight.
+ * Warm-model creations emit `downloadprogress` with loaded 0 and 1 only;
+ * those events are ignored so the indicator surfaces for real downloads.
+ */
+export const useDownloadMonitor = () => {
+  const [progress, setProgress] = useState<number | null>(null);
+  // Tracked outside React state so completion can schedule its clear timer
+  // without side effects inside a state updater.
+  const visibleRef = useRef(false);
+
+  const monitor = useCallback((m: CreateMonitor) => {
+    m.addEventListener("downloadprogress", (e) => {
+      if (e.loaded <= 0) return;
+      if (e.loaded >= 1) {
+        // Settle to "complete" briefly, then clear; stay hidden when no
+        // fractional progress ever showed (warm start).
+        if (!visibleRef.current) return;
+        visibleRef.current = false;
+        setProgress(1);
+        setTimeout(() => setProgress(null), 900);
+        return;
+      }
+      visibleRef.current = true;
+      setProgress(e.loaded);
+    });
+  }, []);
+
+  const clear = useCallback(() => {
+    visibleRef.current = false;
+    setProgress(null);
+  }, []);
+
+  return { progress, monitor, clear };
 };
 
 /**

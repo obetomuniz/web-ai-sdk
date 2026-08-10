@@ -1,5 +1,7 @@
 import { useProofreader } from "@web-ai-sdk/proofreader/react";
 import { useState } from "react";
+import { useDownloadMonitor } from "../../../shared/demoLifecycle.js";
+import { DownloadProgress } from "./DownloadProgress.js";
 import { FreshRunAction } from "./FreshRunAction.js";
 import { UnavailableHint } from "./UnavailableHint.js";
 
@@ -20,11 +22,13 @@ export const ProofreaderDemo = () => {
   // stored result and writes under a new key. Old entries expire via TTL.
   const [freshNonce, setFreshNonce] = useState(0);
 
+  const { progress, monitor } = useDownloadMonitor();
   const { status, output, error, fromCache } = useProofreader({
     input: committed ?? "",
     cache: "session",
     cacheTtl: RESULT_TTL_MS,
     cacheKey: `docs-proofreader:${freshNonce}:${committed ?? ""}`,
+    monitor,
     enabled: enabled && committed !== null,
   });
 
@@ -92,6 +96,7 @@ export const ProofreaderDemo = () => {
           </button>
         )}
         <FreshRunAction show={status === "done" && !busy} onClick={freshRun} />
+        <DownloadProgress progress={progress} />
       </div>
       {error && <p className="demo-error">{error.message}</p>}
       {stale && (
