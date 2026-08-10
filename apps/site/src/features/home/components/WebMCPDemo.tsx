@@ -535,6 +535,7 @@ Choose one of the registered tool names if the user intent maps to it, and fill 
                     className={toolToggle}
                     onClick={() => toggle(t.id)}
                     aria-pressed={on}
+                    disabled={available === false}
                   >
                     <span className={toolToggleTrack} aria-hidden="true" />
                     <span className="flex min-w-0 flex-col gap-0.5">
@@ -589,6 +590,7 @@ Choose one of the registered tool names if the user intent maps to it, and fill 
                 type="button"
                 className={prompt === p ? chipActive : chip}
                 onClick={() => setPrompt(p)}
+                disabled={available === false}
               >
                 {["cart", "order lookup", "settings"][i]}
               </button>

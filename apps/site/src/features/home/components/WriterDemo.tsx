@@ -187,6 +187,7 @@ export const WriterDemo = ({ intent: tabIntent }: DemoIntentProps) => {
                 type="button"
                 className={tone === t ? chipActive : chip}
                 onClick={() => setTone(t)}
+                disabled={available === false}
               >
                 {t}
               </button>
@@ -198,6 +199,7 @@ export const WriterDemo = ({ intent: tabIntent }: DemoIntentProps) => {
                 type="button"
                 className={length === l ? chipActive : chip}
                 onClick={() => setLength(l)}
+                disabled={available === false}
               >
                 {l}
               </button>

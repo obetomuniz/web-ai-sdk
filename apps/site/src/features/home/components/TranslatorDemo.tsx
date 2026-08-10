@@ -180,6 +180,7 @@ export const TranslatorDemo = ({ intent: tabIntent }: DemoIntentProps) => {
               className={select}
               value={from}
               onChange={(e) => setFrom(e.target.value)}
+              disabled={available === false}
             >
               {LANGS.map((l) => (
                 <option key={l.code} value={l.code}>
@@ -195,6 +196,7 @@ export const TranslatorDemo = ({ intent: tabIntent }: DemoIntentProps) => {
               onClick={swap}
               title="Swap"
               aria-label="Swap languages"
+              disabled={available === false}
             >
               ⇄
             </button>
@@ -208,6 +210,7 @@ export const TranslatorDemo = ({ intent: tabIntent }: DemoIntentProps) => {
               className={select}
               value={to}
               onChange={(e) => setTo(e.target.value)}
+              disabled={available === false}
             >
               {LANGS.map((l) => (
                 <option key={l.code} value={l.code}>

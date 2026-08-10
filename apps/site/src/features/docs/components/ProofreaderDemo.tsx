@@ -48,6 +48,24 @@ export const ProofreaderDemo = () => {
 
   return (
     <div className="demo-card">
+      {status === "unavailable" && !error && (
+        <UnavailableHint
+          api="Proofreader API"
+          chrome={
+            <>
+              Chrome labels Proofreader a Developer trial. For localhost, enable{" "}
+              <code>chrome://flags/#proofreader-api</code> and reload.
+            </>
+          }
+          edge={
+            <>
+              Proofreader API unavailable. In Edge Canary/Dev 142+, open{" "}
+              <code>edge://flags/</code>, search for "Proofreader API for Phi
+              mini", enable it, and reload.
+            </>
+          }
+        />
+      )}
       <label className="demo-label">
         Text to proofread
         <textarea
@@ -75,24 +93,6 @@ export const ProofreaderDemo = () => {
         )}
         <FreshRunAction show={status === "done" && !busy} onClick={freshRun} />
       </div>
-      {status === "unavailable" && !error && (
-        <UnavailableHint
-          api="Proofreader API"
-          chrome={
-            <>
-              Chrome labels Proofreader a Developer trial. For localhost, enable{" "}
-              <code>chrome://flags/#proofreader-api</code> and reload.
-            </>
-          }
-          edge={
-            <>
-              Proofreader API unavailable. In Edge Canary/Dev 142+, open{" "}
-              <code>edge://flags/</code>, search for "Proofreader API for Phi
-              mini", enable it, and reload.
-            </>
-          }
-        />
-      )}
       {error && <p className="demo-error">{error.message}</p>}
       {stale && (
         <p className="demo-hint" role="status">

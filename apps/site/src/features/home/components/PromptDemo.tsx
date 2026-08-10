@@ -159,6 +159,7 @@ export const PromptDemo = ({ intent: tabIntent }: DemoIntentProps) => {
                 type="button"
                 className={promptText === p ? chipActive : chip}
                 onClick={() => setPromptText(p)}
+                disabled={available === false}
               >
                 {i === 0 ? "feature-detect" : i === 1 ? "haiku" : "explain"}
               </button>

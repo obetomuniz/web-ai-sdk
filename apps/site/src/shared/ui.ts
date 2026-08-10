@@ -50,7 +50,7 @@ export const chipRowInline =
 export const chipRowEnd = "ml-auto max-[640px]:ml-0 max-[640px]:w-full";
 
 const chipBase =
-  "cursor-pointer appearance-none rounded-pill border px-2.5 py-[5px] font-mono text-[11px] transition-all max-[640px]:px-2.5 max-[640px]:py-1.5 max-[640px]:text-[11.5px]";
+  "cursor-pointer appearance-none rounded-pill border px-2.5 py-[5px] font-mono text-[11px] transition-all disabled:cursor-not-allowed disabled:opacity-50 max-[640px]:px-2.5 max-[640px]:py-1.5 max-[640px]:text-[11.5px]";
 
 export const chip = `${chipBase} border-hairline-2 bg-transparent text-fg-3 hover:border-fg-3 hover:text-fg`;
 
@@ -80,7 +80,7 @@ export const textarea =
 const selectChevron =
   "bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%228%22%20viewBox%3D%220%200%2012%208%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M1%201.5L6%206.5L11%201.5%22%20stroke%3D%22%238a8175%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px_8px] bg-[position:right_12px_center] bg-no-repeat";
 
-export const select = `h-[38px] w-full cursor-pointer appearance-none rounded-sm border border-hairline bg-bg px-3 pr-9 font-mono text-[13px] leading-[38px] text-fg transition-[border-color,background] focus:border-accent-line focus:bg-surface-2 focus:outline-none ${selectChevron}`;
+export const select = `h-[38px] w-full cursor-pointer appearance-none rounded-sm border border-hairline bg-bg px-3 pr-9 font-mono text-[13px] leading-[38px] text-fg transition-[border-color,background] focus:border-accent-line focus:bg-surface-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${selectChevron}`;
 
 /** Pill select — matches selected `chipActive` styling (current value always shown). */
 export const chipSelect = `${chipActive} appearance-none pr-7 max-[640px]:pr-8 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent`;
@@ -175,7 +175,7 @@ export const outputBox =
 export const toolList = "m-0 grid list-none gap-1.5 p-0";
 
 export const toolToggle =
-  "grid w-full cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-3 rounded-sm border border-hairline bg-bg px-3 py-2.5 text-left font-mono text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent hover:border-hairline-2 max-[640px]:gap-2.5 max-[640px]:p-2.5";
+  "grid w-full cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-3 rounded-sm border border-hairline bg-bg px-3 py-2.5 text-left font-mono text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent hover:border-hairline-2 disabled:cursor-not-allowed disabled:opacity-50 max-[640px]:gap-2.5 max-[640px]:p-2.5";
 
 export const toolToggleTrack =
   "relative h-4 w-7 rounded-pill border border-hairline-2 bg-surface-3 transition-[background] after:absolute after:top-0.5 after:left-0.5 after:size-2.5 after:rounded-full after:bg-fg-3 after:transition-[transform,background] group-data-[on=true]/tool:after:translate-x-3 group-data-[on=true]/tool:after:bg-accent group-data-[on=true]/tool:border-accent-line group-data-[on=true]/tool:bg-accent-soft";
@@ -188,7 +188,7 @@ export const langSwapWrap =
   "contents max-[640px]:flex max-[640px]:w-full max-[640px]:justify-center";
 
 export const langSwapBtn =
-  "inline-flex size-[38px] shrink-0 items-center justify-center self-end rounded-sm border border-hairline-2 bg-transparent font-mono text-base leading-none text-fg-2 transition-colors hover:border-fg-3 hover:text-fg max-[640px]:self-auto max-[640px]:rotate-90";
+  "inline-flex size-[38px] shrink-0 items-center justify-center self-end rounded-sm border border-hairline-2 bg-transparent font-mono text-base leading-none text-fg-2 transition-colors hover:border-fg-3 hover:text-fg disabled:cursor-not-allowed disabled:opacity-50 max-[640px]:self-auto max-[640px]:rotate-90";
 
 export const markdownProse =
   "font-sans text-[13.5px] leading-[1.65] whitespace-normal [&>div>:first-child]:mt-0 [&>div>:last-child]:mb-0 [&_p]:mb-2.5 [&_p]:text-fg [&_h1]:my-3.5 [&_h1]:mb-2 [&_h1]:text-base [&_h1]:font-semibold [&_h1]:tracking-[-0.01em] [&_h1]:text-fg [&_h2]:my-3.5 [&_h2]:mb-2 [&_h2]:text-[15px] [&_h2]:font-semibold [&_h2]:tracking-[-0.01em] [&_h2]:text-fg [&_h3]:my-3.5 [&_h3]:mb-2 [&_h3]:text-[13.5px] [&_h3]:font-semibold [&_h3]:tracking-[-0.01em] [&_h3]:text-accent-bright [&_h4]:my-3.5 [&_h4]:mb-2 [&_h4]:text-[13px] [&_h4]:font-semibold [&_h4]:tracking-[-0.01em] [&_h4]:text-fg-2 [&_ul]:mb-2.5 [&_ul]:list-disc [&_ul]:pl-[22px] [&_ol]:mb-2.5 [&_ol]:list-decimal [&_ol]:pl-[22px] [&_li]:my-0.5 [&_li>p]:m-0 [&_li]:marker:text-fg-4 [&_strong]:font-semibold [&_strong]:text-fg [&_em]:text-fg-2 [&_a]:text-accent-bright [&_a]:underline [&_a]:underline-offset-2 [&_code]:rounded [&_code]:border [&_code]:border-hairline [&_code]:bg-surface-2 [&_code]:px-[5px] [&_code]:py-px [&_code]:font-mono [&_code]:text-xs [&_code]:text-fg [&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-sm [&_pre]:border [&_pre]:border-hairline [&_pre]:bg-surface [&_pre]:p-3.5 [&_pre]:font-mono [&_pre]:text-xs [&_pre]:leading-normal [&_pre_code]:border-0 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-accent-line [&_blockquote]:py-1 [&_blockquote]:pl-3 [&_blockquote]:text-fg-2 [&_blockquote]:italic [&_hr]:my-3.5 [&_hr]:border-0 [&_hr]:border-t [&_hr]:border-hairline [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs [&_th]:border [&_th]:border-hairline [&_th]:bg-surface-2 [&_th]:px-2.5 [&_th]:py-1.5 [&_th]:text-left [&_th]:font-medium [&_th]:text-fg [&_td]:border [&_td]:border-hairline [&_td]:px-2.5 [&_td]:py-1.5";

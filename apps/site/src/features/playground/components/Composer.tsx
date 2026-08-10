@@ -91,7 +91,7 @@ export function Composer({
             className={ui.modeTrigger}
             data-accent={activeMode.accent}
             onClick={onToggleModeMenu}
-            disabled={busy}
+            disabled={busy || !promptOn}
             aria-label={`Mode: ${activeMode.name}`}
             aria-expanded={modeMenuOpen}
             aria-controls="playground-mode-menu"
@@ -119,7 +119,7 @@ export function Composer({
               />
             </svg>
           </button>
-          {modeMenuOpen && (
+          {modeMenuOpen && promptOn && (
             <div className={ui.modeMenu}>
               <div className={ui.modeMenuHeader}>
                 <span className={ui.modeMenuTitle}>
