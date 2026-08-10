@@ -16,7 +16,7 @@ export const DownloadProgress = ({ progress }: { progress: number | null }) => {
   return (
     // The aria-label on the live region carries the detail for keyboard and
     // screen-reader users; the tooltip is pointer-hover supplementary text.
-    <span className="demo-tip-wrap">
+    <span className="demo-tip-wrap demo-download">
       <svg
         width="14"
         height="14"

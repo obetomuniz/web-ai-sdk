@@ -33,6 +33,7 @@
   --demo-muted-fg: var(--sl-color-gray-3);
   --demo-hint-bg: var(--sl-color-gray-7);
 
+
   /* Warn hint (unavailable APIs): amber tint matching the home page's
      UnavailableNotice. fg darkens in light mode for contrast (see dark block). */
   --demo-warn-bg: color-mix(in oklch, var(--color-warn) 14%, var(--sl-color-bg));
@@ -80,6 +81,7 @@
   --demo-panel-bg: color-mix(in oklch, var(--sl-color-gray-6) 50%, var(--sl-color-bg));
   --demo-error-fg: oklch(0.72 0.18 25);
   --demo-warn-fg: var(--color-warn);
+
 }
 
 /* ---------- shared building blocks ---------- */
@@ -329,6 +331,17 @@
   color: var(--sl-color-text);
 }
 
+/* Starlight sets `isolation: isolate` on `.main-pane`, so its later sibling
+   (the right sidebar) paints over floating tooltips no matter their z-index.
+   Raise the pane one level: the pane's box never overlaps the sidebar column,
+   so only overhanging tooltips (pointer-events: none) are affected. */
+.main-pane {
+  position: relative;
+  z-index: 1;
+}
+
+/* Surface matches `.inline-code-tip` (web-ai-sdk.css) exactly, so every
+   floating tooltip in the docs reads as the same chip. */
 .demo-tooltip {
   pointer-events: none;
   position: absolute;
@@ -336,11 +349,14 @@
   left: 0;
   z-index: 50;
   white-space: nowrap;
-  border-radius: var(--radius-sm);
-  background: var(--demo-hint-bg);
-  padding: 6px 10px;
-  font-size: 11px;
-  color: var(--sl-color-text);
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--sl-color-hairline-light);
+  border-radius: 0.375rem;
+  background: var(--sl-color-black);
+  color: var(--sl-color-gray-2);
+  font-family: var(--sl-font-sans);
+  font-size: 0.75rem;
+  line-height: 1.4;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.15s ease;
@@ -349,6 +365,13 @@
 .demo-tooltip--right {
   left: auto;
   right: 0;
+}
+
+/* Icon buttons pad a 16px glyph inside a 32px hit-area, which pushes their
+   tooltip visibly farther from the glyph than the download donut's. Pull the
+   tooltip in so the visual gap from the glyph matches the donut's 8px. */
+.demo-tip-wrap:has(> .demo-icon-button) .demo-tooltip {
+  bottom: 100%;
 }
 
 .demo-tip-wrap:hover .demo-tooltip,
@@ -361,6 +384,12 @@
    model. The dasharray transition smooths progress-event jumps. */
 .demo-donut {
   flex-shrink: 0;
+}
+
+/* Breathing room between the donut and whatever control precedes it (the
+   demo-row gap alone reads too tight next to a filled CTA). */
+.demo-download:not(:first-child) {
+  margin-inline-start: 6px;
 }
 
 .demo-donut circle:last-child {
