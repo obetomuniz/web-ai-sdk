@@ -68,28 +68,33 @@ const scoreDocument = (
   document: DocumentationRecord,
   normalizedQuery: string,
   tokens: readonly string[],
-): number => {
+): { score: number; matchedTokens: string[] } => {
   const title = normalize(document.title);
   const description = normalize(document.description);
   const identity = normalize(`${document.id} ${document.uri}`);
   const body = normalize(document.body);
   const combined = `${title} ${description} ${identity} ${body}`;
 
-  if (!tokens.every((token) => combined.includes(token))) return 0;
+  const matchedTokens = tokens.filter((token) => combined.includes(token));
+  // A strict majority of tokens must match so long natural-language queries
+  // can rank by partial coverage while unrelated queries still return nothing.
+  if (matchedTokens.length * 2 <= tokens.length) {
+    return { score: 0, matchedTokens };
+  }
 
-  let score = 1;
+  let score = (matchedTokens.length / tokens.length) * 40;
   if (title === normalizedQuery) score += 120;
   else if (title.includes(normalizedQuery)) score += 60;
   if (identity.includes(normalizedQuery)) score += 45;
   if (description.includes(normalizedQuery)) score += 30;
 
-  for (const token of tokens) {
+  for (const token of matchedTokens) {
     if (title.includes(token)) score += 24;
     if (identity.includes(token)) score += 18;
     if (description.includes(token)) score += 12;
     score += countMatches(body, token) * 2;
   }
-  return score;
+  return { score, matchedTokens };
 };
 
 const excerptFrom = (
@@ -126,7 +131,7 @@ export const searchDocumentation = (
   return documents
     .map((document) => ({
       document,
-      score: scoreDocument(document, normalizedQuery, tokens),
+      ...scoreDocument(document, normalizedQuery, tokens),
     }))
     .filter((candidate) => candidate.score > 0)
     .sort(
@@ -135,14 +140,14 @@ export const searchDocumentation = (
         left.document.title.localeCompare(right.document.title),
     )
     .slice(0, limit)
-    .map(({ document }) => ({
+    .map(({ document, matchedTokens }) => ({
       id: document.id,
       uri: document.uri,
       url: document.url,
       title: document.title,
       description: document.description,
       kind: document.kind,
-      excerpt: excerptFrom(document, tokens),
+      excerpt: excerptFrom(document, matchedTokens),
     }));
 };
 

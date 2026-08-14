@@ -36,6 +36,24 @@ describe("documentation catalog", () => {
     expect(searchDocumentation("definitely-not-in-these-docs")).toEqual([]);
   });
 
+  it("ranks partial matches for long natural-language queries", () => {
+    const results = searchDocumentation(
+      "WebMCP how to use @web-ai-sdk/webmcp browser support registration tools declarative imperative",
+    );
+
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.map((result) => result.id)).toContain("guides/webmcp");
+  });
+
+  it("returns nothing when most query tokens are absent", () => {
+    expect(
+      searchDocumentation("quantum blockchain kubernetes terraform webmcp"),
+    ).toEqual([]);
+    expect(searchDocumentation("definitely-not-in-these-docs webmcp")).toEqual(
+      [],
+    );
+  });
+
   it("keeps excerpt offsets aligned after Unicode normalization", () => {
     const document = readDocumentation("packages/webmcp");
     const result = searchDocumentation("heterogeneous", 5).find(
