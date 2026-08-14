@@ -29,6 +29,25 @@ const normalize = (value: string): string =>
     .replace(/[\u0300-\u036f]/gu, "")
     .toLowerCase();
 
+const normalizeWithOffsets = (
+  value: string,
+): { normalized: string; originalOffsets: number[] } => {
+  const normalizedChunks: string[] = [];
+  const originalOffsets: number[] = [];
+  let originalOffset = 0;
+
+  for (const character of value) {
+    const normalizedCharacter = normalize(character);
+    normalizedChunks.push(normalizedCharacter);
+    for (let index = 0; index < normalizedCharacter.length; index += 1) {
+      originalOffsets.push(originalOffset);
+    }
+    originalOffset += character.length;
+  }
+
+  return { normalized: normalizedChunks.join(""), originalOffsets };
+};
+
 const queryTokens = (query: string): string[] => [
   ...new Set(normalize(query).match(/[a-z0-9@./_-]+/gu) ?? []),
 ];
@@ -78,11 +97,14 @@ const excerptFrom = (
   tokens: readonly string[],
 ): string => {
   const compact = document.body.replace(/\s+/gu, " ").trim();
-  const normalizedBody = normalize(compact);
+  const { normalized: normalizedBody, originalOffsets } =
+    normalizeWithOffsets(compact);
   const positions = tokens
     .map((token) => normalizedBody.indexOf(token))
     .filter((position) => position >= 0);
-  const firstMatch = positions.length > 0 ? Math.min(...positions) : 0;
+  const normalizedFirstMatch =
+    positions.length > 0 ? Math.min(...positions) : 0;
+  const firstMatch = originalOffsets[normalizedFirstMatch] ?? 0;
   const start = Math.max(0, firstMatch - 90);
   const end = Math.min(compact.length, start + 320);
   const prefix = start > 0 ? "…" : "";

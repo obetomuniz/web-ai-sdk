@@ -42,9 +42,10 @@ pnpm --filter @web-ai-sdk-apps/mcp test
 
 ## Deployment
 
-The `Deploy MCP` GitHub Actions workflow is manual. It uses the
-`mcp-production` environment and deploys the Worker to `mcp.web-ai-sdk.dev`.
-The MCP endpoint is `https://mcp.web-ai-sdk.dev/mcp`.
+The `Deploy MCP` GitHub Actions workflow deploys relevant changes after they
+reach `main`. Maintainers can also run it manually. It uses the `mcp-production`
+environment and deploys the Worker to `mcp.web-ai-sdk.dev`. The MCP endpoint is
+`https://mcp.web-ai-sdk.dev/mcp`.
 
 Configure these GitHub Actions secrets before the first deployment:
 

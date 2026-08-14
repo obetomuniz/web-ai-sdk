@@ -35,6 +35,26 @@ describe("documentation catalog", () => {
     expect(searchDocumentation("definitely-not-in-these-docs")).toEqual([]);
   });
 
+  it("keeps excerpt offsets aligned after Unicode normalization", () => {
+    const document = readDocumentation("packages/webmcp");
+    const result = searchDocumentation("heterogeneous", 5).find(
+      (candidate) => candidate.id === "packages/webmcp",
+    );
+    if (!document || !result) throw new Error("Expected WebMCP search result.");
+
+    const compact = document.body.replace(/\s+/gu, " ").trim();
+    const firstMatch = compact.toLowerCase().indexOf("heterogeneous");
+    expect(firstMatch).toBeGreaterThan(90);
+    const start = Math.max(0, firstMatch - 90);
+    const end = Math.min(compact.length, start + 320);
+    const prefix = start > 0 ? "…" : "";
+    const suffix = end < compact.length ? "…" : "";
+
+    expect(result.excerpt).toBe(
+      `${prefix}${compact.slice(start, end).trim()}${suffix}`,
+    );
+  });
+
   it("reads documents through agent-friendly identifiers", () => {
     expect(readDocumentation("web-ai-sdk://docs/guides/webmcp")?.id).toBe(
       "guides/webmcp",
