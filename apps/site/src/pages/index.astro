@@ -2,7 +2,8 @@
 import { BackToTop } from "../features/home/components/BackToTop.js";
 import { HowItWorks } from "../features/home/components/HowItWorks.js";
 import { InstallPill } from "../features/home/components/InstallPill.js";
-import { CityShader } from "../features/home/components/CityShader.js";
+import cityFrag from "../features/home/shader/city.frag.glsl?raw";
+import heroShaderSrc from "../features/home/shader/hero-shader.inline.js?raw";
 import { PackageExplorer } from "../features/home/components/PackageExplorer.js";
 import { ScrollSpy } from "../features/home/components/ScrollSpy.js";
 import { ThemeSwitcher } from "../features/home/components/ThemeSwitcher.js";
@@ -10,6 +11,16 @@ import SiteNav from "../shared/components/SiteNav.astro";
 import * as ui from "../shared/ui.js";
 import { SDK_VERSION } from "../features/home/sdk-version.js";
 import "../styles/home.css";
+
+// The hero backdrop boots from a synchronous inline script (no React island)
+// so the shader is compiled and drawn before first paint — swapping the look
+// means swapping the ?raw frag import above. See hero-shader.inline.js.
+const heroShaderBoot = heroShaderSrc.replace('"__FRAG__"', () =>
+  JSON.stringify(cityFrag),
+);
+if (heroShaderBoot === heroShaderSrc) {
+  throw new Error("hero-shader.inline.js: __FRAG__ placeholder not found");
+}
 
 const REPO = "obetomuniz/web-ai-sdk";
 const CANONICAL_URL = "https://web-ai-sdk.dev/";
@@ -473,9 +484,16 @@ const browserColumns = [
 
     <main>
       <header class={`${ui.hero} relative overflow-hidden`} id="top">
-        {/* client:load, not client:visible: the hero is above the fold, and
-            deferring hydration is what made the backdrop pop in late. */}
-        <CityShader client:load />
+        {/* Static markup + synchronous inline boot, not a React island: any
+            hydration (even client:load) starts the shader seconds after first
+            paint, which read as a blank hero and a hard pop-in. The inline
+            script below the hero content draws the first frame during HTML
+            parse, so the backdrop is part of the initial render. */}
+        <div aria-hidden="true" class={ui.shaderBackdrop}>
+          <canvas data-hero-shader class={ui.shaderCanvas}></canvas>
+          {/* Bottom-to-top page-bg gradient eases the shader into the page. */}
+          <div class={ui.shaderFade}></div>
+        </div>
         <div
           aria-hidden="true"
           class="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,var(--color-bg)_0%,var(--color-bg)_34%,color-mix(in_oklch,var(--color-bg)_50%,transparent)_60%,transparent_88%)] max-[880px]:bg-[linear-gradient(180deg,color-mix(in_oklch,var(--color-bg)_64%,transparent)_0%,color-mix(in_oklch,var(--color-bg)_52%,transparent)_100%)]"
@@ -502,6 +520,11 @@ const browserColumns = [
             </div>
           </div>
         </div>
+        {/* Synchronous on purpose (is:inline, not a bundled module script):
+            it must run during parse, after the hero content above so the
+            canvas has its final layout, and before the browser's first
+            paint. set:html injects the engine with the frag baked in. */}
+        <script is:inline set:html={heroShaderBoot} />
       </header>
 
       <section class={ui.section} data-section="why-raw">
