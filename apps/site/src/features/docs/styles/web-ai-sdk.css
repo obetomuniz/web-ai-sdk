@@ -153,6 +153,70 @@
   text-decoration-color: currentColor;
 }
 
+/* Client setup tabs use recognizable product marks. A compact selected surface
+   replaces Starlight's per-tab underline. */
+.mcp-client-tabs [role="tablist"] {
+  gap: 0.3rem;
+  border-bottom: 0;
+}
+
+.mcp-client-tabs .tab > [role="tab"] {
+  border: 0;
+  border-radius: var(--radius-md);
+  padding: 0.45rem 0.7rem;
+  box-shadow: none;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.mcp-client-tabs .tab > [role="tab"]::before {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  background: var(--mcp-client-color, currentColor);
+  content: "";
+  -webkit-mask: var(--mcp-client-icon) center / contain no-repeat;
+  mask: var(--mcp-client-icon) center / contain no-repeat;
+}
+
+.mcp-client-tabs .tab > [role="tab"][aria-selected="true"] {
+  background: var(--sl-color-accent-low);
+  font-weight: 500;
+}
+
+.mcp-client-tabs .tab > [role="tab"]:hover {
+  background: var(--sl-color-accent-low);
+}
+
+.mcp-client-tabs .tab:nth-child(1) > [role="tab"] {
+  --mcp-client-icon: url("/mcp-client-icons/openai.svg");
+  --mcp-client-color: var(--sl-color-text-accent);
+}
+
+.mcp-client-tabs .tab:nth-child(2) > [role="tab"] {
+  --mcp-client-icon: none;
+}
+
+.mcp-client-tabs .tab:nth-child(2) > [role="tab"]::before {
+  background: url("/mcp-client-icons/gemini-cli.png") center / contain no-repeat;
+  -webkit-mask: none;
+  mask: none;
+}
+
+.mcp-client-tabs .tab:nth-child(3) > [role="tab"] {
+  --mcp-client-icon: url("/mcp-client-icons/claude.svg");
+  --mcp-client-color: #d97757;
+}
+
+.mcp-client-tabs .tab:nth-child(4) > [role="tab"] {
+  --mcp-client-icon: url("/mcp-client-icons/cursor.svg");
+  --mcp-client-color: var(--sl-color-text-accent);
+}
+
+.mcp-client-tabs .tab:nth-child(5) > [role="tab"] {
+  --mcp-client-icon: url("/mcp-client-icons/json.svg");
+}
+
 /* Minor tightening: monospaced inline code as a borderless chip — its
    background alone carries the shape, on the shared radius scale. */
 .sl-markdown-content :not(pre) > code {
