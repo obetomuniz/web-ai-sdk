@@ -25,7 +25,7 @@ const connectClient = async (): Promise<Client> => {
     },
   );
   const client = new Client(
-    { name: "web-ai-sdk-docs-test", version: "1.0.0" },
+    { name: "web-ai-sdk-mcp-test", version: "1.0.0" },
     { versionNegotiation: { mode: "auto" } },
   );
   clients.push(client);
@@ -33,12 +33,12 @@ const connectClient = async (): Promise<Client> => {
   return client;
 };
 
-describe("documentation MCP server", () => {
+describe("web-ai-sdk MCP server", () => {
   it("serves modern MCP tools and resources in-process", async () => {
     const client = await connectClient();
 
     expect(client.getProtocolEra()).toBe("modern");
-    expect(client.getServerVersion()?.name).toBe("web-ai-sdk-docs");
+    expect(client.getServerVersion()?.name).toBe("web-ai-sdk-mcp");
 
     const tools = await client.listTools();
     expect(tools.tools.map((tool) => tool.name)).toEqual([
@@ -63,7 +63,7 @@ describe("documentation MCP server", () => {
     );
 
     const resources = await client.listResources();
-    expect(resources.resources).toHaveLength(33);
+    expect(resources.resources).toHaveLength(34);
     const page = await client.readResource({
       uri: "web-ai-sdk://docs/architecture",
     });

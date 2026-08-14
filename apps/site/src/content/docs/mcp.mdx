@@ -1,0 +1,111 @@
+---
+title: MCP server
+description: Connect an agent to web-ai-sdk documentation and browser support data.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+The public web-ai-sdk MCP server gives agents read-only access to canonical project documentation.
+
+Endpoint: [`https://mcp.web-ai-sdk.dev/mcp`](https://mcp.web-ai-sdk.dev/mcp)
+
+## Connect
+
+Choose your client. MCP defines the protocol and transport, but each client owns its configuration format.
+
+<div className="mcp-client-tabs">
+<Tabs>
+  <TabItem label="Codex">
+
+Add the server with the Codex CLI:
+
+```sh
+codex mcp add web-ai-sdk-mcp --url https://mcp.web-ai-sdk.dev/mcp
+```
+
+Restart Codex, then use `/mcp` to view the server. See the [Codex MCP guide](https://developers.openai.com/codex/mcp/) for other setup methods.
+
+  </TabItem>
+  <TabItem label="Gemini CLI">
+
+Add the server with the Gemini CLI:
+
+```sh
+gemini mcp add --transport http web-ai-sdk-mcp https://mcp.web-ai-sdk.dev/mcp
+```
+
+Run `gemini mcp list` to verify the connection. See the [Gemini CLI MCP guide](https://geminicli.com/docs/tools/mcp-server/) for JSON configuration.
+
+  </TabItem>
+  <TabItem label="Claude Code">
+
+Add the server with the Claude Code CLI:
+
+```sh
+claude mcp add --transport http web-ai-sdk-mcp https://mcp.web-ai-sdk.dev/mcp
+```
+
+Use `/mcp` in Claude Code to verify the connection. See the [Claude Code MCP guide](https://docs.anthropic.com/en/docs/claude-code/mcp/) for configuration scopes.
+
+  </TabItem>
+  <TabItem label="Cursor">
+
+Add this entry to `.cursor/mcp.json` in a project. Use `~/.cursor/mcp.json` to make it available across projects.
+
+```json
+{
+  "mcpServers": {
+    "web-ai-sdk-mcp": {
+      "url": "https://mcp.web-ai-sdk.dev/mcp"
+    }
+  }
+}
+```
+
+See the [Cursor MCP guide](https://docs.cursor.com/context/model-context-protocol) for other configuration options.
+
+  </TabItem>
+  <TabItem label="JSON">
+
+A common JSON configuration uses `mcpServers`, `type`, and `url`. MCP does not standardize client configuration files.
+
+```json
+{
+  "mcpServers": {
+    "web-ai-sdk-mcp": {
+      "type": "http",
+      "url": "https://mcp.web-ai-sdk.dev/mcp"
+    }
+  }
+}
+```
+
+Claude Code accepts this form. Cursor omits `type`, Gemini CLI uses `httpUrl`, and VS Code uses a top-level `servers` key.
+
+  </TabItem>
+</Tabs>
+</div>
+
+For another MCP client, add the endpoint as a Streamable HTTP server. The server does not require authentication.
+
+## Tools
+
+| Tool | Purpose |
+| --- | --- |
+| `search_docs` | Search package references, guides, React hooks, and concepts. |
+| `read_doc` | Read one complete canonical documentation page. |
+| `get_browser_support` | Read current Chrome and Edge support. |
+
+Every documentation page is also available as an MCP resource under `web-ai-sdk://docs/`.
+
+## Limits
+
+The server is public, read-only, and stateless. It does not execute browser AI APIs or access user data.
+
+Requests accept a maximum 64 KiB body. Cloudflare allows 120 requests per minute for each client IP.
+
+## MCP and WebMCP
+
+This MCP server gives external agents access to web-ai-sdk project context.
+
+The [`@web-ai-sdk/webmcp`](/docs/guides/webmcp/) package lets a webpage register tools through `document.modelContext`. The two surfaces are independent.

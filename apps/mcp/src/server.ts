@@ -12,7 +12,7 @@ import type {
   DocumentationSearchResult,
 } from "./types.js";
 
-export const SERVER_NAME = "web-ai-sdk-docs";
+export const SERVER_NAME = "web-ai-sdk-mcp";
 export const SERVER_VERSION = "0.1.0";
 
 const toolAnnotations = {

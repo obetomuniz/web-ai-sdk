@@ -1,8 +1,8 @@
-# web-ai-sdk documentation MCP
+# web-ai-sdk MCP
 
-This private app serves the checked-in web-ai-sdk documentation through a
-read-only Model Context Protocol endpoint. A Cloudflare Worker hosts the remote
-endpoint. The published SDK packages do not depend on this app.
+This private app hosts the public web-ai-sdk Model Context Protocol endpoint.
+It currently serves checked-in documentation through read-only tools and
+resources. The published SDK packages do not depend on this app.
 
 ## Content
 
