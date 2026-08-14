@@ -2,10 +2,15 @@ import {
   Client,
   StreamableHTTPClientTransport,
 } from "@modelcontextprotocol/client";
-import { afterEach, describe, expect, it } from "vitest";
-import { fetchRequest } from "./index.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fetchRequest, type WorkerEnv } from "./index.js";
 
 const clients: Client[] = [];
+const allowAllEnv: WorkerEnv = {
+  MCP_RATE_LIMITER: {
+    limit: async () => ({ success: true }),
+  },
+};
 
 afterEach(async () => {
   await Promise.all(clients.splice(0).map((client) => client.close()));
@@ -15,7 +20,8 @@ const connectClient = async (): Promise<Client> => {
   const transport = new StreamableHTTPClientTransport(
     new URL("https://mcp.web-ai-sdk.dev/mcp"),
     {
-      fetch: (input, init) => fetchRequest(new Request(input, init)),
+      fetch: (input, init) =>
+        fetchRequest(new Request(input, init), allowAllEnv),
     },
   );
   const client = new Client(
@@ -70,6 +76,7 @@ describe("documentation MCP server", () => {
   it("returns service metadata and bounded routing responses", async () => {
     const health = await fetchRequest(
       new Request("https://mcp.web-ai-sdk.dev/health"),
+      allowAllEnv,
     );
     expect(health.status).toBe(200);
     await expect(health.json()).resolves.toMatchObject({
@@ -79,6 +86,7 @@ describe("documentation MCP server", () => {
 
     const missing = await fetchRequest(
       new Request("https://mcp.web-ai-sdk.dev/unknown"),
+      allowAllEnv,
     );
     expect(missing.status).toBe(404);
   });
@@ -89,6 +97,7 @@ describe("documentation MCP server", () => {
         method: "POST",
         headers: { Origin: "https://attacker.example" },
       }),
+      allowAllEnv,
     );
     expect(response.status).toBe(403);
   });
@@ -98,10 +107,38 @@ describe("documentation MCP server", () => {
       new Request("https://mcp.web-ai-sdk.dev/unknown", {
         headers: { Origin: "https://web-ai-sdk.dev" },
       }),
+      allowAllEnv,
     );
     expect(response.status).toBe(404);
     expect(response.headers.get("Access-Control-Allow-Origin")).toBe(
       "https://web-ai-sdk.dev",
     );
+  });
+
+  it("rate limits repeated MCP requests by client IP", async () => {
+    const limit = vi.fn().mockResolvedValue({ success: false });
+    const response = await fetchRequest(
+      new Request("https://mcp.web-ai-sdk.dev/mcp", {
+        method: "POST",
+        headers: { "CF-Connecting-IP": "203.0.113.10" },
+      }),
+      { MCP_RATE_LIMITER: { limit } },
+    );
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("60");
+    expect(limit).toHaveBeenCalledWith({ key: "mcp:203.0.113.10" });
+  });
+
+  it("rejects MCP request bodies larger than 64 KiB", async () => {
+    const response = await fetchRequest(
+      new Request("https://mcp.web-ai-sdk.dev/mcp", {
+        method: "POST",
+        body: "x".repeat(64 * 1024 + 1),
+      }),
+      allowAllEnv,
+    );
+
+    expect(response.status).toBe(413);
   });
 });

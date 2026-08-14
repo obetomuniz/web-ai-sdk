@@ -21,6 +21,13 @@ The server exposes:
 All tools are public, read-only, and stateless. They do not execute browser AI
 APIs or access user data.
 
+Requests to `/mcp` accept a maximum 64 KiB request body. The deployed Worker
+allows 120 requests per minute for each Cloudflare client IP. Requests above
+these limits return `413` or `429`.
+
+Cloudflare enforces the rate limit per data center. Treat it as an abuse control,
+not a precise global quota.
+
 ## Local development
 
 From the repository root:

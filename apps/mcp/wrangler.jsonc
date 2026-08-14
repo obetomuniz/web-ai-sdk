@@ -9,6 +9,16 @@
       "custom_domain": true
     }
   ],
+  "ratelimits": [
+    {
+      "name": "MCP_RATE_LIMITER",
+      "namespace_id": "271211",
+      "simple": {
+        "limit": 120,
+        "period": 60
+      }
+    }
+  ],
   "observability": {
     "enabled": true
   }

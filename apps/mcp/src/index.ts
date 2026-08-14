@@ -6,10 +6,20 @@ import {
 } from "./server.js";
 
 const mcpHandler = createMcpHandler(createDocumentationServer);
+const maxRequestBodyBytes = 64 * 1024;
+const rateLimitSeconds = 60;
 const allowedOrigins = new Set([
   "https://web-ai-sdk.dev",
   "https://mcp.web-ai-sdk.dev",
 ]);
+
+interface RateLimitBinding {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
+export interface WorkerEnv {
+  MCP_RATE_LIMITER: RateLimitBinding;
+}
 
 const corsHeaders = (origin: string): HeadersInit => ({
   "Access-Control-Allow-Headers":
@@ -39,7 +49,54 @@ const json = (value: unknown, status = 200): Response =>
     headers: { "Cache-Control": "no-store" },
   });
 
-export const fetchRequest = async (request: Request): Promise<Response> => {
+const readBoundedRequest = async (
+  request: Request,
+): Promise<Request | null> => {
+  const contentLength = request.headers.get("Content-Length");
+  if (contentLength !== null && Number(contentLength) > maxRequestBodyBytes) {
+    return null;
+  }
+
+  if (!request.body) return request;
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let byteLength = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      byteLength += value.byteLength;
+      if (byteLength > maxRequestBodyBytes) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(byteLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new Request(request.url, {
+    method: request.method,
+    headers: request.headers,
+    body,
+  });
+};
+
+export const fetchRequest = async (
+  request: Request,
+  env: WorkerEnv,
+): Promise<Response> => {
   const url = new URL(request.url);
   const origin = request.headers.get("Origin");
 
@@ -69,7 +126,22 @@ export const fetchRequest = async (request: Request): Promise<Response> => {
     return withCors(json({ error: "Not found." }, 404), origin);
   }
 
-  const response = await mcpHandler.fetch(request);
+  const clientIp = request.headers.get("CF-Connecting-IP") ?? "unknown";
+  const rateLimit = await env.MCP_RATE_LIMITER.limit({
+    key: `mcp:${clientIp}`,
+  });
+  if (!rateLimit.success) {
+    const response = json({ error: "Too many requests." }, 429);
+    response.headers.set("Retry-After", String(rateLimitSeconds));
+    return withCors(response, origin);
+  }
+
+  const boundedRequest = await readBoundedRequest(request);
+  if (!boundedRequest) {
+    return withCors(json({ error: "Request body is too large." }, 413), origin);
+  }
+
+  const response = await mcpHandler.fetch(boundedRequest);
   return withCors(response, origin);
 };
 
