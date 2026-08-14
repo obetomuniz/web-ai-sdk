@@ -56,6 +56,13 @@ The Built-in AI packages wrap local browser capabilities. [`@web-ai-sdk/webmcp`]
 
 All packages use feature detection. See [Browser support](./apps/site/src/content/docs/browser-support.mdx) for current availability.
 
+## Documentation MCP
+
+The private [`apps/mcp`](./apps/mcp) Cloudflare Worker exposes the checked-in
+documentation to remote MCP clients. It provides read-only search, complete
+documents, and browser support data. It stays separate from the published SDK
+packages and their zero-dependency browser code.
+
 ## Scope
 
 The core packages handle browser API lifecycles. They do not include UI, polyfills, DOM traversal, or cross-capability orchestration.
@@ -85,7 +92,7 @@ Each package has its own README with install + usage:
 
 ## Try it locally
 
-One workspace app ships under `apps/site`: an Astro marketing site with Starlight docs mounted at `/docs/`.
+The Astro site and documentation MCP server ship as private workspace apps.
 
 ```sh
 git clone https://github.com/obetomuniz/web-ai-sdk.git
@@ -115,7 +122,8 @@ The demos require a browser that supports the selected API. See [Browser support
 │   ├── proofreader/    # @web-ai-sdk/proofreader
 │   └── sdk/            # @web-ai-sdk/all (meta-package; re-exports the eight above)
 ├── apps/
-│   └── site/           # @web-ai-sdk-apps/site (private; Astro site + Starlight docs)
+│   ├── site/           # @web-ai-sdk-apps/site (private; Astro site + Starlight docs)
+│   └── mcp/            # @web-ai-sdk-apps/mcp (private; documentation MCP Worker)
 ├── .agents/agents.md           # agent instructions (AGENTS.md symlink kept at root)
 ├── README.md           # ← you are here
 └── …
@@ -126,12 +134,14 @@ The demos require a browser that supports the selected API. See [Browser support
 | Task                            | Command               |
 | ------------------------------- | --------------------- |
 | Watch site + docs               | `pnpm dev`            |
+| Watch documentation MCP Worker  | `pnpm mcp`            |
 | Watch wrapper packages          | `pnpm dev:packages`   |
 | Watch meta-package              | `pnpm dev:sdk`        |
 | Boot unified app (`:5173`)      | `pnpm site`           |
 | Build everything                | `pnpm build`          |
 | Build publishable packages only | `pnpm build:packages` |
 | Build app only                  | `pnpm build:apps`     |
+| Build documentation MCP Worker  | `pnpm build:mcp`      |
 | Typecheck everything            | `pnpm typecheck`      |
 | Run tests                       | `pnpm test`           |
 | Lint + format audit             | `pnpm lint`           |

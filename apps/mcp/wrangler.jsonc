@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "web-ai-sdk-docs-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-14",
+  "routes": [
+    {
+      "pattern": "mcp.web-ai-sdk.dev",
+      "custom_domain": true
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}
