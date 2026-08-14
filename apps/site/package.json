@@ -16,8 +16,8 @@
     "docs:check": "node scripts/sync-package-docs.mjs --check"
   },
   "dependencies": {
-    "@astrojs/react": "6.0.1",
-    "@astrojs/starlight": "0.41.4",
+    "@astrojs/react": "6.0.2",
+    "@astrojs/starlight": "0.41.7",
     "@web-ai-sdk/detector": "workspace:*",
     "@web-ai-sdk/prompt": "workspace:*",
     "@web-ai-sdk/proofreader": "workspace:*",
@@ -26,8 +26,8 @@
     "@web-ai-sdk/translator": "workspace:*",
     "@web-ai-sdk/webmcp": "workspace:*",
     "@web-ai-sdk/writer": "workspace:*",
-    "astro": "7.1.4",
-    "marked": "^18.0.7",
+    "astro": "7.2.0",
+    "marked": "^18.0.9",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
