@@ -197,6 +197,21 @@ export const subscribeToToolChanges = (
  */
 const ownedControllers = new Map<string, AbortController>();
 
+/**
+ * Outcome of one async native registration, shared between the registration
+ * pipeline and the synchronous cleanup returned by `registerTool`.
+ *
+ * Affected browser builds attach the signal's unregister algorithm before
+ * validating registration options (see WebMCP PR #240), so a rejected
+ * registration can leave a stale unregister algorithm on our signal. Cleanup
+ * must therefore never abort once the outcome is `"failed"`: nothing of ours
+ * is registered, and the stale algorithm could remove a later valid tool
+ * with the same name.
+ */
+interface RegistrationState {
+  outcome: "pending" | "registered" | "failed";
+}
+
 const isDuplicateNameError = (err: unknown): boolean =>
   /duplicate/i.test((err as Error)?.message ?? "");
 
@@ -258,6 +273,7 @@ const registerOne = async (
   mc: ModelContext,
   registered: NativeToolDefinition,
   controller: AbortController,
+  state: RegistrationState,
   options?: RegisterToolOptions,
 ): Promise<boolean> => {
   // If we still hold a live controller for this name, evict it before the
@@ -277,6 +293,7 @@ const registerOne = async (
 
     if (!isDuplicateNameError(err)) {
       // Unrecoverable first-call failure: log and give up (no throw).
+      state.outcome = "failed";
       if (typeof console !== "undefined") {
         console.error(
           `[@web-ai-sdk/webmcp] tool "${registered.name}" could not be registered: ${(err as Error)?.message ?? String(err)}`,
@@ -295,6 +312,7 @@ const registerOne = async (
       await callRegister(mc, registered, controller, options);
     } catch (retryErr) {
       if (controller.signal.aborted) return false;
+      state.outcome = "failed";
       if (isDuplicateNameError(retryErr)) {
         if (typeof console !== "undefined") {
           console.warn(
@@ -312,6 +330,7 @@ const registerOne = async (
     }
   }
 
+  state.outcome = "registered";
   trackOwnership(controller, registered.name);
   return true;
 };
@@ -357,16 +376,22 @@ export function registerTool(
 
   const registered = toRegistered(normalizeToolDefinition(tool));
   const controller = new AbortController();
+  const state: RegistrationState = { outcome: "pending" };
   // Fire-and-forget: registerOne is total (never rejects — see its contract),
   // so there is no unhandled-rejection risk. The sync cleanup below aborts the
   // controller; if registration is still pending, the abort propagates to the
   // host and registerOne treats it as a clean cancellation.
-  void registerOne(mc, registered, controller, options);
+  void registerOne(mc, registered, controller, state, options);
 
   let disposed = false;
   return () => {
     if (disposed) return;
     disposed = true;
+    // Once the native registration has rejected there is nothing of ours to
+    // unregister, and aborting would fire any stale unregister algorithm the
+    // failed attempt left on our signal (see RegistrationState) — which could
+    // remove a later valid tool registered under the same name.
+    if (state.outcome === "failed") return;
     controller.abort();
   };
 }

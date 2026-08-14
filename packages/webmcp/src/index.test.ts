@@ -649,6 +649,209 @@ describe("registerTool", () => {
   });
 });
 
+describe("failed-registration cleanup isolation", () => {
+  const INVALID_ORIGIN = "not-a-trustworthy-origin";
+  const securityError = () =>
+    new DOMException(
+      "Failed to execute 'registerTool' on 'ModelContext': exposedTo contains an origin that is not potentially trustworthy.",
+      "SecurityError",
+    );
+
+  /**
+   * Deterministic fake host reproducing the ordering defect documented in
+   * WebMCP PR #240: the signal's unregister algorithm is attached BEFORE
+   * `exposedTo` validation. A rejected registration therefore leaves a stale
+   * abort handler that removes whatever tool currently holds the name — the
+   * exact hazard the SDK cleanup must not trigger. Pass `{ sync: true }` for
+   * the legacy synchronous-throw shape.
+   */
+  const installPreFixOrderingModelContext = ({
+    sync = false,
+  }: {
+    sync?: boolean;
+  } = {}) => {
+    const registered = new Map<string, RegisteredCall>();
+    const registerTool = vi.fn(
+      (def: RegisteredCall, options?: NativeRegisterOptions) => {
+        // Pre-fix ordering: unregister algorithm attached first...
+        options?.signal?.addEventListener("abort", () => {
+          registered.delete(def.name);
+        });
+        // ...then options are validated; rejecting leaves the handler live.
+        const validateAndApply = () => {
+          if (options?.exposedTo?.includes(INVALID_ORIGIN)) {
+            throw securityError();
+          }
+          if (registered.has(def.name)) {
+            throw new Error(
+              "Failed to execute 'registerTool' on 'ModelContext': Duplicate tool name",
+            );
+          }
+          registered.set(def.name, def);
+        };
+        if (sync) {
+          validateAndApply();
+          return undefined;
+        }
+        return new Promise<void>((resolve, reject) => {
+          try {
+            validateAndApply();
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        });
+      },
+    );
+    setModelContext("navigator", { registerTool });
+    return { registered, registerTool };
+  };
+
+  const sharedTool = (description: string): Tool => ({
+    name: "shared",
+    description,
+    execute: async () => ({}),
+  });
+
+  it("cleanup from an asynchronously rejected registration does not unregister a later valid same-name tool", async () => {
+    const { registered } = installPreFixOrderingModelContext();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const cleanupRejected = registerTool(sharedTool("rejected"), {
+      exposedTo: [INVALID_ORIGIN],
+    });
+    await flush();
+    expect(registered.has("shared")).toBe(false);
+    // Native error name/message surface unchanged in the existing log.
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/not potentially trustworthy/),
+    );
+
+    const cleanupValid = registerTool(sharedTool("replacement"));
+    await flush();
+    expect(registered.get("shared")?.description).toBe("replacement");
+
+    // The rejected attempt's cleanup must not fire its stale abort handler.
+    cleanupRejected();
+    expect(registered.get("shared")?.description).toBe("replacement");
+
+    // Repeated cleanup of the failed attempt stays a no-op.
+    cleanupRejected();
+    expect(registered.get("shared")?.description).toBe("replacement");
+
+    // The successful registration still unregisters exactly once.
+    cleanupValid();
+    expect(registered.has("shared")).toBe(false);
+    cleanupValid();
+    expect(registered.has("shared")).toBe(false);
+    errorSpy.mockRestore();
+  });
+
+  it("cleanup from a synchronously thrown registration does not unregister a later valid same-name tool", async () => {
+    const { registered } = installPreFixOrderingModelContext({ sync: true });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const cleanupRejected = registerTool(sharedTool("rejected"), {
+      exposedTo: [INVALID_ORIGIN],
+    });
+    await flush();
+    expect(registered.has("shared")).toBe(false);
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/not potentially trustworthy/),
+    );
+
+    const cleanupValid = registerTool(sharedTool("replacement"));
+    await flush();
+    expect(registered.get("shared")?.description).toBe("replacement");
+
+    cleanupRejected();
+    cleanupRejected();
+    expect(registered.get("shared")?.description).toBe("replacement");
+
+    cleanupValid();
+    expect(registered.has("shared")).toBe(false);
+    errorSpy.mockRestore();
+  });
+
+  it("cleanup while registration is pending still cancels it on a pre-fix host", async () => {
+    const registered = new Map<string, RegisteredCall>();
+    let settle: (() => void) | undefined;
+    const nativeRegister = vi.fn(
+      (def: RegisteredCall, options?: NativeRegisterOptions) => {
+        // Pre-fix ordering: handler attached before validation completes.
+        options?.signal?.addEventListener("abort", () => {
+          registered.delete(def.name);
+        });
+        return new Promise<void>((resolve, reject) => {
+          options?.signal?.addEventListener("abort", () => {
+            reject(
+              new DOMException("The user aborted a request.", "AbortError"),
+            );
+          });
+          settle = () => {
+            registered.set(def.name, def);
+            resolve();
+          };
+        });
+      },
+    );
+    setModelContext("navigator", { registerTool: nativeRegister });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const cleanup = registerTool(sharedTool("pending"));
+    expect(settle).toBeDefined();
+    cleanup(); // abort before the pending registration settles
+    await flush();
+
+    expect(registered.has("shared")).toBe(false);
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  it("preserves last-writer eviction on a pre-fix host", async () => {
+    const { registered } = installPreFixOrderingModelContext();
+
+    const cleanupA = registerTool(sharedTool("first"));
+    await flush();
+    expect(registered.get("shared")?.description).toBe("first");
+
+    const cleanupB = registerTool(sharedTool("second"));
+    await flush();
+    expect(registered.get("shared")?.description).toBe("second");
+
+    cleanupA();
+    expect(registered.get("shared")?.description).toBe("second");
+    cleanupB();
+    expect(registered.has("shared")).toBe(false);
+  });
+
+  it("cleanup after a duplicate-name skip does not tear down the other caller's tool on a pre-fix host", async () => {
+    const { registered } = installPreFixOrderingModelContext();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // Pre-occupy the name outside the wrapper; the wrapper cannot evict it.
+    registered.set("shared", {
+      name: "shared",
+      description: "owned by someone else",
+      execute: () => ({}),
+    });
+
+    const cleanup = registerTool(sharedTool("ours"));
+    await flush();
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/already registered by another caller/),
+    );
+
+    // Both failed attempts left stale abort handlers; cleanup must not fire
+    // them against the other caller's registration.
+    cleanup();
+    expect(registered.get("shared")?.description).toBe("owned by someone else");
+    warnSpy.mockRestore();
+  });
+});
+
 describe("Standard Schema tool definitions", () => {
   // Tiny Standard-Schema-shaped validator for tests; mirrors what a real
   // Zod/Valibot schema would expose via the `~standard` property. Kept inline
