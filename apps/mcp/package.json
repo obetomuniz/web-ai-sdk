@@ -1,0 +1,27 @@
+{
+  "name": "@web-ai-sdk-apps/mcp",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Read-only MCP server for web-ai-sdk documentation",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm docs:build && wrangler deploy --dry-run --outdir dist",
+    "deploy": "pnpm docs:build && wrangler deploy",
+    "dev": "pnpm docs:build && wrangler dev",
+    "docs:build": "node scripts/build-docs.mjs",
+    "test": "pnpm docs:build && vitest run",
+    "test:watch": "pnpm docs:build && vitest",
+    "typecheck": "pnpm docs:build && tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.0.0",
+    "@types/node": "^26.0.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.123.0"
+  }
+}

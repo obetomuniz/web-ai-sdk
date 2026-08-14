@@ -17,6 +17,8 @@ _site/
 # Sub-package / sub-app npmrc files (the root .npmrc is intentionally tracked for pnpm config; never commit auth tokens).
 packages/*/.npmrc
 apps/*/.npmrc
+apps/*/.wrangler/
+apps/mcp/src/generated/
 .vscode/
 .idea/
 .claude/

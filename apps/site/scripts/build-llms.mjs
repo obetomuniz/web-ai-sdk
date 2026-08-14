@@ -164,6 +164,7 @@ function buildLlmsIndex() {
     "",
     "## Optional",
     "",
+    "- [Remote documentation MCP](https://mcp.web-ai-sdk.dev/mcp): Search and read canonical web-ai-sdk documentation from an MCP client.",
     "- [Source repository](" + REPO_URL + ")",
     "- [Full text of every README](" + SITE_URL + "/llms-full.txt)",
     "",

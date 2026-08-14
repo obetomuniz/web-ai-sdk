@@ -30,7 +30,7 @@ above.
 
 This is a strict TypeScript and pnpm monorepo. Wrapper packages live in
 `packages/`. The Astro site, Starlight docs, Playground, and demos live in
-`apps/site/`.
+`apps/site/`. The read-only documentation MCP Worker lives in `apps/mcp/`.
 
 Each wrapper exposes:
 
@@ -118,7 +118,9 @@ See [`apps/site/README.md`](../apps/site/README.md) for complete site rules.
 Use scripts from [`package.json`](../package.json). Common commands:
 
 - `pnpm dev`: watch the site and docs.
+- `pnpm mcp`: run the documentation MCP Worker locally.
 - `pnpm build`: build packages and apps.
+- `pnpm build:mcp`: build the documentation MCP Worker.
 - `pnpm gate`: run lint, build, typecheck, and tests.
 
 Run focused checks while iterating. Build before typecheck because the site
