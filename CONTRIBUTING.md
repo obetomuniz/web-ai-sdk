@@ -17,7 +17,7 @@ Use the Node version in `.nvmrc`. Corepack reads the pnpm version from
 `package.json`. `pnpm gate` runs the same checks as CI.
 
 Published packages live in `packages/`. The Astro site and Starlight docs live
-in `apps/site/`. The read-only documentation MCP Worker lives in `apps/mcp/`.
+in `apps/site/`. The read-only web-ai-sdk MCP Worker lives in `apps/mcp/`.
 Run `pnpm run` to list all workflows.
 
 ## Change workflow

@@ -56,12 +56,12 @@ The Built-in AI packages wrap local browser capabilities. [`@web-ai-sdk/webmcp`]
 
 All packages use feature detection. See [Browser support](./apps/site/src/content/docs/browser-support.mdx) for current availability.
 
-## Documentation MCP
+## web-ai-sdk MCP
 
-The private [`apps/mcp`](./apps/mcp) Cloudflare Worker exposes the checked-in
-documentation to remote MCP clients. It provides read-only search, complete
-documents, and browser support data. It stays separate from the published SDK
-packages and their zero-dependency browser code.
+The private [`apps/mcp`](./apps/mcp) workspace app hosts a public, read-only MCP
+server. It currently provides documentation search, complete documents, and
+browser support data. See the [MCP server guide](./apps/site/src/content/docs/mcp.mdx)
+for connection instructions.
 
 ## Scope
 
@@ -92,7 +92,7 @@ Each package has its own README with install + usage:
 
 ## Try it locally
 
-The Astro site and documentation MCP server ship as private workspace apps.
+The Astro site and web-ai-sdk MCP server ship as private workspace apps.
 
 ```sh
 git clone https://github.com/obetomuniz/web-ai-sdk.git
@@ -123,7 +123,7 @@ The demos require a browser that supports the selected API. See [Browser support
 │   └── sdk/            # @web-ai-sdk/all (meta-package; re-exports the eight above)
 ├── apps/
 │   ├── site/           # @web-ai-sdk-apps/site (private; Astro site + Starlight docs)
-│   └── mcp/            # @web-ai-sdk-apps/mcp (private; documentation MCP Worker)
+│   └── mcp/            # @web-ai-sdk-apps/mcp (private; web-ai-sdk MCP Worker)
 ├── .agents/agents.md           # agent instructions (AGENTS.md symlink kept at root)
 ├── README.md           # ← you are here
 └── …
@@ -134,14 +134,14 @@ The demos require a browser that supports the selected API. See [Browser support
 | Task                            | Command               |
 | ------------------------------- | --------------------- |
 | Watch site + docs               | `pnpm dev`            |
-| Watch documentation MCP Worker  | `pnpm mcp`            |
+| Watch web-ai-sdk MCP Worker      | `pnpm mcp`            |
 | Watch wrapper packages          | `pnpm dev:packages`   |
 | Watch meta-package              | `pnpm dev:sdk`        |
 | Boot unified app (`:5173`)      | `pnpm site`           |
 | Build everything                | `pnpm build`          |
 | Build publishable packages only | `pnpm build:packages` |
 | Build app only                  | `pnpm build:apps`     |
-| Build documentation MCP Worker  | `pnpm build:mcp`      |
+| Build web-ai-sdk MCP Worker      | `pnpm build:mcp`      |
 | Typecheck everything            | `pnpm typecheck`      |
 | Run tests                       | `pnpm test`           |
 | Lint + format audit             | `pnpm lint`           |

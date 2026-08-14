@@ -9,9 +9,10 @@ import {
 
 describe("documentation catalog", () => {
   it("indexes every checked-in documentation page", () => {
-    expect(documents).toHaveLength(33);
-    expect(new Set(documents.map((document) => document.id)).size).toBe(33);
+    expect(documents).toHaveLength(34);
+    expect(new Set(documents.map((document) => document.id)).size).toBe(34);
     expect(documents.every((document) => document.body.length > 0)).toBe(true);
+    expect(readDocumentation("mcp")?.title).toBe("MCP server");
   });
 
   it("removes render-only MDX from agent-facing content", () => {

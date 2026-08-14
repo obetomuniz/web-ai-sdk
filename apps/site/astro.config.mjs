@@ -163,6 +163,7 @@ export default defineConfig({
               slug: "docs/production-checklist",
             },
             { label: "Architecture", slug: "docs/architecture" },
+            { label: "MCP server", slug: "docs/mcp" },
           ],
         },
         {
