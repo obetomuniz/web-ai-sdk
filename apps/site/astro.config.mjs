@@ -82,15 +82,6 @@ export default defineConfig({
             "data-website-id": "9e24f5c3-6b64-48fc-8679-610907092f1c",
           },
         },
-        {
-          tag: "script",
-          attrs: {
-            defer: true,
-            src: "https://datafa.st/js/script.js",
-            "data-website-id": "dfid_mEnHw3sriSnXWCpCQsoM6",
-            "data-domain": "web-ai-sdk.dev",
-          },
-        },
         ...preloadedFonts.map((file) => ({
           tag: "link",
           attrs: {
