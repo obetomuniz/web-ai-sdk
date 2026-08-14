@@ -694,3 +694,122 @@ describe("useWebMCP discovery", () => {
     expect(result.current.tools).toEqual([]);
   });
 });
+
+describe("useWebMCP cleanup isolation after failed registration", () => {
+  const INVALID_ORIGIN = "not-a-trustworthy-origin";
+
+  /** Flush the async native register pipeline (chains several microtasks). */
+  const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  /**
+   * Fake host reproducing the pre-WebMCP-PR-#240 ordering: the signal's
+   * unregister algorithm is attached BEFORE `exposedTo` validation, so a
+   * rejected registration leaves a stale abort handler able to remove a
+   * later valid tool with the same name.
+   */
+  const installPreFixOrderingModelContext = () => {
+    const registered = new Map<string, RegisteredCall>();
+    const registerTool = vi.fn(
+      (
+        def: RegisteredCall,
+        options?: { signal?: AbortSignal; exposedTo?: readonly string[] },
+      ) => {
+        options?.signal?.addEventListener("abort", () => {
+          registered.delete(def.name);
+        });
+        return new Promise<void>((resolve, reject) => {
+          if (options?.exposedTo?.includes(INVALID_ORIGIN)) {
+            reject(
+              new DOMException(
+                "Failed to execute 'registerTool' on 'ModelContext': exposedTo contains an origin that is not potentially trustworthy.",
+                "SecurityError",
+              ),
+            );
+            return;
+          }
+          if (registered.has(def.name)) {
+            reject(
+              new Error(
+                "Failed to execute 'registerTool' on 'ModelContext': Duplicate tool name",
+              ),
+            );
+            return;
+          }
+          registered.set(def.name, def);
+          resolve();
+        });
+      },
+    );
+    setModelContext("navigator", { registerTool });
+    return { registered, registerTool };
+  };
+
+  const sharedTool = (description: string): Tool => ({
+    name: "shared",
+    description,
+    execute: async () => ({}),
+  });
+
+  it("unmount after a rejected registration does not unregister a later valid same-name tool", async () => {
+    const { registered } = installPreFixOrderingModelContext();
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const failed = renderHook(() =>
+      useWebMCP(sharedTool("rejected"), { exposedTo: [INVALID_ORIGIN] }),
+    );
+    await act(flush);
+    expect(registered.has("shared")).toBe(false);
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/not potentially trustworthy/),
+    );
+
+    const replacement = renderHook(() => useWebMCP(sharedTool("replacement")));
+    await act(flush);
+    expect(registered.get("shared")?.description).toBe("replacement");
+
+    failed.unmount();
+    expect(registered.get("shared")?.description).toBe("replacement");
+
+    // Unmount after successful registration still unregisters exactly once.
+    replacement.unmount();
+    expect(registered.has("shared")).toBe(false);
+    errorSpy.mockRestore();
+  });
+
+  it("unmount while registration is pending still cancels it", async () => {
+    const registered = new Map<string, RegisteredCall>();
+    let settle: (() => void) | undefined;
+    const nativeRegister = vi.fn(
+      (def: RegisteredCall, options?: { signal?: AbortSignal }) => {
+        options?.signal?.addEventListener("abort", () => {
+          registered.delete(def.name);
+        });
+        return new Promise<void>((resolve, reject) => {
+          options?.signal?.addEventListener("abort", () => {
+            reject(
+              new DOMException("The user aborted a request.", "AbortError"),
+            );
+          });
+          settle = () => {
+            registered.set(def.name, def);
+            resolve();
+          };
+        });
+      },
+    );
+    setModelContext("navigator", { registerTool: nativeRegister });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const { unmount } = renderHook(() => useWebMCP(sharedTool("pending")));
+    expect(settle).toBeDefined();
+    unmount(); // abort before the pending registration settles
+    await act(flush);
+
+    expect(registered.has("shared")).toBe(false);
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+});
