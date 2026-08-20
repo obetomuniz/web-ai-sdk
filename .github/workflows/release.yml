@@ -45,10 +45,10 @@ jobs:
       # a short-lived registry token from the GitHub OIDC token.
       - uses: changesets/action@v2.1.0
         with:
-          publish: pnpm release
-          version: pnpm version-packages
-          commit: "chore: version packages"
-          title: "chore: version packages"
+          publish-script: pnpm release
+          version-script: pnpm version-packages
+          commit-message: "chore: version packages"
+          pr-title: "chore: version packages"
           # A PAT (not the default GITHUB_TOKEN) so the opened "Version
           # Packages" PR triggers the CI workflow. GitHub intentionally
           # suppresses workflow runs for events created by GITHUB_TOKEN.
