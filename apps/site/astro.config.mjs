@@ -3,6 +3,7 @@ import react from "@astrojs/react";
 import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
+import { resolveLocalServer } from "./scripts/local-server.mjs";
 
 // Defaults to the custom-domain root. GitHub Pages builds override this with
 // SITE_BASE for project Pages or any other host prefix.
@@ -19,6 +20,7 @@ const preloadedFonts = [
 export default defineConfig({
   base,
   site: "https://web-ai-sdk.dev",
+  server: ({ command }) => resolveLocalServer(command),
   // Static meta-refresh stub so links to the pre-rename hook URL keep working.
   redirects: {
     "/docs/react/use-web-mcp/": "/docs/react/use-webmcp/",

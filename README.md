@@ -107,6 +107,77 @@ pnpm dev             # site at http://localhost:5173/, docs at /docs/
 
 The demos require a browser that supports the selected API. See [Browser support](./apps/site/src/content/docs/browser-support.mdx) for versions, flags, trials, and hardware requirements.
 
+### Parallel development worktrees
+
+Each linked worktree gets a stable development instance. The instance identity
+uses the worktree directory name and a hash of its canonical path.
+
+Set up any checkout or worktree with the same command:
+
+```sh
+pnpm dev:setup
+pnpm dev:info
+```
+
+`pnpm dev:setup` installs locked dependencies and builds the packages.
+`pnpm dev:info` prints the instance identity and local service URLs.
+
+The primary checkout keeps the standard ports. Linked worktrees receive stable
+ports and distinct `*.localhost` names:
+
+| Service | Primary checkout | Linked worktree port range |
+| --- | --- | --- |
+| Site | `http://localhost:5173/` | `20000-24999` |
+| Preview | `http://localhost:4173/` | `30000-34999` |
+| MCP | `http://localhost:8787/` | `40000-44999` |
+| MCP inspector | Wrangler default | `50000-54999` |
+
+A linked site URL uses this form:
+
+```text
+http://site--<instance>.web-ai-sdk.localhost:<port>/
+```
+
+Use these environment variables when you need explicit values:
+
+| Variable | Behavior |
+| --- | --- |
+| `WEB_AI_SDK_DEV_INSTANCE` | Overrides the derived development identity. |
+| `WEB_AI_SDK_HOST` | Overrides the local bind address. |
+| `WEB_AI_SDK_SITE_PORT` | Overrides the site port. |
+| `WEB_AI_SDK_PREVIEW_PORT` | Overrides the preview port. |
+| `WEB_AI_SDK_MCP_PORT` | Overrides the MCP server port. |
+| `WEB_AI_SDK_MCP_INSPECTOR_PORT` | Overrides the MCP inspector port. |
+
+The generated port can rarely conflict with another local process. Set the
+matching port variable when that happens.
+
+#### Optional Paseo integration
+
+The checked-in [`paseo.json`](./paseo.json) automates setup and process
+supervision. The project does not require Paseo for development isolation.
+
+Paseo provides these workspace scripts:
+
+| Script | Behavior |
+| --- | --- |
+| `site` | Runs the Astro site through a stable `*.localhost` proxy URL. |
+| `mcp` | Runs the local MCP Worker through a separate proxy URL. |
+| `packages` | Watches wrapper package builds during SDK changes. |
+| `preview` | Builds and previews the complete Pages artifact. |
+| `gate` | Runs the full quality gate without starting a service. |
+
+List the URLs and service state from a workspace:
+
+```sh
+paseo script ls
+paseo script start packages
+paseo script start site
+```
+
+Paseo allocates backend ports and exposes each service through a proxy URL. A
+small adapter passes each backend port through a generic variable listed above.
+
 ## Repo layout
 
 ```
@@ -124,6 +195,8 @@ The demos require a browser that supports the selected API. See [Browser support
 ├── apps/
 │   ├── site/           # @web-ai-sdk-apps/site (private; Astro site + Starlight docs)
 │   └── mcp/            # @web-ai-sdk-apps/mcp (private; web-ai-sdk MCP Worker)
+├── scripts/            # development instance and optional tool adapters
+├── paseo.json          # optional worktree setup and managed local services
 ├── .agents/agents.md           # agent instructions (AGENTS.md symlink kept at root)
 ├── README.md           # ← you are here
 └── …
