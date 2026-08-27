@@ -1,0 +1,138 @@
+name: Upstream tracking
+description: Track a capability or browser contract until public evidence supports implementation.
+title: ""
+labels:
+  - tracking
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when the intended outcome is clear but authoritative public evidence or a stable implementation contract is missing. Keep titles outcome-focused. The `tracking` label carries workflow state.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: Select the likely delivery category after promotion.
+      options:
+        - Bug
+        - Enhancement
+        - Documentation
+        - Maintenance
+    validations:
+      required: true
+
+  - type: dropdown
+    id: capability-stage
+    attributes:
+      label: Capability stage
+      description: Select the current stage under the capability-adoption policy.
+      options:
+        - Tracked
+        - Preview
+        - Trial
+        - Stable
+        - Not applicable
+    validations:
+      required: true
+
+  - type: input
+    id: ownership
+    attributes:
+      label: Package or repository area
+      description: Name the capability, package, documentation area, or repository layer that would own the future work.
+      placeholder: "Semantic Embedder, @web-ai-sdk/webmcp, or browser support"
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Intended outcome
+      description: State the repository outcome this issue should enable after promotion.
+    validations:
+      required: true
+
+  - type: textarea
+    id: public-evidence
+    attributes:
+      label: Current public evidence
+      description: Link authoritative public specifications, vendor documentation, implementation records, or standards discussion. Separate facts from proposals and inferences.
+    validations:
+      required: true
+
+  - type: textarea
+    id: unresolved-evidence
+    attributes:
+      label: Why implementation is blocked
+      description: Identify the missing public contract, runtime evidence, compatibility detail, setup instructions, or wrapper value.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-repository-state
+    attributes:
+      label: Current repository state
+      description: Describe existing implementation, tests, documentation, issues, pull requests, and active work that overlap this outcome.
+    validations:
+      required: true
+
+  - type: textarea
+    id: promotion-gate
+    attributes:
+      label: Promotion gate
+      description: List the public evidence and repository decisions required before removing the `tracking` label and setting implementation status to ready.
+      placeholder: |
+        - [ ] The public specification defines the required contract.
+        - [ ] A browser provides reproducible public setup instructions.
+        - [ ] Unsupported and older-browser behavior is documented.
+        - [ ] The wrapper adds material lifecycle or ergonomics value.
+    validations:
+      required: true
+
+  - type: textarea
+    id: post-promotion-contract
+    attributes:
+      label: Desired contract after promotion
+      description: Record durable public interfaces, lifecycle constraints, compatibility boundaries, and lossless-result requirements without treating proposals as shipped behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria after promotion
+      description: List independently testable implementation, lifecycle, compatibility, documentation, changeset, and quality-gate criteria that become actionable after the gate is met.
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: State the boundaries that remain excluded before and after promotion.
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and duplication
+      description: Link upstream work and related repository issues. Explain why this tracking issue owns a distinct outcome.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: tracking-checks
+    attributes:
+      label: Tracking checks
+      options:
+        - label: I searched open issues and pull requests for semantic overlap.
+          required: true
+        - label: Restricted or confidential evidence is not included.
+          required: true
+        - label: This issue is not implementation-ready and should retain the `tracking` label until its promotion gate is satisfied.
+          required: true
+        - label: The intended outcome stays within one coherent SDK capability or repository layer.
+          required: true
