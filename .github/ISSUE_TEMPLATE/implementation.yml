@@ -1,0 +1,130 @@
+name: Implementation proposal
+description: Propose implementation-ready SDK, documentation, or site work.
+title: ""
+labels: []
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when public evidence and repository scope are sufficient for implementation. Use upstream tracking when a specification or browser contract remains unresolved.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: Select the primary delivery category.
+      options:
+        - Bug
+        - Enhancement
+        - Documentation
+        - Maintenance
+    validations:
+      required: true
+
+  - type: dropdown
+    id: capability-stage
+    attributes:
+      label: Capability stage
+      description: Follow the capability-adoption policy in CONTRIBUTING.md.
+      options:
+        - Preview
+        - Trial
+        - Stable
+        - Not applicable
+    validations:
+      required: true
+
+  - type: input
+    id: ownership
+    attributes:
+      label: Package or repository area
+      description: Name the package, documentation area, site surface, or repository layer that owns this work.
+      placeholder: "@web-ai-sdk/webmcp, apps/site, CI, or documentation"
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: State the requested outcome and why it matters.
+      placeholder: Describe the smallest coherent implementation and its user value.
+    validations:
+      required: true
+
+  - type: textarea
+    id: public-evidence
+    attributes:
+      label: Public evidence
+      description: Link authoritative public sources for browser behavior, specifications, compatibility, versions, flags, or timelines. Write "Not applicable" when the work makes no external platform claim.
+      placeholder: Add one precise source per material claim.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: Current behavior
+      description: Describe the repository behavior or content that needs to change.
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired-behavior
+    attributes:
+      label: Desired behavior
+      description: Describe the observable behavior after this issue is complete.
+    validations:
+      required: true
+
+  - type: textarea
+    id: contracts
+    attributes:
+      label: Interfaces and behavioral contracts
+      description: List the public interfaces, lifecycle rules, compatibility boundaries, or content surfaces that the work must preserve or change.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: Provide independently testable criteria. Include vanilla behavior, React lifecycle, failure and cleanup paths, compatibility, documentation, changesets, and the repository quality gate when applicable.
+      placeholder: |
+        - [ ] Observable behavior is covered.
+        - [ ] Failure and cleanup paths are covered.
+        - [ ] Documentation and tests remain synchronized.
+        - [ ] `pnpm gate` passes.
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: State the boundaries that keep this issue coherent and reviewable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and duplication
+      description: Link related issues or pull requests. Explain why this work is not a duplicate and identify blockers or independent release boundaries.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Readiness checks
+      options:
+        - label: I searched open issues and pull requests for semantic overlap.
+          required: true
+        - label: Public platform claims rely only on authoritative public sources.
+          required: true
+        - label: This work is implementation-ready and does not depend on unresolved upstream evidence.
+          required: true
+        - label: The proposal follows the repository capability-adoption and SDK scope policies.
+          required: true
