@@ -16,7 +16,7 @@ Support differs by capability and browser. This page reports only behavior docum
 | `@web-ai-sdk/writer` | [Developer trial · local flag](https://developer.chrome.com/docs/ai/writer-api) | [138+ · Canary/Dev · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) | feature-detected fallback |
 | `@web-ai-sdk/rewriter` | [Developer trial · local flag](https://developer.chrome.com/docs/ai/rewriter-api) | [138+ · Canary/Dev · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) | feature-detected fallback |
 | `@web-ai-sdk/proofreader` | [Developer trial · local flag](https://developer.chrome.com/docs/ai/proofreader-api) | [142+ · Canary/Dev · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/proofreader-api) | feature-detected fallback |
-| `@web-ai-sdk/webmcp` | [OT from 149 · local flag](https://developer.chrome.com/docs/ai/webmcp) | [OT in 150](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/150) | feature-detected fallback |
+| `@web-ai-sdk/webmcp` | [OT from 149 · local flag](https://developer.chrome.com/docs/ai/webmcp) | [OT in 150](https://developer.microsoft.com/microsoft-edge/origin-trials/trials/0b76fe60-b266-458e-a285-04e375c0c31a) | feature-detected fallback |
 
 - **Stable:** the vendor enables the API by default.
 - **Canary/Dev:** an Edge preview that requires a flag.
@@ -44,13 +44,25 @@ These origin trials have ended. The current Developer trial label and localhost 
 
 Chrome documents Translator and Language Detector for desktop. The foundation-model APIs have additional platform, storage, GPU, and CPU requirements. See the [Prompt hardware requirements](https://developer.chrome.com/docs/ai/prompt-api).
 
-Do not infer support from the Chromium engine. Check the capability page for each browser.
+Do not infer product behavior from Chromium engine lineage. Check the capability page for each browser.
+
+## Agent consumers
+
+The table above tracks browser API providers only. An agent consumer is a separate product integration. It does not establish `document.modelContext` support in Chrome or another browser.
+
+| Product | Adoption signal | Product surface | Scope and lifecycle | Primary source |
+| --- | --- | --- | --- | --- |
+| ChatGPT Desktop Site tools | Implemented WebMCP consumer | ChatGPT desktop app built-in browser only | Availability depends on account, selected model, current page, and user permission. Tools do not carry after navigation. Closing the page makes them unavailable. | [OpenAI Site tools](https://help.openai.com/en/articles/20001423-using-site-tools-in-the-chatgpt-desktop-app) |
+
+Users can disable Site tools in the desktop app. The documented consumer behavior does not follow from engine lineage.
+
+The SDK detects the native API on the current document. `document.modelContext` detection cannot prove that an external agent product will discover or invoke a tool.
 
 ## Edge specifics
 
 Microsoft enables Summarizer by default from Edge 138. Prompt, Writer, and Rewriter are Canary/Dev previews from 138.0.3309.2. Proofreader is a preview from Edge 142.
 
-Translator and Language Detector shipped in Edge 148. Edge 150 lists origin trials for Prompt and WebMCP.
+Translator and Language Detector shipped in Edge 148. Edge 150 has origin trials for Prompt and WebMCP.
 
 ### Models and hardware are capability-specific
 

@@ -5,11 +5,25 @@ description: Register, discover, and execute agent-callable tools on the W3C Web
 
 This package wraps the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/) API at `document.modelContext`. It can register, discover, and execute tools. It also reads the earlier `navigator.modelContext` API for compatibility. For React, see [useWebMCP](/docs/react/use-webmcp/).
 
-WebMCP lets a page declare structured tools that agents can discover and call.
+WebMCP lets a page declare structured tools that compatible agents can discover and call. It does not guarantee discovery or invocation by an agent product.
 
 :::caution[Experimental]
 WebMCP is an early proposal. Chrome documents an origin trial from version 149 and a local flag. Microsoft lists an Edge 150 origin trial. Keep the human UI path. See [Browser support](/docs/browser-support/) for setup.
 :::
+
+## Browser API providers and agent consumers
+
+Browser API support and agent-consumer support are separate compatibility dimensions. A browser provider exposes `document.modelContext`. An agent consumer discovers and invokes page tools in a product surface.
+
+Chrome and Edge document browser API trials. They do not document ChatGPT product behavior. [ChatGPT Desktop Site tools](https://help.openai.com/en/articles/20001423-using-site-tools-in-the-chatgpt-desktop-app) are a documented consumer in the desktop app's built-in browser only. They are not Chrome browser support.
+
+ChatGPT documents these Site-tool constraints:
+
+- Availability depends on the account, selected model, current page, and tools the page provides.
+- ChatGPT asks for website permission. Users can turn Site tools off in the desktop app.
+- Tools are page-scoped. They do not carry after navigation. Closing the page makes them unavailable.
+
+Do not infer product behavior from Chromium engine lineage. The SDK can detect `document.modelContext` in the current document. It cannot prove that an external agent will discover or invoke a registered tool.
 
 ## Usage
 
@@ -146,11 +160,13 @@ maintaining a second handwritten definition.
 
 `registerTool(tool, options?)` returns a cleanup function. It unregisters the tool and is safe to call more than once. Unsupported browsers return a no-op cleanup.
 
+Register tools only while the page state they act on exists. Call the cleanup when that state changes or the page tears down. This aligns with the React hook's mount, unmount, and `enabled` lifecycle.
+
 ## How it works
 
 `document.modelContext.registerTool({...}, { signal, exposedTo })` is the standard entry point. The wrapper adds this lifecycle behavior:
 
-- **Feature detection.** On browsers without `document.modelContext` (or the legacy `navigator.modelContext`), registration and subscriptions are no-ops, discovery resolves to `[]`, and `isAvailable()` returns `false`. Execution rejects with `WebMCPUnavailableError` so missing support is distinct from a `null` navigation result.
+- **Feature detection.** On browsers without `document.modelContext` (or the legacy `navigator.modelContext`), registration and subscriptions are no-ops, discovery resolves to `[]`, and `isAvailable()` returns `false`. It reports the native API only. It cannot report external-agent discovery or invocation. Execution rejects with `WebMCPUnavailableError` so missing support is distinct from a `null` navigation result.
 - **Last-writer-wins on duplicate names.** React effect cleanup is asynchronous; a fast re-render can attempt to register `"foo"` before the browser processes the prior `abort()`. The wrapper detects the resulting duplicate-name error, queues a microtask retry, and tracks ownership so a stale registration can't squat the name.
 - **One AbortController per call.** `registerTool` returns a cleanup function that aborts the underlying controller and unregisters the tool.
 - **Library-neutral validation.** Direct definitions may carry Standard Schema input and output validators. The SDK validates and transforms around `execute`, then strips those SDK-only fields before native registration.
@@ -240,7 +256,7 @@ definitions directly to `registerTool()` or `useWebMCP()`.
 
 ## Origin trial
 
-Chrome opened a public [origin trial](https://developer.chrome.com/blog/ai-webmcp-origin-trial) for WebMCP from Chrome 149, and Microsoft lists WebMCP among the [Edge 150 origin trials](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/150). For local Chrome development, the vendor documents a flag that works without a token. See [Browser support](/docs/browser-support/) for the current setup and source links.
+Chrome opened a public [origin trial](https://developer.chrome.com/docs/ai/webmcp) for WebMCP from Chrome 149. Microsoft lists an [Edge 150 origin trial](https://developer.microsoft.com/microsoft-edge/origin-trials/trials/0b76fe60-b266-458e-a285-04e375c0c31a). For local Chrome development, the vendor documents a flag that works without a token. See [Browser support](/docs/browser-support/) for the current setup and source links.
 
 Keep WebMCP optional. Registration becomes a no-op when the API is missing, so the same code can run in other browsers:
 

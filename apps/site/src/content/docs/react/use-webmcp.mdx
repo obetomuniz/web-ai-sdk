@@ -43,7 +43,7 @@ export function AgentTools({ isSignedIn }: { isSignedIn: boolean }) {
 }
 ```
 
-The hook accepts a single plain tool or schema-aware definition, plus readonly arrays containing either shape. It registers on mount, cleans up on unmount, and cleans up whenever `enabled` changes to `false`.
+The hook accepts a single plain tool or schema-aware definition, plus readonly arrays containing either shape. It registers on mount, cleans up on unmount, and cleans up whenever `enabled` changes to `false`. Define tools only while their page state exists.
 
 Multiple tools can be passed directly:
 
@@ -162,13 +162,13 @@ Rerendering `SettingsTool` with a new `pane` updates execution immediately witho
 
 ## Cleanup
 
-Registration cleanup is automatic on unmount via `useEffect`'s return value. If you need imperative cleanup (e.g. log out flow), call the vanilla `registerTool` directly per tool and combine the cleanups: `const cleanups = tools.map(registerTool)`.
+Registration cleanup is automatic on unmount via `useEffect`'s return value. Set `enabled: false` when the page state disappears before unmount. This matches vanilla `registerTool`, where you call the returned cleanup at the same lifecycle boundary.
 
 The hook removes its `toolchange` subscription on unmount and ignores stale discovery promises. Set `enabled: false` to suspend registration and retrieval and return to `"idle"` state.
 
 ## Errors and unavailability
 
-On browsers without `document.modelContext` (or the legacy `navigator.modelContext`), registration is a no-op and the hook reports `"unavailable"` with an empty list. Render whatever fallback UI you want; nothing breaks.
+On browsers without `document.modelContext` (or the legacy `navigator.modelContext`), registration is a no-op and the hook reports `"unavailable"` with an empty list. This detects the native API only. It cannot prove that an external agent will discover or invoke a tool. Render whatever fallback UI you want; nothing breaks.
 
 Native discovery failures, such as invalid cross-origin filters or denied permissions, produce `status: "error"` and populate `error`; the hook does not reject during render or effects.
 
