@@ -1,4 +1,9 @@
-import type { Tool, ToolAnnotations, ToolMetadata } from "./tool.js";
+import type {
+  Tool,
+  ToolAnnotations,
+  ToolExecuteCallbackOptions,
+  ToolMetadata,
+} from "./tool.js";
 
 /**
  * Minimal Standard Schema V1 surface — see https://standardschema.dev. Any
@@ -91,6 +96,7 @@ export interface ToolDefinition<
     input: InputSchema extends StandardSchemaV1
       ? StandardSchemaV1.InferOutput<InputSchema>
       : unknown,
+    options?: ToolExecuteCallbackOptions,
   ) =>
     | Promise<
         OutputSchema extends StandardSchemaV1
@@ -120,6 +126,7 @@ export interface DefineToolOptions<
     input: InputSchema extends StandardSchemaV1
       ? StandardSchemaV1.InferInput<InputSchema>
       : unknown,
+    options?: ToolExecuteCallbackOptions,
   ) =>
     | Promise<
         OutputSchema extends StandardSchemaV1
@@ -135,7 +142,7 @@ export interface DefineToolOptions<
 export interface RegistrableTool extends ToolMetadata {
   input?: StandardSchemaV1;
   output?: StandardSchemaV1;
-  execute: (input: never) => unknown;
+  execute: (input: never, options?: ToolExecuteCallbackOptions) => unknown;
 }
 
 const validateWithSchema = async <Output>(
@@ -178,6 +185,7 @@ export const normalizeToolDefinition = (
 ): Tool => {
   const baseExecute = definition.execute as (
     input: unknown,
+    options?: ToolExecuteCallbackOptions,
   ) => Promise<unknown> | unknown;
   const inputSchema = validateInput ? definition.input : undefined;
   const outputSchema = definition.output;
@@ -186,7 +194,7 @@ export const normalizeToolDefinition = (
     return copyMetadata(definition, baseExecute);
   }
 
-  return copyMetadata(definition, async (input: unknown) => {
+  return copyMetadata(definition, async (input, options) => {
     const executeInput = inputSchema
       ? await validateWithSchema(
           inputSchema,
@@ -194,7 +202,7 @@ export const normalizeToolDefinition = (
           (issues) => new ToolValidationError(definition.name, issues),
         )
       : input;
-    const result = await baseExecute(executeInput);
+    const result = await baseExecute(executeInput, options);
     if (!outputSchema) return result;
     return validateWithSchema(
       outputSchema,

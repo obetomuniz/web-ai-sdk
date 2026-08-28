@@ -25,9 +25,20 @@ export interface ToolMetadata {
   annotations?: ToolAnnotations;
 }
 
+/**
+ * Options supplied by the browser for one tool callback execution.
+ * Older trial hosts can omit the callback's optional second argument.
+ */
+export interface ToolExecuteCallbackOptions {
+  signal: AbortSignal;
+}
+
 export interface Tool<TInput = unknown, TOutput = unknown>
   extends ToolMetadata {
-  execute: (input: TInput) => Promise<TOutput> | TOutput;
+  execute: (
+    input: TInput,
+    options?: ToolExecuteCallbackOptions,
+  ) => Promise<TOutput> | TOutput;
 }
 
 export interface RegisteredToolMetadata {
