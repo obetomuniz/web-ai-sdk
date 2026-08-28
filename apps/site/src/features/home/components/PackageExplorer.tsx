@@ -406,10 +406,8 @@ export const PackageExplorer = () => {
                     data-webmcp-agent-note
                   >
                     This demo detects the page's native WebMCP API and routes
-                    tools in this page.
-                    <br />
-                    It cannot show whether an external agent will discover or
-                    invoke a tool.
+                    tools in this page. It cannot show whether an external agent
+                    will discover or invoke a tool.
                   </p>
                 )}
               </div>
