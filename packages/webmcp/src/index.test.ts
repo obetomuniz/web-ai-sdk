@@ -12,6 +12,7 @@ import {
   subscribeToToolChanges,
   type Tool,
   type ToolDefinition,
+  type ToolExecuteCallbackOptions,
   ToolOutputValidationError,
   ToolValidationError,
   WebMCPUnavailableError,
@@ -23,7 +24,7 @@ interface RegisteredCall {
   description: string;
   inputSchema?: object;
   annotations?: Record<string, boolean>;
-  execute: (input: unknown) => unknown;
+  execute: (input: unknown, options?: ToolExecuteCallbackOptions) => unknown;
 }
 
 interface NativeRegisterOptions {
@@ -246,6 +247,73 @@ describe("registerTool", () => {
     expect(def).not.toHaveProperty("title");
     expect(def?.description).toBe("Returns pong.");
     await expect(def?.execute(undefined)).resolves.toEqual({ result: "pong" });
+  });
+
+  it("forwards the exact native execution signal to plain callbacks", () => {
+    const { registered } = installFakeModelContext();
+    const controller = new AbortController();
+    const callbackOptions = {
+      signal: controller.signal,
+    } satisfies ToolExecuteCallbackOptions;
+    const execute = vi.fn(
+      (_input: unknown, options?: ToolExecuteCallbackOptions) =>
+        options?.signal,
+    );
+
+    registerTool({
+      name: "signal-identity",
+      description: "Returns the execution signal.",
+      execute,
+    });
+
+    expect(
+      registered.get("signal-identity")?.execute({}, callbackOptions),
+    ).toBe(controller.signal);
+    expect(execute).toHaveBeenCalledWith({}, callbackOptions);
+  });
+
+  it("passes undefined when an older host omits execution options", () => {
+    const { registered } = installFakeModelContext();
+    const execute = vi.fn(
+      (_input: unknown, options?: ToolExecuteCallbackOptions) => options,
+    );
+
+    registerTool({
+      name: "legacy-options",
+      description: "Supports hosts without execution options.",
+      execute,
+    });
+
+    expect(registered.get("legacy-options")?.execute({})).toBeUndefined();
+    expect(execute).toHaveBeenCalledWith({});
+  });
+
+  it("preserves synchronous throws and callback rejections", async () => {
+    const { registered } = installFakeModelContext();
+    const syncFailure = new Error("sync failure");
+    const asyncFailure = new Error("async failure");
+
+    registerTool({
+      name: "sync-failure",
+      description: "Throws synchronously.",
+      execute: () => {
+        throw syncFailure;
+      },
+    });
+    registerTool({
+      name: "async-failure",
+      description: "Rejects asynchronously.",
+      execute: async () => {
+        throw asyncFailure;
+      },
+    });
+
+    expect(() => registered.get("sync-failure")?.execute({})).toThrow(
+      syncFailure,
+    );
+    await expect(registered.get("async-failure")?.execute({})).rejects.toBe(
+      asyncFailure,
+    );
   });
 
   it("forwards title when present", () => {
@@ -895,27 +963,45 @@ describe("Standard Schema tool definitions", () => {
 
   it("accepts schemas directly and passes transformed input to execute", async () => {
     const { registered } = installFakeModelContext();
-    const execute = vi.fn((count: number) => String(count + 1));
+    const controller = new AbortController();
+    const callbackOptions: ToolExecuteCallbackOptions = {
+      signal: controller.signal,
+    };
+    const execute = vi.fn(
+      (count: number, options?: ToolExecuteCallbackOptions) => {
+        expect(options).toBe(callbackOptions);
+        return String(count + 1);
+      },
+    );
 
     registerTool({
       name: "increment",
       description: "increments a numeric string",
       input: numericStringSchema,
       inputSchema: { type: "string", pattern: "^\\d+$" },
-      execute: (count) => {
+      execute: (count, options) => {
         expectTypeOf(count).toEqualTypeOf<number>();
-        return execute(count);
+        return execute(count, options);
       },
     });
 
-    await expect(registered.get("increment")?.execute("41")).resolves.toBe(
-      "42",
-    );
-    expect(execute).toHaveBeenCalledWith(41);
+    await expect(
+      registered.get("increment")?.execute("41", callbackOptions),
+    ).resolves.toBe("42");
+    expect(execute).toHaveBeenCalledWith(41, callbackOptions);
   });
 
   it("validates transformed outputs from synchronous and asynchronous schemas", async () => {
     const { registered } = installFakeModelContext();
+    const callbackOptions: ToolExecuteCallbackOptions = {
+      signal: new AbortController().signal,
+    };
+    const execute = vi.fn(
+      (_input: unknown, options?: ToolExecuteCallbackOptions) => {
+        expect(options).toBe(callbackOptions);
+        return "42";
+      },
+    );
     const asyncOutput: StandardSchemaV1<string, number> = {
       "~standard": {
         version: 1,
@@ -932,15 +1018,21 @@ describe("Standard Schema tool definitions", () => {
       name: "count",
       description: "returns a count",
       output: asyncOutput,
-      execute: async () => "42",
+      execute,
     });
 
-    await expect(registered.get("count")?.execute(undefined)).resolves.toBe(42);
+    await expect(
+      registered.get("count")?.execute(undefined, callbackOptions),
+    ).resolves.toBe(42);
+    expect(execute).toHaveBeenCalledWith(undefined, callbackOptions);
   });
 
   it("preserves typed input validation errors without validate ceremony", async () => {
     const { registered } = installFakeModelContext();
     const execute = vi.fn(() => ({ ok: true }));
+    const callbackOptions: ToolExecuteCallbackOptions = {
+      signal: new AbortController().signal,
+    };
 
     registerTool({
       name: "increment",
@@ -950,14 +1042,14 @@ describe("Standard Schema tool definitions", () => {
     });
 
     await expect(
-      registered.get("increment")?.execute("not-a-number"),
+      registered.get("increment")?.execute("not-a-number", callbackOptions),
     ).rejects.toMatchObject({
       name: "ToolValidationError",
       toolName: "increment",
       issues: [{ message: "output must be a numeric string" }],
     });
     await expect(
-      registered.get("increment")?.execute("not-a-number"),
+      registered.get("increment")?.execute("not-a-number", callbackOptions),
     ).rejects.toBeInstanceOf(ToolValidationError);
     expect(execute).not.toHaveBeenCalled();
   });
@@ -1054,6 +1146,30 @@ describe("Standard Schema tool definitions", () => {
     });
     const out = await (tool.execute as (input: unknown) => unknown)(123);
     expect(out).toEqual({ text: 123 });
+  });
+
+  it("forwards callback options through the deprecated definition wrapper", async () => {
+    const callbackOptions: ToolExecuteCallbackOptions = {
+      signal: new AbortController().signal,
+    };
+    const execute = vi.fn(
+      (text: string, options?: ToolExecuteCallbackOptions) => {
+        expect(options).toBe(callbackOptions);
+        return { text };
+      },
+    );
+    const tool = defineTool({
+      name: "deprecated-options",
+      description: "Forwards callback options.",
+      input: stringSchema("input"),
+      validate: true,
+      execute,
+    });
+
+    await expect(tool.execute("hello", callbackOptions)).resolves.toEqual({
+      text: "hello",
+    });
+    expect(execute).toHaveBeenCalledWith("hello", callbackOptions);
   });
 
   it("returns a Tool that registers via the existing surface", () => {

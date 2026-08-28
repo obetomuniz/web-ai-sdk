@@ -30,7 +30,8 @@ const cleanup = registerTool({
     io: "input",
     target: "draft-2020-12",
   }),
-  execute: async ({ sku, quantity }) => addToCart(sku, quantity),
+  execute: async ({ sku, quantity }, options) =>
+    addToCart(sku, quantity, { signal: options?.signal }),
 });
 
 // Later, when the tool should no longer be exposed:
@@ -77,6 +78,10 @@ The browser returns `inputSchema` as serialized JSON. It also includes the regis
 ## Tool
 
 ```ts
+interface ToolExecuteCallbackOptions {
+  signal: AbortSignal;
+}
+
 interface Tool<TInput = unknown, TOutput = unknown> {
   name: string;
   title?: string;
@@ -85,7 +90,10 @@ interface Tool<TInput = unknown, TOutput = unknown> {
   readOnly?: boolean;
   destructive?: boolean;
   annotations?: ToolAnnotations;
-  execute: (input: TInput) => Promise<TOutput> | TOutput;
+  execute: (
+    input: TInput,
+    options?: ToolExecuteCallbackOptions,
+  ) => Promise<TOutput> | TOutput;
 }
 ```
 
@@ -106,6 +114,7 @@ interface ToolDefinition<
     input: InputSchema extends StandardSchemaV1
       ? StandardSchemaV1.InferOutput<InputSchema>
       : unknown,
+    options?: ToolExecuteCallbackOptions,
   ) =>
     | Promise<
         OutputSchema extends StandardSchemaV1
@@ -132,7 +141,7 @@ maintaining a second handwritten definition.
 | `name` <sup>required</sup> | `string` | Tool name. Must be unique within the model context. |
 | `title` | `string` | Human-readable title for host user interfaces. |
 | `description` <sup>required</sup> | `string` | What the tool does. Routed to the agent's tool selector. |
-| `execute` <sup>required</sup> | `(input) => Promise<T> \| T` | The function the agent calls. |
+| `execute` <sup>required</sup> | `(input, options?) => Promise<T> \| T` | The function the agent calls. `options.signal` reports browser cancellation. |
 | `input` | `StandardSchemaV1` | SDK-only input validator. Its parsed or transformed value is passed to `execute`. |
 | `output` | `StandardSchemaV1` | SDK-only resolved-output validator. Its parsed or transformed value is returned. |
 | `inputSchema` | `object` | JSON Schema describing the input shape. Some hosts validate against it before dispatch. |
@@ -145,6 +154,23 @@ maintaining a second handwritten definition.
 ## Registration cleanup
 
 `registerTool(tool, options?)` returns a cleanup function. It unregisters the tool and is safe to call more than once. Unsupported browsers return a no-op cleanup.
+
+## Execution cancellation
+
+The browser passes an execution `AbortSignal` through the callback's optional second argument. Forward it to cancellable work:
+
+```ts
+execute: async (input, options) =>
+  fetch("/api/tool", {
+    method: "POST",
+    body: JSON.stringify(input),
+    signal: options?.signal,
+  });
+```
+
+Older trial browsers can omit the options. The SDK does not create a replacement signal.
+
+Unregistering a tool does not cancel an execution that already started. Application code decides how to observe the execution signal.
 
 ## How it works
 

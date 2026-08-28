@@ -1,7 +1,12 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { type ReactNode, StrictMode, useLayoutEffect } from "react";
 import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
-import type { StandardSchemaV1, Tool, ToolDefinition } from "../index.js";
+import type {
+  StandardSchemaV1,
+  Tool,
+  ToolDefinition,
+  ToolExecuteCallbackOptions,
+} from "../index.js";
 import {
   type RegisterToolOptions,
   type UseWebMCPOptions,
@@ -14,7 +19,7 @@ interface RegisteredCall {
   description: string;
   inputSchema?: object;
   annotations?: Record<string, boolean>;
-  execute: (input: unknown) => unknown;
+  execute: (input: unknown, options?: ToolExecuteCallbackOptions) => unknown;
 }
 
 type Host = "document" | "navigator";
@@ -414,8 +419,14 @@ describe("useWebMCP", () => {
     unmount();
   });
 
-  it("uses the latest execute callback without re-registering", () => {
+  it("forwards the exact signal to the latest callback without re-registering", () => {
     const { registered, registerTool } = installFakeModelContext();
+    const firstOptions: ToolExecuteCallbackOptions = {
+      signal: new AbortController().signal,
+    };
+    const secondOptions: ToolExecuteCallbackOptions = {
+      signal: new AbortController().signal,
+    };
 
     const { rerender, unmount } = renderHook(
       ({ value }: { value: number }) =>
@@ -424,20 +435,62 @@ describe("useWebMCP", () => {
             name: "live-state",
             description: "Read the latest state",
             annotations: { readOnlyHint: true },
-            execute: () => value,
+            execute: (_input, options) => ({ value, signal: options?.signal }),
           },
           { exposedTo: ["https://agent.example"] },
         ),
       { initialProps: { value: 1 } },
     );
     const registeredTool = registered.get("live-state");
-    expect(registeredTool?.execute(undefined)).toBe(1);
+    expect(registeredTool?.execute(undefined, firstOptions)).toEqual({
+      value: 1,
+      signal: firstOptions.signal,
+    });
 
     rerender({ value: 2 });
 
     expect(registerTool).toHaveBeenCalledTimes(1);
-    expect(registeredTool?.execute(undefined)).toBe(2);
+    expect(registeredTool?.execute(undefined, secondOptions)).toEqual({
+      value: 2,
+      signal: secondOptions.signal,
+    });
     unmount();
+  });
+
+  it("does not cancel active execution when unmounted", async () => {
+    const { registered, registerTool } = installFakeModelContext();
+    const executionController = new AbortController();
+    const callbackOptions: ToolExecuteCallbackOptions = {
+      signal: executionController.signal,
+    };
+    let finish: ((value: string) => void) | undefined;
+
+    const { unmount } = renderHook(() =>
+      useWebMCP({
+        name: "active-execution",
+        description: "Completes after unmount.",
+        execute: (_input, options) =>
+          new Promise<string>((resolve) => {
+            expect(options).toBe(callbackOptions);
+            finish = resolve;
+          }),
+      }),
+    );
+    const execution = registered
+      .get("active-execution")
+      ?.execute(undefined, callbackOptions);
+    const registrationSignal = registerTool.mock.calls[0]?.[1]?.signal;
+
+    expect(finish).toBeDefined();
+    unmount();
+
+    expect(registered.has("active-execution")).toBe(false);
+    expect(registrationSignal?.aborted).toBe(true);
+    expect(executionController.signal.aborted).toBe(false);
+    expect(() => unmount()).not.toThrow();
+
+    finish?.("done");
+    await expect(execution).resolves.toBe("done");
   });
 
   it("updates execute callbacks before consumer layout effects run", () => {

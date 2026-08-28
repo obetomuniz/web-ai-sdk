@@ -20,7 +20,11 @@ import {
   registerTool,
   subscribeToToolChanges,
 } from "../index.js";
-import { type Tool, toRegisteredToolMetadata } from "../tool.js";
+import {
+  type Tool,
+  type ToolExecuteCallbackOptions,
+  toRegisteredToolMetadata,
+} from "../tool.js";
 
 export interface UseWebMCPOptions extends RegisterToolOptions, GetToolsOptions {
   /** Whether registration and discovery are active. Defaults to `true`. */
@@ -114,8 +118,8 @@ const wrapTools = (
     const tool: Tool = {
       name: definition.name,
       description: definition.description,
-      execute: (input: unknown) =>
-        (latestTools.current[index] ?? initialTool)?.execute(input),
+      execute: (input: unknown, options?: ToolExecuteCallbackOptions) =>
+        (latestTools.current[index] ?? initialTool)?.execute(input, options),
     };
     if (definition.title !== undefined) tool.title = definition.title;
     if (definition.inputSchema !== undefined) {
@@ -311,6 +315,7 @@ export type {
   Tool,
   ToolAnnotations,
   ToolDefinition,
+  ToolExecuteCallbackOptions,
 } from "../index.js";
 export {
   defineTool,
