@@ -136,6 +136,8 @@ consumes package output. Run `pnpm gate` before any commit.
 - Give each parallel editor a separate workspace. Confirm its root and branch
   with `git rev-parse --show-toplevel` and `git status --short --branch`.
 - Run `pnpm dev:setup` in a new worktree before development starts.
+- Before removing or archiving a worktree, preserve required changes and stop
+  its services. Use its teardown hook, or run `pnpm dev:clean` before removal.
 - Do not overwrite or hide existing changes. If unexpected changes exist before
   work starts, stop and ask the user to commit or stash them.
 - Use a dedicated branch. Never commit, merge, or push directly to `main`.
