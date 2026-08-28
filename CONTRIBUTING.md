@@ -20,6 +20,62 @@ Published packages live in `packages/`. The Astro site and Starlight docs live
 in `apps/site/`. The read-only web-ai-sdk MCP Worker lives in `apps/mcp/`.
 Run `pnpm run` to list all workflows.
 
+## Parallel worktrees
+
+Use a separate linked worktree when issues need concurrent editors. Create each
+worktree from the approved base branch or PR.
+
+Run the same setup in every checkout:
+
+```sh
+pnpm dev:setup
+pnpm dev:info
+```
+
+The first command installs locked dependencies and builds publishable packages.
+The second command prints the development identity and service URLs.
+
+The primary checkout preserves the standard service ports. Each linked
+worktree derives stable ports and `*.localhost` names from its canonical path.
+
+Start services normally from any worktree:
+
+```sh
+pnpm dev:packages
+pnpm dev
+pnpm mcp
+```
+
+Do not copy `.env` files or secrets into a worktree. Add required local values
+through that worktree's environment instead.
+
+Set `WEB_AI_SDK_DEV_INSTANCE` to override the derived identity. Set a
+service-specific port variable if a generated port conflicts with another
+process. See the [root README](./README.md#parallel-development-worktrees) for
+the complete variable list.
+
+### Optional Paseo workflow
+
+The checked-in [`paseo.json`](./paseo.json) automates `pnpm dev:setup`. It also
+provides supervised service commands:
+
+Start a managed service from the worktree directory:
+
+```sh
+paseo script ls
+paseo script start packages
+paseo script start site
+paseo script start mcp
+```
+
+Paseo prints a distinct proxy URL for each branch and service. Its adapter maps
+the allocated port to the project's generic environment variables.
+
+Start `packages` with `site` when package source changes must reach a demo.
+
+Keep one editor in each worktree. Confirm the workspace path before editing,
+and archive the workspace only after preserving every required change.
+
 ## Change workflow
 
 1. Change one package or app at a time when possible.

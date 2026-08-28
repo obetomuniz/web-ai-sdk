@@ -1,0 +1,30 @@
+{
+  "worktree": {
+    "setup": [
+      "pnpm dev:setup"
+    ],
+    "servicePorts": {
+      "range": "20000-29999"
+    }
+  },
+  "scripts": {
+    "site": {
+      "type": "service",
+      "command": "node scripts/paseo-service.mjs site"
+    },
+    "mcp": {
+      "type": "service",
+      "command": "node scripts/paseo-service.mjs mcp"
+    },
+    "packages": {
+      "command": "pnpm dev:packages"
+    },
+    "preview": {
+      "type": "service",
+      "command": "node scripts/paseo-service.mjs preview"
+    },
+    "gate": {
+      "command": "pnpm gate"
+    }
+  }
+}

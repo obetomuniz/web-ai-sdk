@@ -12,6 +12,8 @@
       "!**/storybook-static",
       "!**/.astro",
       "!**/_site",
+      "!**/.claude/worktrees",
+      "!**/.codex/worktrees",
       "!**/.worktrees"
     ]
   },

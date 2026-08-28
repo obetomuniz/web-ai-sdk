@@ -128,8 +128,14 @@ consumes package output. Run `pnpm gate` before any commit.
 
 ## Git and workspace safety
 
-- Work only in the session's current working tree. Never create a worktree,
-  including through a skill, subagent, temporary directory, or `.worktrees/`.
+- Work only in the session's current workspace. Never edit another worktree
+  from the current session.
+- Create a worktree only after the user explicitly approves parallel work.
+- Keep every worktree outside the repository. Never create temporary or in-tree
+  worktrees, including under `.worktrees/`.
+- Give each parallel editor a separate workspace. Confirm its root and branch
+  with `git rev-parse --show-toplevel` and `git status --short --branch`.
+- Run `pnpm dev:setup` in a new worktree before development starts.
 - Do not overwrite or hide existing changes. If unexpected changes exist before
   work starts, stop and ask the user to commit or stash them.
 - Use a dedicated branch. Never commit, merge, or push directly to `main`.
@@ -142,5 +148,5 @@ consumes package output. Run `pnpm gate` before any commit.
 - Never rebase, delete branches, or amend commits without explicit approval.
 - Force-push only with explicit approval to update an existing PR.
 - Do not add agent attribution or `Co-authored-by:` trailers.
-- If parallel work needs another branch, stop and ask the user to create the
-  workspace through their tool.
+- If the current tool cannot provide an isolated workspace, stop and ask the
+  user to create one through their workspace manager.

@@ -5,9 +5,9 @@
   "description": "Unified site for web-ai-sdk (Astro + Starlight docs + React islands)",
   "type": "module",
   "scripts": {
-    "dev": "astro dev --port 5173 --strictPort",
+    "dev": "astro dev --strictPort",
     "build": "astro build && node scripts/build-llms.mjs",
-    "preview": "astro preview --port 4173",
+    "preview": "astro preview",
     "test": "vitest run",
     "typecheck": "astro check",
     "og:build": "node scripts/build-og-image.mjs",

@@ -6,7 +6,7 @@ coverage/
 storybook-static/
 _site/
 .astro/
-# In-tree git worktrees for parallel branch work (see .agents/agents.md §11).
+# Keep linked worktrees outside the repository.
 .worktrees/
 
 *.log
