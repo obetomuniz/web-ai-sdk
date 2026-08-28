@@ -183,7 +183,7 @@ describe("PackageExplorer WebMCP context", () => {
 
     expect(docsLink).toBeDefined();
     expect(docsLink?.nextElementSibling).toBe(note);
-    expect(note?.textContent).toContain("detects document.modelContext");
+    expect(note?.textContent).toContain("detects the page's native WebMCP API");
     expect(note?.textContent).toContain(
       "cannot show whether an external agent will discover or invoke a tool",
     );
