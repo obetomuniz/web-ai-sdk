@@ -234,7 +234,7 @@ const edgeDocs: Record<string, string | undefined> = {
   proofreader:
     "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/proofreader-api",
   webmcp:
-    "https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/150",
+    "https://developer.microsoft.com/microsoft-edge/origin-trials/trials/0b76fe60-b266-458e-a285-04e375c0c31a",
 };
 
 interface SupportRow {
@@ -705,6 +705,9 @@ const browserColumns = [
             </div>
             <div class={ui.supportNote}>
               Each status links to its vendor source. <strong>stable</strong> = documented as on by default; <strong>Canary/Dev</strong> = Edge preview channel with the documented flag; <strong>Developer trial</strong> = Chrome's current status label, not an active public token program; <strong>OT</strong> = <a class="underline underline-offset-2" href="https://developer.chrome.com/docs/web-platform/origin-trials" target="_blank" rel="noreferrer">origin trial</a>. Historical Writer/Rewriter (137–148) and Proofreader (141–145) Chrome origin-trial windows have ended.
+            </div>
+            <div class={`${ui.supportNote} mt-3`}>
+              <strong>Agent consumer signal, not browser support.</strong> <a class="underline underline-offset-2" href="https://help.openai.com/en/articles/20001423-using-site-tools-in-the-chatgpt-desktop-app" target="_blank" rel="noreferrer">ChatGPT Desktop Site tools</a> are an implemented WebMCP consumer in the built-in browser only. Availability depends on the account, model, current page, and user permission. Tools do not carry after navigation. Closing the page makes them unavailable. This does not establish Chrome support or follow from engine lineage.
             </div>
           </div>
         </div>

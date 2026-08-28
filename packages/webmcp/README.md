@@ -14,6 +14,16 @@ Without WebMCP, registration is a no-op and discovery returns an empty list. Exe
 
 Current `registerTool` implementations can be synchronous or asynchronous. The package supports both forms.
 
+## Browser API providers and agent consumers
+
+Browser API support and agent-consumer support are separate compatibility dimensions. Chrome and Edge document browser API trials for `document.modelContext`. Those trials do not establish behavior in another browser product.
+
+ChatGPT Desktop documents Site tools as an implemented WebMCP consumer in its [built-in browser](https://help.openai.com/en/articles/20001423-using-site-tools-in-the-chatgpt-desktop-app). This is not Chrome browser support.
+
+Site-tool availability depends on account access, the selected model, the current page, and user permission. Tools do not carry to another page. Closing the page makes its tools unavailable. Users can turn Site tools off in the desktop app.
+
+`isAvailable()` detects whether the current document exposes `document.modelContext` or the legacy `navigator.modelContext`. It cannot determine whether an external agent will discover or invoke a registered tool.
+
 ## Install
 
 ```sh
@@ -73,11 +83,13 @@ const tools = [
 const cleanups = tools.map(registerTool);
 const cleanup = () => cleanups.forEach((c) => c());
 
-// later, e.g. on page teardown
+// Remove the tools when the page state they act on no longer exists.
 cleanup();
 ```
 
 `registerTool(tool, options?)` registers a single tool and returns the cleanup. Re-registering a tool with the same name is safe; the previous registration is dropped first.
+
+Register tools only while their page state exists. Call the cleanup when that state changes or the page tears down. A native registration or successful feature check does not prove external-agent discovery or invocation.
 
 The browser passes execution options as an optional second callback argument. Forward `options?.signal` to cancellable work. Older trial browsers can omit the options.
 
@@ -117,7 +129,7 @@ export function WebMCP({ isSignedIn }: { isSignedIn: boolean }) {
 }
 ```
 
-`useWebMCP` accepts one tool or a readonly array. It registers on mount and unregisters on unmount. Setting `enabled` to `false` also removes the registration.
+`useWebMCP` accepts one tool or a readonly array. It registers on mount and unregisters on unmount. Setting `enabled` to `false` also removes the registration. Define a tool only while its page state exists.
 
 Registration follows tool metadata and `exposedTo` values, not object identity. `execute` always uses the latest callback. Inline objects and arrays are safe. Metadata changes rebuild the registration. Memoize large schemas and tool arrays to reduce comparison work.
 
