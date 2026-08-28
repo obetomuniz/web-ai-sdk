@@ -46,6 +46,20 @@ pnpm dev
 pnpm mcp
 ```
 
+Before removing a linked worktree, preserve every required change and stop its
+services. Then preview and remove its generated artifacts:
+
+```sh
+pnpm dev:clean -- --dry-run
+pnpm dev:clean
+```
+
+`pnpm dev:clean` removes dependencies, caches, generated files, and build
+outputs from the current checkout. It preserves environment files, local
+configuration, scratch files, and the shared pnpm store.
+
+Remove the worktree with Git or its workspace manager after cleanup succeeds.
+
 Do not copy `.env` files or secrets into a worktree. Add required local values
 through that worktree's environment instead.
 
@@ -68,13 +82,21 @@ paseo script start site
 paseo script start mcp
 ```
 
+Archive a completed Paseo workspace with its workspace ID:
+
+```sh
+paseo workspace archive <workspace-id>
+```
+
+Archiving stops the workspace's owned terminals and services. The checked-in
+teardown hook then runs `pnpm dev:clean` before Paseo removes its worktree.
+
 Paseo prints a distinct proxy URL for each branch and service. Its adapter maps
 the allocated port to the project's generic environment variables.
 
 Start `packages` with `site` when package source changes must reach a demo.
 
-Keep one editor in each worktree. Confirm the workspace path before editing,
-and archive the workspace only after preserving every required change.
+Keep one editor in each worktree. Confirm the workspace path before editing.
 
 ## Change workflow
 

@@ -3,6 +3,9 @@
     "setup": [
       "pnpm dev:setup"
     ],
+    "teardown": [
+      "pnpm dev:clean"
+    ],
     "servicePorts": {
       "range": "20000-29999"
     }

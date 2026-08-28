@@ -152,6 +152,17 @@ Use these environment variables when you need explicit values:
 The generated port can rarely conflict with another local process. Set the
 matching port variable when that happens.
 
+Stop local services before removing a linked worktree. Preview and remove
+generated artifacts with the same tool-neutral commands in every checkout:
+
+```sh
+pnpm dev:clean -- --dry-run
+pnpm dev:clean
+```
+
+The cleanup stays inside the current checkout. It preserves environment files,
+local configuration, scratch files, and the shared pnpm store.
+
 #### Optional Paseo integration
 
 The checked-in [`paseo.json`](./paseo.json) automates setup and process
@@ -178,6 +189,10 @@ paseo script start site
 Paseo allocates backend ports and exposes each service through a proxy URL. A
 small adapter passes each backend port through a generic variable listed above.
 
+Paseo uses the project's `worktree.teardown` hook when it archives an owned
+worktree. The hook runs `pnpm dev:clean` after Paseo stops owned terminals and
+services.
+
 ## Repo layout
 
 ```
@@ -196,7 +211,7 @@ small adapter passes each backend port through a generic variable listed above.
 │   ├── site/           # @web-ai-sdk-apps/site (private; Astro site + Starlight docs)
 │   └── mcp/            # @web-ai-sdk-apps/mcp (private; web-ai-sdk MCP Worker)
 ├── scripts/            # development instance and optional tool adapters
-├── paseo.json          # optional worktree setup and managed local services
+├── paseo.json          # optional worktree lifecycle and managed local services
 ├── .agents/agents.md           # agent instructions (AGENTS.md symlink kept at root)
 ├── README.md           # ← you are here
 └── …
