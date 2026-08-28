@@ -142,11 +142,11 @@
   "devDependencies": {
     "@testing-library/react": "^16",
     "@types/react": "^19.2.18",
-    "happy-dom": "^20.11.2",
+    "happy-dom": "^20.11.6",
     "react": "^19.2.8",
     "tsup": "^8.3.5",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "keywords": [
     "chrome",
