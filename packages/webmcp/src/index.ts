@@ -19,6 +19,7 @@ import {
 import {
   type RegisteredToolMetadata,
   type Tool,
+  type ToolExecuteCallbackOptions,
   toRegisteredToolMetadata,
 } from "./tool.js";
 
@@ -32,10 +33,17 @@ export {
   ToolOutputValidationError,
   ToolValidationError,
 } from "./definition.js";
-export type { Tool, ToolAnnotations } from "./tool.js";
+export type {
+  Tool,
+  ToolAnnotations,
+  ToolExecuteCallbackOptions,
+} from "./tool.js";
 
 interface NativeToolDefinition extends RegisteredToolMetadata {
-  execute: (input: unknown) => Promise<unknown> | unknown;
+  execute: (
+    input: unknown,
+    options?: ToolExecuteCallbackOptions,
+  ) => Promise<unknown> | unknown;
 }
 
 /** Options forwarded to the native WebMCP registration. */

@@ -35,7 +35,14 @@ export function AgentTools({ isSignedIn }: { isSignedIn: boolean }) {
         io: "input",
         target: "draft-2020-12",
       }),
-      execute: async ({ sku }) => ({ ok: true, sku }),
+      execute: async ({ sku }, options) => {
+        const response = await fetch("/api/cart", {
+          method: "POST",
+          body: JSON.stringify({ sku }),
+          signal: options?.signal,
+        });
+        return response.json();
+      },
     },
     { enabled: isSignedIn },
   );
@@ -145,14 +152,19 @@ The browser validates the origins. The SDK owns the registration's `AbortSignal`
 
 ## State + reactivity
 
-The registered tool always delegates to the latest committed `execute` callback, so it can read live props and state without a manual ref bridge:
+The registered tool always delegates to the latest committed `execute` callback. It preserves the browser's execution options across rerenders.
 
 ```tsx
 export function SettingsTool({ pane }: { pane: string }) {
   useWebMCP({
     name: "open_settings",
     description: "Read the currently open settings pane",
-    execute: async () => ({ pane }),
+    execute: async (_input, options) => {
+      const response = await fetch(`/api/settings/${pane}`, {
+        signal: options?.signal,
+      });
+      return response.json();
+    },
   });
   return null;
 }
@@ -160,11 +172,15 @@ export function SettingsTool({ pane }: { pane: string }) {
 
 Rerendering `SettingsTool` with a new `pane` updates execution immediately without unregistering and re-registering the tool. This avoids duplicate-name races while keeping registration changes tied to the fields an agent host can discover.
 
+The browser can omit the second callback argument on older trial builds. Use `options?.signal` instead of creating a replacement signal.
+
 ## Cleanup
 
 Registration cleanup is automatic on unmount via `useEffect`'s return value. Set `enabled: false` when the page state disappears before unmount. This matches vanilla `registerTool`, where you call the returned cleanup at the same lifecycle boundary.
 
 The hook removes its `toolchange` subscription on unmount and ignores stale discovery promises. Set `enabled: false` to suspend registration and retrieval and return to `"idle"` state.
+
+Unmounting removes the registration. It does not cancel an execution that already started.
 
 ## Errors and unavailability
 
@@ -188,6 +204,7 @@ import type {
   Tool,
   ToolAnnotations,
   ToolDefinition,
+  ToolExecuteCallbackOptions,
   UseWebMCPOptions,
   UseWebMCPReturn,
   WebMCPStatus,
@@ -197,11 +214,18 @@ interface Tool {
   name: string;
   title?: string;
   description: string;
-  execute: (input: unknown) => Promise<unknown> | unknown;
+  execute: (
+    input: unknown,
+    options?: ToolExecuteCallbackOptions,
+  ) => Promise<unknown> | unknown;
   readOnly?: boolean;              // maps to annotations.readOnlyHint
   destructive?: boolean;           // compatibility shorthand
   annotations?: ToolAnnotations;   // raw passthrough; merges on top of shorthand
   inputSchema?: object;            // JSON Schema
+}
+
+interface ToolExecuteCallbackOptions {
+  signal: AbortSignal;
 }
 
 interface ToolDefinition<
@@ -215,6 +239,7 @@ interface ToolDefinition<
     input: InputSchema extends StandardSchemaV1
       ? StandardSchemaV1.InferOutput<InputSchema>
       : unknown,
+    options?: ToolExecuteCallbackOptions,
   ) =>
     | Promise<
         OutputSchema extends StandardSchemaV1

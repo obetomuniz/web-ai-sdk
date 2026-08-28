@@ -45,8 +45,10 @@ const tools = [
     description: "List published blog posts.",
     readOnly: true,
     annotations: { untrustedContentHint: true },
-    execute: async () => {
-      const res = await fetch("/api/posts.json");
+    execute: async (_input, options) => {
+      const res = await fetch("/api/posts.json", {
+        signal: options?.signal,
+      });
       return { results: await res.json() };
     },
   },
@@ -65,11 +67,12 @@ const tools = [
       },
       required: ["name", "email", "subject", "message"],
     },
-    execute: async (input) => {
+    execute: async (input, options) => {
       const res = await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
+        signal: options?.signal,
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return { ok: true };
@@ -87,6 +90,10 @@ cleanup();
 `registerTool(tool, options?)` registers a single tool and returns the cleanup. Re-registering a tool with the same name is safe; the previous registration is dropped first.
 
 Register tools only while their page state exists. Call the cleanup when that state changes or the page tears down. A native registration or successful feature check does not prove external-agent discovery or invocation.
+
+The browser passes execution options as an optional second callback argument. Forward `options?.signal` to cancellable work. Older trial browsers can omit the options.
+
+Registration cleanup does not cancel an execution that already started. Application code decides how to handle the browser's execution signal.
 
 ## React
 
@@ -107,8 +114,11 @@ export function WebMCP({ isSignedIn }: { isSignedIn: boolean }) {
         io: "input",
         target: "draft-2020-12",
       }),
-      execute: async ({ query }) => {
-        const res = await fetch(`/api/posts.json?q=${encodeURIComponent(query)}`);
+      execute: async ({ query }, options) => {
+        const res = await fetch(
+          `/api/posts.json?q=${encodeURIComponent(query)}`,
+          { signal: options?.signal },
+        );
         return { results: await res.json() };
       },
     },
@@ -223,6 +233,10 @@ Feature-detect helper.
 ### `Tool<TInput, TOutput>`
 
 ```ts
+interface ToolExecuteCallbackOptions {
+  signal: AbortSignal;
+}
+
 interface Tool<TInput = unknown, TOutput = unknown> {
   name: string;
   title?: string; // human-readable host UI label
@@ -231,7 +245,10 @@ interface Tool<TInput = unknown, TOutput = unknown> {
   readOnly?: boolean; // shorthand for annotations.readOnlyHint
   destructive?: boolean; // shorthand for annotations.destructiveHint
   annotations?: ToolAnnotations; // raw passthrough, merged on top
-  execute: (input: TInput) => Promise<TOutput> | TOutput;
+  execute: (
+    input: TInput,
+    options?: ToolExecuteCallbackOptions,
+  ) => Promise<TOutput> | TOutput;
 }
 ```
 
@@ -257,6 +274,7 @@ interface ToolDefinition<
     input: InputSchema extends StandardSchemaV1
       ? StandardSchemaV1.InferOutput<InputSchema>
       : unknown,
+    options?: ToolExecuteCallbackOptions,
   ) =>
     | Promise<
         OutputSchema extends StandardSchemaV1
@@ -311,12 +329,13 @@ const cleanup = registerTool({
     io: "input",
     target: "draft-2020-12",
   }),
-  async execute({ name, email, subject, message }) {
+  async execute({ name, email, subject, message }, options) {
     // `name`, `email`, etc. are typed from the Zod schema.
     const res = await fetch("/api/send-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, subject, message }),
+      signal: options?.signal,
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return { ok: true };
