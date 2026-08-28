@@ -519,11 +519,6 @@ Choose one of the registered tool names if the user intent maps to it, and fill 
       </div>
       <div className={cardBody}>
         {available === false && <UnavailableNotice api="WebMCP" />}
-        <p className="mb-4 text-[11px] leading-5 text-fg-4">
-          This demo detects <code>document.modelContext</code> and routes tools
-          in this page. It cannot show whether an external agent will discover
-          or invoke a tool.
-        </p>
         <fieldset className={fieldset}>
           <legend className={fieldLegend}>demo tools</legend>
           <ul className={toolList}>

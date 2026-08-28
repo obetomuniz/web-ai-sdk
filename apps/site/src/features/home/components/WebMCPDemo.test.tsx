@@ -73,19 +73,6 @@ afterEach(() => {
 });
 
 describe("WebMCPDemo", () => {
-  it("explains the boundary between in-page routing and external agents", () => {
-    const container = document.createElement("div");
-    document.body.append(container);
-    root = createRoot(container);
-
-    act(() => root?.render(<WebMCPDemo />));
-
-    expect(container.textContent).toContain("detects document.modelContext");
-    expect(container.textContent).toContain(
-      "cannot show whether an external agent will discover or invoke a tool",
-    );
-  });
-
   it("reports the complete discovery count and executes schema-valid cart arguments", async () => {
     const container = document.createElement("div");
     document.body.append(container);

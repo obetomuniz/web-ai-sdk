@@ -400,6 +400,18 @@ export const PackageExplorer = () => {
                     {PACKAGE_DOCS_LABELS[p.slug] ?? "Read the docs"}
                   </span>
                 </a>
+                {p.slug === "webmcp" && (
+                  <p
+                    className="mt-1 w-full text-[12px] leading-5 text-fg-4"
+                    data-webmcp-agent-note
+                  >
+                    This demo detects <code>document.modelContext</code> and
+                    routes tools in this page.
+                    <br />
+                    It cannot show whether an external agent will discover or
+                    invoke a tool.
+                  </p>
+                )}
               </div>
             </div>
             <div className={pkgRight}>

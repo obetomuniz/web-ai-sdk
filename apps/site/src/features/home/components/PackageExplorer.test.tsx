@@ -170,6 +170,26 @@ describe("PackageExplorer preparation intent", () => {
   });
 });
 
+describe("PackageExplorer WebMCP context", () => {
+  it("places the external-agent note below the WebMCP docs link", () => {
+    act(() => root?.render(<PackageExplorer />));
+    selectTab("webmcp");
+
+    const panel = container.querySelector("#pkg-panel-webmcp");
+    const docsLink = [...(panel?.querySelectorAll("a") ?? [])].find((link) =>
+      link.textContent?.includes("web-ai-sdk WebMCP docs"),
+    );
+    const note = panel?.querySelector("[data-webmcp-agent-note]");
+
+    expect(docsLink).toBeDefined();
+    expect(docsLink?.nextElementSibling).toBe(note);
+    expect(note?.textContent).toContain("detects document.modelContext");
+    expect(note?.textContent).toContain(
+      "cannot show whether an external agent will discover or invoke a tool",
+    );
+  });
+});
+
 describe("PackageExplorer install command", () => {
   const getInstallButton = () => {
     const button = [
