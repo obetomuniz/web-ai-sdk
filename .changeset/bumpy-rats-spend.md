@@ -3,4 +3,3 @@
 ---
 
 Expose native WebMCP execution abort signals to registered tool callbacks.
-  
