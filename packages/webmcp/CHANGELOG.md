@@ -1,5 +1,11 @@
 # @web-ai-sdk/webmcp
 
+## 0.10.0
+
+### Minor Changes
+
+- 7c45464: Expose native WebMCP execution abort signals to registered tool callbacks.
+
 ## 0.9.1
 
 ### Patch Changes

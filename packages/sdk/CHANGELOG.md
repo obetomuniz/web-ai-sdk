@@ -1,5 +1,12 @@
 # @web-ai-sdk/all
 
+## 0.9.2
+
+### Patch Changes
+
+- Updated dependencies [7c45464]
+  - @web-ai-sdk/webmcp@0.10.0
+
 ## 0.9.1
 
 ### Patch Changes
