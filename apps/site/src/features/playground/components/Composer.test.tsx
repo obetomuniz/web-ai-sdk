@@ -166,13 +166,13 @@ describe("Composer", () => {
     expect(suggestionRow?.className).not.toContain(" pt-");
   });
 
-  it("keeps primary controls before example suggestions in tab order", () => {
+  it("keeps example suggestions before the input in document order", () => {
     const { container } = renderComposer();
     const input = queryInput(container);
     const example = container.querySelector("[title*='Summarize']");
     if (!example) throw new Error("example button not found");
     const position = input.compareDocumentPosition(example);
-    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(position & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
   });
 
   it("submits an example suggestion directly", () => {
