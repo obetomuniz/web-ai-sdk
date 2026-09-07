@@ -63,7 +63,7 @@
     "pages:preview": "pnpm pages:build && pnpm preview:site"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.10",
+    "@biomejs/biome": "2.5.12",
     "@changesets/cli": "^3.0.1",
     "typescript": "^6.0.3"
   }
