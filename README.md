@@ -252,6 +252,10 @@ This roadmap is not a release commitment. New work must stay within the lifecycl
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the human-facing onboarding, and [`.agents/agents.md`](./.agents/agents.md) for the deeper conventions (same rules apply to humans and AI agents).
 
+## Security
+
+See the [security policy](./SECURITY.md) for supported versions and private vulnerability reporting.
+
 ## License
 
 MIT © Beto Muniz
