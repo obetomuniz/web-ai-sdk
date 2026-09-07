@@ -165,6 +165,33 @@ describe("tool discovery and execution", () => {
     });
   });
 
+  it.each([true, false, undefined])(
+    "preserves discovered consequentialHint: %s",
+    async (consequentialHint) => {
+      const tool: RegisteredTool = {
+        ...discoveredTool(),
+        annotations:
+          consequentialHint === undefined
+            ? { readOnlyHint: true }
+            : { consequentialHint },
+      };
+      setModelContext("document", {
+        registerTool: vi.fn(),
+        getTools: vi.fn(async () => [tool]),
+      });
+
+      const [discovered] = await getTools();
+      expect(discovered).toBe(tool);
+      if (consequentialHint === undefined) {
+        expect(discovered?.annotations).not.toHaveProperty("consequentialHint");
+      } else {
+        expect(discovered?.annotations?.consequentialHint).toBe(
+          consequentialHint,
+        );
+      }
+    },
+  );
+
   it("serializes input and forwards execution options", async () => {
     const tool = discoveredTool();
     const executeNativeTool = vi.fn(async () => '{"echoed":"hello"}');
@@ -437,6 +464,55 @@ describe("registerTool", () => {
     expect(registered.get("external-search")?.annotations).toEqual({
       untrustedContentHint: false,
     });
+  });
+
+  it.each([true, false])(
+    "forwards consequentialHint: %s without changing raw annotation precedence",
+    (consequentialHint) => {
+      const { registered } = installFakeModelContext("document");
+      registerTool({
+        name: "consequential",
+        description: "Declares consequential effects.",
+        readOnly: true,
+        destructive: true,
+        annotations: {
+          consequentialHint,
+          readOnlyHint: false,
+          destructiveHint: false,
+        },
+        execute: () => ({}),
+      });
+      expect(registered.get("consequential")?.annotations).toEqual({
+        consequentialHint,
+        readOnlyHint: false,
+        destructiveHint: false,
+      });
+      expect(registered.get("consequential")).not.toHaveProperty(
+        "consequentialHint",
+      );
+    },
+  );
+
+  it("does not infer consequentialHint from destructive annotations", () => {
+    const { registered } = installFakeModelContext("document");
+    for (const metadata of [
+      { destructive: true },
+      { annotations: { destructiveHint: true } },
+    ]) {
+      const cleanup = registerTool({
+        name: "compatibility",
+        description: "Declares a compatibility hint.",
+        ...metadata,
+        execute: () => ({}),
+      });
+      expect(registered.get("compatibility")?.annotations).toEqual({
+        destructiveHint: true,
+      });
+      expect(registered.get("compatibility")?.annotations).not.toHaveProperty(
+        "consequentialHint",
+      );
+      cleanup();
+    }
   });
 
   it("omits annotations entirely when no flags are set", () => {

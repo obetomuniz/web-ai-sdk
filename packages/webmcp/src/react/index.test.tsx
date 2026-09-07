@@ -344,6 +344,48 @@ describe("useWebMCP", () => {
     unmount();
   });
 
+  it("forwards consequentialHint and updates registration when its value or presence changes", () => {
+    const { registerTool, registered } = installFakeModelContext("document");
+    const { rerender, unmount } = renderHook(
+      ({ consequentialHint }: { consequentialHint: boolean | undefined }) =>
+        useWebMCP({
+          name: "consequential-change",
+          description: "Tracks consequential effects.",
+          input: stringSchema("input"),
+          annotations:
+            consequentialHint === undefined ? {} : { consequentialHint },
+          execute: (text) => text,
+        }),
+      { initialProps: { consequentialHint: true as boolean | undefined } },
+    );
+
+    expect(registered.get("consequential-change")?.annotations).toEqual({
+      consequentialHint: true,
+    });
+    rerender({ consequentialHint: true });
+    expect(registerTool).toHaveBeenCalledTimes(1);
+
+    rerender({ consequentialHint: false });
+    expect(registerTool).toHaveBeenCalledTimes(2);
+    expect(registered.get("consequential-change")?.annotations).toEqual({
+      consequentialHint: false,
+    });
+
+    rerender({ consequentialHint: undefined });
+    expect(registerTool).toHaveBeenCalledTimes(3);
+    expect(registered.get("consequential-change")).not.toHaveProperty(
+      "annotations",
+    );
+
+    rerender({ consequentialHint: true });
+    expect(registerTool).toHaveBeenCalledTimes(4);
+    expect(registered.get("consequential-change")?.annotations).toEqual({
+      consequentialHint: true,
+    });
+    unmount();
+    expect(registered.size).toBe(0);
+  });
+
   it("re-registers when an effective shorthand annotation changes", () => {
     const { registerTool } = installFakeModelContext();
 
