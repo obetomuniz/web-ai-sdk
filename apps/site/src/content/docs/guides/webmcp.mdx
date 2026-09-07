@@ -161,7 +161,7 @@ maintaining a second handwritten definition.
 | `inputSchema` | `object` | JSON Schema describing the input shape. Some hosts validate against it before dispatch. |
 | `readOnly` | `boolean` | Shorthand for `annotations.readOnlyHint = true`. |
 | `destructive` | `boolean` | Compatibility shorthand for `annotations.destructiveHint = true`. |
-| `annotations` | `ToolAnnotations` | Raw passthrough. The current draft defines `readOnlyHint` and `untrustedContentHint`; compatibility fields are described below. |
+| `annotations` | `ToolAnnotations` | Raw passthrough. The current draft defines `readOnlyHint`, `untrustedContentHint`, and `consequentialHint`; compatibility fields are described below. |
 
 </div>
 
@@ -221,7 +221,7 @@ const tools = await getTools({
 
 ## Annotations
 
-Annotations communicate intent to the agent. The current WebMCP draft defines `readOnlyHint` and `untrustedContentHint`. Use the latter when a tool returns external, user-generated, or otherwise untrusted content:
+Annotations communicate intent to the agent. The current WebMCP draft defines `readOnlyHint`, `untrustedContentHint`, and `consequentialHint`. Use `untrustedContentHint` when a tool returns external, user-generated, or otherwise untrusted content:
 
 ```ts
 registerTool({
@@ -239,6 +239,21 @@ registerTool({
 `untrustedContentHint` is a trust-boundary signal; it does not validate result shape, truth, freshness, or safety. `readOnly` remains shorthand for the draft's `readOnlyHint`.
 
 For source compatibility, the SDK retains `destructiveHint`, `idempotentHint`, `openWorldHint`, and the `destructive` shorthand as passthroughs for MCP-shaped and earlier WebMCP hosts. They are not defined by the current WebMCP draft, so current-draft browsers may ignore them. Raw `annotations` values merge on top of shorthand values.
+
+Set `annotations.consequentialHint: true` for tools that can cause significant real-world or difficult-to-reverse effects. A compatible host can use this hint when deciding whether to request confirmation.
+
+The hint is not authorization and does not guarantee a confirmation prompt. Applications must enforce authentication, authorization, validation, origin controls, and rate limits. The SDK does not add confirmation behavior.
+
+The SDK forwards explicit `true` and `false` values and leaves the property absent when omitted. Discovery preserves the metadata returned by the host. There is no shorthand, and the SDK does not infer this value from `destructiveHint`.
+
+```ts
+registerTool({
+  name: "submit_order",
+  description: "Submit the reviewed order.",
+  annotations: { consequentialHint: true },
+  execute: async () => submitReviewedOrder(),
+});
+```
 
 ## Tool design
 

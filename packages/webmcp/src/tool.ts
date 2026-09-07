@@ -3,6 +3,8 @@ export interface ToolAnnotations {
   readOnlyHint?: boolean;
   /** Marks external or user-generated tool output as untrusted. */
   untrustedContentHint?: boolean;
+  /** Signals significant or difficult-to-reverse effects; does not authorize execution or guarantee confirmation. */
+  consequentialHint?: boolean;
   /** Compatibility passthrough for MCP-shaped and earlier WebMCP hosts. */
   destructiveHint?: boolean;
   /** Compatibility passthrough for MCP-shaped and earlier WebMCP hosts. */
