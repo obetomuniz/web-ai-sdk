@@ -187,6 +187,9 @@ Changesets handles later releases.
 
 ## Reporting bugs
 
+For suspected vulnerabilities, follow the [security policy](./SECURITY.md).
+Do not include vulnerability details in public issues.
+
 [Open an issue](https://github.com/obetomuniz/web-ai-sdk/issues) with:
 
 - a minimal reproduction;
