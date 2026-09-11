@@ -21,7 +21,7 @@
     "@modelcontextprotocol/client": "2.0.0",
     "@types/node": "^26.5.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.11",
+    "vitest": "^5.0.0",
     "wrangler": "^4.129.1"
   }
 }
