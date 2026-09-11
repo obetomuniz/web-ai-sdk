@@ -69,8 +69,8 @@ export interface RegisteredTool {
   name: string;
   title?: string;
   description: string;
-  /** The browser returns the registered JSON Schema as a serialized string. */
-  inputSchema?: string;
+  /** Native JSON Schema object, or a serialized string on older trial hosts. */
+  inputSchema?: object | string;
   /** Window belonging to the document that registered the tool. */
   window: Window;
   /** Serialized origin of the document that registered the tool. */

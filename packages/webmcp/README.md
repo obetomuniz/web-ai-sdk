@@ -166,7 +166,11 @@ The owning document does not need exposure. List only origins that need access.
 
 ### `getTools(options?): Promise<RegisteredTool[]>`
 
-Discover tools exposed to the current document. The returned metadata is sorted by the browser and includes the registering `window` and `origin`. `inputSchema`, when present, is the browser's serialized JSON Schema string.
+Discover tools exposed to the current document. The SDK preserves browser ordering, each tool, its registering `window` and `origin`, and its annotations.
+
+The [current WebMCP draft](https://webmachinelearning.github.io/webmcp/#dictdef-registeredtool) defines `inputSchema` as an object. Chrome switched discovery to objects in [155.0.8051.0](https://chromiumdash.appspot.com/commit/012624d070518db013e880c36cc778445b673489). Earlier supported trial builds may return serialized strings.
+
+`inputSchema` is optional and typed as `object | string`. The SDK preserves native values without parsing, stringifying, normalizing, or cloning them. Omitted schemas stay omitted. Malformed legacy strings remain observable.
 
 ```ts
 import { getTools } from "@web-ai-sdk/webmcp";
@@ -175,7 +179,18 @@ const sameOriginTools = await getTools();
 const toolsAcrossFrames = await getTools({
   fromOrigins: ["https://agent.example"],
 });
+
+for (const tool of sameOriginTools) {
+  const schema = tool.inputSchema;
+  if (typeof schema === "string") {
+    console.log("Legacy schema string", schema);
+  } else if (schema !== undefined) {
+    console.log("Schema object", schema);
+  }
+}
 ```
+
+Use this type guard when supporting mixed trial generations. `useWebMCP()` exposes the same `RegisteredTool` type through `tools` and `refresh()`.
 
 The browser includes eligible same-origin tools. `fromOrigins` also requests tools from listed secure origins. Those tools must expose themselves to the caller's origin.
 
@@ -219,7 +234,7 @@ interface RegisteredTool {
   name: string;
   title?: string;
   description: string;
-  inputSchema?: string;
+  inputSchema?: object | string;
   window: Window;
   origin: string;
   annotations?: ToolAnnotations;
