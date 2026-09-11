@@ -126,6 +126,22 @@ export function ToolInspector() {
 
 The status is `"idle" | "loading" | "ready" | "unavailable" | "error"`. `refresh()` resolves to the fresh list as well as updating hook state.
 
+`tools` and `refresh()` use the vanilla core's `RegisteredTool` type. Its optional `inputSchema` is `object | string`, and the hook preserves native values unchanged.
+
+Chrome switched discovery schemas to objects in [155.0.8051.0](https://chromiumdash.appspot.com/commit/012624d070518db013e880c36cc778445b673489). Earlier supported trial builds may return serialized strings. Check the type before consuming a schema:
+
+```tsx
+const { tools } = useWebMCP();
+const schema = tools[0]?.inputSchema;
+if (typeof schema === "string") {
+  console.log("Legacy schema string", schema);
+} else if (schema !== undefined) {
+  console.log("Schema object", schema);
+}
+```
+
+Omitted schemas stay omitted, and malformed legacy strings remain observable. See [Browser support](/docs/browser-support/#webmcp-discovery-compatibility) for the compatibility range.
+
 Pass `fromOrigins` to request eligible tools exposed by descendant documents at specific secure origins:
 
 ```tsx
@@ -276,7 +292,7 @@ interface RegisteredTool {
   name: string;
   title?: string;
   description: string;
-  inputSchema?: string;
+  inputSchema?: object | string;
   window: Window;
   origin: string;
   annotations?: ToolAnnotations;

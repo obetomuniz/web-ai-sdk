@@ -2,14 +2,17 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { type ReactNode, StrictMode, useLayoutEffect } from "react";
 import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import type {
+  RegisteredTool as CoreRegisteredTool,
   StandardSchemaV1,
   Tool,
   ToolDefinition,
   ToolExecuteCallbackOptions,
 } from "../index.js";
 import {
+  type RegisteredTool,
   type RegisterToolOptions,
   type UseWebMCPOptions,
+  type UseWebMCPReturn,
   useWebMCP,
 } from "./index.js";
 
@@ -677,19 +680,20 @@ describe("useWebMCP", () => {
 });
 
 describe("useWebMCP discovery", () => {
-  const discoveredTool = () => ({
+  const discoveredTool = (): RegisteredTool => ({
     name: "echo",
     title: "Echo",
     description: "Echo a value.",
-    inputSchema: '{"type":"object"}',
+    inputSchema: { type: "object" },
     window,
     origin: window.location.origin,
     annotations: { readOnlyHint: true },
   });
 
-  const installDiscoverySurface = () => {
+  const installDiscoverySurface = (
+    tools: RegisteredTool[] = [discoveredTool()],
+  ) => {
     const events = new EventTarget();
-    const tools = [discoveredTool()];
     const getTools = vi.fn(async () => tools);
     setModelContext("document", {
       registerTool: vi.fn(),
@@ -716,6 +720,42 @@ describe("useWebMCP discovery", () => {
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current.tools).toEqual(tools);
     expect(getTools).toHaveBeenCalledWith({ fromOrigins });
+  });
+
+  it("exposes native schema values through shared types, state, and refresh", async () => {
+    expectTypeOf<RegisteredTool>().toEqualTypeOf<CoreRegisteredTool>();
+    expectTypeOf<
+      UseWebMCPReturn["tools"][number]["inputSchema"]
+    >().toEqualTypeOf<object | string | undefined>();
+    expectTypeOf<UseWebMCPReturn["refresh"]>().toEqualTypeOf<
+      () => Promise<readonly RegisteredTool[]>
+    >();
+
+    const objectTool = discoveredTool();
+    const omittedTool = discoveredTool();
+    delete omittedTool.inputSchema;
+    const tools: RegisteredTool[] = [
+      objectTool,
+      { ...discoveredTool(), inputSchema: ' {"type": "object"} ' },
+      { ...discoveredTool(), inputSchema: "{invalid json" },
+      omittedTool,
+    ];
+    const { getTools } = installDiscoverySurface(tools);
+    const { result } = renderHook(() => useWebMCP());
+
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.tools).toBe(tools);
+    expect(result.current.tools[0]?.inputSchema).toBe(objectTool.inputSchema);
+    expect(result.current.tools[1]?.inputSchema).toBe(' {"type": "object"} ');
+    expect(result.current.tools[2]?.inputSchema).toBe("{invalid json");
+    expect(result.current.tools[3]).not.toHaveProperty("inputSchema");
+
+    const refreshedTools = [...tools].reverse();
+    getTools.mockResolvedValueOnce(refreshedTools);
+    await act(async () => {
+      expect(await result.current.refresh()).toBe(refreshedTools);
+    });
+    expect(result.current.tools).toBe(refreshedTools);
   });
 
   it("treats content-equivalent inline origin filters as stable", async () => {

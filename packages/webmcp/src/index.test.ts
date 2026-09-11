@@ -139,7 +139,7 @@ describe("tool discovery and execution", () => {
     name: "echo",
     title: "Echo",
     description: "Echo a value.",
-    inputSchema: '{"type":"object"}',
+    inputSchema: { type: "object" },
     window,
     origin: window.location.origin,
     annotations: { readOnlyHint: true },
@@ -164,6 +164,78 @@ describe("tool discovery and execution", () => {
       fromOrigins: ["https://agent.example"],
     });
   });
+
+  it("preserves schema values, omission, tool identity, and native ordering", async () => {
+    const schema = Object.freeze({
+      type: "object",
+      properties: Object.freeze({
+        items: Object.freeze({
+          type: "array",
+          items: Object.freeze({ enum: Object.freeze(["a", "b"]) }),
+        }),
+        enabled: true,
+      }),
+      additionalProperties: false,
+      "x-extension": Object.freeze({ values: Object.freeze([true, null, 0]) }),
+    });
+    const objectTool: RegisteredTool = {
+      ...discoveredTool(),
+      name: "z_object",
+      origin: "https://tool-provider.example",
+      inputSchema: schema,
+    };
+    const omittedTool = discoveredTool();
+    delete omittedTool.inputSchema;
+    const tools: RegisteredTool[] = [
+      objectTool,
+      {
+        ...discoveredTool(),
+        name: "a_legacy",
+        inputSchema: ' {"type": "object"} ',
+      },
+      { ...discoveredTool(), name: "malformed", inputSchema: "{invalid json" },
+      { ...discoveredTool(), name: "empty", inputSchema: "" },
+      omittedTool,
+    ];
+    setModelContext("document", {
+      registerTool: vi.fn(),
+      getTools: vi.fn(async () => tools),
+    });
+
+    const result = await getTools({ fromOrigins: [objectTool.origin] });
+
+    expectTypeOf<RegisteredTool["inputSchema"]>().toEqualTypeOf<
+      object | string | undefined
+    >();
+    expect(result).toBe(tools);
+    for (const [index, tool] of tools.entries()) {
+      expect(result[index]).toBe(tool);
+      expect(result[index]?.inputSchema).toBe(tool.inputSchema);
+      expect(result[index]?.window).toBe(tool.window);
+      expect(result[index]?.origin).toBe(tool.origin);
+      expect(result[index]?.annotations).toBe(tool.annotations);
+    }
+    expect(result[0]?.inputSchema).toBe(schema);
+    expect(result[1]?.inputSchema).toBe(' {"type": "object"} ');
+    expect(result[2]?.inputSchema).toBe("{invalid json");
+    expect(result[3]?.inputSchema).toBe("");
+    expect(result[4]).not.toHaveProperty("inputSchema");
+  });
+
+  it.each(["NotAllowedError", "SecurityError", "InvalidStateError"])(
+    "preserves native discovery %s failures",
+    async (name) => {
+      const failure = new DOMException("Discovery failed", name);
+      setModelContext("document", {
+        registerTool: vi.fn(),
+        getTools: vi.fn(async () => {
+          throw failure;
+        }),
+      });
+
+      await expect(getTools()).rejects.toBe(failure);
+    },
+  );
 
   it.each([true, false, undefined])(
     "preserves discovered consequentialHint: %s",

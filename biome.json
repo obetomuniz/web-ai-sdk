@@ -13,7 +13,7 @@
       "!**/.astro",
       "!**/_site",
       "!**/.claude/worktrees",
-      "!**/.codex/worktrees",
+      "!.codex/worktrees",
       "!**/.worktrees"
     ]
   },
