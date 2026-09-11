@@ -6,10 +6,11 @@ overrides:
   yaml@<2.8.3: ">=2.8.3 <3.0.0"
   postcss@^8.0.0: "8.5.23"
   nanoid@^3.0.0: "3.3.18"
-  js-yaml@^4.0.0: "4.3.1"
+  js-yaml@^4.0.0: "4.3.2"
   read-yaml-file>js-yaml: 3.15.1
   fast-uri@^3.0.0: "3.1.6"
-  svgo@^4.0.0: "4.0.2"
+  svgo@^4.0.0: "4.1.0"
+  sharp@>=0.35.0 <0.35.4: "0.35.4"
   esbuild: 0.28.1
 
 onlyBuiltDependencies:
