@@ -27,6 +27,12 @@ export default defineConfig({
   },
   vite: {
     plugins: [tailwindcss()],
+    // Keep Satteri's native binary lookup relative to its installed package.
+    environments: {
+      prerender: {
+        resolve: { external: ["satteri"] },
+      },
+    },
     // Keep a single React instance and optimize every SDK `/react` subpath up
     // front. Without this, Vite discovers each `@web-ai-sdk/*/react` package
     // lazily on first visit, re-runs optimizeDeps, and the brief window where
