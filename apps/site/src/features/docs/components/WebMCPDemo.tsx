@@ -70,7 +70,7 @@ export const WebMCPDemo = () => {
     setAvailable(isAvailable());
   }, []);
 
-  const invoke = async (name: string, input: unknown = {}) => {
+  const invoke = async (name: string, input: object = {}) => {
     const tool = registered.find((candidate) => candidate.name === name);
     if (!tool) {
       append(`(tool is not registered; cannot invoke ${name})`);

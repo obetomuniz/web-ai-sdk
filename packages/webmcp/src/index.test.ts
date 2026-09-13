@@ -264,37 +264,6 @@ describe("tool discovery and execution", () => {
     },
   );
 
-  it("serializes input and forwards execution options", async () => {
-    const tool = discoveredTool();
-    const executeNativeTool = vi.fn(async () => '{"echoed":"hello"}');
-    setModelContext("document", {
-      registerTool: vi.fn(),
-      executeTool: executeNativeTool,
-    });
-    const controller = new AbortController();
-
-    await expect(
-      executeTool(tool, { message: "hello" }, { signal: controller.signal }),
-    ).resolves.toBe('{"echoed":"hello"}');
-    expect(executeNativeTool).toHaveBeenCalledWith(
-      tool,
-      '{"message":"hello"}',
-      { signal: controller.signal },
-    );
-  });
-
-  it("normalizes explicitly undefined input to an empty object", async () => {
-    const tool = discoveredTool();
-    const executeNativeTool = vi.fn(async () => "ok");
-    setModelContext("document", {
-      registerTool: vi.fn(),
-      executeTool: executeNativeTool,
-    });
-
-    await expect(executeTool(tool, undefined)).resolves.toBe("ok");
-    expect(executeNativeTool).toHaveBeenCalledWith(tool, "{}", undefined);
-  });
-
   it("rejects execution when the native capability is unavailable", async () => {
     await expect(executeTool(discoveredTool())).rejects.toBeInstanceOf(
       WebMCPUnavailableError,

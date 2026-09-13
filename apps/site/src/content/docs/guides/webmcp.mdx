@@ -61,7 +61,7 @@ const cleanup = () => cleanups.forEach((c) => c());
 
 ## Discover and execute tools
 
-`getTools()` returns metadata for tools exposed to the current document. `executeTool()` accepts one returned tool and serializes its input for the native call.
+`getTools()` returns metadata for tools exposed to the current document. `executeTool()` accepts one returned tool and an object or array.
 
 ```ts
 import {
@@ -85,9 +85,17 @@ const unsubscribe = subscribeToToolChanges(() => {
 
 `getTools({ fromOrigins })` also requests tools from descendant documents at listed secure origins. The registering document must expose each tool to the caller's origin.
 
-The browser returns `inputSchema` as serialized JSON. It also includes the registering `window` and `origin`.
+The browser returns `inputSchema` as an object or a legacy serialized string. It also includes the registering `window` and `origin`.
 
-`executeTool()` returns the native serialized string unchanged; `null` means the tool triggered navigation. Chrome [publicly documents it](https://developer.chrome.com/docs/ai/webmcp), but it is not yet in the published WebMCP community-draft IDL, so the SDK marks it experimental.
+`executeTool()` returns the native serialized string unchanged; `null` means the tool triggered navigation. Pass `{ signal }` as the third argument for native cancellation.
+
+Omitted or `undefined` input defaults to `{}`. `null` and primitives reject with `TypeError`. Circular data, BigInt values, and failing `toJSON()` methods reject during serialization. Objects that serialize to `undefined` also reject.
+
+Chrome accepts object input starting at 155.0.8052.0. The SDK uses verified native function arity to select object or legacy string input before invocation. Serialization runs once, and execution is never retried. Unrecognized arities reject with `WebMCPUnavailableError`.
+
+**Migration:** pass `{ message: "hello" }` instead of a primitive string when that matches the tool schema. Remove caller-side `JSON.stringify()`. The input parameter is now `input?: object`.
+
+See [Browser support](/docs/browser-support/#webmcp-execution-compatibility) for verified builds and the supported trial range.
 
 ## Tool
 

@@ -124,6 +124,14 @@ export function ToolInspector() {
 }
 ```
 
+`executeTool` is re-exported from the vanilla core. Pass an object or array; omitted or `undefined` input defaults to `{}`. Pass `{ signal }` as the third argument for native cancellation. Results remain native strings or navigation `null`.
+
+`null` and primitives reject with `TypeError`. Circular data, BigInt values, and `toJSON()` failures reject during serialization. Objects that serialize to `undefined` also reject. Execution failures reject the helper's promise; they do not update the hook's discovery `error`.
+
+**Migration:** remove caller-side `JSON.stringify()` and wrap primitive values in an object that matches the tool schema. The helper accepts `input?: object`.
+
+The core selects object or legacy string input from verified native arity and never retries execution. See [execution compatibility](/docs/browser-support/#webmcp-execution-compatibility) for the trial range and unknown-contract errors.
+
 The status is `"idle" | "loading" | "ready" | "unavailable" | "error"`. `refresh()` resolves to the fresh list as well as updating hook state.
 
 `tools` and `refresh()` use the vanilla core's `RegisteredTool` type. Its optional `inputSchema` is `object | string`, and the hook preserves native values unchanged.
