@@ -91,7 +91,7 @@ interface ModelContext {
   getTools?: (options?: GetToolsOptions) => Promise<RegisteredTool[]>;
   executeTool?: (
     tool: RegisteredTool,
-    inputArguments: string,
+    input: object | string,
     options?: ExecuteToolOptions,
   ) => Promise<string | null>;
   addEventListener?: EventTarget["addEventListener"];
@@ -149,31 +149,47 @@ export class WebMCPUnavailableError extends Error {
 /**
  * Execute a tool returned by `getTools()`.
  *
- * The SDK accepts the JavaScript input value and serializes it to the JSON
- * string required by the native API. The native serialized result is returned
- * unchanged; `null` means execution triggered a navigation.
+ * Pass an object or array; omitted input defaults to `{}`. Legacy hosts
+ * receive serialized JSON. Current hosts serialize the original object.
+ * The native result is unchanged; `null` means execution triggered navigation.
  *
- * @experimental Chrome publicly documents tool execution at
- * https://developer.chrome.com/docs/ai/webmcp, but it is not yet present in
- * the published WebMCP community draft.
+ * @experimental WebMCP remains a browser trial capability.
  */
 export const executeTool = async (
   tool: RegisteredTool,
-  input: unknown = {},
+  input: object = {},
   options?: ExecuteToolOptions,
 ): Promise<string | null> => {
   const mc = getModelContext();
-  if (!mc?.executeTool) {
+  const execute = mc?.executeTool;
+  if (typeof execute !== "function") {
     throw new WebMCPUnavailableError(
       "WebMCP tool execution is unavailable in this browser.",
     );
   }
 
-  const inputArguments = JSON.stringify(input);
-  if (inputArguments === undefined) {
-    throw new TypeError("WebMCP tool input must be JSON-serializable.");
+  if (
+    input === null ||
+    (typeof input !== "object" && typeof input !== "function")
+  ) {
+    throw new TypeError("WebMCP tool input must be an object or array.");
   }
-  return mc.executeTool(tool, inputArguments, options);
+
+  // Chromium commit 23cad65 made input optional, changing native arity from
+  // 2 to 1. Verified in Chrome 153.0.8010.37 and Canary 155.0.8053.0.
+  // Select before invocation: probing by retry could repeat a consequential
+  // action. Let object-input hosts serialize once, including custom toJSON().
+  if (execute.length === 1) return execute.call(mc, tool, input, options);
+  if (execute.length === 2) {
+    const inputArguments = JSON.stringify(input);
+    if (inputArguments === undefined) {
+      throw new TypeError("WebMCP tool input must be JSON-serializable.");
+    }
+    return execute.call(mc, tool, inputArguments, options);
+  }
+  throw new WebMCPUnavailableError(
+    "WebMCP tool execution has an unsupported input contract in this browser.",
+  );
 };
 
 /**

@@ -205,7 +205,7 @@ Unsupported browsers return `[]`. Native permission, origin, and document-state 
 
 ### `executeTool(tool, input?, options?): Promise<string | null>`
 
-Execute a `RegisteredTool` returned by `getTools()`. Pass the JavaScript input value; the SDK serializes it to the JSON argument string expected by the browser.
+Execute a `RegisteredTool` returned by `getTools()`. Pass an object or array. Omitted or `undefined` input defaults to `{}`.
 
 ```ts
 import { executeTool, getTools } from "@web-ai-sdk/webmcp";
@@ -220,7 +220,17 @@ if (echo) {
 
 The native serialized string is returned unchanged. `null` means tool execution triggered a navigation. Pass `{ signal }` to cancel an in-flight call. Unsupported browsers reject with `WebMCPUnavailableError`.
 
-`executeTool()` is experimental: Chrome [publicly documents it](https://developer.chrome.com/docs/ai/webmcp), but it is not yet present in the published WebMCP community-draft IDL.
+The SDK rejects `null` and primitives with `TypeError`. Circular data, BigInt values, and `toJSON()` failures reject during serialization. Values that serialize to `undefined` also reject.
+
+Chrome switched execution to object input in [155.0.8052.0](https://chromiumdash.appspot.com/commit/23cad65d6e6613d62542b27651c28925acfaffb2). [Chrome docs](https://developer.chrome.com/docs/ai/webmcp/imperative-api) deprecate string arguments from Chrome 155. Earlier supported trial hosts still require serialized strings.
+
+The SDK reads native `executeTool.length` before invocation: `1` selects the original object, and `2` selects serialized JSON. These arities were verified in Chrome 153.0.8010.37 and Canary 155.0.8053.0. Other arities reject with `WebMCPUnavailableError` without invoking a tool.
+
+Serialization runs once: inside the browser for object input, or inside the SDK for legacy string input. Native errors remain observable. The SDK never retries execution or detects browser versions.
+
+**Migration:** replace primitive input with an object that matches the tool schema, such as `{ message: "hello" }`. Remove caller-side `JSON.stringify()`. The signature is `executeTool(tool: RegisteredTool, input?: object, options?: ExecuteToolOptions): Promise<string | null>`.
+
+WebMCP remains a Trial capability. See [Browser support](https://web-ai-sdk.dev/docs/browser-support/#webmcp-execution-compatibility) for the compatibility range.
 
 ### `subscribeToToolChanges(listener): () => void`
 

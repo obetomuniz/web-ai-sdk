@@ -59,7 +59,26 @@ The SDK types the optional discovery field as `object | string`. It preserves na
 
 Use a `typeof schema === "string"` guard when consuming mixed trial generations. The [WebMCP guide](/docs/guides/webmcp/#discovery-schemas) shows the guard. React exposes the same metadata through `tools` and `refresh()`.
 
-String compatibility is temporary. Remove it when supported trial generations no longer require it. Registration continues to accept schema objects; the separate native execution-input transition is outside this discovery change.
+String compatibility is temporary. Remove it when supported trial generations no longer require it. Registration continues to accept schema objects. Execution compatibility is described below.
+
+### WebMCP execution compatibility
+
+The [current draft](https://webmachinelearning.github.io/webmcp/#dom-modelcontext-executetool) accepts an optional object input, including arrays. Chromium [changed the native contract](https://github.com/chromium/chromium/commit/23cad65d6e6613d62542b27651c28925acfaffb2) from a required string to optional object input.
+
+Chromium Dash records [155.0.8052.0 as the first build](https://chromiumdash.appspot.com/commit/23cad65d6e6613d62542b27651c28925acfaffb2). [Chrome's imperative API docs](https://developer.chrome.com/docs/ai/webmcp/imperative-api) deprecate string arguments from Chrome 155.
+
+| Chrome trial generation | Native execution input | Native `executeTool.length` |
+| --- | --- | --- |
+| Earlier supported trial hosts with execution, before 155.0.8052.0 | Serialized JSON string | `2` |
+| Chrome 155, starting at 155.0.8052.0 | Original object or array | `1` |
+
+The SDK reads this arity before invoking the native method. It serializes once for legacy hosts and delegates serialization to object-input hosts. It never retries execution or uses browser-version detection. Unrecognized arities reject with `WebMCPUnavailableError` before invocation.
+
+Both arities were verified in installed Chrome 153.0.8010.37 and Canary 155.0.8053.0 binaries with WebMCP enabled. These checks establish compatibility for those builds, not every browser product. Retain legacy support until supported trial hosts no longer require it.
+
+**Migration:** `executeTool(tool, input?, options?)` now accepts `input?: object`. Pass objects or arrays directly; remove caller-side `JSON.stringify()`. Replace primitives with objects that match the tool schema. Omitted or `undefined` input defaults to `{}`; `null` and primitives reject.
+
+Serialization failures reject, including circular data, BigInt values, failing `toJSON()` methods, and objects that serialize to `undefined`. Native results, navigation `null`, and cancellation remain unchanged.
 
 ## Agent consumers
 
