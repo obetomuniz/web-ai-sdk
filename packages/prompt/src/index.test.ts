@@ -3,6 +3,7 @@ import {
   __clearSessionCacheForTests,
   configureLanguageModelCache,
 } from "./api.js";
+import { defaultCacheKey } from "./cache.js";
 import {
   ask,
   checkAvailability,
@@ -120,7 +121,10 @@ describe("ask", () => {
   it("returns the cached response without calling the model", async () => {
     const fake = installFakeLanguageModel();
     const cache = inMemoryCache();
-    cache.set('["hello","",null,null]', "cached answer");
+    cache.set(
+      defaultCacheKey({ prompt: "hello", streamMode: "delta" }),
+      "cached answer",
+    );
     const result = await ask({ input: "hello", cache });
     expect(result).toEqual({ output: "cached answer", cached: true });
     expect(fake.create).not.toHaveBeenCalled();
@@ -129,17 +133,25 @@ describe("ask", () => {
   it("bypasses the cache read and replaces the value on cacheRefresh", async () => {
     const fake = installFakeLanguageModel({ response: "fresh answer" });
     const cache = inMemoryCache();
-    cache.set('["hello","",null,null]', "cached answer");
+    cache.set(
+      defaultCacheKey({ prompt: "hello", streamMode: "delta" }),
+      "cached answer",
+    );
     const result = await ask({ input: "hello", cache, cacheRefresh: true });
     expect(result).toEqual({ output: "fresh answer", cached: false });
     expect(fake.create).toHaveBeenCalled();
-    expect(cache.get('["hello","",null,null]')).toBe("fresh answer");
+    expect(
+      cache.get(defaultCacheKey({ prompt: "hello", streamMode: "delta" })),
+    ).toBe("fresh answer");
   });
 
   it("does not overwrite a cached value when the run is aborted", async () => {
     installFakeLanguageModel();
     const cache = inMemoryCache();
-    cache.set('["hello","",null,null]', "cached answer");
+    cache.set(
+      defaultCacheKey({ prompt: "hello", streamMode: "delta" }),
+      "cached answer",
+    );
     const controller = new AbortController();
     controller.abort();
     await expect(
@@ -150,16 +162,23 @@ describe("ask", () => {
         signal: controller.signal,
       }),
     ).rejects.toBeInstanceOf(PromptAbortError);
-    expect(cache.get('["hello","",null,null]')).toBe("cached answer");
+    expect(
+      cache.get(defaultCacheKey({ prompt: "hello", streamMode: "delta" })),
+    ).toBe("cached answer");
   });
 
   it("does not overwrite a cached value when the response is empty", async () => {
     installFakeLanguageModel({ response: "   " });
     const cache = inMemoryCache();
-    cache.set('["hello","",null,null]', "cached answer");
+    cache.set(
+      defaultCacheKey({ prompt: "hello", streamMode: "delta" }),
+      "cached answer",
+    );
     const result = await ask({ input: "hello", cache, cacheRefresh: true });
     expect(result).toEqual({ output: null, cached: false });
-    expect(cache.get('["hello","",null,null]')).toBe("cached answer");
+    expect(
+      cache.get(defaultCacheKey({ prompt: "hello", streamMode: "delta" })),
+    ).toBe("cached answer");
   });
 
   it("does not collide cache entries when language hints differ", async () => {
@@ -366,7 +385,9 @@ describe("ask", () => {
     const cache = inMemoryCache();
     const result = await ask({ input: "ping", cache });
     expect(result).toEqual({ output: "one-shot answer", cached: false });
-    expect(cache.get('["ping","",null,null]')).toBe("one-shot answer");
+    expect(
+      cache.get(defaultCacheKey({ prompt: "ping", streamMode: "delta" })),
+    ).toBe("one-shot answer");
   });
 
   it("streams delta chunks (Chrome shape) and reports cumulative buffer via onUpdate", async () => {
@@ -415,17 +436,18 @@ describe("ask", () => {
 
   it("handles cumulative chunks (Edge / Phi-Silica shape) without double-concatenation", async () => {
     installFakeLanguageModel({
-      chunks: ["Hel", "Hello, ", "Hello, world."],
+      chunks: ["Hel", "Hello, ", "Hello, ", "Hello, world."],
     });
     const cache = inMemoryCache();
     const updates: string[] = [];
     const result = await ask({
       input: "say hi",
+      streamMode: "cumulative",
       cache,
       onUpdate: (c) => updates.push(c),
     });
     expect(result.output).toBe("Hello, world.");
-    expect(updates).toEqual(["Hel", "Hello, ", "Hello, world."]);
+    expect(updates).toEqual(["Hel", "Hello, ", "Hello, ", "Hello, world."]);
   });
 
   it("folds systemPrompt into LanguageModel.create's initialPrompts", async () => {
@@ -928,7 +950,7 @@ describe("createSession", () => {
     installFakeLanguageModel({
       chunks: ["Hel", "Hello, ", "Hello, world."],
     });
-    const session = createSession();
+    const session = createSession({ streamMode: "cumulative" });
     const deltas: string[] = [];
     for await (const d of session.sendStreaming("hi")) {
       deltas.push(d);
@@ -1891,5 +1913,70 @@ describe("PromptAbortError", () => {
     await expect(
       ask({ input: "hi", signal: controller.signal, cache: inMemoryCache() }),
     ).rejects.toBeInstanceOf(PromptAbortError);
+  });
+});
+
+describe("lossless Prompt delta streams", () => {
+  it.each([
+    [["4", "4"], "44"],
+    [["a", "ab"], "aab"],
+    [["ha", "ha", "ha"], "hahaha"],
+  ])(
+    "preserves repeated and prefix-shaped chunks %j",
+    async (chunks, expected) => {
+      installFakeLanguageModel({ chunks });
+      const updates: string[] = [];
+      const result = await ask({
+        input: "Only the result",
+        onUpdate: (text) => updates.push(text),
+      });
+      expect(result.output).toBe(expected);
+      expect(updates.at(-1)).toBe(expected);
+      const session = createSession();
+      const deltas: string[] = [];
+      for await (const delta of session.sendStreaming("Only the result"))
+        deltas.push(delta);
+      expect(deltas).toEqual(chunks);
+      session.destroy();
+    },
+  );
+
+  it("inherits cumulative compatibility on clones", async () => {
+    const native = {
+      prompt: vi.fn(async () => "44"),
+      promptStreaming: vi.fn(async function* () {
+        yield "4";
+        yield "44";
+        yield "44";
+      }),
+      clone: vi.fn(async () => native),
+      destroy: vi.fn(),
+    };
+    installFakeLanguageModel({ sessionFactory: () => native });
+    const session = createSession({ streamMode: "cumulative" });
+    const clone = await session.clone();
+    const deltas: string[] = [];
+    for await (const delta of clone.sendStreaming("Only the result"))
+      deltas.push(delta);
+    expect(deltas).toEqual(["4", "4"]);
+    clone.destroy();
+    session.destroy();
+  });
+});
+
+it("ignores legacy cached stream results and separates compatibility modes", async () => {
+  installFakeLanguageModel({ chunks: ["4", "4"] });
+  const cache = inMemoryCache();
+  cache.set('["result","",null,null]', "4");
+  expect(await ask({ input: "result", cache })).toEqual({
+    output: "44",
+    cached: false,
+  });
+  expect(
+    await ask({ input: "result", cache, streamMode: "cumulative" }),
+  ).toEqual({ output: "4", cached: false });
+  expect(await ask({ input: "result", cache })).toEqual({
+    output: "44",
+    cached: true,
   });
 });

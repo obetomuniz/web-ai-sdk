@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __clearSessionCacheForTests } from "../api.js";
+import { defaultCacheKey } from "../cache.js";
 import { usePrompt, useSession } from "./index.js";
 
 interface FakeApi {
@@ -89,7 +90,10 @@ describe("usePrompt", () => {
   it("sets fromCache=true when the result comes from cache", async () => {
     installFakeLanguageModel();
     const memCache = new Map<string, string>();
-    memCache.set('["q","",null,null]', "cached!");
+    memCache.set(
+      defaultCacheKey({ prompt: "q", streamMode: "delta" }),
+      "cached!",
+    );
     const { result } = renderHook(() =>
       usePrompt({
         cache: {

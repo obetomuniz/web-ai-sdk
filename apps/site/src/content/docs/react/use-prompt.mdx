@@ -93,6 +93,7 @@ type PromptStatus = "idle" | "loading" | "streaming" | "done" | "unavailable";
 
 interface UsePromptOptions extends Omit<AskOptions, "input" | "onUpdate" | "signal"> {
   // Inherited from AskOptions (subset shown — see Prompt guide):
+  streamMode?: "delta" | "cumulative"; // default "delta"
   systemPrompt?: string;
   samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
   temperature?: number;

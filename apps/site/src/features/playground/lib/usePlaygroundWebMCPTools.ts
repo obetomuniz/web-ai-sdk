@@ -13,9 +13,10 @@ export interface PlaygroundWebMCPContext {
   threads: AgentThread[];
   activeThread: AgentThread;
   ops: AgentThreadOps;
-  send: (text: string) => Promise<boolean>;
+  send: (text: string, options?: { signal?: AbortSignal }) => Promise<boolean>;
   newSession: () => void;
   busy: boolean;
+  isBusy?: () => boolean;
   pushActivity: (event: Omit<ActivityEvent, "id" | "ts">) => void;
 }
 
@@ -171,7 +172,7 @@ export function createPlaygroundWebMCPTools(args: PlaygroundWebMCPContext) {
       target: "draft-2020-12",
     }),
     execute: async ({ modeId }) => {
-      if (args.busy) return rejectBusy("new_conversation");
+      if (args.isBusy?.() ?? args.busy) return rejectBusy("new_conversation");
       const target = modeId ? findMode(modeId).id : undefined;
       const thread = args.ops.create(target);
       args.newSession();
@@ -192,7 +193,8 @@ export function createPlaygroundWebMCPTools(args: PlaygroundWebMCPContext) {
     output: SwitchConversationOutput,
     inputSchema: ConversationIdSchema,
     execute: async ({ id }) => {
-      if (args.busy) return rejectBusy("switch_conversation");
+      if (args.isBusy?.() ?? args.busy)
+        return rejectBusy("switch_conversation");
       const match = args.threads.find((thread) => thread.id === id);
       if (!match) {
         report("switch_conversation", `unknown id: ${id}`);
@@ -215,11 +217,13 @@ export function createPlaygroundWebMCPTools(args: PlaygroundWebMCPContext) {
     description:
       "Delete an agent conversation by id. Destructive: persisted turns cannot be recovered.",
     destructive: true,
+    annotations: { consequentialHint: true },
     input: ConversationIdInput,
     output: OperationOutput,
     inputSchema: ConversationIdSchema,
     execute: async ({ id }) => {
-      if (args.busy) return rejectBusy("delete_conversation");
+      if (args.isBusy?.() ?? args.busy)
+        return rejectBusy("delete_conversation");
       const match = args.threads.find((thread) => thread.id === id);
       if (!match) {
         report("delete_conversation", `unknown id: ${id}`);
@@ -250,7 +254,7 @@ export function createPlaygroundWebMCPTools(args: PlaygroundWebMCPContext) {
       target: "draft-2020-12",
     }),
     execute: async ({ modeId }) => {
-      if (args.busy) return rejectBusy("set_mode");
+      if (args.isBusy?.() ?? args.busy) return rejectBusy("set_mode");
       const mode = MODES.find((candidate) => candidate.id === modeId);
       if (!mode) {
         report("set_mode", `unknown modeId: ${modeId}`);
@@ -279,10 +283,11 @@ export function createPlaygroundWebMCPTools(args: PlaygroundWebMCPContext) {
       io: "input",
       target: "draft-2020-12",
     }),
-    execute: async ({ text }) => {
-      if (args.busy) return rejectBusy("send_message");
+    execute: async ({ text }, options) => {
+      options?.signal?.throwIfAborted();
+      if (args.isBusy?.() ?? args.busy) return rejectBusy("send_message");
       report("send_message", text);
-      const accepted = await args.send(text);
+      const accepted = await args.send(text, { signal: options?.signal });
       return accepted
         ? { ok: true as const }
         : {
@@ -311,6 +316,9 @@ export function usePlaygroundWebMCPTools(args: PlaygroundWebMCPContext) {
 
   return {
     available,
+    loading: discovery.status === "loading",
+    error: discovery.error,
+    discoveredToolCount: discovery.tools.length,
     registeredTools: discovery.tools.filter((registered) =>
       tools.some((definition) => definition.name === registered.name),
     ),

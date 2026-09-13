@@ -153,6 +153,7 @@ export const resolveCache = (
 };
 
 export interface DefaultCacheKeyInput {
+  streamMode?: "delta" | "cumulative";
   prompt: string;
   systemPrompt?: string;
   samplingMode?: LanguageModelSamplingMode;
@@ -174,6 +175,7 @@ const toolDescriptorKey = (tool: LanguageModelTool): object => ({
 });
 
 const hasExpandedKeyFields = (input: DefaultCacheKeyInput): boolean =>
+  input.streamMode !== undefined ||
   input.language !== undefined ||
   input.languageHints !== undefined ||
   input.expectedInputs !== undefined ||
@@ -199,6 +201,7 @@ export const defaultCacheKey = (input: DefaultCacheKeyInput): string => {
   }
   if (input.samplingMode !== undefined) parts.push(input.samplingMode);
   parts.push(
+    input.streamMode ?? null,
     input.language ?? "",
     input.languageHints ?? false,
     input.expectedInputs ?? null,

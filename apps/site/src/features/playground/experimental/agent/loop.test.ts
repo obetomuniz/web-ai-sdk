@@ -412,3 +412,95 @@ function createSessionFixture(replies: readonly string[]): {
 
   return { base: create(), inputs };
 }
+
+describe("specialized outcomes", () => {
+  it("retains Summarizer failure instead of synthesizing a summary", async () => {
+    const fixture = createSessionFixture([
+      '```tool_code\nsummarize_text(text="Original source")\n```',
+      "Invented fallback",
+    ]);
+    createSessionMock.mockReturnValue(fixture.base);
+    const error = new Error("Summarizer is not installed");
+    error.name = "SummarizerUnavailableError";
+    const agent = createAgentLoop({
+      strictTools: true,
+      tools: [
+        {
+          name: "summarize_text",
+          capability: "Summarizer",
+          description: "Summarize",
+          inputSchema: { type: "object" },
+          execute() {
+            throw error;
+          },
+        },
+      ],
+    });
+    const result = await agent.run("Summarize Original source");
+    agent.destroy();
+    expect(result.stopReason).toBe("unavailable");
+    expect(result.text).not.toContain("Invented fallback");
+    expect(result.steps.flatMap((step) => step.toolCalls)[0]?.error?.name).toBe(
+      "SummarizerUnavailableError",
+    );
+    expect(fixture.inputs).toHaveLength(1);
+  });
+  it("does not publish skipped specialized work as a Prompt success", async () => {
+    const fixture = createSessionFixture([
+      "Invented draft",
+      "Invented draft again",
+    ]);
+    createSessionMock.mockReturnValue(fixture.base);
+    const agent = createAgentLoop({
+      strictTools: true,
+      tools: [
+        {
+          name: "write_text",
+          capability: "Writer",
+          description: "Draft",
+          inputSchema: { type: "object" },
+          requiredCallIf: () => true,
+          execute: () => "Real draft",
+        },
+      ],
+    });
+    const result = await agent.run("Draft an email");
+    agent.destroy();
+    expect(result.text).toContain("write_text");
+    expect(result.text).not.toContain("Invented");
+  });
+});
+
+it("attributes a direct tool result to its producer after earlier failure", async () => {
+  const fixture = createSessionFixture([
+    '```tool_code\nsummarize_text(text="source")\n```',
+    '```tool_code\nwrite_text(task="draft")\n```',
+  ]);
+  createSessionMock.mockReturnValue(fixture.base);
+  const agent = createAgentLoop({
+    tools: [
+      {
+        name: "summarize_text",
+        capability: "Summarizer",
+        description: "Summary",
+        inputSchema: { type: "object" },
+        execute() {
+          throw new Error("Native failure");
+        },
+      },
+      {
+        name: "write_text",
+        capability: "Writer",
+        description: "Draft",
+        inputSchema: { type: "object" },
+        returnDirect: true,
+        execute: () => ({ text: "Actual Writer result" }),
+      },
+    ],
+  });
+  const result = await agent.run("Help with this task");
+  agent.destroy();
+  expect(result.text).toContain("write_text result");
+  expect(result.text).toContain("Actual Writer result");
+  expect(result.text).not.toContain("Prompt fallback");
+});

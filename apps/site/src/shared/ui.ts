@@ -763,7 +763,7 @@ export const playground = {
   activityTime: "text-fg-4 tabular-nums",
   activityKind: "whitespace-nowrap uppercase text-fg-3",
   activityCheckState:
-    "shrink-0 whitespace-nowrap uppercase text-fg-3 data-[tone=ready]:text-ok data-[tone=download]:text-warn data-[tone=downloading]:text-warn data-[tone=unavailable]:text-err",
+    "shrink-0 whitespace-nowrap uppercase text-fg-3 data-[tone=available]:text-ok data-[tone=downloadable]:text-warn data-[tone=downloading]:text-warn data-[tone=unavailable]:text-err data-[tone=error]:text-err",
   activityMain: "grid min-w-0 gap-0.5",
   activityMessage: "truncate text-fg-2",
   activityDetail: "truncate text-fg-4",

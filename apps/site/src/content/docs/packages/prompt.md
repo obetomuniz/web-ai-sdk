@@ -10,7 +10,7 @@ This page is synced from [`packages/prompt/README.md`](https://github.com/obetom
 
 This package wraps the Web's Built-in [Prompt API](https://developer.chrome.com/docs/ai/prompt-api) (`LanguageModel`). Use `ask()` for one-shot prompts. Use `createSession()` or React `useSession()` for conversations and delta streams.
 
-The package normalizes stream chunks, removes selected control characters, and wires abort signals. Application code owns UI state and message history.
+The package converts configured native stream chunks, removes selected control characters, and wires abort signals. Application code owns UI state and message history.
 
 
 ## Status
@@ -165,6 +165,7 @@ The hook does not track responses, history, or streaming status. Keep that state
 ```ts
 interface AskOptions {
   input: string;
+  streamMode?: "delta" | "cumulative"; // default "delta"
   systemPrompt?: string;
   samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
   /** @deprecated Web page contexts are moving to samplingMode. */
@@ -193,6 +194,14 @@ interface AskResult {
 }
 ```
 
+Native chunks default to `streamMode: "delta"`. Repeated chunks remain separate: `["4", "4"]` produces `"44"`.
+
+For a verified legacy host that emits growing snapshots, pass `streamMode: "cumulative"` to `ask()`, `createSession()`, or `useSession()`.
+Clones inherit this option. A cumulative snapshot must start with the previous snapshot; otherwise the operation rejects.
+
+Migration: automatic prefix detection was removed because valid deltas can share prefixes. Configure cumulative mode explicitly for hosts that need it.
+Default result-cache keys include the effective stream mode and ignore legacy entries. Custom cache keys must distinguish modes or refresh cached results after migration.
+
 `onUpdate` receives the cumulative text so far, not deltas. For delta-shaped streaming use `createSession().sendStreaming()`.
 
 ### Treat model output as untrusted
@@ -207,6 +216,7 @@ If `systemPrompt` is passed alongside `createOptions.initialPrompts`, the SDK em
 
 ```ts
 interface CreateSessionOptions {
+  streamMode?: "delta" | "cumulative"; // default "delta"
   systemPrompt?: string;
   samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
   /** @deprecated Web page contexts are moving to samplingMode. */

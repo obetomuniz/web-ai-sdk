@@ -112,15 +112,6 @@ export const cleanResponse = (raw: string): string =>
   stripNonPrinting(raw).trim();
 
 /**
- * Browser implementations may emit "delta" chunks (each chunk is new content)
- * or "cumulative" chunks (each chunk is the full text so far). Detect the
- * shape per chunk: if it starts with the prior buffer, replace; otherwise
- * append.
- *
- * Returns `{ buffer, delta }` so streaming surfaces can decide whether to
- * hand callers cumulative text (`buffer`) or the new piece (`delta`).
- */
-/**
  * A message is empty when its content is a blank string, an empty content
  * array, or an array of only blank text parts. Image and audio parts always
  * count as content: the SDK never inspects media values, so a media-only
@@ -139,11 +130,17 @@ const isEmptyInput = (input: string | LanguageModelMessage[]): boolean =>
     ? !input.trim()
     : input.length === 0 || input.every(isMessageEmpty);
 
+/** Native streams use deltas. Legacy snapshot streams require explicit configuration. */
 export const mergeStreamChunk = (
   buffer: string,
   chunk: string,
+  mode: "delta" | "cumulative" = "delta",
 ): { buffer: string; delta: string } => {
-  if (chunk.startsWith(buffer)) {
+  if (mode === "cumulative") {
+    if (!chunk.startsWith(buffer))
+      throw new Error(
+        "Cumulative Prompt stream replaced previously emitted text.",
+      );
     return { buffer: chunk, delta: chunk.slice(buffer.length) };
   }
   return { buffer: buffer + chunk, delta: chunk };
@@ -171,6 +168,8 @@ export const assertValidSamplingOptions = (options: {
 };
 
 export interface CreateSessionOptions {
+  /** Native chunk format. Defaults to spec delta chunks; use cumulative for legacy hosts. */
+  streamMode?: "delta" | "cumulative";
   /** Optional system prompt (folded into `initialPrompts` as a `system` role). */
   systemPrompt?: string;
   /** Semantic sampling preset. Defaults to the model's default. */
@@ -395,6 +394,7 @@ const toCreateError = (err: unknown): Error => {
 const wrapInstance = (
   internal: Promise<SessionInternal>,
   resolvedInstance?: LanguageModelInstance,
+  streamMode: "delta" | "cumulative" = "delta",
 ): Session => {
   let destroyed = false;
   let currentController: AbortController | null = null;
@@ -512,7 +512,7 @@ const wrapInstance = (
             promptOpts,
           )) {
             if (controller.signal.aborted) throw new PromptAbortError();
-            const merged = mergeStreamChunk(buffer, chunk);
+            const merged = mergeStreamChunk(buffer, chunk, streamMode);
             // Strip non-printing chars (control codes, BOM, zero-width)
             // but preserve inter-token whitespace — trimming would eat
             // spaces that legitimately split deltas like "lo, " | "world".
@@ -585,7 +585,11 @@ const wrapInstance = (
       // destroy lifecycle are fully decoupled from this (parent) session.
       // Pass the instance synchronously so `inputQuota` / `inputUsage` are
       // readable the moment `clone()` resolves, without awaiting a microtask.
-      return wrapInstance(Promise.resolve({ instance: cloned, api }), cloned);
+      return wrapInstance(
+        Promise.resolve({ instance: cloned, api }),
+        cloned,
+        streamMode,
+      );
     } catch (err) {
       if ((err as { name?: string })?.name === "AbortError") {
         throw new PromptAbortError();
@@ -711,5 +715,8 @@ export const createSessionWithReady = (
       throw toCreateError(err);
     });
   ready.catch(() => {});
-  return { session: wrapInstance(internal), ready };
+  return {
+    session: wrapInstance(internal, undefined, options.streamMode),
+    ready,
+  };
 };

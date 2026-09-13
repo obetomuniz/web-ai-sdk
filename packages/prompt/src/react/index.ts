@@ -174,6 +174,7 @@ export const useSession = (
     enabled = true,
     systemPrompt,
     samplingMode,
+    streamMode,
     temperature,
     topK,
     language,
@@ -208,6 +209,7 @@ export const useSession = (
       const created = createSessionWithReady({
         systemPrompt,
         samplingMode,
+        streamMode,
         temperature,
         topK,
         language,
@@ -254,6 +256,7 @@ export const useSession = (
     enabled,
     systemPrompt,
     samplingMode,
+    streamMode,
     temperature,
     topK,
     language,

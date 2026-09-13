@@ -96,6 +96,8 @@ export {
 };
 
 export interface AskOptions {
+  /** Native chunk format. Defaults to spec delta chunks; use cumulative for legacy hosts. */
+  streamMode?: "delta" | "cumulative";
   /** The user-facing prompt / question. */
   input: string;
   /** Optional system prompt (folded into `initialPrompts` as a `system` role). */
@@ -358,6 +360,7 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
     options.cacheKey ??
     defaultCacheKey({
       prompt: options.input,
+      streamMode: options.streamMode ?? "delta",
       systemPrompt: options.systemPrompt,
       samplingMode: options.samplingMode,
       temperature: options.temperature,
@@ -446,7 +449,7 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
         promptOpts,
       )) {
         if (options.signal?.aborted) throw new PromptAbortError();
-        const merged = mergeStreamChunk(buffer, chunk);
+        const merged = mergeStreamChunk(buffer, chunk, options.streamMode);
         buffer = merged.buffer;
         options.onUpdate?.(buffer);
       }

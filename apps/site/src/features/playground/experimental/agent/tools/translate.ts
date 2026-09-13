@@ -1,97 +1,56 @@
-/**
- * `translate_text` tool: wraps `@web-ai-sdk/translator`. Demonstrates
- * how a single agent run composes Prompt + Translator (both Built-in
- * Web AI APIs) through the SDK rather than reaching for
- * `window.Translator` directly.
- *
- * History: this file previously bound `window.Translator` inline
- * because the SDK package wasn't on the dependency list. That direct
- * binding is gone - the SDK ships the same feature-detect, typed-error,
- * abort-aware shape every other tool in this folder relies on.
- */
-
 import {
-  isAvailable as isTranslatorAvailable,
-  translate as sdkTranslate,
-  TranslatorUnavailableError,
+  checkAvailability,
+  prepareTranslator,
+  translate,
 } from "@web-ai-sdk/translator";
+import { z } from "zod";
 import type { AgentTool } from "../types.js";
+import { requireTextResult, runPrepared } from "./lifecycle.js";
+import { languageInput, textInput, toolSchema } from "./textSchemas.js";
 
-interface TranslateInput {
-  text: string;
-  /** BCP-47, e.g. "en", "pt", "ja". */
-  sourceLanguage: string;
-  /** BCP-47, e.g. "en", "pt", "ja". */
-  targetLanguage: string;
-}
-
-interface TranslateOutput {
-  translation: string;
-  cached?: boolean;
-  unavailable?: boolean;
-  error?: string;
-}
-
-export const translateTool: AgentTool<TranslateInput, TranslateOutput> = {
+const inputSchema = z.strictObject({
+  text: textInput,
+  sourceLanguage: languageInput,
+  targetLanguage: languageInput,
+});
+export const translateTool: AgentTool = {
   name: "translate_text",
   description:
-    "Translate text using the browser's built-in Translator. Required input fields: `text` (string), `sourceLanguage` and `targetLanguage` (BCP-47 codes like `en`, `pt`, `ja`). Do NOT use `from`/`to` - those names don't exist on this tool. Returns `{ translation }`, or `{ unavailable: true }` when the API or language pair isn't installed, or `{ error }` when arguments are malformed.",
+    "Translate text with the Translator API. Required fields: text, sourceLanguage, targetLanguage (BCP-47 codes). Do not use from/to. Checks the actual language pair and reports failures explicitly.",
+  capability: "Translator",
   readOnly: true,
-  inputSchema: {
-    type: "object",
-    properties: {
-      text: { type: "string" },
-      sourceLanguage: { type: "string" },
-      targetLanguage: { type: "string" },
-    },
-    required: ["text", "sourceLanguage", "targetLanguage"],
-    additionalProperties: false,
-  },
-  async execute({ text, sourceLanguage, targetLanguage }, { signal }) {
-    // Defensive validation: the model occasionally invents field names
-    // (e.g. `to`/`from`) from its translation-API priors. We surface a
-    // typed error rather than passing `undefined` into the SDK, which
-    // would crash inside `lang.split(...)` and look like a tool bug.
-    if (typeof text !== "string" || !text.trim()) {
-      return {
-        translation: "",
-        error: "Missing required `text` (non-empty string).",
-      };
+  inputSchema: toolSchema(inputSchema),
+  async execute(input, ctx) {
+    const parsed = inputSchema.parse(input);
+    const { text } = parsed;
+    // Match the SDK's primary-subtag normalization for both probing and creation.
+    const config = {
+      sourceLanguage:
+        parsed.sourceLanguage.split("-")[0]?.toLowerCase() ??
+        parsed.sourceLanguage.toLowerCase(),
+      targetLanguage:
+        parsed.targetLanguage.split("-")[0]?.toLowerCase() ??
+        parsed.targetLanguage.toLowerCase(),
+    };
+    if (config.sourceLanguage === config.targetLanguage) {
+      await translate({ ...config, input: text, signal: ctx.signal });
+      return { translation: text, cached: false, unchanged: true };
     }
-    if (typeof sourceLanguage !== "string" || !sourceLanguage.trim()) {
-      return {
-        translation: "",
-        error:
-          "Missing required `sourceLanguage` (BCP-47 code like `en`, `pt`, `ja`). Do NOT use `from` - the field is `sourceLanguage`.",
-      };
-    }
-    if (typeof targetLanguage !== "string" || !targetLanguage.trim()) {
-      return {
-        translation: "",
-        error:
-          "Missing required `targetLanguage` (BCP-47 code like `en`, `pt`, `ja`). Do NOT use `to` - the field is `targetLanguage`.",
-      };
-    }
-
-    if (!isTranslatorAvailable()) {
-      return { translation: "", unavailable: true };
-    }
-    try {
-      const result = await sdkTranslate({
-        input: text,
-        sourceLanguage,
-        targetLanguage,
-        signal,
-      });
-      return {
-        translation: result.output ?? "",
-        cached: result.cached,
-      };
-    } catch (err) {
-      if (err instanceof TranslatorUnavailableError) {
-        return { translation: "", unavailable: true };
-      }
-      throw err;
-    }
+    return runPrepared(
+      ctx,
+      () => checkAvailability(config),
+      (monitor) => prepareTranslator({ ...config, monitor }),
+      async () => {
+        const result = await translate({
+          ...config,
+          input: text,
+          signal: ctx.signal,
+        });
+        return {
+          translation: requireTextResult(result.output, "Translator"),
+          cached: result.cached,
+        };
+      },
+    );
   },
 };

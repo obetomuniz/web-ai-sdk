@@ -1,85 +1,63 @@
-/**
- * `summarize_text` tool: wraps `@web-ai-sdk/summarizer`. Demonstrates how
- * the agent can compose multiple Built-in Web AI APIs through the SDK -
- * the planner (Prompt API) decides when a long piece of text needs to be
- * condensed and dispatches to the Summarizer model on the device.
- */
-
 import {
-  isAvailable as isSummarizerAvailable,
+  checkAvailability,
+  prepareSummarizer,
   summarize,
 } from "@web-ai-sdk/summarizer";
-import type { AgentRunContext } from "../runContext.js";
+import { z } from "zod";
 import { summarizeTextHasKnownSource } from "../summarizeProvenance.js";
 import type { AgentTool } from "../types.js";
+import { requireTextResult, runPrepared } from "./lifecycle.js";
+import { textInput, toolSchema } from "./textSchemas.js";
 
-interface SummarizeInput {
-  text: string;
-  /** "tldr" (paragraph) | "key-points" (list) | "headline" (one line). */
-  type?: "tldr" | "key-points" | "headline";
-  /** "short" | "medium" | "long". */
-  length?: "short" | "medium" | "long";
-}
-
-interface SummarizeOutput {
-  summary: string;
-  cached: boolean;
-}
-
-/** True when the tool ran but produced no summary (unavailable / race). */
-export function isEmptySummarizeOutput(output: unknown): boolean {
-  if (!output || typeof output !== "object") return true;
-  return !(output as SummarizeOutput).summary?.trim();
-}
-
-export const summarizeTool: AgentTool<SummarizeInput, SummarizeOutput> = {
+const inputSchema = z.strictObject({
+  text: textInput,
+  type: z.enum(["tldr", "key-points", "headline"]).default("tldr"),
+  length: z.enum(["short", "medium", "long"]).default("short"),
+});
+export const summarizeTool: AgentTool = {
   name: "summarize_text",
   description:
-    "Condense EXISTING text into a shorter form with the browser's built-in Summarizer (on-device). The `text` argument MUST be copied from text the user pasted in their message or from a successful fetch_url result in this conversation - never text you just generated. Use when the user wants a shorter form or key points from that source. Do NOT use to write, generate, compose, draft, or expand new content; produce that yourself with no tool. Returns an empty summary if the API is unavailable.",
+    "Condense existing text with Summarizer. Copy text from the user's message or a successful fetch_url result. Never summarize invented source text. Options: type (tldr, key-points, headline), length (short, medium, long). Reports unavailable and operational errors explicitly.",
+  capability: "Summarizer",
   readOnly: true,
-  acceptCall(input: Record<string, unknown>, ctx: AgentRunContext): boolean {
-    if (!isSummarizerAvailable()) return false;
-    return summarizeTextHasKnownSource(
-      String(input.text ?? ""),
-      ctx.userInput,
-      ctx.fetchedSources,
+  acceptCall(input, ctx) {
+    return (
+      typeof input.text !== "string" ||
+      summarizeTextHasKnownSource(input.text, ctx.userInput, ctx.fetchedSources)
     );
   },
-  // When the summarizer returns text, finish with that summary only (no second
-  // model paraphrase). If it returns empty (unavailable), the loop continues
-  // so the planner can summarize in prose. Misroutes are blocked by acceptCall.
-  returnDirectIf(_input, output) {
-    const summary = (output as SummarizeOutput)?.summary?.trim();
-    return summary.length > 0;
-  },
-  inputSchema: {
-    type: "object",
-    properties: {
-      text: { type: "string" },
-      type: { type: "string", enum: ["tldr", "key-points", "headline"] },
-      length: { type: "string", enum: ["short", "medium", "long"] },
-    },
-    required: ["text"],
-    additionalProperties: false,
-  },
-  async execute({ text, type = "tldr", length = "short" }, { signal }) {
-    if (!isSummarizerAvailable()) {
-      return { summary: "", cached: false };
-    }
-    try {
-      const result = await summarize({
-        input: text,
-        type,
-        length,
-        language: "en",
-        format: "plain-text",
-        signal,
-      });
-      return { summary: result.output ?? "", cached: result.cached };
-    } catch {
-      // `isAvailable()` can be true while a later call fails (warm-up race).
-      // Never surface SDK errors as tool failures - same as unavailable.
-      return { summary: "", cached: false };
-    }
+  returnDirect: true,
+  inputSchema: toolSchema(inputSchema),
+  async execute(input, ctx) {
+    const { text, ...options } = inputSchema.parse(input);
+    const config = {
+      ...options,
+      language: "en",
+      format: "plain-text" as const,
+    };
+    const availabilityOptions = {
+      ...options,
+      format: config.format,
+      preference: "auto" as const,
+      expectedInputLanguages: ["en"],
+      expectedContextLanguages: ["en"],
+      outputLanguage: "en",
+    };
+    return runPrepared(
+      ctx,
+      () => checkAvailability(availabilityOptions),
+      (monitor) => prepareSummarizer({ ...config, monitor }),
+      async () => {
+        const result = await summarize({
+          ...config,
+          input: text,
+          signal: ctx.signal,
+        });
+        return {
+          summary: requireTextResult(result.output, "Summarizer"),
+          cached: result.cached,
+        };
+      },
+    );
   },
 };

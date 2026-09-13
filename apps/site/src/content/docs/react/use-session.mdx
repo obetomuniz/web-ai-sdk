@@ -183,6 +183,7 @@ type SessionStatus = "loading" | "ready" | "unavailable";
 interface UseSessionOptions extends CreateSessionOptions {
   enabled?: boolean;       // default: true; skip session creation when false
   // Inherited from CreateSessionOptions:
+  streamMode?: "delta" | "cumulative"; // default "delta"
   systemPrompt?: string;
   samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
   temperature?: number;

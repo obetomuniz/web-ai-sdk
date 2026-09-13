@@ -14,6 +14,7 @@ interface ExampleConversationContext {
   conversationId: string;
   turns: ExampleTurnContext[];
   suspended?: boolean;
+  onLifecycle?: (message: string, detail?: string) => void;
 }
 
 interface UseExamplesReturn {
@@ -136,6 +137,18 @@ export function useExamples(
         samplingMode: "predictable",
         responseConstraint: SCHEMA,
         signal: controller.signal,
+        monitor: (monitor) => {
+          monitor.addEventListener("downloadprogress", ({ loaded }) => {
+            if (
+              requestId === requestIdRef.current &&
+              !controller.signal.aborted
+            )
+              context.onLifecycle?.(
+                "Prompt · examples download",
+                `${Math.round(loaded * 100)}%`,
+              );
+          });
+        },
       });
       if (!result.output) throw new Error("Empty response from model.");
 
@@ -193,7 +206,12 @@ export function useExamples(
           // Generated suggestions still work without storage.
         }
       }
-    } catch {
+    } catch (error) {
+      if (requestId === requestIdRef.current)
+        context.onLifecycle?.(
+          "Prompt · examples failed",
+          error instanceof Error ? error.message : String(error),
+        );
       if (requestId === requestIdRef.current && !conversationContext) {
         setExamples(mode.examples.slice(0, MAX_EXAMPLES));
       }
@@ -206,6 +224,7 @@ export function useExamples(
   }, [
     canRegenerate,
     context.suspended,
+    context.onLifecycle,
     context.turns,
     conversationContext,
     generating,

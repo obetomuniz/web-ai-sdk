@@ -8,6 +8,7 @@ import { MODES } from "./experimental/playground/presets.js";
 import { useExamples } from "./experimental/playground/useExamples.js";
 import { useActivityLog } from "./lib/useActivityLog.js";
 import { useAgentThreads } from "./lib/useAgentThreads.js";
+import { useCapabilityReadiness } from "./lib/useCapabilityReadiness.js";
 import { useConversationAgent } from "./lib/useConversationAgent.js";
 import { usePlaygroundLayout } from "./lib/usePlaygroundLayout.js";
 import { usePlaygroundWebMCPTools } from "./lib/usePlaygroundWebMCPTools.js";
@@ -43,8 +44,11 @@ export function Playground() {
     abort,
     newSession,
     busy,
+    isBusy,
     currentInput,
     currentTurnId,
+    capabilityEvents,
+    titleLifecycle,
     send: sendToAgent,
   } = useConversationAgent({
     thread: activeThread,
@@ -65,12 +69,14 @@ export function Playground() {
     conversationId: activeThread.id,
     turns: recentExampleTurns,
     suspended: busy,
+    onLifecycle: (message, detail) =>
+      pushActivity({ kind: "info", message, detail }),
   });
 
   const send = useCallback(
-    async (textToSend: string) => {
+    async (textToSend: string, options?: { signal?: AbortSignal }) => {
       cancelExampleGeneration();
-      return sendToAgent(textToSend);
+      return sendToAgent(textToSend, options);
     },
     [cancelExampleGeneration, sendToAgent],
   );
@@ -96,16 +102,48 @@ export function Playground() {
     };
   }, [modeMenuOpen]);
 
-  const { available: webmcpAvailable, registeredTools: webmcpTools } =
-    usePlaygroundWebMCPTools({
-      threads,
-      activeThread,
-      ops,
-      send,
-      newSession,
-      busy,
-      pushActivity,
-    });
+  const {
+    available: webmcpAvailable,
+    loading: webmcpLoading,
+    error: webmcpError,
+    discoveredToolCount,
+  } = usePlaygroundWebMCPTools({
+    threads,
+    activeThread,
+    ops,
+    send,
+    newSession,
+    busy,
+    isBusy,
+    pushActivity,
+  });
+
+  const capabilityChecks = useCapabilityReadiness(
+    activeMode,
+    capabilityEvents,
+    titleLifecycle,
+  );
+  const checks = [
+    {
+      label: "Prompt",
+      detail: "Conversation responses and requested example generation",
+      state: promptReadiness,
+    },
+    ...capabilityChecks,
+    {
+      label: "WebMCP discovery",
+      detail:
+        webmcpError?.message ??
+        `${discoveredToolCount} tools discovered in this page; external consumer support varies`,
+      state: !webmcpAvailable
+        ? "unavailable"
+        : webmcpLoading
+          ? "checking"
+          : webmcpError
+            ? "error"
+            : "available",
+    },
+  ];
 
   const submitDraft = () => {
     if (!draft.trim() || busy) return;
@@ -120,6 +158,7 @@ export function Playground() {
   };
 
   const createThread = (modeId = activeMode.id) => {
+    if (isBusy()) return;
     const thread = ops.create(modeId);
     newSession();
     pushActivity({
@@ -130,7 +169,7 @@ export function Playground() {
   };
 
   const selectThread = (id: string) => {
-    if (busy || id === activeThread.id) return;
+    if (isBusy() || id === activeThread.id) return;
     ops.select(id);
     newSession();
     const thread = threads.find((candidate) => candidate.id === id);
@@ -142,7 +181,7 @@ export function Playground() {
   };
 
   const closeThread = (id: string) => {
-    if (busy) return;
+    if (isBusy()) return;
     const thread = threads.find((candidate) => candidate.id === id);
     if (!thread) return;
     const wasActive = id === activeThread.id;
@@ -156,6 +195,7 @@ export function Playground() {
   };
 
   const setMode = (modeId: string) => {
+    if (isBusy()) return;
     const mode = MODES.find((candidate) => candidate.id === modeId) ?? MODES[0];
     if (mode.id !== activeMode.id) {
       ops.setMode(activeThread.id, mode.id);
@@ -230,10 +270,7 @@ export function Playground() {
         <RuntimePanel
           open={layout.runtimeOpen}
           conversationsOpen={layout.conversationsOpen}
-          promptReadiness={promptReadiness}
-          summarizerOn={summarizerOn}
-          webmcpAvailable={webmcpAvailable}
-          webmcpToolCount={webmcpTools.length}
+          checks={checks}
           events={eventsLog}
           onHide={layout.hideRuntime}
         />
