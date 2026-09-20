@@ -228,7 +228,7 @@ function splitTopLevel(s: string): string[] {
   return parts;
 }
 
-/** Parse a single argument literal (string / number / bool / null). */
+/** Parse a single argument literal (string / number / bool / null / list). */
 function parseLiteral(raw: string): unknown {
   const s = raw.trim();
   if (s.length === 0) return "";
@@ -239,6 +239,14 @@ function parseLiteral(raw: string): unknown {
       .replace(/\\(["'`\\])/g, "$1")
       .replace(/\\n/g, "\n")
       .replace(/\\t/g, "\t");
+  }
+  if (s.startsWith("[") && s.endsWith("]")) {
+    const inner = s.slice(1, -1).trim();
+    if (!inner) return [];
+    return splitTopLevel(inner)
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map(parseLiteral);
   }
   if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
   if (s === "true" || s === "True") return true;

@@ -6,7 +6,13 @@ import {
 import { z } from "zod";
 import type { AgentTool } from "../types.js";
 import { requireTextResult, runPrepared } from "./lifecycle.js";
-import { textInput, toolSchema } from "./textSchemas.js";
+import {
+  asToolArgs,
+  coerceOption,
+  parseToolInput,
+  textInput,
+  toolSchema,
+} from "./textSchemas.js";
 
 const inputSchema = z.strictObject({
   text: textInput,
@@ -19,13 +25,39 @@ const inputSchema = z.strictObject({
 export const rewriteTool: AgentTool = {
   name: "rewrite_text",
   description:
-    "Revise supplied text with the Rewriter API. Preserve the original text in the text argument. Options: context, tone (as-is, more-formal, more-casual), format, length (as-is, shorter, longer).",
+    "Revise supplied text with the Rewriter API. Required: text copied exactly from the user. Optional: context; tone (as-is, more-formal, more-casual); format (as-is, markdown, plain-text); length (as-is, shorter, longer). Omit optional fields unless the user asks for them.",
   capability: "Rewriter",
   readOnly: true,
   returnDirect: true,
   inputSchema: toolSchema(inputSchema),
   async execute(input, ctx) {
-    const { text, context, ...config } = inputSchema.parse(input);
+    const raw = asToolArgs(input);
+    const { text, context, ...config } = parseToolInput(inputSchema, {
+      ...raw,
+      tone: coerceOption(
+        raw.tone,
+        ["as-is", "more-formal", "more-casual"],
+        { formal: "more-formal", casual: "more-casual", unchanged: "as-is" },
+        "as-is",
+      ),
+      format: coerceOption(
+        raw.format,
+        ["as-is", "markdown", "plain-text"],
+        {
+          md: "markdown",
+          plaintext: "plain-text",
+          text: "plain-text",
+          unchanged: "as-is",
+        },
+        "as-is",
+      ),
+      length: coerceOption(
+        raw.length,
+        ["as-is", "shorter", "longer"],
+        { short: "shorter", long: "longer", unchanged: "as-is" },
+        "as-is",
+      ),
+    });
     return runPrepared(
       ctx,
       () => checkAvailability(config),

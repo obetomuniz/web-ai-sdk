@@ -6,7 +6,14 @@ import {
 import { z } from "zod";
 import type { AgentTool } from "../types.js";
 import { requireTextResult, runPrepared } from "./lifecycle.js";
-import { languageInput, textInput, toolSchema } from "./textSchemas.js";
+import {
+  asToolArgs,
+  coerceLanguageList,
+  languageInput,
+  parseToolInput,
+  textInput,
+  toolSchema,
+} from "./textSchemas.js";
 
 const inputSchema = z.strictObject({
   text: textInput,
@@ -16,13 +23,17 @@ const inputSchema = z.strictObject({
 export const proofreadTool: AgentTool = {
   name: "proofread_text",
   description:
-    "Check spelling and grammar with the Proofreader API. Supply exact original text and optional expectedInputLanguages. Returns correctedInput and corrections with original-text offsets and optional metadata. Never applies edits automatically.",
+    'Check spelling and grammar with the Proofreader API. Required: text copied exactly from the user. Optional: expectedInputLanguages as a BCP-47 list such as ["en"]. Returns correctedInput and corrections. Never apply edits automatically.',
   capability: "Proofreader",
   readOnly: true,
   returnDirect: true,
   inputSchema: toolSchema(inputSchema),
   async execute(input, ctx) {
-    const { text, ...config } = inputSchema.parse(input);
+    const raw = asToolArgs(input);
+    const { text, ...config } = parseToolInput(inputSchema, {
+      ...raw,
+      expectedInputLanguages: coerceLanguageList(raw.expectedInputLanguages),
+    });
     return runPrepared(
       ctx,
       () => checkAvailability(config),

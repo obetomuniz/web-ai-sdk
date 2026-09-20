@@ -7,17 +7,23 @@ import { z } from "zod";
 import { summarizeTextHasKnownSource } from "../summarizeProvenance.js";
 import type { AgentTool } from "../types.js";
 import { requireTextResult, runPrepared } from "./lifecycle.js";
-import { textInput, toolSchema } from "./textSchemas.js";
+import {
+  asToolArgs,
+  coerceOption,
+  parseToolInput,
+  textInput,
+  toolSchema,
+} from "./textSchemas.js";
 
 const inputSchema = z.strictObject({
   text: textInput,
   type: z.enum(["tldr", "key-points", "headline"]).default("tldr"),
-  length: z.enum(["short", "medium", "long"]).default("short"),
+  length: z.enum(["short", "medium", "long"]).default("medium"),
 });
 export const summarizeTool: AgentTool = {
   name: "summarize_text",
   description:
-    "Condense existing text with Summarizer. Copy text from the user's message or a successful fetch_url result. Never summarize invented source text. Options: type (tldr, key-points, headline), length (short, medium, long). Reports unavailable and operational errors explicitly.",
+    "Condense existing text with Summarizer. Copy text from the user's message or a successful fetch_url result. Never summarize invented source text. Optional: type (tldr, key-points, headline), length (short, medium, long). Omit optional fields unless the user asks for them. Reports unavailable and operational errors explicitly.",
   capability: "Summarizer",
   readOnly: true,
   acceptCall(input, ctx) {
@@ -29,7 +35,27 @@ export const summarizeTool: AgentTool = {
   returnDirect: true,
   inputSchema: toolSchema(inputSchema),
   async execute(input, ctx) {
-    const { text, ...options } = inputSchema.parse(input);
+    const raw = asToolArgs(input);
+    const { text, ...options } = parseToolInput(inputSchema, {
+      ...raw,
+      type: coerceOption(
+        raw.type,
+        ["tldr", "key-points", "headline"],
+        {
+          keypoints: "key-points",
+          bullets: "key-points",
+          title: "headline",
+          tl: "tldr",
+        },
+        "tldr",
+      ),
+      length: coerceOption(
+        raw.length,
+        ["short", "medium", "long"],
+        { brief: "short", detailed: "long" },
+        "medium",
+      ),
+    });
     const config = {
       ...options,
       language: "en",

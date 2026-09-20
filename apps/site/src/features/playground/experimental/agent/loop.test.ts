@@ -471,6 +471,60 @@ describe("specialized outcomes", () => {
   });
 });
 
+it("shows a returnDirect rewrite only after the tool, not as leading prose", async () => {
+  const premature =
+    "I would appreciate it if you could forward the document at your earliest convenience.";
+  const fixture = createSessionFixture([
+    `${premature}\n\`\`\`tool_code\nrewrite_text(text="hey send the doc")\n\`\`\``,
+  ]);
+  createSessionMock.mockReturnValue(fixture.base);
+  const agent = createAgentLoop({
+    tools: [
+      {
+        name: "rewrite_text",
+        capability: "Rewriter",
+        description: "Rewrite",
+        inputSchema: {
+          type: "object",
+          properties: { text: { type: "string" } },
+        },
+        requiredCallIf: () => true,
+        returnDirect: true,
+        execute: () => ({ text: "Please send the document when you can." }),
+      },
+    ],
+  });
+  const events: Array<{ type: string; text?: string; delta?: string }> = [];
+  for await (const event of agent.runStreaming(
+    'Rewrite more formally: "hey send the doc"',
+  )) {
+    if (
+      event.type === "text_delta" ||
+      event.type === "thought" ||
+      event.type === "message"
+    ) {
+      events.push(event);
+    }
+  }
+  agent.destroy();
+  expect(
+    events
+      .filter((event) => event.type === "text_delta")
+      .map((event) => event.delta)
+      .join(""),
+  ).not.toContain(premature);
+  expect(
+    events
+      .filter((event) => event.type === "thought")
+      .map((event) => event.text)
+      .join(""),
+  ).not.toContain(premature);
+  const messages = events
+    .filter((event) => event.type === "message")
+    .map((event) => event.text);
+  expect(messages).toEqual(["Please send the document when you can."]);
+});
+
 it("attributes a direct tool result to its producer after earlier failure", async () => {
   const fixture = createSessionFixture([
     '```tool_code\nsummarize_text(text="source")\n```',

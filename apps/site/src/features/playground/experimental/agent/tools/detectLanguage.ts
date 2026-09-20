@@ -6,7 +6,13 @@ import {
 import { z } from "zod";
 import type { AgentTool } from "../types.js";
 import { runPrepared } from "./lifecycle.js";
-import { textInput, toolSchema } from "./textSchemas.js";
+import {
+  asToolArgs,
+  coerceInteger,
+  parseToolInput,
+  textInput,
+  toolSchema,
+} from "./textSchemas.js";
 
 const inputSchema = z.strictObject({
   text: textInput,
@@ -20,7 +26,11 @@ export const detectLanguageTool: AgentTool = {
   readOnly: true,
   inputSchema: toolSchema(inputSchema),
   async execute(input, ctx) {
-    const { text, topK } = inputSchema.parse(input);
+    const raw = asToolArgs(input);
+    const { text, topK } = parseToolInput(inputSchema, {
+      ...raw,
+      topK: coerceInteger(raw.topK),
+    });
     return runPrepared(
       ctx,
       () => checkAvailability(),

@@ -2,7 +2,13 @@ import { checkAvailability, prepareWriter, write } from "@web-ai-sdk/writer";
 import { z } from "zod";
 import type { AgentTool } from "../types.js";
 import { requireTextResult, runPrepared } from "./lifecycle.js";
-import { textInput, toolSchema } from "./textSchemas.js";
+import {
+  asToolArgs,
+  coerceOption,
+  parseToolInput,
+  textInput,
+  toolSchema,
+} from "./textSchemas.js";
 
 const inputSchema = z.strictObject({
   task: textInput,
@@ -15,13 +21,39 @@ const inputSchema = z.strictObject({
 export const writeTool: AgentTool = {
   name: "write_text",
   description:
-    "Draft new text with the Writer API. Supply task, optional context, tone (formal, neutral, casual), format, and length (short, medium, long).",
+    "Draft new text with the Writer API. Required: task. Optional: context; tone (formal, neutral, casual); format (markdown, plain-text); length (short, medium, long). Omit optional fields unless the user asks for them.",
   capability: "Writer",
   readOnly: true,
   returnDirect: true,
   inputSchema: toolSchema(inputSchema),
   async execute(input, ctx) {
-    const { task, context, ...config } = inputSchema.parse(input);
+    const raw = asToolArgs(input);
+    const { task, context, ...config } = parseToolInput(inputSchema, {
+      ...raw,
+      tone: coerceOption(
+        raw.tone,
+        ["formal", "neutral", "casual"],
+        { professional: "formal", informal: "casual" },
+        "neutral",
+      ),
+      format: coerceOption(
+        raw.format,
+        ["markdown", "plain-text"],
+        {
+          md: "markdown",
+          plaintext: "plain-text",
+          text: "plain-text",
+          txt: "plain-text",
+        },
+        "markdown",
+      ),
+      length: coerceOption(
+        raw.length,
+        ["short", "medium", "long"],
+        { brief: "short", detailed: "long" },
+        "short",
+      ),
+    });
     return runPrepared(
       ctx,
       () => checkAvailability(config),

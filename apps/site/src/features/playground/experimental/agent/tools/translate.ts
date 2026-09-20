@@ -6,7 +6,12 @@ import {
 import { z } from "zod";
 import type { AgentTool } from "../types.js";
 import { requireTextResult, runPrepared } from "./lifecycle.js";
-import { languageInput, textInput, toolSchema } from "./textSchemas.js";
+import {
+  languageInput,
+  parseToolInput,
+  textInput,
+  toolSchema,
+} from "./textSchemas.js";
 
 const inputSchema = z.strictObject({
   text: textInput,
@@ -21,7 +26,7 @@ export const translateTool: AgentTool = {
   readOnly: true,
   inputSchema: toolSchema(inputSchema),
   async execute(input, ctx) {
-    const parsed = inputSchema.parse(input);
+    const parsed = parseToolInput(inputSchema, input);
     const { text } = parsed;
     // Match the SDK's primary-subtag normalization for both probing and creation.
     const config = {

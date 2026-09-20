@@ -453,6 +453,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
             signal,
             stepIndex,
             tools,
+            unattemptedRequestedTools().length === 0,
           );
           reply = streamed.text;
           streamedAnswerText = streamed.streamedAnswerText;
@@ -661,12 +662,21 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
         // that prose as a synthesized `thought` for parity with the
         // constraint path's transcript.
         const thought = leadingProse(reply, tools);
+        // returnDirect tools already become the answer. Keep their preface
+        // off the transcript so the rewritten text is not shown, then shown
+        // again after the tool card.
+        const hideThought =
+          calls.length === 1 &&
+          tools.find((tool) => tool.name === calls[0]?.name)?.returnDirect ===
+            true;
+        const visibleThought = hideThought ? "" : thought;
         // We optimistically stream leading prose to the answer panel before
         // knowing the turn is a tool call. Now that it is, discard that
         // premature text so it isn't duplicated. It re-appears just below as
         // this turn's interleaved `thought`, beside the tool cards.
         if (streamedAnswerText) yield { type: "step_reset", index: stepIndex };
-        if (thought) yield { type: "thought", index: stepIndex, text: thought };
+        if (visibleThought)
+          yield { type: "thought", index: stepIndex, text: visibleThought };
 
         // Surface a plan so the UI flips to "tool_calling", then dispatch
         // through the shared dispatcher.
@@ -674,7 +684,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
           type: "plan",
           index: stepIndex,
           plan: {
-            ...(thought ? { thought } : {}),
+            ...(visibleThought ? { thought: visibleThought } : {}),
             toolCalls: calls.map((c) => ({ name: c.name, input: c.input })),
           },
         };
@@ -744,7 +754,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
           steps.push({
             index: stepIndex,
             plan: {
-              ...(thought ? { thought } : {}),
+              ...(visibleThought ? { thought: visibleThought } : {}),
               toolCalls: calls,
               final: true,
               message: finalText,
@@ -774,7 +784,10 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
         }
         steps.push({
           index: stepIndex,
-          plan: { ...(thought ? { thought } : {}), toolCalls: calls },
+          plan: {
+            ...(visibleThought ? { thought: visibleThought } : {}),
+            toolCalls: calls,
+          },
           toolCalls: records,
         });
         yield { type: "step_end", index: stepIndex };
@@ -919,6 +932,7 @@ async function* streamReply(
   signal: AbortSignal,
   stepIndex: number,
   tools: readonly AgentTool[],
+  streamAnswer: boolean,
 ): AsyncGenerator<AgentEvent, StreamedReply, void> {
   const stream = session.sendStreaming(input, { signal });
   const it = stream[Symbol.asyncIterator]();
@@ -976,12 +990,12 @@ async function* streamReply(
       if (kind === "prose") {
         const fence = acc.indexOf("```");
         if (fence !== -1) {
-          if (fence > emittedProse) {
+          if (streamAnswer && fence > emittedProse) {
             yield { type: "text_delta", delta: acc.slice(emittedProse, fence) };
             emittedProse = fence;
           }
           kind = "tool";
-        } else {
+        } else if (streamAnswer) {
           const limit = proseStreamLimit(acc);
           if (limit > emittedProse) {
             yield { type: "text_delta", delta: acc.slice(emittedProse, limit) };

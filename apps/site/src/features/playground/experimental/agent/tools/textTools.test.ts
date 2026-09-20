@@ -276,3 +276,108 @@ it("labels same-language translation as a no-op without creating a model", async
   });
   expect(create).not.toHaveBeenCalled();
 });
+
+it("coerces Writer format aliases and ignores extra keys", async () => {
+  const create = vi.fn(async () => ({
+    write: async () => "Hello",
+    destroy() {},
+  }));
+  vi.stubGlobal("Writer", { availability: async () => "available", create });
+  const { result } = await dispatch(writeTool, {
+    task: "Draft an email",
+    format: "plain_text",
+    style: "email",
+  });
+  expect(toolOutcome(result)).toBe("success");
+  expect(create).toHaveBeenCalledWith(
+    expect.objectContaining({ format: "plain-text" }),
+  );
+});
+
+it("rejects unknown Writer format values before creating a model", async () => {
+  const create = vi.fn(async () => ({
+    write: async () => "Hello",
+    destroy() {},
+  }));
+  vi.stubGlobal("Writer", { availability: async () => "available", create });
+  const { result } = await dispatch(writeTool, {
+    task: "Draft an email",
+    format: "short",
+  });
+  expect(toolOutcome(result)).toBe("invalid input");
+  expect(result.error?.message).toMatch(/format:/);
+  expect(create).not.toHaveBeenCalled();
+});
+
+it("keeps the Summarizer default length when omitted", async () => {
+  const create = vi.fn(async () => ({
+    summarize: async () => "A summary",
+    destroy() {},
+  }));
+  vi.stubGlobal("Summarizer", {
+    availability: async () => "available",
+    create,
+  });
+  const { result } = await dispatch(summarizeTool, {
+    text: "A source paragraph",
+  });
+  expect(toolOutcome(result)).toBe("success");
+  expect(create).toHaveBeenCalledWith(
+    expect.objectContaining({ length: "medium" }),
+  );
+});
+
+it("parses a serialized Proofreader language list leftover from tool_code", async () => {
+  const create = vi.fn(async () => ({
+    proofread: async () => ({
+      correctedInput: "I saw him.",
+      corrections: [],
+    }),
+    destroy() {},
+  }));
+  vi.stubGlobal("Proofreader", {
+    availability: async () => "available",
+    create,
+  });
+  const { result } = await dispatch(proofreadTool, {
+    text: "I seen him.",
+    expectedInputLanguages: '["en"]',
+  });
+  expect(toolOutcome(result)).toBe("success");
+  expect(create).toHaveBeenCalledWith(
+    expect.objectContaining({ expectedInputLanguages: ["en"] }),
+  );
+});
+
+it("accepts a language string for Proofreader expectedInputLanguages", async () => {
+  const create = vi.fn(async () => ({
+    proofread: async () => ({
+      correctedInput: "I saw him.",
+      corrections: [],
+    }),
+    destroy() {},
+  }));
+  vi.stubGlobal("Proofreader", {
+    availability: async () => "available",
+    create,
+  });
+  const { result } = await dispatch(proofreadTool, {
+    text: "I seen him.",
+    expectedInputLanguages: "en",
+  });
+  expect(toolOutcome(result)).toBe("success");
+  expect(create).toHaveBeenCalledWith(
+    expect.objectContaining({ expectedInputLanguages: ["en"] }),
+  );
+});
+
+it("reports malformed input as a short field message", async () => {
+  vi.stubGlobal("Writer", {
+    availability: async () => "available",
+    create: vi.fn(),
+  });
+  const { result } = await dispatch(writeTool, {});
+  expect(toolOutcome(result)).toBe("invalid input");
+  expect(result.error?.message).toMatch(/task:/);
+  expect(result.error?.message).not.toMatch(/\[ \{/);
+});
