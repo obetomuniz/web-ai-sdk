@@ -8,7 +8,7 @@ This package wraps the W3C [WebMCP](https://webmachinelearning.github.io/webmcp/
 WebMCP lets a page declare structured tools that compatible agents can discover and call. It does not guarantee discovery or invocation by an agent product.
 
 :::caution[Experimental]
-WebMCP is an early proposal. Chrome documents an origin trial from version 149 and a local flag. Microsoft lists an Edge 150 origin trial. Keep the human UI path. See [Browser support](/docs/browser-support/) for setup.
+WebMCP is an early proposal. Chrome documents an origin trial from version 149 and a local flag. Microsoft Learn Edge 153 and Edge 154 release notes list a WebMCP origin trial. Keep the human UI path. See [Browser support](/docs/browser-support/) for setup.
 :::
 
 ## Browser API providers and agent consumers
@@ -329,7 +329,7 @@ definitions directly to `registerTool()` or `useWebMCP()`.
 
 ## Origin trial
 
-Chrome opened a public [origin trial](https://developer.chrome.com/docs/ai/webmcp) for WebMCP from Chrome 149. Microsoft lists an [Edge 150 origin trial](https://developer.microsoft.com/microsoft-edge/origin-trials/trials/0b76fe60-b266-458e-a285-04e375c0c31a). For local Chrome development, the vendor documents a flag that works without a token. See [Browser support](/docs/browser-support/) for the current setup and source links.
+Chrome opened a public [origin trial](https://developer.chrome.com/docs/ai/webmcp) for WebMCP from Chrome 149. Microsoft Learn [Edge 154 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/154) list a WebMCP origin trial. The [Edge 153 notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/153) list the same trial. Register through the [Edge origin-trial listing](https://developer.microsoft.com/microsoft-edge/origin-trials/trials/0b76fe60-b266-458e-a285-04e375c0c31a). For local Chrome development, the vendor documents a flag that works without a token. See [Browser support](/docs/browser-support/) for the current setup and source links.
 
 Keep WebMCP optional. Registration becomes a no-op when the API is missing, so the same code can run in other browsers:
 
