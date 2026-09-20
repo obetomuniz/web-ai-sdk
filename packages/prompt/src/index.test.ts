@@ -382,6 +382,28 @@ describe("ask", () => {
     expect(updates).toEqual(["Hel", "Hello, ", "Hello, world."]);
   });
 
+  it.each([
+    { chunks: ["4", "4"], output: "44" },
+    { chunks: ["a", "ab"], output: "aab" },
+  ])("preserves repeated native deltas $chunks", async ({ chunks, output }) => {
+    installFakeLanguageModel({ chunks });
+    const updates: string[] = [];
+    expect(
+      await ask({
+        input: "Only the result",
+        onUpdate: (text) => updates.push(text),
+      }),
+    ).toEqual({ output, cached: false });
+    expect(updates.at(-1)).toBe(output);
+
+    const session = createSession();
+    const deltas: string[] = [];
+    for await (const delta of session.sendStreaming("Only the result"))
+      deltas.push(delta);
+    expect(deltas).toEqual(chunks);
+    session.destroy();
+  });
+
   it("does not cache by default; same call hits the model twice without a `cache` option", async () => {
     const fake = installFakeLanguageModel({ response: "fresh response" });
     await ask({ input: "ping" });
@@ -411,21 +433,6 @@ describe("ask", () => {
     });
     expect(result.output).toBeNull();
     expect(result.cached).toBe(false);
-  });
-
-  it("handles cumulative chunks (Edge / Phi-Silica shape) without double-concatenation", async () => {
-    installFakeLanguageModel({
-      chunks: ["Hel", "Hello, ", "Hello, world."],
-    });
-    const cache = inMemoryCache();
-    const updates: string[] = [];
-    const result = await ask({
-      input: "say hi",
-      cache,
-      onUpdate: (c) => updates.push(c),
-    });
-    expect(result.output).toBe("Hello, world.");
-    expect(updates).toEqual(["Hel", "Hello, ", "Hello, world."]);
   });
 
   it("folds systemPrompt into LanguageModel.create's initialPrompts", async () => {
@@ -918,19 +925,6 @@ describe("createSession", () => {
     const session = createSession();
     const deltas: string[] = [];
     for await (const d of session.sendStreaming("say hi")) {
-      deltas.push(d);
-    }
-    expect(deltas).toEqual(["Hel", "lo, ", "world."]);
-    session.destroy();
-  });
-
-  it("sendStreaming yields deltas even when the backend ships cumulative chunks", async () => {
-    installFakeLanguageModel({
-      chunks: ["Hel", "Hello, ", "Hello, world."],
-    });
-    const session = createSession();
-    const deltas: string[] = [];
-    for await (const d of session.sendStreaming("hi")) {
       deltas.push(d);
     }
     expect(deltas).toEqual(["Hel", "lo, ", "world."]);

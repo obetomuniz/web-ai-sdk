@@ -10,7 +10,7 @@ This page is synced from [`packages/prompt/README.md`](https://github.com/obetom
 
 This package wraps the Web's Built-in [Prompt API](https://developer.chrome.com/docs/ai/prompt-api) (`LanguageModel`). Use `ask()` for one-shot prompts. Use `createSession()` or React `useSession()` for conversations and delta streams.
 
-The package normalizes stream chunks, removes selected control characters, and wires abort signals. Application code owns UI state and message history.
+The package concatenates native stream chunks, removes selected control characters, and wires abort signals. Application code owns UI state and message history.
 
 
 ## Status
@@ -192,6 +192,8 @@ interface AskResult {
   cached: boolean;
 }
 ```
+
+Native streaming chunks are deltas. Repeated chunks remain separate: `["4", "4"]` produces `"44"`.
 
 `onUpdate` receives the cumulative text so far, not deltas. For delta-shaped streaming use `createSession().sendStreaming()`.
 

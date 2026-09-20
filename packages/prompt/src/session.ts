@@ -7,8 +7,8 @@
  * instance with its own history, system prompt, sampling, and lifecycle.
  *
  * The wrapper is intentionally thin. It handles cross-browser smoothing that
- * every consumer would otherwise reimplement (delta-vs-cumulative chunk
- * detection, control-character cleanup, abort composition, typed unavailability)
+ * every consumer would otherwise reimplement (control-character cleanup,
+ * abort composition, typed unavailability)
  * and forwards everything else to the native instance. It does NOT track
  * conversation history or queue concurrent sends; those are the consumer's
  * data model and UI concerns. It does surface `clone()`, since forking a warm
@@ -112,15 +112,6 @@ export const cleanResponse = (raw: string): string =>
   stripNonPrinting(raw).trim();
 
 /**
- * Browser implementations may emit "delta" chunks (each chunk is new content)
- * or "cumulative" chunks (each chunk is the full text so far). Detect the
- * shape per chunk: if it starts with the prior buffer, replace; otherwise
- * append.
- *
- * Returns `{ buffer, delta }` so streaming surfaces can decide whether to
- * hand callers cumulative text (`buffer`) or the new piece (`delta`).
- */
-/**
  * A message is empty when its content is a blank string, an empty content
  * array, or an array of only blank text parts. Image and audio parts always
  * count as content: the SDK never inspects media values, so a media-only
@@ -139,15 +130,14 @@ const isEmptyInput = (input: string | LanguageModelMessage[]): boolean =>
     ? !input.trim()
     : input.length === 0 || input.every(isMessageEmpty);
 
+/** Native streaming chunks are deltas, including repeated or prefix-shaped text. */
 export const mergeStreamChunk = (
   buffer: string,
   chunk: string,
-): { buffer: string; delta: string } => {
-  if (chunk.startsWith(buffer)) {
-    return { buffer: chunk, delta: chunk.slice(buffer.length) };
-  }
-  return { buffer: buffer + chunk, delta: chunk };
-};
+): { buffer: string; delta: string } => ({
+  buffer: buffer + chunk,
+  delta: chunk,
+});
 
 export const assertValidSamplingOptions = (options: {
   samplingMode?: LanguageModelSamplingMode;
