@@ -1,5 +1,11 @@
 # @web-ai-sdk/prompt
 
+## 0.10.1
+
+### Patch Changes
+
+- 01b487c: Preserve repeated native Prompt stream chunks by concatenating deltas.
+
 ## 0.10.0
 
 ### Minor Changes
