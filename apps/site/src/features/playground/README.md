@@ -318,14 +318,16 @@ Deletion keeps its destructive compatibility hint and adds `consequentialHint: t
 
 ### Browser smoke checks
 
-Build packages and the site, then preview the build:
+Build packages, then create a local QA build with the smoke route:
 
 ```sh
-pnpm build
+pnpm build:packages
+PLAYGROUND_SMOKE=1 pnpm build:site
 pnpm preview:site
 ```
 
 Open `/playground/smoke/` on the preview origin and select **Run checks**.
+Normal site builds omit this route and its browser bundle.
 The harness calls real SDK exports, tests the repeated-digit follow-up, and records specialized results.
 It also checks native WebMCP invocation counts, cancellation, discovery, and deletion of one disposable in-memory conversation.
 It never reads or deletes persisted Playground conversations.

@@ -37,7 +37,7 @@ export type CacheOption = "session" | "local" | ResponseCache;
 export const DEFAULT_CACHE_TTL_MS = 60 * 60 * 1000;
 
 /** Version tag for the storage envelope written by the built-in shortcuts. */
-const ENVELOPE_VERSION = 1;
+const ENVELOPE_VERSION = 2;
 
 interface CacheEnvelope {
   v: number;
@@ -188,8 +188,6 @@ const hasExpandedKeyFields = (input: DefaultCacheKeyInput): boolean =>
  */
 export const defaultCacheKey = (input: DefaultCacheKeyInput): string => {
   const parts: unknown[] = [
-    // Ignore cached results written before native chunks were treated as deltas.
-    "prompt-result-v2",
     input.prompt,
     input.systemPrompt ?? "",
     input.temperature ?? null,

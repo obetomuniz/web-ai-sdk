@@ -730,7 +730,7 @@ describe("ask", () => {
       });
       expect(first).toEqual({ output: "Hello, world.", cached: false });
       const stored = JSON.parse(store.get("prompt:k") ?? "");
-      expect(stored.v).toBe(1);
+      expect(stored.v).toBe(2);
       expect(stored.value).toBe("Hello, world.");
       expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
@@ -765,7 +765,7 @@ describe("ask", () => {
       });
       expect(first).toEqual({ output: "Hello, world.", cached: false });
       const stored = JSON.parse(store.get("prompt:k") ?? "");
-      expect(stored.v).toBe(1);
+      expect(stored.v).toBe(2);
       expect(stored.value).toBe("Hello, world.");
       expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
@@ -1903,17 +1903,29 @@ describe("lossless Prompt delta streams", () => {
 
 it("ignores cached results from before the delta fix", async () => {
   installFakeLanguageModel({ chunks: ["4", "4"] });
-  const cache = inMemoryCache();
-  cache.set('["result","",null,null]', "4");
-  expect(await ask({ input: "result", cache })).toEqual({
-    output: "44",
-    cached: false,
+  const key = `prompt:${defaultCacheKey({ prompt: "result" })}`;
+  const store = new Map<string, string>([
+    [key, JSON.stringify({ v: 1, value: "4", expiresAt: Date.now() + 60_000 })],
+  ]);
+  vi.stubGlobal("sessionStorage", {
+    getItem: (entry: string) => store.get(entry) ?? null,
+    setItem: (entry: string, value: string) => store.set(entry, value),
+    removeItem: (entry: string) => store.delete(entry),
   });
-  expect(defaultCacheKey({ prompt: "result" })).not.toBe(
-    '["result","",null,null]',
-  );
-  expect(await ask({ input: "result", cache })).toEqual({
-    output: "44",
-    cached: true,
-  });
+  try {
+    expect(await ask({ input: "result", cache: "session" })).toEqual({
+      output: "44",
+      cached: false,
+    });
+    expect(JSON.parse(store.get(key) ?? "")).toMatchObject({
+      v: 2,
+      value: "44",
+    });
+    expect(await ask({ input: "result", cache: "session" })).toEqual({
+      output: "44",
+      cached: true,
+    });
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });

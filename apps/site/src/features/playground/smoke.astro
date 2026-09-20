@@ -28,7 +28,7 @@ import "../../styles/home.css";
       <pre id="results" aria-live="polite" class="overflow-auto whitespace-pre-wrap break-words rounded-xl bg-surface p-4">No checks have run.</pre>
     </main>
     <script>
-      import { runSmoke, type SmokeResult } from "../../features/playground/smoke.js";
+      import { runSmoke, type SmokeResult } from "./smoke.js";
       const run = document.querySelector<HTMLButtonElement>("#run");
       const stop = document.querySelector<HTMLButtonElement>("#stop");
       const output = document.querySelector("#results");

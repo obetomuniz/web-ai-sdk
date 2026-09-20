@@ -6,7 +6,8 @@ Use the [canonical setup guidance](../../content/docs/browser-support.mdx).
 
 ## Setup
 
-Built with `pnpm build` and served with `pnpm preview:site` at `http://localhost:34192`.
+The original run used `pnpm build` and `pnpm preview:site` at `http://localhost:34192`.
+The smoke route now requires `PLAYGROUND_SMOKE=1 pnpm build:site`; normal site builds omit it.
 Checks used real SDK exports on `/playground/smoke/` and an isolated Playground conversation store.
 The smoke harness creates and deletes only an in-memory conversation.
 
@@ -22,12 +23,11 @@ Canary's temporary profile enabled `enable-webmcp-testing@1`, `writer-api@1`, `r
 These are flag-based observations. No origin-trial token was installed or tested.
 Both browser builds exposed all seven text API globals. Exposure alone did not determine readiness.
 Canary reported `downloadable` for the English-to-Portuguese translation pair, so that operation was skipped before model creation.
-Proofreader passed initially but reported `downloadable` on the final rerun. Both Canary reports are retained.
+Proofreader passed initially but reported `downloadable` on the final rerun.
 
 ## Native results
 
-See [Chrome 153 results](./browser-smoke-chrome153.json) and [Canary 155 results](./browser-smoke-chrome155.json).
-The saved reports omit intermediate cumulative output buffers; they retain operation results and lifecycle progress.
+This summary records the browser results and relevant lifecycle observations.
 
 Both Prompt runs received `40 + 4`, followed by `dont add the calculation, just result, ok?`.
 Both returned native follow-up chunks `["4", "4"]`. The SDK preserved the answer `44`.

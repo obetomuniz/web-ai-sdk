@@ -188,7 +188,7 @@ interface AskResult {
 
 Native streaming chunks are deltas. Repeated chunks remain separate: `["4", "4"]` produces `"44"`.
 The wrapper no longer guesses whether a chunk is a growing snapshot because valid deltas can share prefixes.
-Default result-cache keys ignore entries from before this fix. Refresh custom cache keys if they hold an affected result.
+Built-in `"session"` and `"local"` result caches ignore entries from before this fix. Refresh custom caches if they hold an affected result.
 
 `onUpdate` receives the cumulative text so far, not deltas. For delta-shaped streaming use `createSession().sendStreaming()`.
 
