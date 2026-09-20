@@ -57,7 +57,7 @@ describe("storage shortcut TTL envelope", () => {
     const raw = storage.getItem("prompt:k");
     expect(raw).not.toBe("v");
     expect(JSON.parse(raw ?? "")).toEqual({
-      v: 2,
+      v: 1,
       value: "v",
       expiresAt: Date.now() + DEFAULT_CACHE_TTL_MS,
     });
@@ -113,12 +113,12 @@ describe("storage shortcut TTL envelope", () => {
       "{not json",
       "null",
       '"just a string"',
-      JSON.stringify({ v: 1, value: "v", expiresAt: Date.now() + 1000 }),
-      JSON.stringify({ v: 2, expiresAt: Date.now() + 1000 }),
-      JSON.stringify({ v: 2, value: 42, expiresAt: Date.now() + 1000 }),
-      JSON.stringify({ v: 2, value: "v" }),
-      JSON.stringify({ v: 2, value: "v", expiresAt: "soon" }),
-      JSON.stringify({ v: 2, value: "v", expiresAt: Number.NaN }),
+      JSON.stringify({ v: 2, value: "v", expiresAt: Date.now() + 1000 }),
+      JSON.stringify({ v: 1, expiresAt: Date.now() + 1000 }),
+      JSON.stringify({ v: 1, value: 42, expiresAt: Date.now() + 1000 }),
+      JSON.stringify({ v: 1, value: "v" }),
+      JSON.stringify({ v: 1, value: "v", expiresAt: "soon" }),
+      JSON.stringify({ v: 1, value: "v", expiresAt: Number.NaN }),
     ];
     for (const entry of badEntries) {
       storage.setItem("prompt:k", entry);

@@ -10,11 +10,8 @@ import {
   clockNowTool,
   createFetchUrlTool,
   detectLanguageTool,
-  proofreadTool,
-  rewriteTool,
   summarizeTool,
   translateTool,
-  writeTool,
 } from "../agent/tools/index.js";
 import type { AgentTool } from "../agent/types.js";
 import type { ToolRendererId } from "./toolRenderers.js";
@@ -22,7 +19,6 @@ import type { TranscriptRendererId } from "./transcriptRenderers.js";
 
 export interface AgentMode {
   id: string;
-  strictTools?: boolean;
   name: string;
   accent: "info" | "ok" | "warn" | "violet";
   description: string;
@@ -61,26 +57,14 @@ export const MODES: [AgentMode, ...AgentMode[]] = [
   },
   {
     id: "web-ai-suite",
-    strictTools: true,
     name: "Built-in Web AI suite",
     accent: "ok",
     description:
-      "Composes specialized SDK tools for Writer, Rewriter, Proofreader, Summarizer, Translator, and Language Detector in one agent flow.",
+      "Composes specialized SDK tools for Summarizer, Translator, and Language Detector in one agent flow.",
     systemPrompt:
-      "You orchestrate the browser's Built-in Web AI APIs and must demonstrate the specialized tools instead of silently replacing them with model knowledge. For translation requests, ALWAYS call `translate_text` for every requested target language; never translate in prose yourself. When the source language is not explicit, call `detect_language` first, then use its top language code as `sourceLanguage` for the translation call(s). After detection, multiple target translations may run in parallel. For requests to summarize supplied text, ALWAYS call `summarize_text`. For drafting call write_text, for revision call rewrite_text, and for grammar or spelling call proofread_text. Report an unavailable/error tool result honestly instead of fabricating the operation.",
-    tools: [
-      summarizeTool,
-      translateTool,
-      detectLanguageTool,
-      writeTool,
-      rewriteTool,
-      proofreadTool,
-      clockNowTool,
-    ].map(requireSpecializedTool),
+      "You orchestrate the browser's Built-in Web AI APIs and must demonstrate the specialized tools instead of silently replacing them with model knowledge. For translation requests, ALWAYS call `translate_text` for every requested target language; never translate in prose yourself. When the source language is not explicit, call `detect_language` first, then use its top language code as `sourceLanguage` for the translation call(s). After detection, multiple target translations may run in parallel. For requests to summarize supplied text, ALWAYS call `summarize_text`. Report an unavailable/error tool result honestly instead of fabricating the operation.",
+    tools: [summarizeTool, translateTool, detectLanguageTool, clockNowTool],
     examples: [
-      "Draft a short welcome email for a new teammate with write_text.",
-      'Rewrite more formally: "hey, can u send me that doc when u get a sec? thx"',
-      'Check grammar: "I seen him yesterday at the store."',
       'Summarize: "WebMCP exposes browser-page tools to AI agents via document.modelContext, mirroring the Model Context Protocol pattern for the web."',
       "Detect the language of 'こんにちは', then translate it to English and Portuguese.",
       "It's almost lunchtime. What's the current time?",
@@ -108,63 +92,19 @@ export const MODES: [AgentMode, ...AgentMode[]] = [
     description:
       "Everything the playground knows about. Useful for exploring how the planner picks tools when many are available.",
     systemPrompt:
-      "You are a research and productivity assistant running on the user's device. Use the most specialized tool for each subtask, and only when it's actually needed - Use write_text for drafting, rewrite_text for revision, proofread_text for grammar, summarize_text for summaries, and translate_text for translation. Answer explanations directly. Use `fetch_url` when the user includes a URL, explicitly requests an online lookup, or makes an unambiguous follow-up about another resource relative to a URL already fetched in this conversation. Derive a contextual URL only from an explicit identifier and a known prior route; if it is ambiguous, ask for the URL. Never state fresh external facts without a successful tool result in the current turn, and never summarize a URL without fetching it. If a fetch fails (often CORS), say so explicitly. Stop as soon as you have the answer.",
+      "You are a research and productivity assistant running on the user's device. Use the most specialized tool for each subtask, and only when it's actually needed - for tasks you can do from your own knowledge (writing, explaining, summarizing pasted text), answer directly with no tools. Use `fetch_url` when the user includes a URL, explicitly requests an online lookup, or makes an unambiguous follow-up about another resource relative to a URL already fetched in this conversation. Derive a contextual URL only from an explicit identifier and a known prior route; if it is ambiguous, ask for the URL. Never state fresh external facts without a successful tool result in the current turn, and never summarize a URL without fetching it. If a fetch fails (often CORS), say so explicitly. Stop as soon as you have the answer.",
     tools: [
       summarizeTool,
       translateTool,
       detectLanguageTool,
-      writeTool,
-      rewriteTool,
-      proofreadTool,
       clockNowTool,
       fetchUrl,
       clipboardReadTool,
       clipboardWriteTool,
     ],
     examples: [
-      "Draft a short welcome email for a new teammate with write_text.",
-      'Rewrite more formally: "hey, send me the document please"',
-      'Check grammar: "I seen him yesterday."',
       "Detect the language of 'こんにちは', then translate it to English and Portuguese.",
       "Fetch the README of https://api.github.com/repos/obetomuniz/web-ai-sdk/readme, base64-decode it, and give me a 3-bullet summary.",
     ],
   },
 ];
-
-// English examples are supported by deterministic enforcement as well as model instructions.
-const SPECIALIZED_REQUESTS: Record<string, RegExp> = {
-  summarize_text: /^(?:summarize|summarise)\b/i,
-  translate_text: /^translate\b/i,
-  detect_language: /^detect\b.{0,40}\blanguage\b/i,
-  write_text: /^(?:write|draft|compose)\b/i,
-  rewrite_text: /^(?:rewrite|revise|rephrase)\b/i,
-  proofread_text:
-    /^(?:proofread\b|(?:check|fix|correct)\s+(?:the\s+)?(?:grammar|spelling)\b)/i,
-};
-
-function hasSpecializedRequest(input: string, pattern: RegExp | undefined) {
-  if (!pattern) return false;
-  // Source text is data. Recognize direct commands and explicit sequential requests only.
-  const instructions = input
-    .replace(/(^|[\s:(])'[^']*'(?=$|[\s.,;!?)])/g, "$1 ")
-    .replace(/```[\s\S]*?```|`[^`]*`|"[^"]*"|“[^”]*”/g, " ")
-    .replace(/[:\n][\s\S]*$/, "");
-  return instructions
-    .split(/(?:^|[;.!?])\s*|\s*,\s*(?:and\s+)?then\s+/i)
-    .some((part) =>
-      pattern.test(
-        part
-          .trim()
-          .replace(/^(?:(?:can|could|would) you\s+)?(?:please\s+)?/i, ""),
-      ),
-    );
-}
-
-function requireSpecializedTool(tool: AgentTool): AgentTool {
-  return {
-    ...tool,
-    requiredCallIf: (ctx) =>
-      tool.requiredCallIf?.(ctx) === true ||
-      hasSpecializedRequest(ctx.userInput, SPECIALIZED_REQUESTS[tool.name]),
-  };
-}

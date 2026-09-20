@@ -8,8 +8,6 @@ export type PromptReadiness =
 
 export function promptIsReady(readiness: PromptReadiness): boolean {
   return (
-    readiness === "downloadable" ||
-    readiness === "downloading" ||
     readiness === "checking" ||
     readiness === "available" ||
     readiness === "unknown"
@@ -22,7 +20,6 @@ export function promptReadinessMessage(
 ): string {
   switch (readiness) {
     case "downloadable":
-      return "Send a message to prepare the Prompt model. The browser may download model files.";
     case "downloading":
       return `${browserName(browser)} is preparing the on-device model. Keep this page open while it finishes.`;
     case "unavailable":

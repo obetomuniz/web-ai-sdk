@@ -2,7 +2,7 @@
 
 This package wraps the Web's Built-in [Prompt API](https://developer.chrome.com/docs/ai/prompt-api) (`LanguageModel`). Use `ask()` for one-shot prompts. Use `createSession()` or React `useSession()` for conversations and delta streams.
 
-The package converts configured native stream chunks, removes selected control characters, and wires abort signals. Application code owns UI state and message history.
+The package concatenates native stream chunks, removes selected control characters, and wires abort signals. Application code owns UI state and message history.
 
 **Docs:** <https://web-ai-sdk.dev/docs/guides/prompt/> · **React:** [`usePrompt`](https://web-ai-sdk.dev/docs/react/use-prompt/) · [`useSession`](https://web-ai-sdk.dev/docs/react/use-session/) · **Production:** [Checklist](https://web-ai-sdk.dev/docs/production-checklist/)
 
@@ -187,8 +187,6 @@ interface AskResult {
 ```
 
 Native streaming chunks are deltas. Repeated chunks remain separate: `["4", "4"]` produces `"44"`.
-The wrapper no longer guesses whether a chunk is a growing snapshot because valid deltas can share prefixes.
-Built-in `"session"` and `"local"` result caches ignore entries from before this fix. Refresh custom caches if they hold an affected result.
 
 `onUpdate` receives the cumulative text so far, not deltas. For delta-shaped streaming use `createSession().sendStreaming()`.
 

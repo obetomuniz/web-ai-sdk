@@ -1,7 +1,4 @@
-import type {
-  CreateMonitor,
-  LanguageModelSamplingMode,
-} from "@web-ai-sdk/prompt";
+import type { LanguageModelSamplingMode } from "@web-ai-sdk/prompt";
 
 /**
  * Public types for the experimental agent loop prototype.
@@ -62,7 +59,6 @@ export interface AgentToolContext {
 
 export interface AgentTool<TInput = AgentToolInput, TOutput = AgentToolOutput> {
   name: string;
-  capability?: string;
   description: string;
   inputSchema: {
     type: "object";
@@ -303,8 +299,6 @@ export interface AgentStream<E = AgentEvent> extends AsyncIterable<E> {
 export type AgentOnToolErrorPolicy = "report" | "throw" | "stop";
 
 export interface CreateAgentOptions {
-  strictTools?: boolean;
-  monitor?: (monitor: CreateMonitor) => void;
   systemPrompt?: string;
   tools?: readonly AgentTool[];
   /** Completed turns used to restore a persisted conversation session. */

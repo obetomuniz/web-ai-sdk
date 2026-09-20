@@ -48,7 +48,6 @@ export interface UseAgentOptions extends CreateAgentOptions {
   eventLimit?: number;
   /** Called when a run completes so hosts can persist it as a thread turn. */
   onTurnComplete?: (turn: AgentTurn) => void;
-  onEvent?: (event: AgentEvent) => void;
 }
 
 /** The thought currently being streamed, with the step it belongs to. */
@@ -64,10 +63,7 @@ export interface UseAgentReturn {
   stopReason: AgentStopReason | null;
   error: Error | null;
   isStreamingTurn: boolean;
-  run: (
-    input: string,
-    options?: { signal?: AbortSignal },
-  ) => Promise<AgentTurn | undefined>;
+  run: (input: string) => Promise<void>;
   /** Lower-level alternative to `run`: returns the underlying stream. */
   getStream: (input: string) => AgentStream;
   abort: () => void;
@@ -88,15 +84,11 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
   optionsRef.current = options;
 
   const agentRef = useRef<Agent | null>(null);
-  const activeRun = useRef<AbortController | null>(null);
-  const generation = useRef(0);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Agent identity must refresh when any construction option changes; the current values are read from optionsRef.
   useEffect(() => {
     agentRef.current = promptAvailable ? createAgent(optionsRef.current) : null;
     return () => {
-      generation.current++;
-      activeRun.current?.abort();
       agentRef.current?.destroy();
       agentRef.current = null;
     };
@@ -107,8 +99,6 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
     options.language,
     options.sessionMode,
     options.onToolError,
-    options.strictTools,
-    options.monitor,
     options.tools,
     options.sessionKey,
     promptAvailable,
@@ -133,6 +123,7 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
   // partial output instead of waiting for Chrome's AbortSignal to land
   // (it's honored only at chunk boundaries, and short generations / tool
   // calls often finish first - which made Stop look like a no-op).
+  const abortedRef = useRef(false);
 
   const reset = useCallback(() => {
     setStatus(promptAvailable ? "idle" : "unavailable");
@@ -161,7 +152,7 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
     // to the aborted state synchronously; the run loop sees `abortedRef`
     // and breaks, running the generator's `finally` (which destroys the
     // cloned session and stops generation).
-    activeRun.current?.abort();
+    abortedRef.current = true;
     agentRef.current?.abort();
     runningRef.current = false;
     setLiveThought(null);
@@ -173,9 +164,6 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
   // run is a fresh, independent conversation (the on-device model reuses
   // prior answers from session memory otherwise).
   const newSession = useCallback(() => {
-    generation.current++;
-    activeRun.current?.abort();
-    runningRef.current = false;
     agentRef.current?.newSession();
     setStatus(promptAvailable ? "idle" : "unavailable");
     clearStreamingTurn();
@@ -194,7 +182,7 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
   );
 
   const run = useCallback(
-    async (input: string, runOptions?: { signal?: AbortSignal }) => {
+    async (input: string) => {
       if (!promptAvailable) {
         setStatus("unavailable");
         return;
@@ -203,21 +191,7 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
       if (runningRef.current) agentRef.current.abort();
 
       runningRef.current = true;
-      const controller = new AbortController();
-      activeRun.current?.abort();
-      activeRun.current = controller;
-      const epoch = ++generation.current;
-      const ownsView = () => generation.current === epoch;
-      const onAbort = () => controller.abort();
-      runOptions?.signal?.addEventListener("abort", onAbort, { once: true });
-      if (runOptions?.signal?.aborted) controller.abort();
-      let completedResult: AgentTurn | undefined;
-      const onTurnComplete = optionsRef.current.onTurnComplete;
-      const onEvent = optionsRef.current.onEvent;
-      const complete = (turn: AgentTurn) => {
-        completedResult = turn;
-        onTurnComplete?.(turn);
-      };
+      abortedRef.current = false;
       const startedAt = performance.now();
       setStatus("planning");
       clearStreamingTurn();
@@ -238,7 +212,7 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
       let textFlushHandle: number | null = null;
       let textFlushUsesRaf = false;
       const flushPendingText = () => {
-        if (!pendingTextDelta || !ownsView()) return;
+        if (!pendingTextDelta) return;
         const delta = pendingTextDelta;
         pendingTextDelta = "";
         setText((prev) => prev + delta);
@@ -269,9 +243,7 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
         }, 16) as unknown as number;
       };
 
-      const stream = agentRef.current.runStreaming(input, {
-        signal: controller.signal,
-      });
+      const stream = agentRef.current.runStreaming(input);
 
       try {
         for await (const ev of stream) {
@@ -279,9 +251,7 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
           // the transcript freezes exactly where it is. Breaking the loop
           // calls the stream's `return()`, which runs the generator's
           // `finally` and destroys the model session (stopping generation).
-          if (!ownsView() || controller.signal.aborted) break;
-
-          onEvent?.(ev);
+          if (abortedRef.current) break;
 
           // `plan_delta` and `text_delta` arrive at token frequency
           // (often 50-200 per step). Pushing them through React state
@@ -296,22 +266,6 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
             ev.type === "text_delta" ||
             ev.type === "thought_delta";
           if (!isHighFreq) {
-            if (
-              ev.type === "tool_progress" &&
-              ev.data &&
-              typeof ev.data === "object" &&
-              (ev.data as { phase?: string }).phase === "output"
-            ) {
-              const previous = eventBuffer.findIndex(
-                (event) =>
-                  event.type === "tool_progress" &&
-                  event.callId === ev.callId &&
-                  event.data &&
-                  typeof event.data === "object" &&
-                  (event.data as { phase?: string }).phase === "output",
-              );
-              if (previous >= 0) eventBuffer.splice(previous, 1);
-            }
             eventBuffer.push(ev);
             const tail =
               eventBuffer.length > eventLimit
@@ -341,7 +295,6 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
               setLiveThought((prev) =>
                 prev && prev.index === ev.index ? null : prev,
               );
-              projectedText = "";
               setText("");
               const step = stepsByIndex.get(ev.index);
               if (step) {
@@ -438,7 +391,7 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
                   terminalError.name = ev.failure.name;
                   setError(terminalError);
                 }
-                complete({
+                optionsRef.current.onTurnComplete?.({
                   userInput: input,
                   assistantText: ev.text,
                   steps: completedSteps,
@@ -463,56 +416,25 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
       } catch (err) {
         cancelTextFlush();
         flushPendingText();
-        if (ownsView() && !controller.signal.aborted) {
-          const e = err instanceof Error ? err : new Error(String(err));
-          setError(e);
-          setStopReason("model_error");
-          setStatus("error");
-          completedTurn = true;
-          complete({
-            userInput: input,
-            assistantText:
-              "The run stopped unexpectedly. Try again; if it repeats, reload the playground.",
-            steps: Array.from(stepsByIndex.values()),
-            stopReason: "model_error",
-            durationMs: performance.now() - startedAt,
-            failure: { name: e.name, message: e.message },
-          });
-        }
+        const e = err instanceof Error ? err : new Error(String(err));
+        setError(e);
+        setStopReason("model_error");
+        setStatus("error");
+        completedTurn = true;
+        optionsRef.current.onTurnComplete?.({
+          userInput: input,
+          assistantText:
+            "The run stopped unexpectedly. Try again; if it repeats, reload the playground.",
+          steps: Array.from(stepsByIndex.values()),
+          stopReason: "model_error",
+          durationMs: performance.now() - startedAt,
+          failure: { name: e.name, message: e.message },
+        });
       } finally {
         cancelTextFlush();
         flushPendingText();
-        if (controller.signal.aborted && !completedTurn) {
-          for (const event of eventBuffer) {
-            if (event.type !== "tool_call") continue;
-            const step = stepsByIndex.get(event.index);
-            if (
-              !step ||
-              step.toolCalls.some((call) => call.callId === event.callId)
-            )
-              continue;
-            const error = {
-              name: "AbortError",
-              message: "Operation cancelled.",
-            };
-            step.toolCalls.push({
-              callId: event.callId,
-              name: event.name,
-              input: event.input,
-              error,
-              durationMs: 0,
-            });
-            if (ownsView())
-              onEvent?.({
-                type: "tool_result",
-                index: event.index,
-                callId: event.callId,
-                name: event.name,
-                error,
-                durationMs: 0,
-              });
-          }
-          complete({
+        if (abortedRef.current && !completedTurn) {
+          optionsRef.current.onTurnComplete?.({
             userInput: input,
             assistantText: projectedText,
             steps: Array.from(stepsByIndex.values()),
@@ -520,18 +442,11 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
             durationMs: performance.now() - startedAt,
           });
         }
-        runOptions?.signal?.removeEventListener("abort", onAbort);
-        if (ownsView()) {
-          activeRun.current = null;
-          runningRef.current = false;
-          if (controller.signal.aborted) {
-            setStatus("aborted");
-            setStopReason("aborted");
-          }
-          if (optionsRef.current.sessionMode === "thread") clearStreamingTurn();
+        runningRef.current = false;
+        if (optionsRef.current.sessionMode === "thread") {
+          clearStreamingTurn();
         }
       }
-      return completedResult;
     },
     [clearStreamingTurn, promptAvailable, eventLimit],
   );

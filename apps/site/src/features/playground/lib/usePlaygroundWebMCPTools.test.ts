@@ -166,7 +166,7 @@ describe("createPlaygroundWebMCPTools", () => {
       conversation.id,
       "minimal",
     );
-    expect(context.send).toHaveBeenCalledWith("Hello", { signal: undefined });
+    expect(context.send).toHaveBeenCalledWith("Hello");
   });
 
   it("publishes display titles and marks user-derived output as untrusted", () => {
@@ -258,64 +258,3 @@ describe("createPlaygroundWebMCPTools", () => {
     });
   });
 });
-
-it("forwards native cancellation and retains consequential deletion", async () => {
-  const context = createContext();
-  const tools = createPlaygroundWebMCPTools(context);
-  const deletion = tools.find((tool) => tool.name === "delete_conversation");
-  expect(deletion).toMatchObject({
-    destructive: true,
-    annotations: { consequentialHint: true },
-  });
-  const send = tools[6];
-  if (!send) throw new Error("Missing send_message");
-  const controller = new AbortController();
-  await send.execute({ text: "Hello" }, { signal: controller.signal });
-  expect(context.send).toHaveBeenCalledWith("Hello", {
-    signal: controller.signal,
-  });
-  controller.abort();
-  await expect(
-    send.execute({ text: "Never start" }, { signal: controller.signal }),
-  ).rejects.toMatchObject({ name: "AbortError" });
-  expect(context.send).toHaveBeenCalledOnce();
-});
-
-it.each([
-  ["new_conversation", {}],
-  ["switch_conversation", { id: conversation.id }],
-  ["delete_conversation", { id: conversation.id }],
-  ["set_mode", { modeId: "platform" }],
-])(
-  "rejects %s immediately after send acquires ownership",
-  async (name, input) => {
-    let owned = false;
-    let finish!: () => void;
-    const context = createContext({
-      isBusy: () => owned,
-      send: vi.fn(async () => {
-        owned = true;
-        await new Promise<void>((resolve) => {
-          finish = resolve;
-        });
-        owned = false;
-        return true;
-      }),
-    });
-    const registered = registerPlaygroundTools(context);
-    const sending = createPlaygroundWebMCPTools(context)[6].execute({
-      text: "Hello",
-    });
-    expect(context.busy).toBe(false);
-    expect(owned).toBe(true);
-    expect(
-      await findRegisteredTool(registered, name).execute(input),
-    ).toMatchObject({ ok: false });
-    expect(context.ops.create).not.toHaveBeenCalled();
-    expect(context.ops.remove).not.toHaveBeenCalled();
-    expect(context.ops.select).not.toHaveBeenCalled();
-    expect(context.ops.setMode).not.toHaveBeenCalled();
-    finish();
-    await sending;
-  },
-);

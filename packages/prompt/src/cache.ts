@@ -37,7 +37,7 @@ export type CacheOption = "session" | "local" | ResponseCache;
 export const DEFAULT_CACHE_TTL_MS = 60 * 60 * 1000;
 
 /** Version tag for the storage envelope written by the built-in shortcuts. */
-const ENVELOPE_VERSION = 2;
+const ENVELOPE_VERSION = 1;
 
 interface CacheEnvelope {
   v: number;

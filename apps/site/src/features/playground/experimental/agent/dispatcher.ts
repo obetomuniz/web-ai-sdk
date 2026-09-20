@@ -20,7 +20,6 @@
  */
 
 import { AgentToolValidationError, AgentUnknownToolError } from "./errors.js";
-import { abortError, withSignal } from "./tools/lifecycle.js";
 import type { AgentEvent, AgentTool, AgentToolCallRecord } from "./types.js";
 
 export interface DispatcherOptions {
@@ -83,10 +82,8 @@ export async function* runDispatcher(
   const settlements = prepared.map(async (p, i) => {
     const tool = tools.find((t) => t.name === p.name);
     const start = nowMs();
-    let finished = false;
 
     const emit = (data: unknown) => {
-      if (signal.aborted || finished) return;
       progressQueue.push({
         type: "tool_progress",
         callId: p.callId,
@@ -125,18 +122,12 @@ export async function* runDispatcher(
     }
 
     try {
-      if (signal.aborted) throw abortError();
-      const output = await withSignal(
-        Promise.resolve(
-          tool.execute(p.input, {
-            signal,
-            callId: p.callId,
-            step: stepIndex,
-            emit,
-          }),
-        ),
+      const output = await tool.execute(p.input, {
         signal,
-      );
+        callId: p.callId,
+        step: stepIndex,
+        emit,
+      });
       records[i] = {
         callId: p.callId,
         name: p.name,
@@ -164,7 +155,6 @@ export async function* runDispatcher(
         };
       }
     } finally {
-      finished = true;
       pumpProgress();
     }
   });

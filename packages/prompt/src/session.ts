@@ -701,8 +701,5 @@ export const createSessionWithReady = (
       throw toCreateError(err);
     });
   ready.catch(() => {});
-  return {
-    session: wrapInstance(internal),
-    ready,
-  };
+  return { session: wrapInstance(internal), ready };
 };

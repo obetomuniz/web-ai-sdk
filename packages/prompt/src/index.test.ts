@@ -3,7 +3,6 @@ import {
   __clearSessionCacheForTests,
   configureLanguageModelCache,
 } from "./api.js";
-import { defaultCacheKey } from "./cache.js";
 import {
   ask,
   checkAvailability,
@@ -121,7 +120,7 @@ describe("ask", () => {
   it("returns the cached response without calling the model", async () => {
     const fake = installFakeLanguageModel();
     const cache = inMemoryCache();
-    cache.set(defaultCacheKey({ prompt: "hello" }), "cached answer");
+    cache.set('["hello","",null,null]', "cached answer");
     const result = await ask({ input: "hello", cache });
     expect(result).toEqual({ output: "cached answer", cached: true });
     expect(fake.create).not.toHaveBeenCalled();
@@ -130,19 +129,17 @@ describe("ask", () => {
   it("bypasses the cache read and replaces the value on cacheRefresh", async () => {
     const fake = installFakeLanguageModel({ response: "fresh answer" });
     const cache = inMemoryCache();
-    cache.set(defaultCacheKey({ prompt: "hello" }), "cached answer");
+    cache.set('["hello","",null,null]', "cached answer");
     const result = await ask({ input: "hello", cache, cacheRefresh: true });
     expect(result).toEqual({ output: "fresh answer", cached: false });
     expect(fake.create).toHaveBeenCalled();
-    expect(cache.get(defaultCacheKey({ prompt: "hello" }))).toBe(
-      "fresh answer",
-    );
+    expect(cache.get('["hello","",null,null]')).toBe("fresh answer");
   });
 
   it("does not overwrite a cached value when the run is aborted", async () => {
     installFakeLanguageModel();
     const cache = inMemoryCache();
-    cache.set(defaultCacheKey({ prompt: "hello" }), "cached answer");
+    cache.set('["hello","",null,null]', "cached answer");
     const controller = new AbortController();
     controller.abort();
     await expect(
@@ -153,20 +150,16 @@ describe("ask", () => {
         signal: controller.signal,
       }),
     ).rejects.toBeInstanceOf(PromptAbortError);
-    expect(cache.get(defaultCacheKey({ prompt: "hello" }))).toBe(
-      "cached answer",
-    );
+    expect(cache.get('["hello","",null,null]')).toBe("cached answer");
   });
 
   it("does not overwrite a cached value when the response is empty", async () => {
     installFakeLanguageModel({ response: "   " });
     const cache = inMemoryCache();
-    cache.set(defaultCacheKey({ prompt: "hello" }), "cached answer");
+    cache.set('["hello","",null,null]', "cached answer");
     const result = await ask({ input: "hello", cache, cacheRefresh: true });
     expect(result).toEqual({ output: null, cached: false });
-    expect(cache.get(defaultCacheKey({ prompt: "hello" }))).toBe(
-      "cached answer",
-    );
+    expect(cache.get('["hello","",null,null]')).toBe("cached answer");
   });
 
   it("does not collide cache entries when language hints differ", async () => {
@@ -373,9 +366,7 @@ describe("ask", () => {
     const cache = inMemoryCache();
     const result = await ask({ input: "ping", cache });
     expect(result).toEqual({ output: "one-shot answer", cached: false });
-    expect(cache.get(defaultCacheKey({ prompt: "ping" }))).toBe(
-      "one-shot answer",
-    );
+    expect(cache.get('["ping","",null,null]')).toBe("one-shot answer");
   });
 
   it("streams delta chunks (Chrome shape) and reports cumulative buffer via onUpdate", async () => {
@@ -389,6 +380,28 @@ describe("ask", () => {
     });
     expect(result.output).toBe("Hello, world.");
     expect(updates).toEqual(["Hel", "Hello, ", "Hello, world."]);
+  });
+
+  it.each([
+    { chunks: ["4", "4"], output: "44" },
+    { chunks: ["a", "ab"], output: "aab" },
+  ])("preserves repeated native deltas $chunks", async ({ chunks, output }) => {
+    installFakeLanguageModel({ chunks });
+    const updates: string[] = [];
+    expect(
+      await ask({
+        input: "Only the result",
+        onUpdate: (text) => updates.push(text),
+      }),
+    ).toEqual({ output, cached: false });
+    expect(updates.at(-1)).toBe(output);
+
+    const session = createSession();
+    const deltas: string[] = [];
+    for await (const delta of session.sendStreaming("Only the result"))
+      deltas.push(delta);
+    expect(deltas).toEqual(chunks);
+    session.destroy();
   });
 
   it("does not cache by default; same call hits the model twice without a `cache` option", async () => {
@@ -730,7 +743,7 @@ describe("ask", () => {
       });
       expect(first).toEqual({ output: "Hello, world.", cached: false });
       const stored = JSON.parse(store.get("prompt:k") ?? "");
-      expect(stored.v).toBe(2);
+      expect(stored.v).toBe(1);
       expect(stored.value).toBe("Hello, world.");
       expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
@@ -765,7 +778,7 @@ describe("ask", () => {
       });
       expect(first).toEqual({ output: "Hello, world.", cached: false });
       const stored = JSON.parse(store.get("prompt:k") ?? "");
-      expect(stored.v).toBe(2);
+      expect(stored.v).toBe(1);
       expect(stored.value).toBe("Hello, world.");
       expect(stored.expiresAt).toBeGreaterThan(Date.now());
 
@@ -1873,59 +1886,4 @@ describe("PromptAbortError", () => {
       ask({ input: "hi", signal: controller.signal, cache: inMemoryCache() }),
     ).rejects.toBeInstanceOf(PromptAbortError);
   });
-});
-
-describe("lossless Prompt delta streams", () => {
-  it.each([
-    [["4", "4"], "44"],
-    [["a", "ab"], "aab"],
-    [["ha", "ha", "ha"], "hahaha"],
-  ])(
-    "preserves repeated and prefix-shaped chunks %j",
-    async (chunks, expected) => {
-      installFakeLanguageModel({ chunks });
-      const updates: string[] = [];
-      const result = await ask({
-        input: "Only the result",
-        onUpdate: (text) => updates.push(text),
-      });
-      expect(result.output).toBe(expected);
-      expect(updates.at(-1)).toBe(expected);
-      const session = createSession();
-      const deltas: string[] = [];
-      for await (const delta of session.sendStreaming("Only the result"))
-        deltas.push(delta);
-      expect(deltas).toEqual(chunks);
-      session.destroy();
-    },
-  );
-});
-
-it("ignores cached results from before the delta fix", async () => {
-  installFakeLanguageModel({ chunks: ["4", "4"] });
-  const key = `prompt:${defaultCacheKey({ prompt: "result" })}`;
-  const store = new Map<string, string>([
-    [key, JSON.stringify({ v: 1, value: "4", expiresAt: Date.now() + 60_000 })],
-  ]);
-  vi.stubGlobal("sessionStorage", {
-    getItem: (entry: string) => store.get(entry) ?? null,
-    setItem: (entry: string, value: string) => store.set(entry, value),
-    removeItem: (entry: string) => store.delete(entry),
-  });
-  try {
-    expect(await ask({ input: "result", cache: "session" })).toEqual({
-      output: "44",
-      cached: false,
-    });
-    expect(JSON.parse(store.get(key) ?? "")).toMatchObject({
-      v: 2,
-      value: "44",
-    });
-    expect(await ask({ input: "result", cache: "session" })).toEqual({
-      output: "44",
-      cached: true,
-    });
-  } finally {
-    vi.unstubAllGlobals();
-  }
 });

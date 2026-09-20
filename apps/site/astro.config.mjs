@@ -62,24 +62,6 @@ export default defineConfig({
     // React must register before Starlight's MDX renderer; otherwise MDX probes
     // React function components directly during dev SSR, which trips hook calls.
     react(),
-    ...(process.env.PLAYGROUND_SMOKE === "1"
-      ? [
-          {
-            name: "playground-smoke",
-            hooks: {
-              "astro:config:setup"({ injectRoute }) {
-                injectRoute({
-                  pattern: "/playground/smoke/",
-                  entrypoint: new URL(
-                    "./src/features/playground/smoke.astro",
-                    import.meta.url,
-                  ),
-                });
-              },
-            },
-          },
-        ]
-      : []),
     starlight({
       title: "web-ai-sdk",
       description:

@@ -104,9 +104,8 @@ preview.
 
 ### 4. Availability checks are optimistic
 
-Prompt API detection is asynchronous. Keep the composer usable while readiness is unknown. Explain download states without creating a session.
-
-Send expresses user intent and starts Prompt creation. A downloadable model does not disable Send.
+Prompt API detection is asynchronous. Treat the initial state as ready. Show a
+warning only after the browser reports a known unavailable or download state.
 
 This prevents status changes during page load. Poll download states because the
 browser can update them without a reload.
@@ -190,7 +189,8 @@ Conversations and turns persist across reloads. Runtime Activity does not. It
 describes events from the current page session and is intentionally capped at
 50 entries.
 
-The Activity surface includes Prompt, conversation-title Summarizer, selected text tools, and WebMCP discovery checks. Keeping capability state in the same diagnostic list avoids decorative
+The Activity surface begins with live checks for Prompt, Summarizer, and WebMCP
+support. Keeping capability state in the same diagnostic list avoids decorative
 status chrome and makes unavailable or downloading states inspectable beside
 the events they affect.
 
@@ -267,72 +267,3 @@ Use a supported browser for final Playground QA. Verify at minimum:
 - Markdown lists, code, links, and partial streaming syntax;
 - console warnings and errors;
 - layout shift during reload.
-
-
-## SDK coverage and limits
-
-| Package | Playground role | Unsupported behavior and limits |
-| --- | --- | --- |
-| Prompt | Thread sessions, clones, sampling, context budgets, and requested schema-constrained examples | Missing API disables responses. Creation and download failures appear in Activity. Models start after Send or example regeneration. |
-| Summarizer | `summarize_text` and conversation titles | Tool failures stay visible. Titles can fall back to request text. The summary adapter accepts only supplied or fetched source text. |
-| Translator | `translate_text` | Checks the normalized source/target pair. Same-language requests return unchanged text. No pair is prepared before its options exist. |
-| Detector | `detect_language` | Returns ranked candidates and confidence scores. `topK` limits presentation to 1–20 results. |
-| Writer | `write_text` | Drafts text with task, context, tone, format, and length options. Availability depends on browser setup. |
-| Rewriter | `rewrite_text` | Revises supplied text with relative tone and length options. The original remains unchanged. |
-| Proofreader | `proofread_text` | Preserves corrected text, offsets, replacements, types, and explanations. Invalid ranges are displayed without slicing or applying edits. |
-| WebMCP | Seven conversation controls through `useWebMCP` | Discovery loading, errors, and counts are separate from API exposure. Consumer support is independent of browser provider support. |
-
-Package stages and setup remain defined in the [canonical browser guidance](../../content/docs/browser-support.mdx).
-The internal planner calls application callbacks. It does not execute discovered tools through native WebMCP.
-The optional registry bridge stays disabled by default. When enabled, it forwards the native execution signal.
-
-### Tool outcomes
-
-Activity and tool cards distinguish success, unavailable, invalid input, operational error, and cancellation.
-Typed SDK errors retain their names and messages. Cancellation cannot become a fallback answer.
-
-The Built-in Web AI suite requires specialized tools for its supported operations.
-Its English intent checks cover direct commands and curated examples. Explicit tool names enforce calls in any mode.
-The command guard excludes quoted source and text after a colon or newline. It does not treat bare “and” as another command.
-Model instructions handle other phrasing; these checks are not a general natural-language intent parser.
-Skipped or failed required work produces an explicit failure instead of a generated specialized result.
-General-purpose modes label Prompt fallback after specialized failures.
-
-Expand a tool card to inspect its options, result, preparation, and download progress.
-Writer and Rewriter progress contains cumulative text. The renderer replaces the previous buffer.
-Proofreader offsets refer to `checkedText`, which matches the SDK's whitespace-trimmed input.
-The raw `original` remains available. Correction metadata is retained verbatim; no correction is applied automatically.
-Use the response's Copy control explicitly to copy corrected text.
-
-### Preparation and cancellation
-
-Passive checks never create models. Configurable tools remain unknown until their task options exist.
-Each validated dispatch probes its actual configuration, acquires a matching `prepare*` lease, runs the operation, and releases its lease.
-This task-scoped design does not keep specialized sessions warm across separate runs.
-It never clears global SDK caches or enables result persistence.
-
-Run signals release preparation leases even before readiness settles.
-Mode changes and unmount cancel owned work. Generation checks reject late output from a prior run.
-WebMCP `send_message` uses the invocation's signal. A late abort cannot cancel another invocation.
-Deletion keeps its destructive compatibility hint and adds `consequentialHint: true`; application busy and ownership checks still control mutations.
-
-### Browser smoke checks
-
-Build packages, then create a local QA build with the smoke route:
-
-```sh
-pnpm build:packages
-PLAYGROUND_SMOKE=1 pnpm build:site
-pnpm preview:site
-```
-
-Open `/playground/smoke/` on the preview origin and select **Run checks**.
-Normal site builds omit this route and its browser bundle.
-The harness calls real SDK exports, tests the repeated-digit follow-up, and records specialized results.
-It also checks native WebMCP invocation counts, cancellation, discovery, and deletion of one disposable in-memory conversation.
-It never reads or deletes persisted Playground conversations.
-
-Record exact installed versions, flags, skips, and failures with the results.
-The harness installs no origin-trial tokens. Flag testing does not verify origin-trial-token setup.
-Run each available native execution generation separately. A skipped or missing generation is not a pass.
-See [browser validation](./browser-validation.md) for this implementation's recorded results.

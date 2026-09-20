@@ -42,8 +42,7 @@ import { streamFromGenerator, streamFromResult } from "./events.js";
 import type { AgentRunContext } from "./runContext.js";
 import { extractFetchSourceText } from "./summarizeProvenance.js";
 import { parseToolCode, proseStreamLimit, stripToolCode } from "./toolCode.js";
-import { toolOutcome } from "./toolOutcome.js";
-import { withSignal } from "./tools/lifecycle.js";
+import { isEmptySummarizeOutput } from "./tools/summarize.js";
 import type {
   Agent,
   AgentEvent,
@@ -125,7 +124,6 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
   const createConversationSession = (): Session =>
     createSession({
       systemPrompt,
-      monitor: options.monitor,
       samplingMode: options.samplingMode,
       language: options.language,
       tools: sdkTools,
@@ -164,15 +162,8 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
   const acquireRunSession = async (): Promise<Session> => {
     const base = getBase();
     try {
-      const clone = await base.clone();
-      if (destroyed) {
-        clone.destroy();
-        throw new AgentUnavailableError("Agent has been destroyed.");
-      }
-      return clone;
+      return await base.clone();
     } catch {
-      if (destroyed)
-        throw new AgentUnavailableError("Agent has been destroyed.");
       return createConversationSession();
     }
   };
@@ -235,7 +226,10 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
     return acquireRunSession();
   };
 
-  // Create the Prompt session only after a run expresses user intent.
+  // Pre-warm the model while the user reads the UI (mirrors the
+  // constraint agent), so the first run can claim a ready clone.
+  getBase();
+  if (sessionMode === "run-isolated") prefetchRunClone();
 
   async function* loop(
     input: string,
@@ -260,7 +254,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
 
     let session: Session;
     try {
-      session = await withSignal(takeRunSession(), signal);
+      session = await takeRunSession();
     } catch (error) {
       if (currentController === controller) currentController = null;
       const terminal = describeRunFailure(error);
@@ -375,8 +369,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
       requiredToolNames.filter(
         (name) =>
           !toolCallRecords.some(
-            (record) =>
-              record.name === name && toolOutcome(record) === "success",
+            (record) => record.name === name && !record.error,
           ),
       );
     const unattemptedRequestedTools = () =>
@@ -453,7 +446,6 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
             signal,
             stepIndex,
             tools,
-            unattemptedRequestedTools().length === 0,
           );
           reply = streamed.text;
           streamedAnswerText = streamed.streamedAnswerText;
@@ -605,12 +597,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
             : [];
           finalText = maybeReportIncompleteToolRequests(
             maybeFlagUnverifiedUrl(
-              maybeFlagUnsupportedValues(
-                options.strictTools && uncompletedRequestedTools().length > 0
-                  ? ""
-                  : answer,
-                unsupportedValues,
-              ),
+              maybeFlagUnsupportedValues(answer, unsupportedValues),
               {
                 hasFetchTool: !!fetchTool,
                 totalUrls: inputUrls.length,
@@ -621,16 +608,6 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
             requiredToolNames,
             toolCallRecords,
           );
-          if (
-            !options.strictTools &&
-            toolCallRecords.some(
-              (record) =>
-                tools.find((tool) => tool.name === record.name)?.capability &&
-                toolOutcome(record) !== "success",
-            )
-          ) {
-            finalText = `Prompt fallback after a specialized tool failed.\n\n${finalText}`;
-          }
           yield {
             type: "plan",
             index: stepIndex,
@@ -643,15 +620,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
             text: finalText,
           });
           yield { type: "step_end", index: stepIndex };
-          stopReason =
-            options.strictTools && uncompletedRequestedTools().length > 0
-              ? "tool_error"
-              : "done";
-          if (stopReason === "tool_error")
-            failure = {
-              name: "AgentIncompleteToolRequestError",
-              message: "The requested specialized tool did not complete.",
-            };
+          stopReason = "done";
           yield { type: "message", text: finalText };
           break;
         }
@@ -662,21 +631,12 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
         // that prose as a synthesized `thought` for parity with the
         // constraint path's transcript.
         const thought = leadingProse(reply, tools);
-        // returnDirect tools already become the answer. Keep their preface
-        // off the transcript so the rewritten text is not shown, then shown
-        // again after the tool card.
-        const hideThought =
-          calls.length === 1 &&
-          tools.find((tool) => tool.name === calls[0]?.name)?.returnDirect ===
-            true;
-        const visibleThought = hideThought ? "" : thought;
         // We optimistically stream leading prose to the answer panel before
         // knowing the turn is a tool call. Now that it is, discard that
         // premature text so it isn't duplicated. It re-appears just below as
         // this turn's interleaved `thought`, beside the tool cards.
         if (streamedAnswerText) yield { type: "step_reset", index: stepIndex };
-        if (visibleThought)
-          yield { type: "thought", index: stepIndex, text: visibleThought };
+        if (thought) yield { type: "thought", index: stepIndex, text: thought };
 
         // Surface a plan so the UI flips to "tool_calling", then dispatch
         // through the shared dispatcher.
@@ -684,7 +644,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
           type: "plan",
           index: stepIndex,
           plan: {
-            ...(visibleThought ? { thought: visibleThought } : {}),
+            ...(thought ? { thought } : {}),
             toolCalls: calls.map((c) => ({ name: c.name, input: c.input })),
           },
         };
@@ -696,51 +656,21 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
         });
         recordToolResults(records);
 
-        if (
-          signal.aborted ||
-          records.some((record) => toolOutcome(record) === "cancelled")
-        ) {
-          steps.push({
-            index: stepIndex,
-            plan: { toolCalls: calls },
-            toolCalls: records,
-          });
+        // Summarizer returned `{ summary: "" }` (availability race). The next
+        // model turn will summarize in prose - drop the empty tool card so the
+        // transcript does not look like the tool succeeded with no output.
+        const summarizeOnlyEmpty =
+          calls.length === 1 &&
+          calls[0]?.name === "summarize_text" &&
+          records[0] &&
+          !records[0].error &&
+          isEmptySummarizeOutput(records[0].output);
+        if (summarizeOnlyEmpty) {
+          yield { type: "step_reset", index: stepIndex };
           yield { type: "step_end", index: stepIndex };
-          stopReason = "aborted";
-          break;
-        }
-        // A failed specialized operation stays visible. SDK mode cannot synthesize a replacement.
-        const specializedFailure = records.find(
-          (record) =>
-            options.strictTools &&
-            tools.find((tool) => tool.name === record.name)?.capability &&
-            toolOutcome(record) !== "success",
-        );
-        if (specializedFailure) {
-          steps.push({
-            index: stepIndex,
-            plan: { toolCalls: calls },
-            toolCalls: records,
-          });
-          yield { type: "step_end", index: stepIndex };
-          stopReason =
-            toolOutcome(specializedFailure) === "unavailable"
-              ? "unavailable"
-              : "tool_error";
-          finalText = `${specializedFailure.name}: ${toolOutcome(specializedFailure)}. ${specializedFailure.error?.message ?? "No specialized result is available."}`;
-          const successes = records
-            .filter((record) => toolOutcome(record) === "success")
-            .map((record) => record.name);
-          if (successes.length > 0)
-            finalText += `\n\nCompleted: ${successes.join(", ")}. Expand their result cards to inspect the output.`;
-          failure = specializedFailure.error
-            ? {
-                name: specializedFailure.error.name ?? "ToolError",
-                message: specializedFailure.error.message,
-              }
-            : undefined;
-          yield { type: "message", text: finalText };
-          break;
+          turnInput =
+            "The on-device Summarizer returned no text. Summarize the user's source yourself in plain text now - do not call summarize_text or any other tool.";
+          continue;
         }
 
         const directText = resolveDirectReturnText(
@@ -754,7 +684,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
           steps.push({
             index: stepIndex,
             plan: {
-              ...(visibleThought ? { thought: visibleThought } : {}),
+              ...(thought ? { thought } : {}),
               toolCalls: calls,
               final: true,
               message: finalText,
@@ -762,16 +692,6 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
             toolCalls: records,
             text: finalText,
           });
-          if (
-            !options.strictTools &&
-            toolCallRecords.some(
-              (record) =>
-                tools.find((tool) => tool.name === record.name)?.capability &&
-                toolOutcome(record) !== "success",
-            )
-          ) {
-            finalText = `${records[0]?.name ?? "Tool"} result after earlier specialized work failed.\n\n${finalText}`;
-          }
           yield {
             type: "plan",
             index: stepIndex,
@@ -784,10 +704,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
         }
         steps.push({
           index: stepIndex,
-          plan: {
-            ...(visibleThought ? { thought: visibleThought } : {}),
-            toolCalls: calls,
-          },
+          plan: { ...(thought ? { thought } : {}), toolCalls: calls },
           toolCalls: records,
         });
         yield { type: "step_end", index: stepIndex };
@@ -805,10 +722,6 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
         }
 
         turnInput = buildToolResultTurn(records, perResultMaxChars);
-        if (records.some((record) => toolOutcome(record) !== "success")) {
-          turnInput +=
-            "\nIf you answer using Prompt after a specialized failure, label the answer as a Prompt fallback. Never claim the specialized tool succeeded.";
-        }
       }
 
       if (stopReason === null) {
@@ -828,26 +741,6 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
         }
       }
     } finally {
-      if (
-        sessionMode === "thread" &&
-        stopReason === "done" &&
-        finalText.trim()
-      ) {
-        restoredMessages.push(
-          { role: "user", content: input },
-          { role: "assistant", content: finalText },
-        );
-      }
-      if (
-        sessionMode === "thread" &&
-        signal.aborted &&
-        conversationSession === session
-      ) {
-        session.destroy();
-        conversationSession = null;
-        baseSession?.destroy();
-        baseSession = null;
-      }
       if (currentController === controller) currentController = null;
       if (sessionMode === "run-isolated") {
         session.destroy();
@@ -932,7 +825,6 @@ async function* streamReply(
   signal: AbortSignal,
   stepIndex: number,
   tools: readonly AgentTool[],
-  streamAnswer: boolean,
 ): AsyncGenerator<AgentEvent, StreamedReply, void> {
   const stream = session.sendStreaming(input, { signal });
   const it = stream[Symbol.asyncIterator]();
@@ -990,12 +882,12 @@ async function* streamReply(
       if (kind === "prose") {
         const fence = acc.indexOf("```");
         if (fence !== -1) {
-          if (streamAnswer && fence > emittedProse) {
+          if (fence > emittedProse) {
             yield { type: "text_delta", delta: acc.slice(emittedProse, fence) };
             emittedProse = fence;
           }
           kind = "tool";
-        } else if (streamAnswer) {
+        } else {
           const limit = proseStreamLimit(acc);
           if (limit > emittedProse) {
             yield { type: "text_delta", delta: acc.slice(emittedProse, limit) };
@@ -1252,8 +1144,7 @@ function maybeReportIncompleteToolRequests(
   const failed = requestedNames.filter((name) => {
     const attempts = records.filter((record) => record.name === name);
     return (
-      attempts.length > 0 &&
-      attempts.every((record) => toolOutcome(record) !== "success")
+      attempts.length > 0 && attempts.every((record) => Boolean(record.error))
     );
   });
   if (missing.length === 0 && failed.length === 0) return answer;
@@ -1293,7 +1184,7 @@ function resolveDirectReturnText(
   const call = calls[0];
   const record = records[0];
   if (!call || !record) return null;
-  if (toolOutcome(record) !== "success") return null;
+  if (record.error) return null;
 
   const tool = tools.find((t) => t.name === call.name);
   if (!tool) return null;
@@ -1311,11 +1202,6 @@ function directOutputToText(output: unknown, toolName: string): string {
   if (toolName === "summarize_text" && output && typeof output === "object") {
     const summary = (output as { summary?: unknown }).summary;
     if (typeof summary === "string") return summary.trim();
-  }
-  if (output && typeof output === "object") {
-    const result = output as { text?: unknown; correctedInput?: unknown };
-    if (typeof result.text === "string") return result.text;
-    if (typeof result.correctedInput === "string") return result.correctedInput;
   }
   if (output === null || output === undefined) return "";
   try {
@@ -1541,7 +1427,17 @@ function composeSignals(
   primary: AbortSignal,
   external: AbortSignal | undefined,
 ): AbortSignal {
-  return external ? AbortSignal.any([primary, external]) : primary;
+  if (!external) return primary;
+  if (primary.aborted || external.aborted) {
+    const c = new AbortController();
+    c.abort();
+    return c.signal;
+  }
+  const c = new AbortController();
+  const onAbort = () => c.abort();
+  primary.addEventListener("abort", onAbort, { once: true });
+  external.addEventListener("abort", onAbort, { once: true });
+  return c.signal;
 }
 
 function makeUnavailableAgent(tools: readonly AgentTool[]): Agent {
