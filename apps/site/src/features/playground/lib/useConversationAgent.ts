@@ -79,7 +79,19 @@ export function useConversationAgent({
           typeof event.data === "object" &&
           (event.data as { phase?: string }).phase !== "output")
       ) {
-        setCapabilityEvents((previous) => [...previous.slice(-99), event]);
+        setCapabilityEvents((previous) => {
+          const next =
+            event.type === "tool_progress"
+              ? previous.filter(
+                  (entry) =>
+                    entry.type !== "tool_progress" ||
+                    entry.callId !== event.callId ||
+                    (entry.data as { phase?: string } | undefined)?.phase !==
+                      (event.data as { phase?: string } | undefined)?.phase,
+                )
+              : previous;
+          return [...next, event].slice(-100);
+        });
       }
       if (event.type === "tool_result")
         pushActivity({

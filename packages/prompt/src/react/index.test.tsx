@@ -90,10 +90,7 @@ describe("usePrompt", () => {
   it("sets fromCache=true when the result comes from cache", async () => {
     installFakeLanguageModel();
     const memCache = new Map<string, string>();
-    memCache.set(
-      defaultCacheKey({ prompt: "q", streamMode: "delta" }),
-      "cached!",
-    );
+    memCache.set(defaultCacheKey({ prompt: "q" }), "cached!");
     const { result } = renderHook(() =>
       usePrompt({
         cache: {

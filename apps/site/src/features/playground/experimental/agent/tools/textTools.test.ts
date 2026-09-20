@@ -277,7 +277,10 @@ it("labels same-language translation as a no-op without creating a model", async
   expect(create).not.toHaveBeenCalled();
 });
 
-it("coerces Writer format aliases and ignores extra keys", async () => {
+it.each([
+  ["plain_text", "plain-text"],
+  ["email", "plain-text"],
+] as const)("coerces Writer format %s to %s", async (format, expected) => {
   const create = vi.fn(async () => ({
     write: async () => "Hello",
     destroy() {},
@@ -285,12 +288,12 @@ it("coerces Writer format aliases and ignores extra keys", async () => {
   vi.stubGlobal("Writer", { availability: async () => "available", create });
   const { result } = await dispatch(writeTool, {
     task: "Draft an email",
-    format: "plain_text",
+    format,
     style: "email",
   });
   expect(toolOutcome(result)).toBe("success");
   expect(create).toHaveBeenCalledWith(
-    expect.objectContaining({ format: "plain-text" }),
+    expect.objectContaining({ format: expected }),
   );
 });
 
@@ -370,6 +373,27 @@ it("accepts a language string for Proofreader expectedInputLanguages", async () 
     expect.objectContaining({ expectedInputLanguages: ["en"] }),
   );
 });
+
+it.each([
+  { languages: ["en", 42] },
+  { languages: '["en", 42]' },
+  { languages: '["en",]' },
+])(
+  "rejects malformed Proofreader language lists before creating a model: %j",
+  async ({ languages }) => {
+    const create = vi.fn();
+    vi.stubGlobal("Proofreader", {
+      availability: async () => "available",
+      create,
+    });
+    const { result } = await dispatch(proofreadTool, {
+      text: "I seen him.",
+      expectedInputLanguages: languages,
+    });
+    expect(toolOutcome(result)).toBe("invalid input");
+    expect(create).not.toHaveBeenCalled();
+  },
+);
 
 it("reports malformed input as a short field message", async () => {
   vi.stubGlobal("Writer", {

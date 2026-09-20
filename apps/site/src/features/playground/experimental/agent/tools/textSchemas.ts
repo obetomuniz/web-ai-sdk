@@ -64,28 +64,18 @@ export function coerceOption<T extends string>(
 
 export function coerceLanguageList(value: unknown): unknown {
   if (value == null || value === "") return undefined;
-  if (Array.isArray(value)) {
-    const languages = value.filter(
-      (entry): entry is string =>
-        typeof entry === "string" && entry.trim().length > 0,
-    );
-    return languages.length > 0 ? languages : undefined;
-  }
+  if (Array.isArray(value)) return value;
   if (typeof value !== "string") return value;
   const trimmed = value.trim();
   if (trimmed.startsWith("[")) {
     try {
       const parsed: unknown = JSON.parse(trimmed.replace(/'/g, '"'));
-      if (Array.isArray(parsed)) return coerceLanguageList(parsed);
+      return Array.isArray(parsed) ? parsed : value;
     } catch {
-      // Native tool_code may also emit a comma-separated string.
+      return value;
     }
   }
-  const languages = trimmed
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-  return languages.length > 0 ? languages : undefined;
+  return trimmed.split(",").map((entry) => entry.trim());
 }
 
 export function coerceInteger(value: unknown): unknown {

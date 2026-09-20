@@ -153,7 +153,6 @@ export const resolveCache = (
 };
 
 export interface DefaultCacheKeyInput {
-  streamMode?: "delta" | "cumulative";
   prompt: string;
   systemPrompt?: string;
   samplingMode?: LanguageModelSamplingMode;
@@ -175,7 +174,6 @@ const toolDescriptorKey = (tool: LanguageModelTool): object => ({
 });
 
 const hasExpandedKeyFields = (input: DefaultCacheKeyInput): boolean =>
-  input.streamMode !== undefined ||
   input.language !== undefined ||
   input.languageHints !== undefined ||
   input.expectedInputs !== undefined ||
@@ -190,6 +188,8 @@ const hasExpandedKeyFields = (input: DefaultCacheKeyInput): boolean =>
  */
 export const defaultCacheKey = (input: DefaultCacheKeyInput): string => {
   const parts: unknown[] = [
+    // Ignore cached results written before native chunks were treated as deltas.
+    "prompt-result-v2",
     input.prompt,
     input.systemPrompt ?? "",
     input.temperature ?? null,
@@ -201,7 +201,6 @@ export const defaultCacheKey = (input: DefaultCacheKeyInput): string => {
   }
   if (input.samplingMode !== undefined) parts.push(input.samplingMode);
   parts.push(
-    input.streamMode ?? null,
     input.language ?? "",
     input.languageHints ?? false,
     input.expectedInputs ?? null,

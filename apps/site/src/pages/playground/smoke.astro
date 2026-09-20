@@ -3,13 +3,28 @@ import "../../styles/home.css";
 ---
 <!doctype html>
 <html lang="en">
-  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width" /><meta name="robots" content="noindex" /><title>Playground SDK smoke checks</title></head>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="robots" content="noindex" />
+    <title>Playground SDK smoke checks</title>
+  </head>
   <body class="min-h-screen bg-bg text-fg">
     <main class="mx-auto max-w-4xl space-y-6 p-6">
       <h1 class="text-2xl">Playground SDK smoke checks</h1>
-      <p>Run real SDK operations after configuring a supported browser. Prepare models in Playground before running skipped checks. Conversation checks use disposable in-memory data.</p>
-      <p><a href="../../docs/browser-support/" class="underline">Browser setup</a> · <a href="../" class="underline">Playground</a></p>
-      <div class="flex gap-4"><button id="run" class="rounded-full bg-fg px-5 py-2 text-bg">Run checks</button><button id="stop" class="rounded-full border px-5 py-2" disabled>Stop checks</button></div>
+      <p>
+        Run real SDK operations after configuring a supported browser. Prepare
+        models in Playground before running skipped checks. Conversation checks
+        use disposable in-memory data.
+      </p>
+      <p>
+        <a href="../../docs/browser-support/" class="underline">Browser setup</a>
+        · <a href="../" class="underline">Playground</a>
+      </p>
+      <div class="flex gap-4">
+        <button id="run" class="rounded-full bg-fg px-5 py-2 text-bg">Run checks</button>
+        <button id="stop" class="rounded-full border px-5 py-2" disabled>Stop checks</button>
+      </div>
       <pre id="results" aria-live="polite" class="overflow-auto whitespace-pre-wrap break-words rounded-xl bg-surface p-4">No checks have run.</pre>
     </main>
     <script>
@@ -20,11 +35,20 @@ import "../../styles/home.css";
       let controller: AbortController | undefined;
       run?.addEventListener("click", async () => {
         if (!run || !stop || !output) return;
-        controller = new AbortController(); const results: SmokeResult[] = [];
-        run.disabled = true; stop.disabled = false;
+        controller = new AbortController();
+        const results: SmokeResult[] = [];
+        run.disabled = true;
+        stop.disabled = false;
         output.textContent = "Running checks…";
-        try { await runSmoke((result) => { results.push(result); output.textContent = JSON.stringify(results, null, 2); }, controller.signal); }
-        finally { run.disabled = false; stop.disabled = true; }
+        try {
+          await runSmoke((result) => {
+            results.push(result);
+            output.textContent = JSON.stringify(results, null, 2);
+          }, controller.signal);
+        } finally {
+          run.disabled = false;
+          stop.disabled = true;
+        }
       });
       stop?.addEventListener("click", () => controller?.abort());
       window.addEventListener("pagehide", () => controller?.abort());

@@ -158,7 +158,6 @@ The hook does not track responses, history, or streaming status. Keep that state
 ```ts
 interface AskOptions {
   input: string;
-  streamMode?: "delta" | "cumulative"; // default "delta"
   systemPrompt?: string;
   samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
   /** @deprecated Web page contexts are moving to samplingMode. */
@@ -187,13 +186,9 @@ interface AskResult {
 }
 ```
 
-Native chunks default to `streamMode: "delta"`. Repeated chunks remain separate: `["4", "4"]` produces `"44"`.
-
-For a verified legacy host that emits growing snapshots, pass `streamMode: "cumulative"` to `ask()`, `createSession()`, or `useSession()`.
-Clones inherit this option. A cumulative snapshot must start with the previous snapshot; otherwise the operation rejects.
-
-Migration: automatic prefix detection was removed because valid deltas can share prefixes. Configure cumulative mode explicitly for hosts that need it.
-Default result-cache keys include the effective stream mode and ignore legacy entries. Custom cache keys must distinguish modes or refresh cached results after migration.
+Native streaming chunks are deltas. Repeated chunks remain separate: `["4", "4"]` produces `"44"`.
+The wrapper no longer guesses whether a chunk is a growing snapshot because valid deltas can share prefixes.
+Default result-cache keys ignore entries from before this fix. Refresh custom cache keys if they hold an affected result.
 
 `onUpdate` receives the cumulative text so far, not deltas. For delta-shaped streaming use `createSession().sendStreaming()`.
 
@@ -209,7 +204,6 @@ If `systemPrompt` is passed alongside `createOptions.initialPrompts`, the SDK em
 
 ```ts
 interface CreateSessionOptions {
-  streamMode?: "delta" | "cumulative"; // default "delta"
   systemPrompt?: string;
   samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
   /** @deprecated Web page contexts are moving to samplingMode. */

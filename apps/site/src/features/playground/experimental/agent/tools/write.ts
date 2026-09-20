@@ -41,6 +41,7 @@ export const writeTool: AgentTool = {
         ["markdown", "plain-text"],
         {
           md: "markdown",
+          email: "plain-text",
           plaintext: "plain-text",
           text: "plain-text",
           txt: "plain-text",

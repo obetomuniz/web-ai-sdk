@@ -120,7 +120,11 @@ export async function runSmoke(
   const textCases: Array<[AgentTool, Record<string, unknown>]> = [
     [
       writeTool,
-      { task: "Draft a one-sentence welcome email.", length: "short" },
+      {
+        task: "Draft a one-sentence welcome email.",
+        format: "email",
+        length: "short",
+      },
     ],
     [rewriteTool, { text: "hey, send me the doc please", tone: "more-formal" }],
     [
