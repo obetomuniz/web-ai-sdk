@@ -15,7 +15,7 @@ The package provides typed registration, cleanup, discovery, and execution. It h
 
 ## Status
 
-Chrome provides a public [origin trial from Chrome 149](https://developer.chrome.com/docs/ai/webmcp). For local development, enable `chrome://flags/#enable-webmcp-testing`. Microsoft lists WebMCP in the [Edge 150 origin trials](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/150).
+Chrome provides a public [origin trial from Chrome 149](https://developer.chrome.com/docs/ai/webmcp). For local development, enable `chrome://flags/#enable-webmcp-testing`. Microsoft Learn [Edge 154 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/154) list WebMCP under Origin trials. The [Edge 153 notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/153) list the same trial.
 
 Without WebMCP, registration is a no-op and discovery returns an empty list. Execution throws `WebMCPUnavailableError`.
 
