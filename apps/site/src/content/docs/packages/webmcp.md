@@ -321,13 +321,14 @@ interface ToolDefinition<
 
 `title` is for human-facing host UI. `description` is consumed by the agent host; write it as an instruction to an LLM about when to call the tool.
 
-The current WebMCP draft defines `readOnlyHint`, `untrustedContentHint`, and `consequentialHint`. The SDK also retains `destructiveHint`, `idempotentHint`, `openWorldHint`, and the `destructive` shorthand as source-compatible passthroughs for MCP-shaped and earlier WebMCP hosts; current-draft browsers may ignore those compatibility fields.
+The current WebMCP draft defines `readOnlyHint`, `untrustedContentHint`, `consequentialHint`, and `debugging`. The SDK also retains `destructiveHint`, `idempotentHint`, `openWorldHint`, and the `destructive` shorthand as source-compatible passthroughs for MCP-shaped and earlier WebMCP hosts; current-draft browsers may ignore those compatibility fields.
 
 ```ts
 interface ToolAnnotations {
   readOnlyHint?: boolean;
   untrustedContentHint?: boolean;
   consequentialHint?: boolean;
+  debugging?: boolean;
   destructiveHint?: boolean; // compatibility
   idempotentHint?: boolean; // compatibility
   openWorldHint?: boolean; // compatibility
@@ -404,6 +405,10 @@ Set `annotations.consequentialHint: true` for tools that can cause significant r
 The hint is not authorization and does not guarantee a confirmation prompt. Applications must enforce authentication, authorization, validation, origin controls, and rate limits. The SDK does not add confirmation behavior.
 
 The SDK forwards explicit `true` and `false` values and leaves the property absent when omitted. Discovery preserves the metadata returned by the host. There is no shorthand, and the SDK does not infer this value from `destructiveHint`.
+
+Set `annotations.debugging: true` for tools intended for debugging and developer tooling rather than end-user interactions. The field categorizes a tool. It does not grant permission or bypass application checks. Apply the same authentication, authorization, and validation as other tools.
+
+The SDK forwards explicit `true` and `false` values and leaves the property absent when omitted. Discovery preserves the metadata returned by the host. There is no shorthand. The SDK does not filter tools by this field or infer other annotations from it.
 
 Set `annotations.untrustedContentHint: true` when results contain external, user-generated, or otherwise untrusted content. It is a trust-boundary signal for the host, not validation of the result's shape, truth, freshness, or safety.
 

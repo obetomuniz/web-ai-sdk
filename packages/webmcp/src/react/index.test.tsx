@@ -5,6 +5,7 @@ import type {
   RegisteredTool as CoreRegisteredTool,
   StandardSchemaV1,
   Tool,
+  ToolAnnotations,
   ToolDefinition,
   ToolExecuteCallbackOptions,
 } from "../index.js";
@@ -63,6 +64,9 @@ afterEach(() => {
   setModelContext("document", undefined);
   setModelContext("navigator", undefined);
 });
+
+/** Flush the async native register pipeline (chains several microtasks). */
+const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 const stringSchema = (label: string): StandardSchemaV1<string, string> => ({
   "~standard": {
@@ -387,6 +391,65 @@ describe("useWebMCP", () => {
     });
     unmount();
     expect(registered.size).toBe(0);
+  });
+
+  it("forwards debugging and rebuilds registration only when its value or presence changes", async () => {
+    const { registerTool, registered } = installFakeModelContext("document");
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { rerender, unmount } = renderHook(
+      ({ annotations }: { annotations: ToolAnnotations }) =>
+        useWebMCP({
+          name: "inspect_state",
+          description: "Returns application state for developer tooling.",
+          annotations,
+          execute: async () => ({}),
+        }),
+      {
+        initialProps: {
+          annotations: {
+            debugging: true,
+            readOnlyHint: true,
+          } as ToolAnnotations,
+        },
+      },
+    );
+
+    expect(registered.get("inspect_state")?.annotations).toEqual({
+      debugging: true,
+      readOnlyHint: true,
+    });
+    rerender({ annotations: { readOnlyHint: true, debugging: true } });
+    expect(registerTool).toHaveBeenCalledTimes(1);
+
+    rerender({ annotations: { debugging: false, readOnlyHint: true } });
+    expect(registerTool).toHaveBeenCalledTimes(2);
+    expect(registered.get("inspect_state")?.annotations).toEqual({
+      debugging: false,
+      readOnlyHint: true,
+    });
+
+    rerender({ annotations: { readOnlyHint: true } });
+    expect(registerTool).toHaveBeenCalledTimes(3);
+    expect(registered.get("inspect_state")?.annotations).toEqual({
+      readOnlyHint: true,
+    });
+
+    rerender({ annotations: { readOnlyHint: true, debugging: true } });
+    expect(registerTool).toHaveBeenCalledTimes(4);
+    expect(registered.get("inspect_state")?.annotations).toEqual({
+      readOnlyHint: true,
+      debugging: true,
+    });
+
+    await act(flush);
+    expect(registered.size).toBe(1);
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+    unmount();
+    expect(registered.size).toBe(0);
+    errorSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 
   it("re-registers when an effective shorthand annotation changes", () => {
@@ -832,9 +895,6 @@ describe("useWebMCP discovery", () => {
 
 describe("useWebMCP cleanup isolation after failed registration", () => {
   const INVALID_ORIGIN = "not-a-trustworthy-origin";
-
-  /** Flush the async native register pipeline (chains several microtasks). */
-  const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
   /**
    * Fake host reproducing the pre-WebMCP-PR-#240 ordering: the signal's

@@ -215,6 +215,29 @@ describe.each([1, 2])("native executeTool arity %i", (arity) => {
   });
 });
 
+it("passes discovered debugging tools to native execution unchanged", async () => {
+  const debuggingTool: RegisteredTool = {
+    ...tool,
+    name: "inspect_state",
+    annotations: { debugging: true },
+  };
+  const failure = new Error("Inspection failed");
+  const execute = nativeMock(1)
+    .mockResolvedValueOnce("ok")
+    .mockRejectedValueOnce(failure);
+  install(execute);
+  const options = { signal: new AbortController().signal };
+
+  await expect(executeTool(debuggingTool, {}, options)).resolves.toBe("ok");
+  await expect(executeTool(debuggingTool, {}, options)).rejects.toBe(failure);
+  expect(execute.mock.calls).toEqual([
+    [debuggingTool, {}, options],
+    [debuggingTool, {}, options],
+  ]);
+  expect(execute.mock.calls[0]?.[0]).toBe(debuggingTool);
+  expect(execute.mock.calls[0]?.[2]).toBe(options);
+});
+
 it.each([0, 3])(
   "rejects unverified arity %i without invoking or serializing",
   async (arity) => {

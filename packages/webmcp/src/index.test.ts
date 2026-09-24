@@ -264,6 +264,30 @@ describe("tool discovery and execution", () => {
     },
   );
 
+  it.each([true, false, undefined])(
+    "preserves discovered debugging: %s",
+    async (debugging) => {
+      const annotations =
+        debugging === undefined
+          ? { readOnlyHint: true }
+          : { readOnlyHint: true, debugging };
+      const tool: RegisteredTool = { ...discoveredTool(), annotations };
+      setModelContext("document", {
+        registerTool: vi.fn(),
+        getTools: vi.fn(async () => [tool]),
+      });
+
+      const [discovered] = await getTools();
+      expect(discovered).toBe(tool);
+      expect(discovered?.annotations).toBe(annotations);
+      if (debugging === undefined) {
+        expect(discovered?.annotations).not.toHaveProperty("debugging");
+      } else {
+        expect(discovered?.annotations?.debugging).toBe(debugging);
+      }
+    },
+  );
+
   it("rejects execution when the native capability is unavailable", async () => {
     await expect(executeTool(discoveredTool())).rejects.toBeInstanceOf(
       WebMCPUnavailableError,
@@ -554,6 +578,88 @@ describe("registerTool", () => {
       );
       cleanup();
     }
+  });
+
+  it.each([true, false])(
+    "forwards debugging: %s without changing raw annotation precedence",
+    (debugging) => {
+      const { registered } = installFakeModelContext("document");
+      registerTool({
+        name: "inspect_state",
+        description: "Returns application state for developer tooling.",
+        readOnly: true,
+        destructive: true,
+        annotations: {
+          debugging,
+          consequentialHint: true,
+          readOnlyHint: false,
+          destructiveHint: false,
+        },
+        execute: () => ({}),
+      });
+      expect(registered.get("inspect_state")?.annotations).toEqual({
+        debugging,
+        consequentialHint: true,
+        readOnlyHint: false,
+        destructiveHint: false,
+      });
+      expect(registered.get("inspect_state")).not.toHaveProperty("debugging");
+    },
+  );
+
+  it("omits debugging when callers omit it", () => {
+    const { registered } = installFakeModelContext("document");
+    registerTool({
+      name: "annotated",
+      description: "Declares other annotations.",
+      readOnly: true,
+      destructive: true,
+      annotations: { untrustedContentHint: true, consequentialHint: false },
+      execute: () => ({}),
+    });
+    expect(registered.get("annotated")?.annotations).toEqual({
+      readOnlyHint: true,
+      destructiveHint: true,
+      untrustedContentHint: true,
+      consequentialHint: false,
+    });
+    expect(registered.get("annotated")?.annotations).not.toHaveProperty(
+      "debugging",
+    );
+  });
+
+  it("keeps execution, failure, abort, and cleanup unchanged for debugging tools", async () => {
+    const { registered } = installFakeModelContext("document");
+    const failure = new Error("inspection failed");
+    const execute = vi.fn(
+      async (input: unknown, options?: ToolExecuteCallbackOptions) => {
+        options?.signal.throwIfAborted();
+        if (input === "fail") throw failure;
+        return input;
+      },
+    );
+    const cleanup = registerTool({
+      name: "inspect_state",
+      description: "Returns application state for developer tooling.",
+      annotations: { debugging: true },
+      execute,
+    });
+    const native = registered.get("inspect_state");
+    const controller = new AbortController();
+    const options = { signal: controller.signal };
+
+    expect(native?.execute).toBe(execute);
+    await expect(native?.execute("ok", options)).resolves.toBe("ok");
+    await expect(native?.execute("fail", options)).rejects.toBe(failure);
+    controller.abort(new DOMException("Cancelled", "AbortError"));
+    await expect(native?.execute("ok", options)).rejects.toBe(
+      controller.signal.reason,
+    );
+    expect(execute).toHaveBeenCalledTimes(3);
+
+    cleanup();
+    expect(registered.has("inspect_state")).toBe(false);
+    expect(() => cleanup()).not.toThrow();
   });
 
   it("omits annotations entirely when no flags are set", () => {

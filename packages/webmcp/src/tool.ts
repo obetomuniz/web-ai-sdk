@@ -5,6 +5,8 @@ export interface ToolAnnotations {
   untrustedContentHint?: boolean;
   /** Signals significant or difficult-to-reverse effects; does not authorize execution or guarantee confirmation. */
   consequentialHint?: boolean;
+  /** Categorizes a tool for debugging and developer tooling; does not authorize execution. */
+  debugging?: boolean;
   /** Compatibility passthrough for MCP-shaped and earlier WebMCP hosts. */
   destructiveHint?: boolean;
   /** Compatibility passthrough for MCP-shaped and earlier WebMCP hosts. */

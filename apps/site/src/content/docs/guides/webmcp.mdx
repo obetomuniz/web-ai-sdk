@@ -169,7 +169,7 @@ maintaining a second handwritten definition.
 | `inputSchema` | `object` | JSON Schema describing the input shape. Some hosts validate against it before dispatch. |
 | `readOnly` | `boolean` | Shorthand for `annotations.readOnlyHint = true`. |
 | `destructive` | `boolean` | Compatibility shorthand for `annotations.destructiveHint = true`. |
-| `annotations` | `ToolAnnotations` | Raw passthrough. The current draft defines `readOnlyHint`, `untrustedContentHint`, and `consequentialHint`; compatibility fields are described below. |
+| `annotations` | `ToolAnnotations` | Raw passthrough. The current draft defines `readOnlyHint`, `untrustedContentHint`, `consequentialHint`, and `debugging`; compatibility fields are described below. |
 
 </div>
 
@@ -253,7 +253,7 @@ The [React hook](/docs/react/use-webmcp/) exposes the same metadata type. See [B
 
 ## Annotations
 
-Annotations communicate intent to the agent. The current WebMCP draft defines `readOnlyHint`, `untrustedContentHint`, and `consequentialHint`. Use `untrustedContentHint` when a tool returns external, user-generated, or otherwise untrusted content:
+Annotations communicate intent to the agent. The current WebMCP draft defines `readOnlyHint`, `untrustedContentHint`, `consequentialHint`, and `debugging`. Use `untrustedContentHint` when a tool returns external, user-generated, or otherwise untrusted content:
 
 ```ts
 registerTool({
@@ -287,6 +287,20 @@ registerTool({
 });
 ```
 
+Set `annotations.debugging: true` for tools intended for debugging and developer tooling rather than end-user interactions. The field categorizes a tool. It does not grant permission or bypass application checks. Apply the same authentication, authorization, and validation as other tools.
+
+The SDK forwards explicit `true` and `false` values and leaves the property absent when omitted. Discovery preserves the metadata returned by the host. There is no shorthand. The SDK does not filter tools by this field or infer other annotations from it.
+
+```ts
+registerTool({
+  name: "inspect_cart_state",
+  description: "Return the current cart state for debugging.",
+  readOnly: true,
+  annotations: { debugging: true },
+  execute: async () => ({ cart: getCartSnapshot() }),
+});
+```
+
 ## Tool design
 
 Agents select tools by reading their names, descriptions, schemas, and annotations. Follow these rules:
@@ -295,7 +309,7 @@ Agents select tools by reading their names, descriptions, schemas, and annotatio
 - **Descriptions that say when to use the tool**, not just what it does. Besides the schema, the description is the agent's only routing signal.
 - **Precise `inputSchema`.** Mark `required` fields, describe every property, and use enums for closed sets so hosts can validate before dispatch.
 - **Small, structured outputs.** Return compact objects the agent can act on, and surface failures as structured error objects rather than thrown strings.
-- **Honest annotations.** Use `readOnly` for inspection tools and `untrustedContentHint` for untrusted results. Compatibility fields such as `destructive` may help older hosts, but no annotation is authorization. Never expose a tool that bypasses your normal authorization checks.
+- **Honest annotations.** Use `readOnly` for inspection tools, `untrustedContentHint` for untrusted results, and `debugging` for developer-tooling tools. Compatibility fields such as `destructive` may help older hosts, but no annotation is authorization. Never expose a tool that bypasses your normal authorization checks.
 - **Lifecycle-scoped registration.** Register a tool only while the UI state it acts on exists, and call the cleanup when that state goes away.
 
 ## Errors and unavailability
