@@ -104,6 +104,11 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
     urlFetchingTool,
   );
   const knownFetchUrls = new Set(restoredFetchUrls);
+  // Grows with each run, like `knownFetchUrls`, so tools can resolve a
+  // follow-up against the conversation rather than the latest message only.
+  const previousUserInputs = (options.initialTurns ?? [])
+    .map((turn) => turn.userInput)
+    .filter((userInput) => userInput.trim() !== "");
   const restoredMessages: LanguageModelMessage[] = (
     options.initialTurns ?? []
   ).flatMap((turn) => {
@@ -321,10 +326,12 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
     const fetchedSources: string[] = [];
     const runCtx: AgentRunContext = {
       userInput: input,
+      previousUserInputs: [...previousUserInputs],
       userUrls,
       knownUrls: knownFetchUrls,
       fetchedSources,
     };
+    if (input.trim() !== "") previousUserInputs.push(input);
     // Evidence-required tool work: tools the user named explicitly, plus
     // tools that declared (via `requiredCallIf`) that this request needs
     // their output - e.g. `clock_now` for a current-time question asked

@@ -7,6 +7,12 @@
 export interface AgentRunContext {
   /** Original user message for this run. */
   readonly userInput: string;
+  /**
+   * Earlier user messages in this conversation, oldest first (restored
+   * turns plus previous runs). Lets a tool read a short follow-up such as
+   * "and Vancouver?" as a continuation of the request before it.
+   */
+  readonly previousUserInputs: readonly string[];
   /** Normalized HTTP(S) URLs the user named in `userInput`. */
   readonly userUrls: ReadonlySet<string>;
   /** Normalized URLs successfully fetched earlier in this conversation. */
