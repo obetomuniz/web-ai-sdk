@@ -1,6 +1,7 @@
 import type { Session } from "@web-ai-sdk/prompt";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildNativePrompt, createAgentLoop } from "./loop.js";
+import { clockNowTool } from "./tools/clock.js";
 import type { AgentTool, AgentToolContext } from "./types.js";
 
 const { createSessionMock } = vi.hoisted(() => ({
@@ -431,6 +432,67 @@ describe("createAgentLoop", () => {
     expect(result.stopReason).toBe("budget_exhausted");
     expect(result.text).toContain("clock_now was not called");
     expect(result.failure?.name).toBe("AgentIncompleteToolRequestError");
+  });
+
+  describe("time follow-ups", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-09-24T18:27:32Z"));
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("requires clock_now for a follow-up to a restored time question", async () => {
+      const fixture = createSessionFixture([
+        "It is 00:27 in Vancouver.",
+        '```tool_code\nclock_now(timeZone="America/Vancouver")\n```',
+        "It is 11:27 in Vancouver.",
+      ]);
+      createSessionMock.mockReturnValue(fixture.base);
+      const agent = createAgentLoop({
+        tools: [clockNowTool],
+        sessionMode: "thread",
+        initialTurns: [
+          {
+            userInput: "What time is it in Tokyo?",
+            assistantText: "It is 3:27 in Tokyo.",
+            stopReason: "done",
+            steps: [],
+          },
+        ],
+      });
+
+      const result = await agent.run("and vancouver ?");
+      agent.destroy();
+
+      expect(fixture.inputs[1]).toContain("requires `clock_now`");
+      expect(result.stopReason).toBe("done");
+      expect(result.text).toBe("It is 11:27 in Vancouver.");
+    });
+
+    it("carries earlier runs into the follow-up check", async () => {
+      const fixture = createSessionFixture([
+        '```tool_code\nclock_now(timeZone="Asia/Tokyo")\n```',
+        "It is 3:27 in Tokyo.",
+        "It is 00:27 in Vancouver.",
+        '```tool_code\nclock_now(timeZone="America/Vancouver")\n```',
+        "It is 11:27 in Vancouver.",
+      ]);
+      createSessionMock.mockReturnValue(fixture.base);
+      const agent = createAgentLoop({
+        tools: [clockNowTool],
+        sessionMode: "thread",
+      });
+
+      await agent.run("What time is it in Tokyo?");
+      const result = await agent.run("and vancouver ?");
+      agent.destroy();
+
+      expect(fixture.inputs[3]).toContain("requires `clock_now`");
+      expect(result.text).toBe("It is 11:27 in Vancouver.");
+    });
   });
 });
 

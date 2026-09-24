@@ -5,6 +5,7 @@
  * playground.
  */
 
+import type { AgentRunContext } from "../runContext.js";
 import type { AgentTool } from "../types.js";
 
 interface ClockInput {
@@ -36,13 +37,13 @@ export const clockNowTool: AgentTool<ClockInput, ClockOutput> = {
     additionalProperties: false,
   },
   acceptCall(_input, ctx) {
-    return isCurrentTimeRequest(ctx.userInput);
+    return isCurrentTimeRequest(ctx);
   },
   // Same predicate both ways: a current-time question is the only reason
   // to run this tool (acceptCall), and once the user asks one, an answer
   // without a successful run would be a guessed time (requiredCallIf).
   requiredCallIf(ctx) {
-    return isCurrentTimeRequest(ctx.userInput);
+    return isCurrentTimeRequest(ctx);
   },
   async execute({ timeZone }) {
     const now = new Date();
@@ -83,6 +84,40 @@ const CURRENT_TIME_REQUESTS = [
   /\bis\s+it\s+(?:morning|afternoon|evening|night|midnight|noon)\b/i,
 ] as const;
 
-function isCurrentTimeRequest(input: string): boolean {
+/**
+ * A short continuation such as "and Vancouver?", "what about London?" or
+ * "e Londres?": a leading connective plus at most four words, with no
+ * sentence punctuation, so URLs and second requests don't qualify. It has
+ * no time words of its own, so it only counts as a time question when it
+ * continues one (observed: "and vancouver ?" after a Tokyo time question
+ * got a guessed time, 11 hours off, with no clock call).
+ */
+const FOLLOW_UP =
+  /^\s*¿?(?:and|what about|how about|e|y|et|und)(?:\s+[^\s.!?]+){1,4}\s*\??\s*$/i;
+
+/**
+ * A reply that only acknowledges the last answer ("thanks!", "ok, cool").
+ * It doesn't change the topic, so a follow-up after it still continues
+ * the time question (observed: "and paris?" after "thanks!" got a guessed
+ * time).
+ */
+const ACKNOWLEDGEMENT =
+  /^\s*(?:(?:ok(?:ay)?|cool|great|nice|perfect|awesome|got it|thanks?(?: a lot| so much)?|thank you(?: so much)?|thx|ty|obrigad[oa]|valeu|gracias|merci|danke)[\s,.!]*)+$/i;
+
+function isCurrentTimeRequest(ctx: AgentRunContext): boolean {
+  if (asksForCurrentTime(ctx.userInput)) return true;
+  if (!FOLLOW_UP.test(ctx.userInput)) return false;
+  // Walk back through follow-ups ("and Vancouver?") and acknowledgements
+  // to the message that started the exchange.
+  for (const earlier of [...ctx.previousUserInputs].reverse()) {
+    if (asksForCurrentTime(earlier)) return true;
+    if (!FOLLOW_UP.test(earlier) && !ACKNOWLEDGEMENT.test(earlier)) {
+      return false;
+    }
+  }
+  return false;
+}
+
+function asksForCurrentTime(input: string): boolean {
   return CURRENT_TIME_REQUESTS.some((pattern) => pattern.test(input));
 }
