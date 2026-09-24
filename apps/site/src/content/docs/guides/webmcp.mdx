@@ -298,6 +298,29 @@ Agents select tools by reading their names, descriptions, schemas, and annotatio
 - **Honest annotations.** Use `readOnly` for inspection tools and `untrustedContentHint` for untrusted results. Compatibility fields such as `destructive` may help older hosts, but no annotation is authorization. Never expose a tool that bypasses your normal authorization checks.
 - **Lifecycle-scoped registration.** Register a tool only while the UI state it acts on exists, and call the cleanup when that state goes away.
 
+## Permissions Policy
+
+The [WebMCP draft](https://webmachinelearning.github.io/webmcp/#permissions-policy) gates its APIs behind the `tools` policy-controlled feature. Its default allowlist is `self`. [Chrome documents](https://developer.chrome.com/docs/ai/webmcp#permissions_policy) that this default allows top-level and same-origin documents.
+
+To disable WebMCP in a document that must not expose tools, send this response header with the document:
+
+```http
+Permissions-Policy: tools=()
+```
+
+The empty allowlist disables `tools` for the document and all descendant frames, including same-origin and cross-origin frames. The browser enforces the policy before page scripts run.
+
+Under the draft, native registration, discovery, and execution reject with `NotAllowedError` in a disabled document. `registerTool()` logs the error. `getTools()` and `executeTool()` reject with it. `isAvailable()` checks only for the API and does not read the policy.
+
+The [draft's security section](https://webmachinelearning.github.io/webmcp/#mitigation-disable-permissions-policy) presents this header as defense in depth. It blocks WebMCP use by injected scripts or compromised dependencies in that document. It does not:
+
+- authorize a tool call or user;
+- request user confirmation;
+- make tool content trusted;
+- prevent prompt injection in documents that keep WebMCP enabled.
+
+The SDK does not set response headers. Keep the controls in [Annotations](#annotations) and [Tool design](#tool-design).
+
 ## Errors and unavailability
 
 Registration and event subscription return no-op cleanups when the API is missing. Discovery returns an empty list.
@@ -315,7 +338,7 @@ if (!isAvailable()) {
 registerTool({ ... });
 ```
 
-Native `getTools()` errors remain observable, including invalid or untrustworthy `fromOrigins`, denied permissions policy, and detached-document failures. `executeTool()` also preserves native execution and cancellation failures.
+Native `getTools()` errors remain observable, including invalid or untrustworthy `fromOrigins`, a denied [Permissions Policy](#permissions-policy), and detached-document failures. `executeTool()` also preserves native execution and cancellation failures.
 
 When a direct definition includes `input`, invalid input rejects with
 `ToolValidationError` before `execute` runs. When it includes `output`, an
