@@ -1,5 +1,11 @@
 # @web-ai-sdk/webmcp
 
+## 0.12.1
+
+### Patch Changes
+
+- 6ee40d1: Add the optional `debugging` tool annotation. Preserve explicit values through registration and discovery. Document that the field categorizes debugging and developer-tooling tools and does not authorize execution.
+
 ## 0.12.0
 
 ### Minor Changes
