@@ -169,6 +169,16 @@ Treat AI edits as suggestions. Keep the original text until the user accepts the
 
 For multi-step edits, provide version navigation or a diff.
 
+## Disable WebMCP where tools do not belong
+
+Send this response header with each document that must not expose WebMCP tools:
+
+```http
+Permissions-Policy: tools=()
+```
+
+The empty allowlist disables WebMCP for the document and all descendant frames. The header is defense in depth. It does not authorize tool calls, request confirmation, or prevent prompt injection. See the [WebMCP guide](/docs/guides/webmcp/#permissions-policy).
+
 ## Expire caches and offer refresh
 
 The `"session"` and `"local"` caches expire entries after one hour (`DEFAULT_CACHE_TTL_MS`). Pass `cacheTtl` (milliseconds) to change the TTL per call. Add a visible Refresh action wired to `cacheRefresh`.

@@ -397,6 +397,29 @@ historical opt-in input validation through `validate: true`. New code should
 pass schema-aware definitions directly to `registerTool()` or `useWebMCP()`.
 The wrapper will only be removed in a documented breaking release.
 
+## Permissions Policy
+
+The [WebMCP draft](https://webmachinelearning.github.io/webmcp/#permissions-policy) gates its APIs behind the `tools` policy-controlled feature. Its default allowlist is `self`. [Chrome documents](https://developer.chrome.com/docs/ai/webmcp#permissions_policy) that this default allows top-level and same-origin documents.
+
+To disable WebMCP in a document that must not expose tools, send this response header with the document:
+
+```http
+Permissions-Policy: tools=()
+```
+
+The empty allowlist disables `tools` for the document and all descendant frames, including same-origin and cross-origin frames. The browser enforces the policy before page scripts run.
+
+Under the draft, native registration, discovery, and execution reject with `NotAllowedError` in a disabled document. `registerTool()` logs the error. `getTools()` and `executeTool()` reject with it. `isAvailable()` checks only for the API and does not read the policy.
+
+The [draft's security section](https://webmachinelearning.github.io/webmcp/#mitigation-disable-permissions-policy) presents this header as defense in depth. It blocks WebMCP use by injected scripts or compromised dependencies in that document. It does not:
+
+- authorize a tool call or user;
+- request user confirmation;
+- make tool content trusted;
+- prevent prompt injection in documents that keep WebMCP enabled.
+
+The SDK does not set response headers. Keep the application controls in [Safety](#safety).
+
 ## Safety
 
 Set `annotations.consequentialHint: true` for tools that can cause significant real-world or difficult-to-reverse effects. A compatible host can use this hint when deciding whether to request confirmation.
