@@ -10,64 +10,72 @@
  */
 
 import {
-  DetectorUnavailableError,
-  isAvailable as isDetectorAvailable,
-  detect as sdkDetect,
+  checkAvailability,
+  detect,
+  prepareLanguageDetector,
 } from "@web-ai-sdk/detector";
+import { z } from "zod";
 import type { AgentTool } from "../types.js";
+import { parseToolInput } from "./input.js";
+import {
+  downloadModel,
+  runTextOperation,
+  type TextOperation,
+} from "./lifecycle.js";
 
-interface DetectInput {
-  text: string;
-  /** Maximum number of candidates to return. Default 3. */
-  topK?: number;
-}
+const schema = z.object({
+  text: z
+    .string()
+    .min(1)
+    .refine((value) => Boolean(value.trim())),
+  topK: z.number().int().min(1).max(10).default(3).catch(3),
+});
 
-interface DetectOutput {
-  candidates: Array<{ language: string; confidence: number }>;
-  cached?: boolean;
-  unavailable?: boolean;
-  error?: string;
-}
-
-export const detectLanguageTool: AgentTool<DetectInput, DetectOutput> = {
+export const detectLanguageTool: AgentTool<
+  z.input<typeof schema>,
+  {
+    candidates: Array<{ language: string; confidence: number }>;
+    cached: boolean;
+  }
+> = {
   name: "detect_language",
   description:
     "Detect the language(s) of a snippet of text using the browser's built-in Language Detector. Required input field: `text` (string). Optional: `topK` (number, default 3). Returns up to `topK` BCP-47 candidates with confidence scores. Pair with `translate_text` when the user's text isn't in the target language.",
   readOnly: true,
-  inputSchema: {
-    type: "object",
-    properties: {
-      text: { type: "string" },
-      topK: { type: "number" },
-    },
-    required: ["text"],
-    additionalProperties: false,
+  inputSchema: z.toJSONSchema(schema, {
+    io: "input",
+  }) as AgentTool["inputSchema"],
+  async execute(input, ctx) {
+    const { topK } = parseToolInput("detect_language", schema, input);
+    const result = await runTextOperation(ctx, operation(input, ctx.signal));
+    return {
+      candidates: (result.output?.all ?? [])
+        .slice(0, topK)
+        .map((candidate) => ({
+          language: candidate.detectedLanguage,
+          confidence: candidate.confidence,
+        })),
+      cached: result.cached,
+    };
   },
-  async execute({ text, topK = 3 }, { signal }) {
-    if (typeof text !== "string" || !text.trim()) {
-      return {
-        candidates: [],
-        error: "Missing required `text` (non-empty string).",
-      };
-    }
-    if (!isDetectorAvailable()) {
-      return { candidates: [], unavailable: true };
-    }
-    try {
-      const result = await sdkDetect({ input: text, signal });
-      if (!result.output) {
-        return { candidates: [], cached: result.cached };
-      }
-      const top = result.output.all.slice(0, Math.max(1, topK)).map((c) => ({
-        language: c.detectedLanguage,
-        confidence: c.confidence,
-      }));
-      return { candidates: top, cached: result.cached };
-    } catch (err) {
-      if (err instanceof DetectorUnavailableError) {
-        return { candidates: [], unavailable: true };
-      }
-      throw err;
-    }
+  async download(input, onProgress) {
+    return downloadModel(operation(input).prepare, onProgress);
+  },
+  async availability(input) {
+    return operation(input).availability();
   },
 };
+
+function operation(
+  input: unknown,
+  signal?: AbortSignal,
+): TextOperation<Awaited<ReturnType<typeof detect>>> {
+  const { text } = parseToolInput("detect_language", schema, input);
+  return {
+    key: "detect_language",
+    options: {},
+    availability: () => checkAvailability(),
+    prepare: (monitor) => prepareLanguageDetector({ monitor }),
+    execute: (_onUpdate, monitor) => detect({ input: text, monitor, signal }),
+  };
+}

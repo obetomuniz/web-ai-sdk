@@ -1,15 +1,18 @@
 import { playground as ui } from "../../../shared/ui.js";
 import type { PromptReadiness } from "../lib/promptReadiness.js";
 import type { ActivityEvent } from "../lib/types.js";
+import type { CapabilityCheck } from "../lib/useCapabilityChecks.js";
 import { PanelToggle } from "./PanelToggle.js";
 
 interface Props {
   open: boolean;
   conversationsOpen: boolean;
   promptReadiness: PromptReadiness;
-  summarizerOn: boolean;
+  capabilityChecks: CapabilityCheck[];
   webmcpAvailable: boolean;
   webmcpToolCount: number;
+  webmcpStatus: string;
+  webmcpError: Error | null;
   events: ActivityEvent[];
   onHide: () => void;
 }
@@ -18,9 +21,11 @@ export function RuntimePanel({
   open,
   conversationsOpen,
   promptReadiness,
-  summarizerOn,
+  capabilityChecks,
   webmcpAvailable,
   webmcpToolCount,
+  webmcpStatus,
+  webmcpError,
   events,
   onHide,
 }: Props) {
@@ -42,7 +47,8 @@ export function RuntimePanel({
           <div className={ui.workspaceHeading}>
             <h2 className={ui.workspaceTitle}>Recent activities</h2>
             <div className={ui.workspaceCount}>
-              3 checks · {events.length} event{events.length === 1 ? "" : "s"}
+              {capabilityChecks.length + 2} checks · {events.length} event
+              {events.length === 1 ? "" : "s"}
             </div>
           </div>
           <div className={ui.workspacePane}>
@@ -53,15 +59,19 @@ export function RuntimePanel({
                   detail: "Conversation responses",
                   state: promptCheckState(promptReadiness),
                 },
-                {
-                  label: "Summarizer API",
-                  detail: "Text summaries and conversation titles",
-                  state: summarizerOn ? "ready" : "unavailable",
-                },
+                ...capabilityChecks,
                 {
                   label: "WebMCP",
-                  detail: `${webmcpToolCount} conversation control${webmcpToolCount === 1 ? "" : "s"} exposed to browser agents`,
-                  state: webmcpAvailable ? "ready" : "unavailable",
+                  detail:
+                    webmcpError?.message ??
+                    `${webmcpToolCount} conversation controls discovered in this document. External agent access depends on the host.`,
+                  state: !webmcpAvailable
+                    ? "unavailable"
+                    : webmcpStatus === "ready"
+                      ? "ready"
+                      : webmcpStatus === "error"
+                        ? "error"
+                        : "checking",
                 },
               ]}
               events={events}
@@ -87,6 +97,7 @@ type RuntimeCheckState =
   | "download"
   | "downloading"
   | "unavailable"
+  | "error"
   | "unknown";
 
 interface RuntimeCheck {

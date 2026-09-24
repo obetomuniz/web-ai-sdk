@@ -23,5 +23,8 @@ export {
   createFetchUrlTool,
   type FetchUrlToolOptions,
 } from "./fetchUrl.js";
+export { proofreadTool } from "./proofread.js";
+export { rewriteTool } from "./rewrite.js";
 export { summarizeTool } from "./summarize.js";
 export { translateTool } from "./translate.js";
+export { writeTool } from "./write.js";

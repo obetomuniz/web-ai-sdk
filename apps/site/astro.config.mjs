@@ -1,5 +1,6 @@
 // @ts-check
 import react from "@astrojs/react";
+import sitemap from "@astrojs/sitemap";
 import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
@@ -62,6 +63,9 @@ export default defineConfig({
     // React must register before Starlight's MDX renderer; otherwise MDX probes
     // React function components directly during dev SSR, which trips hook calls.
     react(),
+    // Registered here so Starlight skips its default sitemap. The smoke
+    // harness ships with production builds for browser QA but stays unlisted.
+    sitemap({ filter: (page) => !page.includes("/playground/smoke/") }),
     starlight({
       title: "web-ai-sdk",
       description:

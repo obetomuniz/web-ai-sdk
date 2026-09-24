@@ -1,5 +1,14 @@
-import type { ReactElement } from "react";
+import { type ReactElement, useEffect, useState } from "react";
 import { playground as ui } from "../../../../shared/ui.js";
+import {
+  detectLanguageTool,
+  proofreadTool,
+  rewriteTool,
+  summarizeTool,
+  translateTool,
+  writeTool,
+} from "../agent/tools/index.js";
+import type { AgentTool } from "../agent/types.js";
 
 export interface TranscriptToolFrame {
   callId: string;
@@ -21,6 +30,17 @@ type ToolRendererProps = {
 
 type ToolRendererComponent = (props: ToolRendererProps) => ReactElement;
 
+const downloadableTools = new Map<string, AgentTool>(
+  [
+    writeTool,
+    rewriteTool,
+    proofreadTool,
+    summarizeTool,
+    translateTool,
+    detectLanguageTool,
+  ].map((tool) => [tool.name, tool as AgentTool]),
+);
+
 const renderers: Record<ToolRendererId, ToolRendererComponent> = {
   default: DefaultToolRenderer,
   minimal: MinimalToolRenderer,
@@ -36,6 +56,7 @@ function resolveToolCardStatus(
   tool: TranscriptToolFrame,
 ): "calling" | "ok" | "error" | "warn" {
   if (tool.pending) return "calling";
+  if (tool.error?.name?.endsWith("UnavailableError")) return "warn";
   if (tool.error) return "error";
   const outputIssue = resolveOutputIssue(tool.output);
   if (outputIssue?.kind === "error") return "error";
@@ -54,6 +75,13 @@ function resolveToolCardStatus(
 function DefaultToolRenderer({ tool, animate = true }: ToolRendererProps) {
   const status = resolveToolCardStatus(tool);
   const outputIssue = resolveOutputIssue(tool.output);
+  const latestText = tool.progress
+    .map(progressText)
+    .filter((text) => text !== null)
+    .at(-1);
+  const lifecycleProgress = tool.progress.filter(
+    (progress) => progressText(progress) === null,
+  );
 
   return (
     <li
@@ -97,13 +125,18 @@ function DefaultToolRenderer({ tool, animate = true }: ToolRendererProps) {
             {status === "calling" && "calling..."}
             {status === "ok" && `${Math.round(tool.durationMs ?? 0)}ms`}
             {status === "warn" && "unavailable"}
-            {status === "error" && "error"}
+            {status === "error" &&
+              (tool.error?.name === "AbortError"
+                ? "cancelled"
+                : tool.error?.name === "AgentToolValidationError"
+                  ? "invalid input"
+                  : "error")}
           </span>
         </summary>
 
-        {tool.progress.length > 0 && (
+        {lifecycleProgress.length > 0 && (
           <ul className={ui.toolProgress}>
-            {tool.progress.map((progress) => (
+            {lifecycleProgress.map((progress) => (
               <li key={summarizeJson(progress)} className={ui.toolProgressItem}>
                 <span className={ui.toolProgressDot} />
                 <code>{summarizeJson(progress)}</code>
@@ -111,6 +144,11 @@ function DefaultToolRenderer({ tool, animate = true }: ToolRendererProps) {
             ))}
           </ul>
         )}
+        {tool.pending && latestText && (
+          <pre className={ui.toolJson}>{latestText}</pre>
+        )}
+
+        {tool.name === "proofread_text" && <ProofreaderResult tool={tool} />}
 
         <details className={ui.toolDetails}>
           <summary className={ui.toolSummary}>
@@ -128,7 +166,7 @@ function DefaultToolRenderer({ tool, animate = true }: ToolRendererProps) {
                 : outputIssue
                   ? `${outputIssue.kind} · ${truncate(outputIssue.message, 80)}`
                   : status === "warn"
-                    ? "summarizer unavailable · answered below"
+                    ? "No specialized result was produced"
                     : `output · ${summarizeJson(tool.output)}`}
             </summary>
             <pre className={ui.toolJson}>
@@ -139,7 +177,166 @@ function DefaultToolRenderer({ tool, animate = true }: ToolRendererProps) {
           </details>
         )}
       </details>
+      {!tool.pending && tool.error?.name?.endsWith("UnavailableError") && (
+        <DownloadModelAction tool={tool} />
+      )}
     </li>
+  );
+}
+
+type DownloadState =
+  | { kind: "checking" }
+  | { kind: "not-downloadable" }
+  | { kind: "idle" }
+  | { kind: "downloading"; loaded: number }
+  | { kind: "ready" }
+  | { kind: "failed"; message: string };
+
+/**
+ * Browsers start model downloads only from a user gesture, and a planned tool
+ * call runs seconds after Send. This click supplies the gesture. Readiness is
+ * checked live, so persisted cards stay accurate after reloads and downloads.
+ */
+function DownloadModelAction({ tool }: { tool: TranscriptToolFrame }) {
+  const [state, setState] = useState<DownloadState>({ kind: "checking" });
+  const agentTool = downloadableTools.get(tool.name);
+  useEffect(() => {
+    let active = true;
+    if (!agentTool?.availability) return;
+    agentTool.availability(tool.input).then(
+      (readiness) => {
+        if (!active) return;
+        setState(
+          readiness === "downloadable" || readiness === "downloading"
+            ? { kind: "idle" }
+            : { kind: "not-downloadable" },
+        );
+      },
+      () => active && setState({ kind: "not-downloadable" }),
+    );
+    return () => {
+      active = false;
+    };
+  }, [agentTool, tool.input]);
+  const download = agentTool?.download;
+  if (
+    !download ||
+    state.kind === "checking" ||
+    state.kind === "not-downloadable"
+  )
+    return null;
+  const start = () => {
+    setState({ kind: "downloading", loaded: 0 });
+    download(tool.input, (loaded) =>
+      setState({ kind: "downloading", loaded }),
+    ).then(
+      () => setState({ kind: "ready" }),
+      (error: unknown) =>
+        setState({
+          kind: "failed",
+          message: error instanceof Error ? error.message : String(error),
+        }),
+    );
+  };
+  return (
+    <div className={ui.toolAction} role="status" aria-live="polite">
+      <span>
+        {state.kind === "idle" &&
+          "This model needs a download. Browsers start downloads only from a click."}
+        {state.kind === "downloading" &&
+          `Downloading model ${Math.round(state.loaded * 100)}%`}
+        {state.kind === "ready" && "Model ready. Send your request again."}
+        {state.kind === "failed" && `Download failed: ${state.message}`}
+      </span>
+      {(state.kind === "idle" || state.kind === "failed") && (
+        <button type="button" className={ui.toolActionButton} onClick={start}>
+          Download model
+        </button>
+      )}
+    </div>
+  );
+}
+
+function progressText(value: unknown): string | null {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    !("phase" in value) ||
+    value.phase !== "output" ||
+    !("text" in value)
+  )
+    return null;
+  return typeof value.text === "string" ? value.text : null;
+}
+
+/** Render offsets as metadata only. Never apply untrusted edits to the source. */
+function ProofreaderResult({ tool }: { tool: TranscriptToolFrame }) {
+  if (
+    !tool.output ||
+    typeof tool.output !== "object" ||
+    !("output" in tool.output)
+  )
+    return null;
+  const result = tool.output.output;
+  if (
+    !result ||
+    typeof result !== "object" ||
+    !("correctedInput" in result) ||
+    typeof result.correctedInput !== "string"
+  )
+    return null;
+  const original = typeof tool.input.text === "string" ? tool.input.text : "";
+  const corrections =
+    "corrections" in result && Array.isArray(result.corrections)
+      ? result.corrections
+      : [];
+  return (
+    <section aria-label="Proofreader result" className={ui.toolResult}>
+      <p className={ui.toolResultLabel}>Original text</p>
+      <pre className={ui.toolResultText}>{original}</pre>
+      <p className={ui.toolResultLabel}>Corrected text</p>
+      <pre className={ui.toolResultText}>{result.correctedInput}</pre>
+      {corrections.length > 0 && (
+        <p className={ui.toolResultLabel}>Corrections</p>
+      )}
+      <ul className={ui.toolCorrections}>
+        {corrections.map((value: unknown, index: number) => {
+          if (!value || typeof value !== "object") return null;
+          const correction = value as Record<string, unknown>;
+          const { startIndex, endIndex } = correction;
+          const valid =
+            typeof startIndex === "number" &&
+            typeof endIndex === "number" &&
+            Number.isInteger(startIndex) &&
+            Number.isInteger(endIndex) &&
+            startIndex >= 0 &&
+            endIndex >= startIndex &&
+            endIndex <= original.length;
+          return (
+            <li
+              // biome-ignore lint/suspicious/noArrayIndexKey: Native corrections are an immutable result and can share offsets.
+              key={`${String(startIndex)}:${String(endIndex)}:${index}`}
+              className={ui.toolCorrection}
+            >
+              <p>
+                {valid
+                  ? `Original offsets ${startIndex}–${endIndex}: ${original.slice(startIndex, endIndex)}`
+                  : "Invalid display offsets; original text preserved"}
+              </p>
+              {typeof correction.correction === "string" && (
+                <p>Replacement: {correction.correction}</p>
+              )}
+              {typeof correction.type === "string" && (
+                <p>Type: {correction.type}</p>
+              )}
+              {typeof correction.explanation === "string" && (
+                <p>{correction.explanation}</p>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

@@ -35,6 +35,7 @@ import { runDispatcher } from "./dispatcher.js";
 import {
   DIRECT_ANSWER_RETRY,
   filterCallsForDispatch,
+  SPECIALIZED_TOOL_RETRY,
   shouldSteerDirectAnswer,
 } from "./dispatchPolicy.js";
 import { AgentStalledError, AgentUnavailableError } from "./errors.js";
@@ -42,7 +43,7 @@ import { streamFromGenerator, streamFromResult } from "./events.js";
 import type { AgentRunContext } from "./runContext.js";
 import { extractFetchSourceText } from "./summarizeProvenance.js";
 import { parseToolCode, proseStreamLimit, stripToolCode } from "./toolCode.js";
-import { isEmptySummarizeOutput } from "./tools/summarize.js";
+import { createToolLeaseScope } from "./toolLeases.js";
 import type {
   Agent,
   AgentEvent,
@@ -84,6 +85,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
   const maxSteps = options.maxSteps ?? DEFAULT_MAX_STEPS;
   const onToolError = options.onToolError ?? "report";
   const sessionMode = options.sessionMode ?? "run-isolated";
+  const leases = createToolLeaseScope();
   // URL safety net (same intent as the constraint loop): if the user
   // referenced a URL and a fetch tool exists, fetch it deterministically
   // when the model finalizes without fetching, and flag any URL answer
@@ -127,6 +129,10 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
       samplingMode: options.samplingMode,
       language: options.language,
       tools: sdkTools,
+      monitor: (monitor) =>
+        monitor.addEventListener("downloadprogress", ({ loaded }) =>
+          options.onModelDownload?.(loaded),
+        ),
       ...(restoredMessages.length > 0
         ? {
             createOptions: {
@@ -343,6 +349,8 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
     // Guards the one-time rewrite when the answer states values that no
     // tool result from this run supports.
     let unsupportedValueRetryDone = false;
+    // Guards the one-time steer toward a tool in `requireToolResult` modes.
+    let specializedToolRetryDone = false;
     const recordFetches = (records: AgentToolCallRecord[]) => {
       for (const r of records) {
         const src = extractFetchSourceText(r);
@@ -402,6 +410,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
           calls: fetchCalls,
           stepIndex,
           signal,
+          leases,
         });
         steps.push({
           index: stepIndex,
@@ -469,6 +478,12 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
         const calls = filterCallsForDispatch(proposed, tools, runCtx);
 
         if (shouldSteerDirectAnswer(proposed, calls) && !directRetryDone) {
+          if (options.requireToolResult) {
+            stopReason = "tool_error";
+            finalText =
+              "No specialized result was produced because the proposed tool call did not match this request. Include the original text for text operations and try again.";
+            break;
+          }
           directRetryDone = true;
           yield { type: "step_end", index: stepIndex };
           turnInput = DIRECT_ANSWER_RETRY;
@@ -501,6 +516,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
               calls: fetchCalls,
               stepIndex,
               signal,
+              leases,
             });
             steps.push({
               index: stepIndex,
@@ -563,6 +579,29 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
               "The model returned an invalid tool call. Run the request again.";
           } else {
             answer = stripToolCode(reply) || reply.trim();
+          }
+          if (options.requireToolResult) {
+            const incomplete = uncompletedRequestedTools();
+            if (incomplete.length > 0) {
+              stopReason = "tool_error";
+              finalText = `${incomplete.join(", ")} did not complete, so the model's own answer was withheld. Send the request again.`;
+              break;
+            }
+            if (!toolCallRecords.some((record) => !record.error)) {
+              if (!specializedToolRetryDone && stepIndex + 1 < maxSteps) {
+                specializedToolRetryDone = true;
+                if (streamedAnswerText) {
+                  yield { type: "step_reset", index: stepIndex };
+                }
+                yield { type: "step_end", index: stepIndex };
+                turnInput = SPECIALIZED_TOOL_RETRY;
+                continue;
+              }
+              stopReason = "tool_error";
+              finalText =
+                "No specialized tool completed this request. Ask for a specific text operation, or select Minimal for a Prompt API response.";
+              break;
+            }
           }
 
           // Evidence check for tool-backed runs: numeric values in the
@@ -653,25 +692,11 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
           calls,
           stepIndex,
           signal,
+          leases,
         });
         recordToolResults(records);
 
-        // Summarizer returned `{ summary: "" }` (availability race). The next
-        // model turn will summarize in prose - drop the empty tool card so the
-        // transcript does not look like the tool succeeded with no output.
-        const summarizeOnlyEmpty =
-          calls.length === 1 &&
-          calls[0]?.name === "summarize_text" &&
-          records[0] &&
-          !records[0].error &&
-          isEmptySummarizeOutput(records[0].output);
-        if (summarizeOnlyEmpty) {
-          yield { type: "step_reset", index: stepIndex };
-          yield { type: "step_end", index: stepIndex };
-          turnInput =
-            "The on-device Summarizer returned no text. Summarize the user's source yourself in plain text now - do not call summarize_text or any other tool.";
-          continue;
-        }
+        signal.throwIfAborted();
 
         const directText = resolveDirectReturnText(
           calls,
@@ -711,8 +736,10 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
 
         const fatal = records.find((r) => r.error);
         if (fatal && onToolError !== "report") {
-          stopReason = "tool_error";
-          finalText = `I couldn't complete this request because ${fatal.name} failed.`;
+          stopReason = fatal.error?.name?.endsWith("UnavailableError")
+            ? "unavailable"
+            : "tool_error";
+          finalText = `I couldn't complete this request because ${fatal.name} failed: ${fatal.error?.message ?? "No result was produced."}`;
           failure = {
             name: fatal.error?.name ?? "ToolError",
             message:
@@ -792,6 +819,7 @@ export function createAgentLoop(options: CreateAgentOptions = {}): Agent {
       destroyed = true;
       currentController?.abort();
       currentController = null;
+      leases.releaseAll();
       currentClone?.destroy();
       currentClone = null;
       invalidatePrefetchedClone();
@@ -1044,7 +1072,7 @@ function buildToolResultTurn(
       !(r.output as { summary?: string }).summary?.trim(),
   );
   const preamble = unavailableSummarize
-    ? "Tool results (summarize_text returned no summary - the Summarizer API was unavailable; summarize the source yourself in plain text):\n"
+    ? "Tool results (summarize_text returned no summary; report that no summary was produced):\n"
     : "Tool results:\n";
   return [
     preamble,
@@ -1198,6 +1226,17 @@ function resolveDirectReturnText(
 
 function directOutputToText(output: unknown, toolName: string): string {
   if (typeof output === "string") return output.trim();
+  if (output && typeof output === "object" && "output" in output) {
+    const result = output.output;
+    if (typeof result === "string") return result;
+    if (
+      result &&
+      typeof result === "object" &&
+      "correctedInput" in result &&
+      typeof result.correctedInput === "string"
+    )
+      return result.correctedInput;
+  }
   // Summarizer returns `{ summary, cached }`; expose the summary as-is.
   if (toolName === "summarize_text" && output && typeof output === "object") {
     const summary = (output as { summary?: unknown }).summary;

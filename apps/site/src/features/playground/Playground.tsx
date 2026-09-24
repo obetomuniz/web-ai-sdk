@@ -8,6 +8,7 @@ import { MODES } from "./experimental/playground/presets.js";
 import { useExamples } from "./experimental/playground/useExamples.js";
 import { useActivityLog } from "./lib/useActivityLog.js";
 import { useAgentThreads } from "./lib/useAgentThreads.js";
+import { useCapabilityChecks } from "./lib/useCapabilityChecks.js";
 import { useConversationAgent } from "./lib/useConversationAgent.js";
 import { usePlaygroundLayout } from "./lib/usePlaygroundLayout.js";
 import { usePlaygroundWebMCPTools } from "./lib/usePlaygroundWebMCPTools.js";
@@ -51,9 +52,11 @@ export function Playground() {
     mode: activeMode,
     ops,
     promptOn,
+    promptReadiness,
     summarizerOn,
     pushActivity,
   });
+  const capabilityChecks = useCapabilityChecks(tools, events);
 
   const {
     examples,
@@ -68,9 +71,9 @@ export function Playground() {
   });
 
   const send = useCallback(
-    async (textToSend: string) => {
+    async (textToSend: string, signal?: AbortSignal) => {
       cancelExampleGeneration();
-      return sendToAgent(textToSend);
+      return sendToAgent(textToSend, signal);
     },
     [cancelExampleGeneration, sendToAgent],
   );
@@ -96,16 +99,20 @@ export function Playground() {
     };
   }, [modeMenuOpen]);
 
-  const { available: webmcpAvailable, registeredTools: webmcpTools } =
-    usePlaygroundWebMCPTools({
-      threads,
-      activeThread,
-      ops,
-      send,
-      newSession,
-      busy,
-      pushActivity,
-    });
+  const {
+    available: webmcpAvailable,
+    registeredTools: webmcpTools,
+    status: webmcpStatus,
+    error: webmcpError,
+  } = usePlaygroundWebMCPTools({
+    threads,
+    activeThread,
+    ops,
+    send,
+    newSession,
+    busy,
+    pushActivity,
+  });
 
   const submitDraft = () => {
     if (!draft.trim() || busy) return;
@@ -120,6 +127,7 @@ export function Playground() {
   };
 
   const createThread = (modeId = activeMode.id) => {
+    if (busy) return;
     const thread = ops.create(modeId);
     newSession();
     pushActivity({
@@ -156,6 +164,7 @@ export function Playground() {
   };
 
   const setMode = (modeId: string) => {
+    if (busy) return;
     const mode = MODES.find((candidate) => candidate.id === modeId) ?? MODES[0];
     if (mode.id !== activeMode.id) {
       ops.setMode(activeThread.id, mode.id);
@@ -231,9 +240,11 @@ export function Playground() {
           open={layout.runtimeOpen}
           conversationsOpen={layout.conversationsOpen}
           promptReadiness={promptReadiness}
-          summarizerOn={summarizerOn}
+          capabilityChecks={capabilityChecks}
           webmcpAvailable={webmcpAvailable}
           webmcpToolCount={webmcpTools.length}
+          webmcpStatus={webmcpStatus}
+          webmcpError={webmcpError}
           events={eventsLog}
           onHide={layout.hideRuntime}
         />

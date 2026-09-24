@@ -6,12 +6,30 @@
  */
 
 import {
-  isAvailable as isSummarizerAvailable,
+  checkAvailability,
+  prepareSummarizer,
   summarize,
 } from "@web-ai-sdk/summarizer";
+import { z } from "zod";
 import type { AgentRunContext } from "../runContext.js";
 import { summarizeTextHasKnownSource } from "../summarizeProvenance.js";
 import type { AgentTool } from "../types.js";
+import { parseToolInput, withAliases } from "./input.js";
+import {
+  downloadModel,
+  runTextOperation,
+  type TextOperation,
+} from "./lifecycle.js";
+
+// Optional style hints fall back to defaults; on-device planners misspell them.
+const inputSchema = z.object({
+  text: z
+    .string()
+    .min(1)
+    .refine((value) => Boolean(value.trim())),
+  type: z.enum(["tldr", "key-points", "headline"]).optional().catch(undefined),
+  length: z.enum(["short", "medium", "long"]).optional().catch(undefined),
+});
 
 interface SummarizeInput {
   text: string;
@@ -26,31 +44,23 @@ interface SummarizeOutput {
   cached: boolean;
 }
 
-/** True when the tool ran but produced no summary (unavailable / race). */
-export function isEmptySummarizeOutput(output: unknown): boolean {
-  if (!output || typeof output !== "object") return true;
-  return !(output as SummarizeOutput).summary?.trim();
-}
-
 export const summarizeTool: AgentTool<SummarizeInput, SummarizeOutput> = {
   name: "summarize_text",
   description:
-    "Condense EXISTING text into a shorter form with the browser's built-in Summarizer (on-device). The `text` argument MUST be copied from text the user pasted in their message or from a successful fetch_url result in this conversation - never text you just generated. Use when the user wants a shorter form or key points from that source. Do NOT use to write, generate, compose, draft, or expand new content; produce that yourself with no tool. Returns an empty summary if the API is unavailable.",
+    "Condense EXISTING text into a shorter form with the browser's built-in Summarizer (on-device). The `text` argument MUST be copied from text the user pasted in their message or from a successful fetch_url result in this conversation - never text you just generated. Use when the user wants a shorter form or key points from that source. Do NOT use to write, generate, compose, draft, or expand new content; use `write_text` for that when available, otherwise produce it yourself with no tool.",
   readOnly: true,
   acceptCall(input: Record<string, unknown>, ctx: AgentRunContext): boolean {
-    if (!isSummarizerAvailable()) return false;
+    if (typeof input.text !== "string" || !input.text.trim()) return true;
     return summarizeTextHasKnownSource(
       String(input.text ?? ""),
       ctx.userInput,
       ctx.fetchedSources,
     );
   },
-  // When the summarizer returns text, finish with that summary only (no second
-  // model paraphrase). If it returns empty (unavailable), the loop continues
-  // so the planner can summarize in prose. Misroutes are blocked by acceptCall.
+  // Return successful summaries without another model paraphrase.
   returnDirectIf(_input, output) {
     const summary = (output as SummarizeOutput)?.summary?.trim();
-    return summary.length > 0;
+    return Boolean(summary?.length);
   },
   inputSchema: {
     type: "object",
@@ -62,24 +72,62 @@ export const summarizeTool: AgentTool<SummarizeInput, SummarizeOutput> = {
     required: ["text"],
     additionalProperties: false,
   },
-  async execute({ text, type = "tldr", length = "short" }, { signal }) {
-    if (!isSummarizerAvailable()) {
-      return { summary: "", cached: false };
-    }
-    try {
-      const result = await summarize({
-        input: text,
-        type,
-        length,
-        language: "en",
-        format: "plain-text",
-        signal,
-      });
-      return { summary: result.output ?? "", cached: result.cached };
-    } catch {
-      // `isAvailable()` can be true while a later call fails (warm-up race).
-      // Never surface SDK errors as tool failures - same as unavailable.
-      return { summary: "", cached: false };
-    }
+  async execute(input, ctx) {
+    const result = await runTextOperation(ctx, operation(input, ctx.signal));
+    return { summary: result.output ?? "", cached: result.cached };
+  },
+  async download(input, onProgress) {
+    return downloadModel(operation(input).prepare, onProgress);
+  },
+  async availability(input) {
+    return operation(input).availability();
   },
 };
+
+function operation(
+  input: unknown,
+  signal?: AbortSignal,
+): TextOperation<Awaited<ReturnType<typeof summarize>>> {
+  const {
+    text,
+    type = "tldr",
+    length = "short",
+  } = parseToolInput(
+    "summarize_text",
+    inputSchema,
+    withAliases(input, {
+      type: {
+        summary: "tldr",
+        "tl;dr": "tldr",
+        keyphrases: "key-points",
+        "key points": "key-points",
+        bullets: "key-points",
+        title: "headline",
+      },
+      length: {},
+    }),
+  );
+  const options = {
+    type,
+    length,
+    language: "en",
+    format: "plain-text" as const,
+  };
+  return {
+    key: `summarize_text:${JSON.stringify(options)}`,
+    options,
+    availability: () =>
+      checkAvailability({
+        type,
+        length,
+        format: "plain-text",
+        preference: "auto",
+        expectedInputLanguages: ["en"],
+        expectedContextLanguages: ["en"],
+        outputLanguage: "en",
+      }),
+    prepare: (monitor) => prepareSummarizer({ ...options, monitor }),
+    execute: (onUpdate, monitor) =>
+      summarize({ ...options, input: text, onUpdate, monitor, signal }),
+  };
+}

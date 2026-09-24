@@ -13,7 +13,7 @@ export interface PlaygroundWebMCPContext {
   threads: AgentThread[];
   activeThread: AgentThread;
   ops: AgentThreadOps;
-  send: (text: string) => Promise<boolean>;
+  send: (text: string, signal?: AbortSignal) => Promise<boolean>;
   newSession: () => void;
   busy: boolean;
   pushActivity: (event: Omit<ActivityEvent, "id" | "ts">) => void;
@@ -215,6 +215,7 @@ export function createPlaygroundWebMCPTools(args: PlaygroundWebMCPContext) {
     description:
       "Delete an agent conversation by id. Destructive: persisted turns cannot be recovered.",
     destructive: true,
+    annotations: { consequentialHint: true },
     input: ConversationIdInput,
     output: OperationOutput,
     inputSchema: ConversationIdSchema,
@@ -279,10 +280,11 @@ export function createPlaygroundWebMCPTools(args: PlaygroundWebMCPContext) {
       io: "input",
       target: "draft-2020-12",
     }),
-    execute: async ({ text }) => {
+    execute: async ({ text }, options) => {
+      options?.signal?.throwIfAborted();
       if (args.busy) return rejectBusy("send_message");
       report("send_message", text);
-      const accepted = await args.send(text);
+      const accepted = await args.send(text, options?.signal);
       return accepted
         ? { ok: true as const }
         : {
@@ -311,6 +313,8 @@ export function usePlaygroundWebMCPTools(args: PlaygroundWebMCPContext) {
 
   return {
     available,
+    status: discovery.status,
+    error: discovery.error,
     registeredTools: discovery.tools.filter((registered) =>
       tools.some((definition) => definition.name === registered.name),
     ),

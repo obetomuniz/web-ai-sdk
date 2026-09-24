@@ -48,6 +48,7 @@ export interface UseAgentOptions extends CreateAgentOptions {
   eventLimit?: number;
   /** Called when a run completes so hosts can persist it as a thread turn. */
   onTurnComplete?: (turn: AgentTurn) => void;
+  onEvent?: (event: AgentEvent) => void;
 }
 
 /** The thought currently being streamed, with the step it belongs to. */
@@ -84,11 +85,14 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
   optionsRef.current = options;
 
   const agentRef = useRef<Agent | null>(null);
+  const runVersionRef = useRef(0);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Agent identity must refresh when any construction option changes; the current values are read from optionsRef.
   useEffect(() => {
     agentRef.current = promptAvailable ? createAgent(optionsRef.current) : null;
     return () => {
+      runVersionRef.current += 1;
+      runningRef.current = false;
       agentRef.current?.destroy();
       agentRef.current = null;
     };
@@ -99,6 +103,7 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
     options.language,
     options.sessionMode,
     options.onToolError,
+    options.requireToolResult,
     options.tools,
     options.sessionKey,
     promptAvailable,
@@ -154,7 +159,6 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
     // cloned session and stops generation).
     abortedRef.current = true;
     agentRef.current?.abort();
-    runningRef.current = false;
     setLiveThought(null);
     setStopReason("aborted");
     setStatus("aborted");
@@ -191,6 +195,8 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
       if (runningRef.current) agentRef.current.abort();
 
       runningRef.current = true;
+      const runVersion = ++runVersionRef.current;
+      const onTurnComplete = optionsRef.current.onTurnComplete;
       abortedRef.current = false;
       const startedAt = performance.now();
       setStatus("planning");
@@ -212,6 +218,7 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
       let textFlushHandle: number | null = null;
       let textFlushUsesRaf = false;
       const flushPendingText = () => {
+        if (runVersion !== runVersionRef.current) return;
         if (!pendingTextDelta) return;
         const delta = pendingTextDelta;
         pendingTextDelta = "";
@@ -251,7 +258,8 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
           // the transcript freezes exactly where it is. Breaking the loop
           // calls the stream's `return()`, which runs the generator's
           // `finally` and destroys the model session (stopping generation).
-          if (abortedRef.current) break;
+          if (abortedRef.current || runVersion !== runVersionRef.current) break;
+          optionsRef.current.onEvent?.(ev);
 
           // `plan_delta` and `text_delta` arrive at token frequency
           // (often 50-200 per step). Pushing them through React state
@@ -391,7 +399,7 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
                   terminalError.name = ev.failure.name;
                   setError(terminalError);
                 }
-                optionsRef.current.onTurnComplete?.({
+                onTurnComplete?.({
                   userInput: input,
                   assistantText: ev.text,
                   steps: completedSteps,
@@ -414,6 +422,7 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
           }
         }
       } catch (err) {
+        if (runVersion !== runVersionRef.current) return;
         cancelTextFlush();
         flushPendingText();
         const e = err instanceof Error ? err : new Error(String(err));
@@ -421,7 +430,7 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
         setStopReason("model_error");
         setStatus("error");
         completedTurn = true;
-        optionsRef.current.onTurnComplete?.({
+        onTurnComplete?.({
           userInput: input,
           assistantText:
             "The run stopped unexpectedly. Try again; if it repeats, reload the playground.",
@@ -433,8 +442,12 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
       } finally {
         cancelTextFlush();
         flushPendingText();
-        if (abortedRef.current && !completedTurn) {
-          optionsRef.current.onTurnComplete?.({
+        if (
+          runVersion === runVersionRef.current &&
+          abortedRef.current &&
+          !completedTurn
+        ) {
+          onTurnComplete?.({
             userInput: input,
             assistantText: projectedText,
             steps: Array.from(stepsByIndex.values()),
@@ -442,8 +455,11 @@ export function useAgent(options: UseAgentOptions): UseAgentReturn {
             durationMs: performance.now() - startedAt,
           });
         }
-        runningRef.current = false;
-        if (optionsRef.current.sessionMode === "thread") {
+        if (runVersion === runVersionRef.current) runningRef.current = false;
+        if (
+          runVersion === runVersionRef.current &&
+          optionsRef.current.sessionMode === "thread"
+        ) {
           clearStreamingTurn();
         }
       }

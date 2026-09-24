@@ -4,6 +4,7 @@ import { useAgent } from "../experimental/agent/react/index.js";
 import type { AgentMode } from "../experimental/playground/presets.js";
 import { activityPreview } from "./activity.js";
 import { type AgentThread, deriveThreadName } from "./agentThreads.js";
+import type { PromptReadiness } from "./promptReadiness.js";
 import type { ActivityEvent } from "./types.js";
 import type { AgentThreadOps } from "./useAgentThreads.js";
 
@@ -12,6 +13,7 @@ interface Args {
   mode: AgentMode;
   ops: AgentThreadOps;
   promptOn: boolean;
+  promptReadiness?: PromptReadiness;
   summarizerOn: boolean;
   pushActivity: (event: Omit<ActivityEvent, "id" | "ts">) => void;
 }
@@ -21,9 +23,14 @@ export function useConversationAgent({
   mode,
   ops,
   promptOn,
+  promptReadiness,
   summarizerOn,
   pushActivity,
 }: Args) {
+  // Chrome reports progress on every session create; log real downloads only.
+  const promptDownloadingRef = useRef(false);
+  promptDownloadingRef.current =
+    promptReadiness === "downloadable" || promptReadiness === "downloading";
   const [currentInput, setCurrentInput] = useState("");
   const [currentTurnId, setCurrentTurnId] = useState<string | null>(null);
   const currentTurnIdRef = useRef<string | null>(null);
@@ -42,6 +49,48 @@ export function useConversationAgent({
     sessionMode: "thread",
     samplingMode: "predictable",
     language: "en",
+    onToolError: mode.id === "web-ai-suite" ? "stop" : "report",
+    requireToolResult: mode.id === "web-ai-suite",
+    onModelDownload: (loaded) => {
+      if (!promptDownloadingRef.current) return;
+      pushActivity({
+        kind: "info",
+        message: "Prompt API model download",
+        detail: `${Math.round(loaded * 100)}%`,
+      });
+    },
+    onEvent: (event) => {
+      if (event.type === "tool_result") {
+        const outcome =
+          event.error?.name === "AbortError"
+            ? "cancelled"
+            : event.error?.name?.endsWith("UnavailableError")
+              ? "unavailable"
+              : event.error?.name === "AgentToolValidationError"
+                ? "invalid input"
+                : event.error
+                  ? "operational error"
+                  : "success";
+        pushActivity({
+          kind: "tool_invoked",
+          message: `${event.name}: ${outcome}`,
+          detail: event.error?.message,
+        });
+      }
+      if (
+        event.type === "tool_progress" &&
+        event.data &&
+        typeof event.data === "object" &&
+        "phase" in event.data &&
+        event.data.phase !== "output"
+      ) {
+        pushActivity({
+          kind: "info",
+          message: event.name,
+          detail: describeProgress(event.data),
+        });
+      }
+    },
     onTurnComplete: (turn) => {
       const currentRun = currentRunRef.current;
       if (!currentRun) return;
@@ -78,14 +127,16 @@ export function useConversationAgent({
   });
 
   const busy =
+    agent.isStreamingTurn ||
     agent.status === "planning" ||
     agent.status === "tool_calling" ||
     agent.status === "streaming";
 
   const send = useCallback(
-    async (textToSend: string) => {
+    async (textToSend: string, signal?: AbortSignal) => {
+      signal?.throwIfAborted();
       const trimmed = textToSend.trim();
-      if (!trimmed || busy || !promptOn) return false;
+      if (!trimmed || busy || currentRunRef.current || !promptOn) return false;
       const turnId = crypto.randomUUID();
       const conversationId = thread.id;
       currentTurnIdRef.current = turnId;
@@ -101,20 +152,33 @@ export function useConversationAgent({
         message: activityPreview(trimmed, "Message sent"),
       });
       setCurrentInput(trimmed);
+      const cancelOwnedRun = () => {
+        if (currentRunRef.current?.turnId !== turnId) return;
+        agent.abort();
+        pushActivity({
+          kind: "chat_abort",
+          message: "WebMCP cancelled response",
+          detail: conversationId,
+        });
+      };
+      signal?.addEventListener("abort", cancelOwnedRun, { once: true });
       try {
         await agent.run(trimmed);
+        signal?.throwIfAborted();
         return true;
       } finally {
+        signal?.removeEventListener("abort", cancelOwnedRun);
         if (currentTurnIdRef.current === turnId) {
           currentTurnIdRef.current = null;
           currentRunRef.current = null;
           setCurrentTurnId((current) => (current === turnId ? null : current));
+          setCurrentInput("");
         }
-        setCurrentInput("");
       }
     },
     [
       agent.run,
+      agent.abort,
       busy,
       ops,
       promptOn,
@@ -165,4 +229,16 @@ async function generateConversationTitle(
   } catch {
     rename(conversationId, fallbackTitle);
   }
+}
+
+function describeProgress(data: object): string {
+  const { phase, state, loaded } = data as {
+    phase?: unknown;
+    state?: unknown;
+    loaded?: unknown;
+  };
+  if (phase === "readiness") return `Readiness: ${String(state)}`;
+  if (phase === "download" && typeof loaded === "number")
+    return `Model download: ${Math.round(loaded * 100)}%`;
+  return JSON.stringify(data);
 }

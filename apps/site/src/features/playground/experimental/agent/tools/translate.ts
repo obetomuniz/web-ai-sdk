@@ -11,87 +11,72 @@
  */
 
 import {
-  isAvailable as isTranslatorAvailable,
-  translate as sdkTranslate,
-  TranslatorUnavailableError,
+  checkAvailability,
+  prepareTranslator,
+  translate,
 } from "@web-ai-sdk/translator";
+import { z } from "zod";
 import type { AgentTool } from "../types.js";
+import { parseToolInput } from "./input.js";
+import {
+  downloadModel,
+  runTextOperation,
+  type TextOperation,
+} from "./lifecycle.js";
 
-interface TranslateInput {
-  text: string;
-  /** BCP-47, e.g. "en", "pt", "ja". */
-  sourceLanguage: string;
-  /** BCP-47, e.g. "en", "pt", "ja". */
-  targetLanguage: string;
-}
+const schema = z.object({
+  text: z
+    .string()
+    .min(1)
+    .refine((value) => Boolean(value.trim())),
+  sourceLanguage: z.string().trim().min(1),
+  targetLanguage: z.string().trim().min(1),
+});
 
-interface TranslateOutput {
-  translation: string;
-  cached?: boolean;
-  unavailable?: boolean;
-  error?: string;
-}
-
-export const translateTool: AgentTool<TranslateInput, TranslateOutput> = {
+export const translateTool: AgentTool<
+  z.input<typeof schema>,
+  { translation: string; cached: boolean }
+> = {
   name: "translate_text",
   description:
-    "Translate text using the browser's built-in Translator. Required input fields: `text` (string), `sourceLanguage` and `targetLanguage` (BCP-47 codes like `en`, `pt`, `ja`). Do NOT use `from`/`to` - those names don't exist on this tool. Returns `{ translation }`, or `{ unavailable: true }` when the API or language pair isn't installed, or `{ error }` when arguments are malformed.",
+    "Translate text using the browser's built-in Translator. Required input fields: `text` (string), `sourceLanguage` and `targetLanguage` (BCP-47 codes like `en`, `pt`, `ja`). Do NOT use `from`/`to` - those names don't exist on this tool. Returns `{ translation }`.",
   readOnly: true,
-  inputSchema: {
-    type: "object",
-    properties: {
-      text: { type: "string" },
-      sourceLanguage: { type: "string" },
-      targetLanguage: { type: "string" },
-    },
-    required: ["text", "sourceLanguage", "targetLanguage"],
-    additionalProperties: false,
+  // A translation request needs a Translator result; prose from the planner
+  // would present Prompt output as a translation.
+  requiredCallIf(ctx) {
+    return /\btranslate\b/i.test(ctx.userInput);
   },
-  async execute({ text, sourceLanguage, targetLanguage }, { signal }) {
-    // Defensive validation: the model occasionally invents field names
-    // (e.g. `to`/`from`) from its translation-API priors. We surface a
-    // typed error rather than passing `undefined` into the SDK, which
-    // would crash inside `lang.split(...)` and look like a tool bug.
-    if (typeof text !== "string" || !text.trim()) {
-      return {
-        translation: "",
-        error: "Missing required `text` (non-empty string).",
-      };
-    }
-    if (typeof sourceLanguage !== "string" || !sourceLanguage.trim()) {
-      return {
-        translation: "",
-        error:
-          "Missing required `sourceLanguage` (BCP-47 code like `en`, `pt`, `ja`). Do NOT use `from` - the field is `sourceLanguage`.",
-      };
-    }
-    if (typeof targetLanguage !== "string" || !targetLanguage.trim()) {
-      return {
-        translation: "",
-        error:
-          "Missing required `targetLanguage` (BCP-47 code like `en`, `pt`, `ja`). Do NOT use `to` - the field is `targetLanguage`.",
-      };
-    }
-
-    if (!isTranslatorAvailable()) {
-      return { translation: "", unavailable: true };
-    }
-    try {
-      const result = await sdkTranslate({
-        input: text,
-        sourceLanguage,
-        targetLanguage,
-        signal,
-      });
-      return {
-        translation: result.output ?? "",
-        cached: result.cached,
-      };
-    } catch (err) {
-      if (err instanceof TranslatorUnavailableError) {
-        return { translation: "", unavailable: true };
-      }
-      throw err;
-    }
+  inputSchema: z.toJSONSchema(schema, {
+    io: "input",
+  }) as AgentTool["inputSchema"],
+  async execute(input, ctx) {
+    const result = await runTextOperation(ctx, operation(input, ctx.signal));
+    return { translation: result.output ?? "", cached: result.cached };
+  },
+  async download(input, onProgress) {
+    return downloadModel(operation(input).prepare, onProgress);
+  },
+  async availability(input) {
+    return operation(input).availability();
   },
 };
+
+function operation(
+  input: unknown,
+  signal?: AbortSignal,
+): TextOperation<Awaited<ReturnType<typeof translate>>> {
+  const { text, sourceLanguage, targetLanguage } = parseToolInput(
+    "translate_text",
+    schema,
+    input,
+  );
+  const options = { sourceLanguage, targetLanguage };
+  return {
+    key: `translate_text:${JSON.stringify(options)}`,
+    options,
+    availability: () => checkAvailability(options),
+    prepare: (monitor) => prepareTranslator({ ...options, monitor }),
+    execute: (_onUpdate, monitor) =>
+      translate({ ...options, input: text, monitor, signal }),
+  };
+}

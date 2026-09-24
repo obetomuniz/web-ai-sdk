@@ -20,13 +20,19 @@
  */
 
 import { AgentToolValidationError, AgentUnknownToolError } from "./errors.js";
-import type { AgentEvent, AgentTool, AgentToolCallRecord } from "./types.js";
+import type {
+  AgentEvent,
+  AgentTool,
+  AgentToolCallRecord,
+  AgentToolLeaseScope,
+} from "./types.js";
 
 export interface DispatcherOptions {
   tools: readonly AgentTool[];
   calls: ReadonlyArray<{ name: string; input: Record<string, unknown> }>;
   stepIndex: number;
   signal: AbortSignal;
+  leases?: AgentToolLeaseScope;
   callIdFactory?: () => string;
 }
 
@@ -42,6 +48,7 @@ export async function* runDispatcher(
     calls,
     stepIndex,
     signal,
+    leases,
     callIdFactory = defaultCallIdFactory,
   } = options;
 
@@ -82,8 +89,10 @@ export async function* runDispatcher(
   const settlements = prepared.map(async (p, i) => {
     const tool = tools.find((t) => t.name === p.name);
     const start = nowMs();
+    let settled = false;
 
     const emit = (data: unknown) => {
+      if (signal.aborted || settled) return;
       progressQueue.push({
         type: "tool_progress",
         callId: p.callId,
@@ -122,12 +131,15 @@ export async function* runDispatcher(
     }
 
     try {
-      const output = await tool.execute(p.input, {
-        signal,
-        callId: p.callId,
-        step: stepIndex,
-        emit,
-      });
+      const output = await executeUntilAbort(signal, () =>
+        tool.execute(p.input, {
+          signal,
+          callId: p.callId,
+          step: stepIndex,
+          emit,
+          leases,
+        }),
+      );
       records[i] = {
         callId: p.callId,
         name: p.name,
@@ -136,7 +148,7 @@ export async function* runDispatcher(
         durationMs: nowMs() - start,
       };
     } catch (err) {
-      if ((err as Error)?.name === "AbortError") {
+      if (signal.aborted || (err as Error)?.name === "AbortError") {
         records[i] = {
           callId: p.callId,
           name: p.name,
@@ -155,6 +167,7 @@ export async function* runDispatcher(
         };
       }
     } finally {
+      settled = true;
       pumpProgress();
     }
   });
@@ -170,7 +183,7 @@ export async function* runDispatcher(
   while (pendingCount > 0 || progressQueue.length > 0) {
     while (progressQueue.length > 0) {
       const progress = progressQueue.shift();
-      if (progress) yield progress;
+      if (progress && !signal.aborted) yield progress;
     }
 
     if (pendingCount === 0) break;
@@ -189,7 +202,7 @@ export async function* runDispatcher(
   await completionPromise;
   while (progressQueue.length > 0) {
     const progress = progressQueue.shift();
-    if (progress) yield progress;
+    if (progress && !signal.aborted) yield progress;
   }
 
   // Emit `tool_result` events in completion order is appealing, but
@@ -214,6 +227,33 @@ export async function* runDispatcher(
   }
 
   return { records: final };
+}
+
+/** Settle cancellation even when a native operation ignores its signal. */
+export async function executeUntilAbort<T>(
+  signal: AbortSignal,
+  execute: () => T | Promise<T>,
+): Promise<T> {
+  signal.throwIfAborted();
+  let onAbort = () => {};
+  const aborted = new Promise<never>((_resolve, reject) => {
+    onAbort = () =>
+      reject(new DOMException("Operation cancelled", "AbortError"));
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+  try {
+    const result = await Promise.race([
+      Promise.resolve().then(() => {
+        signal.throwIfAborted();
+        return execute();
+      }),
+      aborted,
+    ]);
+    signal.throwIfAborted();
+    return result;
+  } finally {
+    signal.removeEventListener("abort", onAbort);
+  }
 }
 
 function lightValidate(

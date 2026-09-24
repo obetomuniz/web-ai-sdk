@@ -1,7 +1,7 @@
 import type { Session } from "@web-ai-sdk/prompt";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildNativePrompt, createAgentLoop } from "./loop.js";
-import type { AgentTool } from "./types.js";
+import type { AgentTool, AgentToolContext } from "./types.js";
 
 const { createSessionMock } = vi.hoisted(() => ({
   createSessionMock: vi.fn(),
@@ -45,6 +45,109 @@ describe("buildNativePrompt", () => {
 });
 
 describe("createAgentLoop", () => {
+  it("does not present a Prompt-only answer as an SDK demonstration", async () => {
+    const fixture = createSessionFixture([
+      "Here is my generated draft.",
+      "Here is my generated draft again.",
+    ]);
+    createSessionMock.mockReturnValue(fixture.base);
+    const agent = createAgentLoop({
+      tools: [createClockFixtureTool([])],
+      requireToolResult: true,
+    });
+    const result = await agent.run("Draft a message");
+    agent.destroy();
+    expect(fixture.inputs[1]).toContain("Do not answer in prose");
+    expect(result.stopReason).toBe("tool_error");
+    expect(result.text).toContain("No specialized tool completed");
+    expect(result.text).not.toContain("generated draft");
+  });
+
+  it("steers one prose answer toward the matching specialized tool", async () => {
+    const fixture = createSessionFixture([
+      "Here is my generated draft.",
+      "```tool_code\ndraft_fixture()\n```",
+    ]);
+    createSessionMock.mockReturnValue(fixture.base);
+    const agent = createAgentLoop({
+      requireToolResult: true,
+      tools: [
+        {
+          name: "draft_fixture",
+          description: "Draft text.",
+          inputSchema: { type: "object" },
+          returnDirect: true,
+          execute: async () => "Drafted by the Writer.",
+        },
+      ],
+    });
+    const result = await agent.run("Draft a message");
+    agent.destroy();
+    expect(result.stopReason).toBe("done");
+    expect(result.text).toBe("Drafted by the Writer.");
+  });
+  it("withholds a prose translation when the required tool never ran", async () => {
+    const fixture = createSessionFixture([
+      "```tool_code\ndetect_fixture()\n```",
+      "English: Hello. Portuguese: Olá.",
+      "English: Hello. Portuguese: Olá.",
+    ]);
+    createSessionMock.mockReturnValue(fixture.base);
+    const agent = createAgentLoop({
+      requireToolResult: true,
+      tools: [
+        {
+          name: "detect_fixture",
+          description: "Detect a language.",
+          inputSchema: { type: "object" },
+          execute: async () => ({ language: "ja" }),
+        },
+        {
+          name: "translate_fixture",
+          description: "Translate text.",
+          inputSchema: { type: "object" },
+          requiredCallIf: () => true,
+          execute: async () => ({ translation: "Olá" }),
+        },
+      ],
+    });
+    const result = await agent.run("Translate it to Portuguese");
+    agent.destroy();
+    expect(result.stopReason).toBe("tool_error");
+    expect(result.text).toContain("translate_fixture did not complete");
+    expect(result.text).not.toContain("Olá");
+  });
+
+  it("keeps prepared tool sessions until the agent is destroyed", async () => {
+    const fixture = createSessionFixture([
+      "```tool_code\nprepare_fixture()\n```",
+      "Prepared.",
+    ]);
+    createSessionMock.mockReturnValue(fixture.base);
+    const release = vi.fn();
+    const execute = vi.fn(async (_input: unknown, ctx: AgentToolContext) => {
+      await ctx.leases?.acquire("fixture", () => ({
+        ready: Promise.resolve(),
+        release,
+      })).ready;
+      return { prepared: true };
+    });
+    const agent = createAgentLoop({
+      tools: [
+        {
+          name: "prepare_fixture",
+          description: "Prepare a fixture session.",
+          inputSchema: { type: "object" },
+          execute,
+        },
+      ],
+    });
+    await agent.run("Prepare the fixture");
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(release).not.toHaveBeenCalled();
+    agent.destroy();
+    expect(release).toHaveBeenCalledTimes(1);
+  });
   it("continues a mixed request until a prefixed clock_now call executes", async () => {
     const fixture = createSessionFixture([
       "Both URLs were fetched successfully.",
