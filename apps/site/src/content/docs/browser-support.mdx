@@ -80,6 +80,14 @@ Both arities were verified in installed Chrome 153.0.8010.37 and Canary 155.0.80
 
 Serialization failures reject, including circular data, BigInt values, failing `toJSON()` methods, and objects that serialize to `undefined`. Native results, navigation `null`, and cancellation remain unchanged.
 
+### WebMCP annotation compatibility
+
+The [current draft](https://webmachinelearning.github.io/webmcp/#dom-toolannotations-debugging) defines `ToolAnnotations.debugging` with a default of `false`. Chromium [implemented the member](https://github.com/chromium/chromium/commit/4ba301ad8c7c1e2190707d80aec6bc8aa63a2671). Chromium Dash records [156.0.8067.0 as the first build](https://chromiumdash.appspot.com/commit/4ba301ad8c7c1e2190707d80aec6bc8aa63a2671).
+
+Chrome for Testing 156.0.8072.0 with `#enable-webmcp-testing` returned explicit `true` and `false` values through discovery. It returned `false` when registration omitted the field. Installed Chrome 153.0.8010.53 accepted the field and omitted it from discovery.
+
+The SDK forwards the field unchanged and preserves discovered metadata. It does not add defaults or detect browser versions. Treat an omitted value as `false`.
+
 ## Agent consumers
 
 The table above tracks browser API providers only. An agent consumer is a separate product integration. It does not establish `document.modelContext` support in Chrome or another browser.

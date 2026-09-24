@@ -226,6 +226,12 @@ The SDK forwards explicit `true` and `false` values and leaves the property abse
 
 Pass the hint inside `annotations`, for example `annotations: { consequentialHint: true }`. Changes between `true`, `false`, and omission rebuild registration through the vanilla core. Equivalent annotation values do not rebuild registration.
 
+Set `annotations.debugging: true` for tools intended for debugging and developer tooling rather than end-user interactions. The field categorizes a tool. It does not grant permission or bypass application checks. Apply the same authentication, authorization, and validation as other tools.
+
+The SDK forwards explicit `true` and `false` values and leaves the property absent when omitted. Discovery preserves the metadata returned by the host. There is no shorthand. The SDK does not filter tools by this field or infer other annotations from it.
+
+Pass the field inside `annotations`, for example `annotations: { debugging: true }`. Changes between `true`, `false`, and omission rebuild registration through the vanilla core. Equivalent annotation values do not rebuild registration.
+
 Raw `annotations` values merge on top of shorthand values.
 
 ## Reference
@@ -291,6 +297,7 @@ interface ToolAnnotations {
   readOnlyHint?: boolean;
   untrustedContentHint?: boolean;
   consequentialHint?: boolean;
+  debugging?: boolean;
   destructiveHint?: boolean;       // compatibility
   idempotentHint?: boolean;        // compatibility
   openWorldHint?: boolean;         // compatibility
