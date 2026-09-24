@@ -10,6 +10,10 @@ import type { AgentTool } from "./types.js";
 export const DIRECT_ANSWER_RETRY =
   "Answer the user's request directly in plain text now. Do not call or mention any tool - produce the full answer yourself.";
 
+/** Modes that demonstrate specialized tools must not answer in prose. */
+export const SPECIALIZED_TOOL_RETRY =
+  "Do not answer in prose. Call the one tool that matches the user's request now, copying the user's text exactly into its input.";
+
 export function filterCallsForDispatch(
   calls: readonly ParsedToolCall[],
   tools: readonly AgentTool[],

@@ -104,8 +104,7 @@ export class ToolRegistry {
 /**
  * Wraps an `AgentTool` into the `Tool` shape `@web-ai-sdk/webmcp`
  * expects. External agents get the same `inputSchema` the in-page agent
- * sees, but they call through a synthetic AbortSignal and a synthetic
- * `callId` since WebMCP doesn't propagate a parent run context.
+ * sees. Forward native cancellation; hosts without it get a local signal.
  */
 function maybeRegisterWebMCP(tool: AgentTool): (() => void) | undefined {
   if (!isWebMCPAvailable()) return undefined;
@@ -116,12 +115,12 @@ function maybeRegisterWebMCP(tool: AgentTool): (() => void) | undefined {
     inputSchema: tool.inputSchema,
     readOnly: tool.readOnly,
     destructive: tool.destructive,
-    execute: async (input) => {
+    execute: async (input, options) => {
       // External agents (Cursor, Claude, Chrome) call through WebMCP
       // without an associated agent run; there's no event stream to
       // route progress to, so `emit` is a no-op for these calls.
       const ctx: AgentToolContext = {
-        signal: new AbortController().signal,
+        signal: options?.signal ?? new AbortController().signal,
         callId: `webmcp:${cryptoRandomId()}`,
         step: -1,
         emit: () => {

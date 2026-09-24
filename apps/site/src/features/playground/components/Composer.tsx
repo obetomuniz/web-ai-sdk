@@ -62,7 +62,7 @@ export function Composer({
   return (
     <div className={ui.composerDock}>
       <div className={ui.composerNotices}>
-        {!promptOn && (
+        {(!promptOn || promptReadiness === "downloadable") && (
           <div className={ui.composerNotice} role="status" aria-live="polite">
             <NoticeIcon className={ui.composerNoticeIcon} />
             <span className={ui.composerNoticeCopy}>

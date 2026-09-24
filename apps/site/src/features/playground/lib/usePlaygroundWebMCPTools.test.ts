@@ -41,7 +41,7 @@ function createContext(
 
 interface RegisteredTool {
   name: string;
-  execute: (input: unknown) => unknown;
+  execute: (input: unknown, options?: { signal?: AbortSignal }) => unknown;
 }
 
 type PlaygroundToolDefinition = ReturnType<
@@ -92,6 +92,25 @@ afterEach(() => {
     configurable: true,
   });
   vi.unstubAllGlobals();
+});
+
+it("forwards native cancellation to send_message", async () => {
+  const context = createContext();
+  const registered = registerPlaygroundTools(context);
+  const controller = new AbortController();
+  await findRegisteredTool(registered, "send_message").execute(
+    { text: "Hello" },
+    { signal: controller.signal },
+  );
+  expect(context.send).toHaveBeenCalledWith("Hello", controller.signal);
+});
+
+it("marks conversation deletion as consequential", () => {
+  const definitions = createPlaygroundWebMCPTools(createContext());
+  expect(findDefinition(definitions, "delete_conversation")).toMatchObject({
+    destructive: true,
+    annotations: { consequentialHint: true },
+  });
 });
 
 describe("createPlaygroundWebMCPTools", () => {
@@ -166,7 +185,7 @@ describe("createPlaygroundWebMCPTools", () => {
       conversation.id,
       "minimal",
     );
-    expect(context.send).toHaveBeenCalledWith("Hello");
+    expect(context.send).toHaveBeenCalledWith("Hello", undefined);
   });
 
   it("publishes display titles and marks user-derived output as untrusted", () => {

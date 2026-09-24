@@ -105,10 +105,12 @@ preview.
 ### 4. Availability checks are optimistic
 
 Prompt API detection is asynchronous. Treat the initial state as ready. Show a
-warning only after the browser reports a known unavailable or download state.
+notice only after the browser reports a known unavailable or download state.
 
-This prevents status changes during page load. Poll download states because the
-browser can update them without a reload.
+This prevents status changes during page load. A downloadable model keeps the
+composer enabled because the first message is the user intent that starts the
+download. Poll download states because the browser can update them without a
+reload.
 
 ### 5. Keep each run with its original conversation
 
@@ -189,10 +191,10 @@ Conversations and turns persist across reloads. Runtime Activity does not. It
 describes events from the current page session and is intentionally capped at
 50 entries.
 
-The Activity surface begins with live checks for Prompt, Summarizer, and WebMCP
-support. Keeping capability state in the same diagnostic list avoids decorative
-status chrome and makes unavailable or downloading states inspectable beside
-the events they affect.
+Activity shows Prompt, conversation-title Summarizer, WebMCP discovery, and the
+selected mode's text capabilities. API exposure alone does not mean readiness.
+Task-dependent options stay unknown until a tool invocation supplies them.
+Readiness, download progress, and named tool outcomes appear beside run events.
 
 The Activity count is therefore not expected to equal persisted turn, tool, or
 agent-step counts. It is a lightweight inspection surface, not an audit log.
@@ -224,6 +226,51 @@ The row composition comes from named grid areas in `ui.composer`. Below 640px
 the input takes its own full-width row, the mode trigger and actions move to a
 compact second row, and examples stay hidden. The Astro boot shell mirrors the
 same structure and classes.
+
+## SDK capability coverage
+
+| Package | Playground role | Deliberate limits |
+| --- | --- | --- |
+| Prompt | Plans tools, streams replies, clones sessions, budgets context, and generates requested examples | Text only; conversation sessions remain application-owned |
+| Summarizer | Summarizes supplied source text and generates conversation titles | Source-provenance checks remain; title failures use the request text |
+| Translator | Translates with an explicit source and target language | Readiness uses the actual pair; no assumed default pair |
+| Detector | Returns ranked language candidates and confidence | Does not choose translation policy inside the SDK |
+| Writer | `write_text` drafts from a task, tone, length, and optional context | Uses cumulative updates; does not replace conversation text |
+| Rewriter | `rewrite_text` revises supplied text with relative tone and length | Keeps original input immutable |
+| Proofreader | `proofread_text` returns corrected text and correction metadata | Displays original offsets, replacement, type, and explanation; never applies edits automatically |
+| WebMCP | Registers conversation controls and reports native discovery | Internal planner calls application callbacks, not native discovered tools |
+
+Built-in Web AI suite requires a successful tool result before showing an answer.
+A prose answer gets one corrective turn toward the matching tool, and translation
+requests need a Translator result. Otherwise the model's own answer is withheld.
+Unavailable tools, invalid arguments, operational failures, and cancellation remain
+distinct. The suite stops on tool failure. Kitchen sink asks the model to identify
+the SDK capability it used. Minimal remains available for ordinary Prompt-only
+requests.
+
+On-device planners misspell optional hints. Tools map near misses such as
+`formal` to the Rewriter's `more-formal`, drop unknown optional values and extra
+fields, and accept one language as a string. Missing or empty text still fails
+as invalid input.
+
+Each text operation probes its exact options, then prepares a matching SDK
+session owned by the conversation agent. Later calls with the same options reuse
+it. The agent keeps at most four and releases them when the mode or conversation
+changes or the Playground unmounts. No text models are created at page load.
+The application does not clear global SDK caches or enable new result persistence.
+
+Browsers start model downloads only from a user gesture, and a planned tool call
+runs seconds after Send. When a failed call's model is downloadable, its tool
+card offers **Download model**. Readiness is checked live, so persisted cards stay
+accurate. After the download, the next request runs without a gesture.
+Activity reports download progress only when a download was needed; Chrome
+also fires progress events when creating sessions for installed models.
+
+WebMCP `send_message` forwards native cancellation to its own conversation run.
+The abort listener is removed when that invocation ends. Deletion keeps the
+compatibility destructive hint and adds the consequential annotation.
+Discovery loading and errors remain visible separately from API exposure.
+Discovered schemas may be objects, strings, or absent.
 
 ## Maintenance invariants
 
@@ -267,3 +314,19 @@ Use a supported browser for final Playground QA. Verify at minimum:
 - Markdown lists, code, links, and partial streaming syntax;
 - console warnings and errors;
 - layout shift during reload.
+
+### Browser smoke harness
+
+Open `/playground/smoke/` in the production preview. Each button invokes a real
+SDK operation after explicit user intent. Record the exact browser version,
+enabled flags, trial-token setup, results, and skips from the JSON report.
+Use [Browser support](/docs/browser-support/) for current setup instructions.
+
+WebMCP checks register uniquely named temporary tools and use SDK `executeTool`.
+The deletion check uses an isolated in-memory conversation, never persisted user
+conversations. The cancellation check verifies one invocation and a native
+callback abort. Cleanup unregisters each smoke tool.
+
+Run on both object-input and legacy string-input hosts when available. Do not
+simulate another generation by overriding native execution in browser QA.
+Unit tests cover both SDK execution generations separately.

@@ -14,6 +14,12 @@ describe("promptReadinessMessage", () => {
     );
   });
 
+  it("explains that the first message starts a downloadable model", () => {
+    expect(promptReadinessMessage("downloadable", "chrome")).toBe(
+      "Chrome downloads the on-device model when you send your first message. Keep this page open while it finishes.",
+    );
+  });
+
   it("does not send unsupported browsers to Chrome settings", () => {
     expect(promptReadinessMessage("unavailable", "other")).toBe(
       "This browser does not support the Prompt API. Open the Playground in desktop Chrome or Edge.",

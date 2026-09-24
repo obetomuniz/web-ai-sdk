@@ -55,6 +55,22 @@ export interface AgentToolContext {
    * objects; the kit doesn't constrain the shape.
    */
   emit(data: unknown): void;
+  /**
+   * Prepared SDK sessions owned by the agent. Absent when a tool runs
+   * outside an agent (WebMCP bridge, smoke harness).
+   */
+  readonly leases?: AgentToolLeaseScope;
+}
+
+/** An SDK `prepare*` lease: resolves when the session exists. */
+export interface AgentToolLease {
+  ready: Promise<void>;
+  release(): void;
+}
+
+export interface AgentToolLeaseScope {
+  /** Reuse the lease for `key`, or create it with `prepare`. */
+  acquire(key: string, prepare: () => AgentToolLease): AgentToolLease;
 }
 
 export interface AgentTool<TInput = AgentToolInput, TOutput = AgentToolOutput> {
@@ -111,6 +127,13 @@ export interface AgentTool<TInput = AgentToolInput, TOutput = AgentToolOutput> {
    * a cast. The runtime is identical.
    */
   execute(input: TInput, ctx: AgentToolContext): Promise<TOutput> | TOutput;
+  /**
+   * Download the model `execute` needs for this input. Browsers require a
+   * user gesture to start downloads, so call it from a click handler.
+   */
+  download?(input: TInput, onProgress: (loaded: number) => void): Promise<void>;
+  /** Current model readiness for this input, without creating a session. */
+  availability?(input: TInput): Promise<string | null>;
 }
 
 export type AgentStopReason =
@@ -318,6 +341,9 @@ export interface CreateAgentOptions {
    */
   sessionMode?: "run-isolated" | "thread";
   onToolError?: AgentOnToolErrorPolicy;
+  /** SDK demonstration mode cannot present a Prompt-only answer as tool work. */
+  requireToolResult?: boolean;
+  onModelDownload?: (loaded: number) => void;
   /**
    * When the user's input references a URL and a URL-fetching tool is
    * available, deterministically fetch it if the model tries to finalize

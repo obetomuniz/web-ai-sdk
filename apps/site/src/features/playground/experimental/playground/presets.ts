@@ -10,8 +10,11 @@ import {
   clockNowTool,
   createFetchUrlTool,
   detectLanguageTool,
+  proofreadTool,
+  rewriteTool,
   summarizeTool,
   translateTool,
+  writeTool,
 } from "../agent/tools/index.js";
 import type { AgentTool } from "../agent/types.js";
 import type { ToolRendererId } from "./toolRenderers.js";
@@ -43,6 +46,15 @@ const platformTools = [
 const platformPrompt =
   'You are a research and productivity assistant. Default to answering DIRECTLY from your own knowledge with NO tools - especially for requests to write, generate, compose, rewrite, or explain something. When the user asks to summarize quoted or pasted text (e.g. after "Summarize:"), call `summarize_text` with that exact text - do not paraphrase in prose instead. Reach for other tools only when the task genuinely needs external data you don\'t have. Use `fetch_url` when the user includes a URL, explicitly asks you to look something up online, or makes an unambiguous follow-up about another resource relative to a URL already fetched in this conversation. A contextual URL must be derived from an explicit identifier and a known prior route; if it is ambiguous, ask for the URL instead. Never state fresh external facts without a successful tool result in the current turn. If a fetch fails (often CORS), say so explicitly and never fabricate the page contents. Fetch is read-only and capped to 32 KB; clipboard tools require user permission.';
 
+const textInstructions =
+  " Use write_text for drafting, rewrite_text for revising supplied text, and proofread_text for grammar or spelling checks. Use summarize_text for summaries of supplied text. Preserve original text and identify the SDK capability used. Never claim a specialized operation succeeded without its successful tool result. Report failures explicitly.";
+const writeExample =
+  "Use write_text to draft a short, formal email asking to reschedule a meeting.";
+const rewriteExample =
+  'Use rewrite_text to make this more formal: "hey, can u send me the notes when u get a sec?"';
+const proofreadExample =
+  'Use proofread_text to check the grammar: "She have two book on her desk."';
+
 export const MODES: [AgentMode, ...AgentMode[]] = [
   {
     id: "minimal",
@@ -60,13 +72,25 @@ export const MODES: [AgentMode, ...AgentMode[]] = [
     name: "Built-in Web AI suite",
     accent: "ok",
     description:
-      "Composes specialized SDK tools for Summarizer, Translator, and Language Detector in one agent flow.",
+      "Demonstrates Summarizer, Translator, Language Detector, Writer, Rewriter, and Proofreader through SDK tools.",
     systemPrompt:
-      "You orchestrate the browser's Built-in Web AI APIs and must demonstrate the specialized tools instead of silently replacing them with model knowledge. For translation requests, ALWAYS call `translate_text` for every requested target language; never translate in prose yourself. When the source language is not explicit, call `detect_language` first, then use its top language code as `sourceLanguage` for the translation call(s). After detection, multiple target translations may run in parallel. For requests to summarize supplied text, ALWAYS call `summarize_text`. Report an unavailable/error tool result honestly instead of fabricating the operation.",
-    tools: [summarizeTool, translateTool, detectLanguageTool, clockNowTool],
+      "You orchestrate the browser's Built-in Web AI APIs and must demonstrate the specialized tools instead of silently replacing them with model knowledge. For translation requests, ALWAYS call `translate_text` for every requested target language; never translate in prose yourself. When the source language is not explicit, call `detect_language` first, then use its top language code as `sourceLanguage` for the translation call(s). After detection, multiple target translations may run in parallel. For requests to summarize supplied text, ALWAYS call `summarize_text`. Report an unavailable/error tool result honestly instead of fabricating the operation." +
+      textInstructions,
+    tools: [
+      summarizeTool,
+      translateTool,
+      detectLanguageTool,
+      writeTool,
+      rewriteTool,
+      proofreadTool,
+      clockNowTool,
+    ],
     examples: [
       'Summarize: "WebMCP exposes browser-page tools to AI agents via document.modelContext, mirroring the Model Context Protocol pattern for the web."',
       "Detect the language of 'こんにちは', then translate it to English and Portuguese.",
+      proofreadExample,
+      writeExample,
+      rewriteExample,
       "It's almost lunchtime. What's the current time?",
     ],
   },
@@ -92,8 +116,12 @@ export const MODES: [AgentMode, ...AgentMode[]] = [
     description:
       "Everything the playground knows about. Useful for exploring how the planner picks tools when many are available.",
     systemPrompt:
-      "You are a research and productivity assistant running on the user's device. Use the most specialized tool for each subtask, and only when it's actually needed - for tasks you can do from your own knowledge (writing, explaining, summarizing pasted text), answer directly with no tools. Use `fetch_url` when the user includes a URL, explicitly requests an online lookup, or makes an unambiguous follow-up about another resource relative to a URL already fetched in this conversation. Derive a contextual URL only from an explicit identifier and a known prior route; if it is ambiguous, ask for the URL. Never state fresh external facts without a successful tool result in the current turn, and never summarize a URL without fetching it. If a fetch fails (often CORS), say so explicitly. Stop as soon as you have the answer.",
+      "You are a research and productivity assistant running on the user's device. Use the most specialized tool for each subtask, and only when it's actually needed - for tasks you can do from your own knowledge (explaining, answering general questions), answer directly with no tools. Use `fetch_url` when the user includes a URL, explicitly requests an online lookup, or makes an unambiguous follow-up about another resource relative to a URL already fetched in this conversation. Derive a contextual URL only from an explicit identifier and a known prior route; if it is ambiguous, ask for the URL. Never state fresh external facts without a successful tool result in the current turn, and never summarize a URL without fetching it. If a fetch fails (often CORS), say so explicitly. Stop as soon as you have the answer." +
+      textInstructions,
     tools: [
+      writeTool,
+      rewriteTool,
+      proofreadTool,
       summarizeTool,
       translateTool,
       detectLanguageTool,
@@ -105,6 +133,9 @@ export const MODES: [AgentMode, ...AgentMode[]] = [
     examples: [
       "Detect the language of 'こんにちは', then translate it to English and Portuguese.",
       "Fetch the README of https://api.github.com/repos/obetomuniz/web-ai-sdk/readme, base64-decode it, and give me a 3-bullet summary.",
+      writeExample,
+      rewriteExample,
+      proofreadExample,
     ],
   },
 ];

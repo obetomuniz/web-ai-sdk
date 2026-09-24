@@ -826,6 +826,16 @@ export const playground = {
     "flex min-w-0 items-center gap-2 font-mono text-[9px] text-fg-4",
   toolProgressDot: "size-1 shrink-0 rounded-full bg-accent",
   toolDetails: "border-t border-hairline",
+  toolResult: "grid gap-1.5 border-t border-hairline px-3 py-2",
+  toolResultLabel: "font-mono text-[9px] uppercase tracking-[0.06em] text-fg-4",
+  toolResultText:
+    "whitespace-pre-wrap break-words rounded-sm bg-surface px-2.5 py-1.5 font-mono text-[10px] leading-relaxed text-fg-2",
+  toolCorrections: "grid list-none gap-1.5 p-0",
+  toolCorrection: "grid gap-0.5 font-mono text-[9px] leading-relaxed text-fg-3",
+  toolAction:
+    "flex flex-wrap items-center justify-between gap-2 border-t border-hairline px-3 py-2 font-mono text-[9px] text-fg-3",
+  toolActionButton:
+    "cursor-pointer rounded-sm border border-accent-line bg-transparent px-2 py-1 font-mono text-[9px] uppercase tracking-[0.06em] text-accent transition-colors hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none",
   toolSummary:
     "cursor-pointer truncate px-3 py-2 font-mono text-[9px] text-fg-4 hover:text-fg-2",
   toolJson:
