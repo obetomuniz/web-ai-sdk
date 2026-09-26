@@ -27,10 +27,11 @@ export function useConversationAgent({
   summarizerOn,
   pushActivity,
 }: Args) {
-  // Chrome reports progress on every session create; log real downloads only.
+  // Chrome reports progress on every session create; track real downloads only.
   const promptDownloadingRef = useRef(false);
   promptDownloadingRef.current =
     promptReadiness === "downloadable" || promptReadiness === "downloading";
+  const [promptDownload, setPromptDownload] = useState<number | null>(null);
   const [currentInput, setCurrentInput] = useState("");
   const [currentTurnId, setCurrentTurnId] = useState<string | null>(null);
   const currentTurnIdRef = useRef<string | null>(null);
@@ -51,13 +52,9 @@ export function useConversationAgent({
     language: "en",
     onToolError: mode.id === "web-ai-suite" ? "stop" : "report",
     requireToolResult: mode.id === "web-ai-suite",
+    // Download progress updates the runtime check in place, not Activity.
     onModelDownload: (loaded) => {
-      if (!promptDownloadingRef.current) return;
-      pushActivity({
-        kind: "info",
-        message: "Prompt API model download",
-        detail: `${Math.round(loaded * 100)}%`,
-      });
+      if (promptDownloadingRef.current) setPromptDownload(loaded);
     },
     onEvent: (event) => {
       if (event.type === "tool_result") {
@@ -82,7 +79,8 @@ export function useConversationAgent({
         event.data &&
         typeof event.data === "object" &&
         "phase" in event.data &&
-        event.data.phase !== "output"
+        event.data.phase !== "output" &&
+        event.data.phase !== "download"
       ) {
         pushActivity({
           kind: "info",
@@ -191,6 +189,7 @@ export function useConversationAgent({
   return {
     ...agent,
     busy,
+    promptDownload,
     currentInput,
     currentTurnId,
     send,
@@ -232,13 +231,10 @@ async function generateConversationTitle(
 }
 
 function describeProgress(data: object): string {
-  const { phase, state, loaded } = data as {
+  const { phase, state } = data as {
     phase?: unknown;
     state?: unknown;
-    loaded?: unknown;
   };
   if (phase === "readiness") return `Readiness: ${String(state)}`;
-  if (phase === "download" && typeof loaded === "number")
-    return `Model download: ${Math.round(loaded * 100)}%`;
   return JSON.stringify(data);
 }

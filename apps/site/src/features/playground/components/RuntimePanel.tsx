@@ -8,6 +8,8 @@ interface Props {
   open: boolean;
   conversationsOpen: boolean;
   promptReadiness: PromptReadiness;
+  /** Latest Prompt API model download fraction, or `null` before a download. */
+  promptDownload: number | null;
   capabilityChecks: CapabilityCheck[];
   webmcpAvailable: boolean;
   webmcpToolCount: number;
@@ -21,6 +23,7 @@ export function RuntimePanel({
   open,
   conversationsOpen,
   promptReadiness,
+  promptDownload,
   capabilityChecks,
   webmcpAvailable,
   webmcpToolCount,
@@ -54,11 +57,7 @@ export function RuntimePanel({
           <div className={ui.workspacePane}>
             <ActivityList
               checks={[
-                {
-                  label: "Prompt API",
-                  detail: "Conversation responses",
-                  state: promptCheckState(promptReadiness),
-                },
+                promptCheck(promptReadiness, promptDownload),
                 ...capabilityChecks,
                 {
                   label: "WebMCP",
@@ -104,6 +103,23 @@ interface RuntimeCheck {
   label: string;
   detail: string;
   state: RuntimeCheckState;
+}
+
+export function promptCheck(
+  readiness: PromptReadiness,
+  download: number | null,
+): RuntimeCheck {
+  if (download !== null && readiness !== "available")
+    return {
+      label: "Prompt API",
+      detail: `Model download: ${Math.round(download * 100)}%`,
+      state: "downloading",
+    };
+  return {
+    label: "Prompt API",
+    detail: "Conversation responses",
+    state: promptCheckState(readiness),
+  };
 }
 
 function promptCheckState(readiness: PromptReadiness): RuntimeCheckState {

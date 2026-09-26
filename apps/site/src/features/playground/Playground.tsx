@@ -44,6 +44,7 @@ export function Playground() {
     abort,
     newSession,
     busy,
+    promptDownload,
     currentInput,
     currentTurnId,
     send: sendToAgent,
@@ -240,6 +241,7 @@ export function Playground() {
           open={layout.runtimeOpen}
           conversationsOpen={layout.conversationsOpen}
           promptReadiness={promptReadiness}
+          promptDownload={promptDownload}
           capabilityChecks={capabilityChecks}
           webmcpAvailable={webmcpAvailable}
           webmcpToolCount={webmcpTools.length}
