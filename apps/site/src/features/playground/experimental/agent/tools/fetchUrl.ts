@@ -4,7 +4,9 @@
  * Three response shapes, chosen by `Content-Type`:
  *
  * - **JSON** → parsed and returned as `body` (right for APIs like the
- *   GitHub repo endpoint).
+ *   GitHub repo endpoint), minus hypermedia link fields (see
+ *   `dropLinkFields`) and with base64 file content decoded (see
+ *   `decodeBase64Content`).
  * - **HTML** → parsed with an inert `DOMParser` and reduced to clean,
  *   structured reading text (headings / paragraphs / list items), with
  *   a compact `Sections:` outline pinned to the top. This is the fix
@@ -207,7 +209,7 @@ export function createFetchUrlTool(
             contentType,
             truncated: rawTruncated,
             format: "json",
-            body: JSON.parse(rawText),
+            body: decodeBase64Content(dropLinkFields(JSON.parse(rawText))),
           };
         } catch {
           return {
@@ -253,6 +255,58 @@ export function createFetchUrlTool(
       };
     },
   };
+}
+
+/**
+ * Remove string fields whose key ends in `_url` (except `html_url`), at
+ * any depth. APIs like GitHub's return dozens of these hypermedia links
+ * (`forks_url`, `git_refs_url{/sha}`, …), about 60% of the repo payload.
+ * Measured live on Chrome's Gemma 4 model: with them, the model misread
+ * `stargazers_count: 22` as 222 or 2222 in 9 of 12 answers; without
+ * them, 6 of 6 answers were correct. `url` and `html_url` stay so the
+ * model can still cite the resource.
+ */
+function dropLinkFields(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(dropLinkFields);
+  if (!value || typeof value !== "object") return value;
+  const out: Record<string, unknown> = {};
+  for (const [key, field] of Object.entries(value)) {
+    if (
+      typeof field === "string" &&
+      key.endsWith("_url") &&
+      key !== "html_url"
+    ) {
+      continue;
+    }
+    out[key] = dropLinkFields(field);
+  }
+  return out;
+}
+
+/**
+ * Decode `{ content, encoding: "base64" }` bodies, the shape of GitHub's
+ * contents API (for example `/repos/{owner}/{repo}/readme`). Base64 costs
+ * about 1.5 chars per token, so the web-ai-sdk README measured 11,378
+ * tokens encoded (over the 9,216-token window) and 3,769 decoded. The
+ * model cannot decode it reliably either. Content that is not valid UTF-8
+ * (for example an image) stays encoded.
+ */
+function decodeBase64Content(body: unknown): unknown {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return body;
+  const { content, encoding } = body as {
+    content?: unknown;
+    encoding?: unknown;
+  };
+  if (encoding !== "base64" || typeof content !== "string") return body;
+  try {
+    const bytes = Uint8Array.from(atob(content.replace(/\s/g, "")), (c) =>
+      c.charCodeAt(0),
+    );
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return { ...body, content: text, encoding: "utf-8" };
+  } catch {
+    return body;
+  }
 }
 
 const NOISE_SELECTOR =

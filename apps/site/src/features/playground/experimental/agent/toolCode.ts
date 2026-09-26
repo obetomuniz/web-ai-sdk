@@ -45,10 +45,13 @@ export function parseToolCode(
 ): ParsedToolCall[] {
   const known = new Map<string, AgentTool>(tools.map((t) => [t.name, t]));
 
-  // Prefer fenced ```tool_code``` (also tolerate ```python / ```tool /
-  // bare fences the model sometimes uses). If there are no fences, scan
-  // the whole text - small models occasionally drop the fence.
-  const blocks = collectCodeBlocks(text);
+  // Gemma-style `<|tool_call>` calls win when present (see
+  // `collectMarkedCalls`). Otherwise prefer fenced ```tool_code``` (also
+  // tolerate ```python / ```tool / bare fences the model sometimes uses).
+  // If there are no fences, scan the whole text - small models
+  // occasionally drop the fence.
+  const marked = collectMarkedCalls(text);
+  const blocks = marked.length > 0 ? marked : collectCodeBlocks(text);
   const sources = blocks.length > 0 ? blocks : [text];
 
   const calls: ParsedToolCall[] = [];
@@ -87,16 +90,59 @@ export function stripToolCode(text: string): string {
 }
 
 /**
+ * Markers that open a tool call: the ``` fence, and the Gemma-style
+ * `<|tool_call>` token the model sometimes emits as literal text
+ * (observed live: `<|tool_call>call:translate_text(text='…')<tool_call|>`).
+ */
+const TOOL_CALL_MARKERS = ["```", "<|tool_call>"] as const;
+
+/** Index of the first tool-call marker, or -1 when the text has none. */
+export function toolCallMarkerIndex(text: string): number {
+  const found = TOOL_CALL_MARKERS.map((marker) => text.indexOf(marker)).filter(
+    (index) => index !== -1,
+  );
+  return found.length > 0 ? Math.min(...found) : -1;
+}
+
+/**
  * Index one past the last character of leading prose that is safe to show
- * while streaming: everything before the first ``` fence, minus a trailing
- * run of one or two backticks that might start a fence still arriving.
+ * while streaming: everything before the first tool-call marker, minus a
+ * trailing partial marker (e.g. "``" or "<|tool") that may still be arriving.
  */
 export function proseStreamLimit(text: string): number {
-  const fence = text.indexOf("```");
-  if (fence !== -1) return fence;
-  if (text.endsWith("``")) return text.length - 2;
-  if (text.endsWith("`")) return text.length - 1;
-  return text.length;
+  const marker = toolCallMarkerIndex(text);
+  if (marker !== -1) return marker;
+  let limit = text.length;
+  for (const m of TOOL_CALL_MARKERS) {
+    for (let n = m.length - 1; n > 0; n--) {
+      if (text.endsWith(m.slice(0, n))) {
+        limit = Math.min(limit, text.length - n);
+        break;
+      }
+    }
+  }
+  return limit;
+}
+
+/**
+ * The call expression after each `<|tool_call>` marker. In Gemma's native
+ * protocol a tool call ends the turn, and the runtime returns the real
+ * result. Chrome does not stop generation there, so the model often
+ * continues with an imagined tool response (observed live: a ```json block
+ * with a made-up timestamp, then an answer). Parse only the call and drop
+ * that tail.
+ */
+function collectMarkedCalls(text: string): string[] {
+  return text
+    .split("<|tool_call>")
+    .slice(1)
+    .map((segment) => {
+      const head = /^\s*(?:call:)?\s*[A-Za-z_][\w.]*\s*\(/.exec(segment);
+      if (!head) return "";
+      const close = matchParen(segment, head[0].length - 1);
+      return close === -1 ? "" : segment.slice(0, close + 1);
+    })
+    .filter(Boolean);
 }
 
 function collectCodeBlocks(text: string): string[] {

@@ -149,6 +149,80 @@ describe("createAgentLoop", () => {
     agent.destroy();
     expect(release).toHaveBeenCalledTimes(1);
   });
+  it("hides Gemma tool-call tokens from thoughts and streamed text", async () => {
+    // Replies captured live from Chrome 154 with the Gemma 4 Prompt API model.
+    const fixture = createSessionFixture([
+      [
+        "<|tool",
+        "_call>call:detect_language(text='こんにちは')\n",
+        "```tool_code\ndetect_language(text='こんにちは')\n```",
+      ],
+      [
+        "<|tool_call>call:translate_text(text='こんにちは', targetLanguage='en')\n",
+        "<|tool_call>call:translate_text(text='こんにちは', targetLanguage='pt')<tool_call|>",
+      ],
+      ["Good afternoon. ", "Boa tarde."],
+    ]);
+    createSessionMock.mockReturnValue(fixture.base);
+    const calls: string[] = [];
+    const tool = (name: string): AgentTool => ({
+      name,
+      description: name,
+      inputSchema: {
+        type: "object",
+        properties: {
+          text: { type: "string" },
+          targetLanguage: { type: "string" },
+        },
+      },
+      async execute(input) {
+        calls.push(name);
+        return input;
+      },
+    });
+    const agent = createAgentLoop({
+      tools: [tool("detect_language"), tool("translate_text")],
+    });
+
+    const stream = agent.runStreaming(
+      "Detect the language of 'こんにちは', then translate it to English and Portuguese.",
+    );
+    const visible: string[] = [];
+    for await (const ev of stream) {
+      if (ev.type === "thought") visible.push(ev.text);
+      if (ev.type === "text_delta") visible.push(ev.delta);
+    }
+    agent.destroy();
+
+    expect(calls).toEqual([
+      "detect_language",
+      "translate_text",
+      "translate_text",
+    ]);
+    expect(visible.join("")).toBe("Good afternoon. Boa tarde.");
+    await expect(stream.result).resolves.toMatchObject({
+      text: "Good afternoon. Boa tarde.",
+    });
+  });
+
+  it("dispatches a Gemma tool call and ignores its imagined tool response", async () => {
+    // Captured live: after the call, the model invents a tool response.
+    const fixture = createSessionFixture([
+      '<|tool_call>call:clock_now(timeZone="Asia/Tokyo")\n```json\n{\n  "timeZone": "Asia/Tokyo",\n  "currentTime": "2024-05-24T12:00:00.000Z"\n}\n```\nThe current time in Tokyo is 12:00:00.',
+      "It is 12:34 in Tokyo.",
+    ]);
+    createSessionMock.mockReturnValue(fixture.base);
+    const calls: string[] = [];
+    const agent = createAgentLoop({ tools: [createClockFixtureTool(calls)] });
+
+    const result = await agent.run("What time is it in Tokyo right now?");
+    agent.destroy();
+
+    expect(calls).toEqual(["clock_now"]);
+    expect(fixture.inputs[1]).toContain('"formatted":"12:34"');
+    expect(result.text).toBe("It is 12:34 in Tokyo.");
+  });
+
   it("continues a mixed request until a prefixed clock_now call executes", async () => {
     const fixture = createSessionFixture([
       "Both URLs were fetched successfully.",
@@ -536,7 +610,10 @@ function createClockFixtureTool(
   };
 }
 
-function createSessionFixture(replies: readonly string[]): {
+/** A string reply streams as one chunk; an array streams chunk by chunk. */
+function createSessionFixture(
+  replies: readonly (string | readonly string[])[],
+): {
   base: Session;
   inputs: string[];
 } {
@@ -551,7 +628,8 @@ function createSessionFixture(replies: readonly string[]): {
       },
       async send(input) {
         inputs.push(String(input));
-        return replies[replyIndex++] ?? null;
+        const reply = replies[replyIndex++];
+        return typeof reply === "string" ? reply : (reply?.join("") ?? null);
       },
       async *sendStreaming(input) {
         inputs.push(String(input));
@@ -559,7 +637,7 @@ function createSessionFixture(replies: readonly string[]): {
         if (reply === undefined) {
           throw new Error("Fixture ran out of model replies.");
         }
-        yield reply;
+        yield* typeof reply === "string" ? [reply] : reply;
       },
       abort() {},
       async clone() {
