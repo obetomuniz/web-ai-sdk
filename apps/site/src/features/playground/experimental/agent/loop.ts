@@ -42,7 +42,12 @@ import { AgentStalledError, AgentUnavailableError } from "./errors.js";
 import { streamFromGenerator, streamFromResult } from "./events.js";
 import type { AgentRunContext } from "./runContext.js";
 import { extractFetchSourceText } from "./summarizeProvenance.js";
-import { parseToolCode, proseStreamLimit, stripToolCode } from "./toolCode.js";
+import {
+  parseToolCode,
+  proseStreamLimit,
+  stripToolCode,
+  toolCallMarkerIndex,
+} from "./toolCode.js";
 import { createToolLeaseScope } from "./toolLeases.js";
 import type {
   Agent,
@@ -899,7 +904,7 @@ async function* streamReply(
 
       if (kind === undefined) {
         const trimmed = acc.trimStart();
-        if (trimmed.startsWith("```")) {
+        if (toolCallMarkerIndex(trimmed) === 0) {
           kind = "tool";
         } else if (
           /tool_code/i.test(acc) ||
@@ -915,7 +920,7 @@ async function* streamReply(
       }
 
       if (kind === "prose") {
-        const fence = acc.indexOf("```");
+        const fence = toolCallMarkerIndex(acc);
         if (fence !== -1) {
           if (fence > emittedProse) {
             yield { type: "text_delta", delta: acc.slice(emittedProse, fence) };
@@ -1290,6 +1295,7 @@ function looksLikeUnparsedToolCall(
   tools: readonly AgentTool[],
 ): boolean {
   if (/```tool_code/i.test(reply)) return true;
+  if (reply.includes("<|tool_call>")) return true;
   if (/\bprint\s*\(\s*\w/.test(reply)) return true;
   return tools.some((t) =>
     new RegExp(`(^|[^\\w.])${escapeRegExp(t.name)}\\s*\\(`).test(reply),
@@ -1428,6 +1434,7 @@ function couldStillBeToolCall(
 
   const prefixes = [
     "tool_code",
+    "<|tool_call>",
     "print",
     "default_api",
     ...tools.map((tool) => tool.name),
