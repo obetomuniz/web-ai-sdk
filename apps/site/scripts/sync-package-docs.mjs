@@ -77,7 +77,7 @@ for (const pkg of packages) {
 
   let current = "";
   try {
-    current = await readFile(pagePath, "utf8");
+    current = (await readFile(pagePath, "utf8")).replaceAll("\r\n", "\n");
   } catch (err) {
     if (err.code !== "ENOENT") throw err;
   }

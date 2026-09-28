@@ -16,6 +16,9 @@ pnpm gate
 Use the Node version in `.nvmrc`. Corepack reads the pnpm version from
 `package.json`. `pnpm gate` runs the same checks as CI.
 
+Shared development tools live in [`.configs/dev/scripts/`](./.configs/dev/README.md).
+Keep app-specific scripts in `apps/<name>/scripts/`.
+
 Published packages live in `packages/`. The Astro site and Starlight docs live
 in `apps/site/`. The read-only web-ai-sdk MCP Worker lives in `apps/mcp/`.
 Run `pnpm run` to list all workflows.

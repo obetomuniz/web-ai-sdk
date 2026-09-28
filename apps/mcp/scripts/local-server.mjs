@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { resolveDevelopmentService } from "../../../scripts/development-instance.mjs";
+import { resolveDevelopmentService } from "../../../.configs/dev/scripts/development-instance.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../../../", import.meta.url));
 

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   cleanDevelopmentArtifacts,
   collectDevelopmentArtifacts,
-} from "../../../scripts/development-clean.mjs";
+} from "../../../.configs/dev/scripts/development-clean.mjs";
 
 const temporaryRoots = [];
 
@@ -92,7 +92,11 @@ describe("development cleanup", () => {
     );
     temporaryRoots.push(root, external);
     fs.writeFileSync(path.join(external, "keep.txt"), "keep");
-    fs.symlinkSync(external, path.join(root, "node_modules"), "dir");
+    fs.symlinkSync(
+      external,
+      path.join(root, "node_modules"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
 
     cleanDevelopmentArtifacts(root);
 

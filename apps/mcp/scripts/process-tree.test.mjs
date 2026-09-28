@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   spawnManagedProcess,
   terminateProcessTree,
-} from "../../../scripts/process-tree.mjs";
+} from "../../../.configs/dev/scripts/process-tree.mjs";
 
 function isRunning(pid) {
   try {

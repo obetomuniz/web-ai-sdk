@@ -20,8 +20,8 @@
   },
   "scripts": {
     "dev": "pnpm --filter @web-ai-sdk-apps/site run dev",
-    "dev:clean": "node scripts/development-clean.mjs",
-    "dev:info": "node scripts/development-info.mjs",
+    "dev:clean": "node .configs/dev/scripts/development-clean.mjs",
+    "dev:info": "node .configs/dev/scripts/development-info.mjs",
     "dev:setup": "pnpm install --frozen-lockfile && pnpm build:packages",
     "dev:packages": "pnpm --filter \"./packages/**\" --filter \"!@web-ai-sdk/all\" -r --parallel run dev",
     "dev:sdk": "pnpm build:packages && pnpm --filter @web-ai-sdk/all run dev",
