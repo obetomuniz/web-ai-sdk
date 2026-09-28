@@ -1,11 +1,10 @@
 import {
   childProcessExitCode,
   spawnManagedProcess,
-} from "../../../scripts/process-tree.mjs";
+} from "../../../.configs/dev/scripts/process-tree.mjs";
 import { buildWranglerDevArgs } from "./local-server.mjs";
 
-const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-const child = spawnManagedProcess(pnpmCommand, buildWranglerDevArgs(), {
+const child = spawnManagedProcess("pnpm", buildWranglerDevArgs(), {
   stdio: "inherit",
 });
 

@@ -6,7 +6,7 @@ import {
   normalizeDevelopmentInstanceId,
   resolveDevelopmentInstance,
   resolveDevelopmentService,
-} from "../../../scripts/development-instance.mjs";
+} from "../../../.configs/dev/scripts/development-instance.mjs";
 
 const temporaryRoots = [];
 

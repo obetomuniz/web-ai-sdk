@@ -33,7 +33,6 @@ if (!paseoPort) {
   process.exit(1);
 }
 
-const pnpmCommand = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const environment = {
   ...process.env,
   [service.portVariable]: paseoPort,
@@ -47,7 +46,7 @@ if (serviceName === "mcp") {
   environment.WEB_AI_SDK_MCP_INSPECTOR_PORT = "0";
 }
 
-const child = spawnManagedProcess(pnpmCommand, service.args, {
+const child = spawnManagedProcess("pnpm", service.args, {
   env: environment,
   stdio: "inherit",
 });

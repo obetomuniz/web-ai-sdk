@@ -4,7 +4,7 @@ import {
   resolveDevelopmentService,
 } from "./development-instance.mjs";
 
-const root = fileURLToPath(new URL("../", import.meta.url));
+const root = fileURLToPath(new URL("../../../", import.meta.url));
 const instance = resolveDevelopmentInstance(root);
 
 console.log(`Development instance: ${instance.id}`);

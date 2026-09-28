@@ -210,7 +210,7 @@ services.
 ├── apps/
 │   ├── site/           # @web-ai-sdk-apps/site (private; Astro site + Starlight docs)
 │   └── mcp/            # @web-ai-sdk-apps/mcp (private; web-ai-sdk MCP Worker)
-├── scripts/            # development instance and optional tool adapters
+├── .configs/dev/       # shared development tools and optional tool adapters
 ├── paseo.json          # optional worktree lifecycle and managed local services
 ├── .agents/agents.md           # agent instructions (AGENTS.md symlink kept at root)
 ├── README.md           # ← you are here
