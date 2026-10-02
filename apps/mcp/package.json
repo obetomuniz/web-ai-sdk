@@ -18,10 +18,10 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@modelcontextprotocol/client": "2.0.0",
-    "@types/node": "^26.6.2",
+    "@modelcontextprotocol/client": "2.2.0",
+    "@types/node": "^26.6.3",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.1",
-    "wrangler": "^4.136.1"
+    "vitest": "^5.0.2",
+    "wrangler": "^4.143.1"
   }
 }
