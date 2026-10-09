@@ -23,6 +23,8 @@ Edge provides a [Canary/Dev preview](https://learn.microsoft.com/en-us/microsoft
 
 Canary/Dev 150.0.4070+ can use prerelease Aion-1.0-Instruct on Medium/Low devices. This path requires the "Enable prerelease on-device language model" flag.
 
+`samplingMode` is a Chrome web [origin trial](https://developer.chrome.com/docs/ai/prompt-api) option. The [Prompt API draft](https://webmachinelearning.github.io/prompt-api/) marks it experimental. See [Sampling](#sampling).
+
 See [Browser support](https://web-ai-sdk.dev/docs/browser-support/) for the full matrix. Without `LanguageModel`, React reports `"unavailable"` and `ask()` throws `PromptUnavailableError`.
 
 ## Install
@@ -166,7 +168,14 @@ The hook does not track responses, history, or streaming status. Keep that state
 interface AskOptions {
   input: string;
   systemPrompt?: string;
-  samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
+  samplingMode?:
+    | "most-predictable"
+    | "predictable"
+    | "slightly-predictable"
+    | "balanced"
+    | "slightly-creative"
+    | "creative"
+    | "most-creative";
   /** @deprecated Web page contexts are moving to samplingMode. */
   temperature?: number;
   /** @deprecated Web page contexts are moving to samplingMode. */
@@ -175,7 +184,7 @@ interface AskOptions {
   supportedLanguages?: readonly string[];   // default ["en"]
   expectedInputs?: LanguageModelExpectedInput[];   // advanced passthrough
   expectedOutputs?: LanguageModelExpectedOutput[]; // advanced passthrough
-  tools?: LanguageModelTool[];              // experimental: native function-calling passthrough
+  tools?: LanguageModelTool[];              // experimental: legacy-shape tool passthrough
   monitor?: (m: CreateMonitor) => void;     // observe first-call model download
   responseConstraint?: object;              // JSON Schema for structured output
   omitResponseConstraintInput?: boolean;
@@ -210,7 +219,14 @@ If `systemPrompt` is passed alongside `createOptions.initialPrompts`, the SDK em
 ```ts
 interface CreateSessionOptions {
   systemPrompt?: string;
-  samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
+  samplingMode?:
+    | "most-predictable"
+    | "predictable"
+    | "slightly-predictable"
+    | "balanced"
+    | "slightly-creative"
+    | "creative"
+    | "most-creative";
   /** @deprecated Web page contexts are moving to samplingMode. */
   temperature?: number;
   /** @deprecated Web page contexts are moving to samplingMode. */
@@ -219,7 +235,7 @@ interface CreateSessionOptions {
   supportedLanguages?: readonly string[];
   expectedInputs?: LanguageModelExpectedInput[];
   expectedOutputs?: LanguageModelExpectedOutput[];
-  tools?: LanguageModelTool[]; // experimental: native function-calling passthrough
+  tools?: LanguageModelTool[]; // experimental: legacy-shape tool passthrough
   monitor?: (m: CreateMonitor) => void;     // observe first-call model download; wins over createOptions.monitor
   // Pass `initialPrompts` here to seed multi-turn context.
   createOptions?: Partial<LanguageModelCreateOptions>;
@@ -251,9 +267,27 @@ interface Session {
 
 `omitResponseConstraintInput` is only forwarded when `responseConstraint` is also set; the native API throws a `TypeError` otherwise. When you omit the schema, include format guidance in the prompt text itself (the model no longer sees the schema).
 
-### Native tool calling (experimental)
+### Sampling
 
-The Prompt API spec defines native function calling: register `tools` on the session and the runtime invokes their `execute` on the model's behalf, feeding results back. `ask()` and `createSession()` forward a `tools` array straight through to `LanguageModel.create()`:
+`samplingMode` accepts the seven values in Chrome's [Prompt API documentation](https://developer.chrome.com/docs/ai/prompt-api) and the [Prompt API draft](https://webmachinelearning.github.io/prompt-api/): `"most-predictable"`, `"predictable"`, `"slightly-predictable"`, `"balanced"`, `"slightly-creative"`, `"creative"`, and `"most-creative"`.
+
+Chrome documents `samplingMode` for web pages under its sampling-parameters origin trial. The draft marks the option experimental. Treat it as a trial option, not as stable cross-browser behavior.
+
+The SDK forwards the value unchanged to `LanguageModel.create()`. `ask()` and `checkAvailability({ samplingMode })` forward it unchanged to `LanguageModel.availability()`. The SDK does not normalize values or map them to a model. The browser decides whether the option is available. If the browser rejects the availability check, `ask()` throws `PromptUnavailableError`.
+
+Each sampling mode uses its own cached base session and its own result-cache key.
+
+Chrome supports numeric `topK` and `temperature` in Chrome Extensions, not on web pages by default. Edge lists a separate [origin trial for numeric `topK` and `temperature`](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/155). That listing does not establish Edge support for `samplingMode` values. The SDK rejects `samplingMode` combined with `temperature` or `topK` with a `TypeError`.
+
+### Tool calling (experimental, legacy shape)
+
+`LanguageModelTool` is an older experimental shape. Each tool carries an `execute` callback for the browser to invoke.
+
+The current [Prompt API draft](https://webmachinelearning.github.io/prompt-api/) does not use this shape. Since [Prompt API PR #162](https://github.com/webmachinelearning/prompt-api/pull/162), the draft declares tools without an `execute` callback. The application runs each tool and returns a structured tool response. Prompt API [issue #209](https://github.com/webmachinelearning/prompt-api/issues/209) calls this design open-loop tool calling.
+
+The SDK has not adopted the open-loop draft. [Issue #241](https://github.com/obetomuniz/web-ai-sdk/issues/241) tracks that work and its browser compatibility gate. Chrome's [Prompt API documentation](https://developer.chrome.com/docs/ai/prompt-api) does not document tool use.
+
+`ask()` and `createSession()` forward a `tools` array unchanged to `LanguageModel.create()`. The example below matches the current SDK types. It is not an example of the current draft, and the SDK does not verify that a browser runs it.
 
 ```ts
 import { createSession, type LanguageModelTool } from "@web-ai-sdk/prompt";
@@ -277,7 +311,7 @@ const tools: LanguageModelTool[] = [
 const session = createSession({ systemPrompt, tools });
 ```
 
-The SDK only forwards `tools`; it does not call `execute`. Native tool execution depends on the browser. Treat it as experimental and provide a fallback.
+The SDK only forwards `tools`; it does not call `execute`. A browser can ignore the callback or reject the tool. Treat this option as experimental and provide a fallback.
 
 Your application must parse tool-like model output and run any manual execution loop.
 
@@ -285,7 +319,7 @@ Your application must parse tool-like model output and run any manual execution 
 
 Each `ask()` call still uses a clone or fresh instance. Prefer `createSession()` for tool-based sessions because it bypasses this cache.
 
-To declare the native tool modalities, pass them through the advanced `expectedInputs` / `expectedOutputs` fields (`{ type: "tool-response" }` / `{ type: "tool-call" }`).
+The SDK types also accept `{ type: "tool-response" }` in `expectedInputs` and `{ type: "tool-call" }` in `expectedOutputs`. The SDK forwards them unchanged.
 
 ### Session resilience: base + per-task `clone()`
 
@@ -480,7 +514,7 @@ Feature-detect helper.
 
 ### `checkAvailability(opts?): Promise<LanguageModelAvailability | null>`
 
-Forwards to `LanguageModel.availability()`. Returns `null` if the global is missing or the call throws.
+Forwards `samplingMode`, `expectedInputs`, and `expectedOutputs` unchanged to `LanguageModel.availability()`. Returns `null` if the global is missing or the call throws.
 
 ## Caching
 

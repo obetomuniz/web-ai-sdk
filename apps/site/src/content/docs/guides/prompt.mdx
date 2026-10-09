@@ -45,7 +45,14 @@ Use React interpolation or DOM `textContent` for plain text. If you render HTML,
 interface AskOptions {
   input: string;
   systemPrompt?: string;
-  samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
+  samplingMode?:
+    | "most-predictable"
+    | "predictable"
+    | "slightly-predictable"
+    | "balanced"
+    | "slightly-creative"
+    | "creative"
+    | "most-creative";
   temperature?: number;
   topK?: number;
   language?: string;
@@ -70,14 +77,14 @@ interface AskOptions {
 | --- | --- | --- |
 | `input` <sup>required</sup> | `string` | The user-facing prompt / question. Empty / whitespace resolves to `{ output: null }`. |
 | `systemPrompt` | `string` | Optional system prompt (folded into `initialPrompts` as a `system` role). |
-| `samplingMode` | `"most-predictable" \| "predictable" \| "balanced" \| "creative" \| "most-creative"` | Semantic sampling preset. Mutually exclusive with `temperature` / `topK`. |
+| `samplingMode` | `"most-predictable" \| "predictable" \| "slightly-predictable" \| "balanced" \| "slightly-creative" \| "creative" \| "most-creative"` | Semantic sampling preset. Chrome web origin trial. Mutually exclusive with `temperature` / `topK`. |
 | `temperature` | `number` | Legacy raw sampling temperature. Web page contexts are moving to `samplingMode`. |
 | `topK` | `number` | Legacy raw sampling top-k. Web page contexts are moving to `samplingMode`. |
 | `language` | `string` | BCP-47 language hint. Folded into `expectedInputs` / `expectedOutputs` when supported. |
 | `supportedLanguages` | `readonly string[]` | Languages the model supports for the language hint. Defaults to `["en"]`. |
 | `expectedInputs` | `LanguageModelExpectedInput[]` | Advanced: full passthrough. Overrides the `language` hint. |
 | `expectedOutputs` | `LanguageModelExpectedOutput[]` | Advanced: full passthrough. Overrides the `language` hint. |
-| `tools` | `LanguageModelTool[]` | **Experimental.** Native function-calling passthrough (see [Native tool calling](#native-tool-calling-experimental)). |
+| `tools` | `LanguageModelTool[]` | **Experimental.** Legacy-shape tool passthrough (see [Tool calling](#tool-calling-experimental-legacy-shape)). |
 | `monitor` | `(m) => void` | Observe the first-call model download. |
 | `responseConstraint` | `object` | JSON Schema for structured output. |
 | `cache` | `"session" \| "local" \| { get, set }` | Opt-in result cache. |
@@ -310,7 +317,15 @@ The two cache-shaped items above are *ergonomic defaults scoped to `ask()`*, not
 
 ## System prompt + sampling
 
-`systemPrompt` is folded into the session's `initialPrompts` as a `system` role. Prefer `samplingMode` for output variety: the browser maps the semantic mode to model-appropriate sampling parameters. Legacy `temperature` and `topK` are still passed through where browsers expose them, but they are mutually exclusive with `samplingMode`.
+`systemPrompt` is folded into the session's `initialPrompts` as a `system` role.
+
+`samplingMode` accepts seven values: `"most-predictable"`, `"predictable"`, `"slightly-predictable"`, `"balanced"`, `"slightly-creative"`, `"creative"`, and `"most-creative"`. The browser maps each value to sampling parameters for its model.
+
+Chrome documents `samplingMode` for web pages under its [sampling-parameters origin trial](https://developer.chrome.com/docs/ai/prompt-api). The [Prompt API draft](https://webmachinelearning.github.io/prompt-api/) marks the option experimental. The SDK forwards the value unchanged, and the browser decides whether the option is available.
+
+Chrome supports numeric `topK` and `temperature` in Chrome Extensions, not on web pages by default. Edge lists a separate [origin trial for numeric `topK` and `temperature`](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/155). That listing does not establish Edge support for `samplingMode` values.
+
+The SDK passes legacy `temperature` and `topK` through. It rejects them with a `TypeError` when `samplingMode` is also set.
 
 For `createSession`, use either the `systemPrompt` shorthand or `createOptions.initialPrompts` for restored multi-turn context. If both are provided, the advanced `initialPrompts` value is authoritative and the SDK warns once per loaded module instance that `systemPrompt` was ignored.
 
@@ -359,9 +374,15 @@ The wrapper passes `responseConstraint` straight through to `session.prompt()` /
 
 By default the schema is inlined into the prompt context, which costs tokens. Pass `omitResponseConstraintInput: true` (on `ask()` or `SessionSendOptions`) to drop it; the constraint still shapes the output, but you should then include format guidance in the prompt text itself. The flag is only forwarded when `responseConstraint` is also set — the native API throws a `TypeError` otherwise, so the wrapper ignores it on its own.
 
-## Native tool calling (experimental)
+## Tool calling (experimental, legacy shape)
 
-The Prompt API spec defines native [function calling](https://github.com/webmachinelearning/prompt-api#tool-use): register `tools` on the session, and the runtime invokes each tool's `execute` on the model's behalf, then feeds the result back into the conversation. `ask()` and `createSession()` forward a `tools` array straight through to `LanguageModel.create()`:
+`LanguageModelTool` is an older experimental shape. Each tool carries an `execute` callback for the browser to invoke.
+
+The current [Prompt API draft](https://webmachinelearning.github.io/prompt-api/) does not use this shape. Since [Prompt API PR #162](https://github.com/webmachinelearning/prompt-api/pull/162), the draft declares tools without an `execute` callback. The application runs each tool and returns a structured tool response. Prompt API [issue #209](https://github.com/webmachinelearning/prompt-api/issues/209) calls this design open-loop tool calling.
+
+The SDK has not adopted the open-loop draft. [Issue #241](https://github.com/obetomuniz/web-ai-sdk/issues/241) tracks that work and its browser compatibility gate. Chrome's [Prompt API documentation](https://developer.chrome.com/docs/ai/prompt-api) does not document tool use.
+
+`ask()` and `createSession()` forward a `tools` array unchanged to `LanguageModel.create()`. The example below matches the current SDK types. It is not an example of the current draft, and the SDK does not verify that a browser runs it.
 
 ```ts
 import { createSession, type LanguageModelTool } from "@web-ai-sdk/prompt";
@@ -385,9 +406,9 @@ const tools: LanguageModelTool[] = [
 const session = createSession({ systemPrompt, tools });
 ```
 
-The SDK only forwards `tools`; it does not call `execute`. Native execution depends on the browser. Treat it as experimental and provide a fallback.
+The SDK only forwards `tools`; it does not call `execute`. A browser can ignore the callback or reject the tool. Treat this option as experimental and provide a fallback.
 
-Your application must parse model-emitted tool calls and run any manual execution loop. To declare native tool modalities, use `expectedInputs` and `expectedOutputs`.
+Your application must parse tool-like model output and run any manual execution loop. The SDK also forwards `{ type: "tool-response" }` in `expectedInputs` and `{ type: "tool-call" }` in `expectedOutputs` unchanged.
 
 `tools` also works with `ask({ input, tools })`. Its base-session cache key excludes functions, so `execute` does not affect that key.
 

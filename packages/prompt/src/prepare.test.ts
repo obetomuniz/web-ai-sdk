@@ -212,6 +212,34 @@ describe("prepareLanguageModel", () => {
     expect(api.create).toHaveBeenCalledTimes(2);
   });
 
+  it("isolates leases per sampling mode", async () => {
+    const { api, bases } = installFakeApi();
+    const kept = prepareLanguageModel({
+      samplingMode: "slightly-predictable",
+    });
+    await kept.ready;
+
+    await ask({ input: "hello", samplingMode: "slightly-creative" });
+    expect(api.create).toHaveBeenCalledTimes(2);
+    expect(api.create).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ samplingMode: "slightly-predictable" }),
+    );
+    expect(api.create).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ samplingMode: "slightly-creative" }),
+    );
+
+    // The matching call reuses the prepared base.
+    await ask({ input: "hello", samplingMode: "slightly-predictable" });
+    expect(api.create).toHaveBeenCalledTimes(2);
+
+    kept.release();
+    await tick();
+    expect(bases[0]?.destroy).toHaveBeenCalledTimes(1);
+    expect(bases[1]?.destroy).not.toHaveBeenCalled();
+  });
+
   it("clear detaches leased bases and destroys them on final release", async () => {
     const { api, bases } = installFakeApi();
     const lease = prepareLanguageModel({ systemPrompt: "sys" });

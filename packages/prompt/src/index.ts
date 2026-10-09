@@ -377,6 +377,9 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
 
   const availability = await api
     .availability({
+      ...(baseCreateOptions.samplingMode !== undefined
+        ? { samplingMode: baseCreateOptions.samplingMode }
+        : {}),
       ...(baseCreateOptions.expectedInputs
         ? { expectedInputs: baseCreateOptions.expectedInputs }
         : {}),

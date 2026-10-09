@@ -1,7 +1,11 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __clearSessionCacheForTests } from "../api.js";
-import { usePrompt, useSession } from "./index.js";
+import {
+  type LanguageModelSamplingMode,
+  usePrompt,
+  useSession,
+} from "./index.js";
 
 interface FakeApi {
   availability: ReturnType<typeof vi.fn>;
@@ -270,6 +274,36 @@ describe("useSession", () => {
     expect(api.create).toHaveBeenCalledTimes(1);
     rerender({ samplingMode: "creative" });
     expect(api.create).toHaveBeenCalledTimes(2);
+  });
+
+  it("accepts the expanded sampling modes and destroys the replaced session", async () => {
+    const api = installFakeLanguageModel();
+    const destroys: ReturnType<typeof vi.fn>[] = [];
+    api.create.mockImplementation(async () => {
+      const destroy = vi.fn();
+      destroys.push(destroy);
+      return { prompt: vi.fn(async () => "answer"), destroy };
+    });
+    type SamplingModeProps = { samplingMode: LanguageModelSamplingMode };
+    const initialProps: SamplingModeProps = {
+      samplingMode: "slightly-predictable",
+    };
+    const { result, rerender, unmount } = renderHook(
+      ({ samplingMode }: SamplingModeProps) => useSession({ samplingMode }),
+      { initialProps },
+    );
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    rerender({ samplingMode: "slightly-creative" });
+    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(api.create.mock.calls.map(([options]) => options)).toEqual([
+      expect.objectContaining({ samplingMode: "slightly-predictable" }),
+      expect.objectContaining({ samplingMode: "slightly-creative" }),
+    ]);
+    expect(destroys[0]).toHaveBeenCalledTimes(1);
+    expect(destroys[1]).not.toHaveBeenCalled();
+    unmount();
+    await waitFor(() => expect(destroys[1]).toHaveBeenCalledTimes(1));
   });
 
   it("forwards monitor onto the LanguageModel.create() call", async () => {

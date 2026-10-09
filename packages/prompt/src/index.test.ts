@@ -471,6 +471,65 @@ describe("ask", () => {
     expect(createOpts).toMatchObject({ samplingMode: "creative" });
   });
 
+  it.each(["slightly-predictable", "slightly-creative"] as const)(
+    "forwards samplingMode %s unchanged",
+    async (samplingMode) => {
+      const fake = installFakeLanguageModel();
+      await ask({ input: "ping", samplingMode });
+      expect(fake.availability).toHaveBeenCalledWith({ samplingMode });
+      const createOpts = fake.create.mock.calls[0]?.[0];
+      expect(createOpts).toMatchObject({ samplingMode });
+    },
+  );
+
+  it("omits samplingMode from availability() when none is passed", async () => {
+    const fake = installFakeLanguageModel();
+    await ask({ input: "ping" });
+    expect(fake.availability.mock.calls[0]?.[0]).not.toHaveProperty(
+      "samplingMode",
+    );
+  });
+
+  it("does not share a base session or cached result across sampling modes", async () => {
+    const fake = installFakeLanguageModel();
+    const cache = inMemoryCache();
+    const first = await ask({
+      input: "ping",
+      samplingMode: "slightly-predictable",
+      cache,
+    });
+    const second = await ask({
+      input: "ping",
+      samplingMode: "slightly-creative",
+      cache,
+    });
+    const balanced = await ask({
+      input: "ping",
+      samplingMode: "balanced",
+      cache,
+    });
+    expect(first.cached).toBe(false);
+    expect(second.cached).toBe(false);
+    expect(balanced.cached).toBe(false);
+    const createdModes = new Set(
+      fake.create.mock.calls.map(
+        ([options]) => (options as { samplingMode?: string }).samplingMode,
+      ),
+    );
+    expect(createdModes).toEqual(
+      new Set(["slightly-predictable", "slightly-creative", "balanced"]),
+    );
+
+    const createCalls = fake.create.mock.calls.length;
+    const repeat = await ask({
+      input: "ping",
+      samplingMode: "slightly-creative",
+      cache,
+    });
+    expect(repeat.cached).toBe(true);
+    expect(fake.create).toHaveBeenCalledTimes(createCalls);
+  });
+
   it("rejects mixed samplingMode and raw sampling parameters", async () => {
     installFakeLanguageModel();
     await expect(
@@ -1049,6 +1108,18 @@ describe("createSession", () => {
     session.destroy();
   });
 
+  it.each(["slightly-predictable", "slightly-creative"] as const)(
+    "forwards samplingMode %s unchanged",
+    async (samplingMode) => {
+      const fake = installFakeLanguageModel({ response: "ok" });
+      const session = createSession({ samplingMode });
+      await session.send("warm");
+      const createOpts = fake.create.mock.calls[0]?.[0];
+      expect(createOpts).toMatchObject({ samplingMode });
+      session.destroy();
+    },
+  );
+
   it("forwards monitor to the underlying LanguageModel.create()", async () => {
     const fake = installFakeLanguageModel({ response: "ok" });
     const monitor = vi.fn();
@@ -1410,6 +1481,16 @@ describe("Session multimodal content", () => {
     expect(availability).toBe("available");
     expect(fake.availability).toHaveBeenCalledWith({ expectedInputs });
   });
+
+  it.each(["slightly-predictable", "slightly-creative"] as const)(
+    "checkAvailability forwards samplingMode %s unchanged",
+    async (samplingMode) => {
+      const fake = installFakeLanguageModel();
+      const availability = await checkAvailability({ samplingMode });
+      expect(availability).toBe("available");
+      expect(fake.availability).toHaveBeenCalledWith({ samplingMode });
+    },
+  );
 
   it("append forwards multimodal messages losslessly", async () => {
     const appendSpy = vi.fn(async (_messages: unknown, _opts?: unknown) => {});

@@ -94,7 +94,14 @@ type PromptStatus = "idle" | "loading" | "streaming" | "done" | "unavailable";
 interface UsePromptOptions extends Omit<AskOptions, "input" | "onUpdate" | "signal"> {
   // Inherited from AskOptions (subset shown — see Prompt guide):
   systemPrompt?: string;
-  samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
+  samplingMode?:
+    | "most-predictable"
+    | "predictable"
+    | "slightly-predictable"
+    | "balanced"
+    | "slightly-creative"
+    | "creative"
+    | "most-creative";
   temperature?: number;
   topK?: number;
   language?: string;
