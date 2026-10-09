@@ -118,7 +118,7 @@ export const WebMCPDemo = () => {
           }
           edge={
             <>
-              Microsoft Learn Edge 154 release notes list a WebMCP origin trial.
+              Microsoft Learn Edge 155 release notes list a WebMCP origin trial.
               Register an origin-trial token to exercise the tools.
             </>
           }

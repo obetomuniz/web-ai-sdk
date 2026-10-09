@@ -9,14 +9,14 @@ Support differs by capability and browser. The browser table reports only behavi
 
 | Package | <BrowserTableHeading browsers={["chrome"]} label="Chrome" /> | <BrowserTableHeading browsers={["edge"]} label="Edge" /> | <BrowserTableHeading browsers={["safari", "firefox"]} label="Fallback when the native API is missing" /> |
 | --- | --- | --- | --- |
-| `@web-ai-sdk/prompt` | [148+ · stable](https://developer.chrome.com/docs/ai/prompt-api) | [138+ · Canary/Dev · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api); [sampling-parameters OT in 154](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/154) | feature-detected fallback |
+| `@web-ai-sdk/prompt` | [148+ · stable](https://developer.chrome.com/docs/ai/prompt-api) | [138+ · Canary/Dev · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api); [numeric sampling-parameters OT in 155](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/155) | feature-detected fallback |
 | `@web-ai-sdk/summarizer` | [138+ · stable](https://developer.chrome.com/docs/ai/built-in-apis) | [138+ · stable](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) | feature-detected fallback |
 | `@web-ai-sdk/translator` | [138+ · stable](https://developer.chrome.com/docs/ai/built-in-apis) | [148+ · stable](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/148) | feature-detected fallback |
 | `@web-ai-sdk/detector` | [138+ · stable](https://developer.chrome.com/docs/ai/built-in-apis) | [148+ · stable](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/148) | feature-detected fallback |
 | `@web-ai-sdk/writer` | [Developer trial · local flag](https://developer.chrome.com/docs/ai/writer-api) | [138+ · Canary/Dev · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) | feature-detected fallback |
 | `@web-ai-sdk/rewriter` | [Developer trial · local flag](https://developer.chrome.com/docs/ai/rewriter-api) | [138+ · Canary/Dev · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) | feature-detected fallback |
 | `@web-ai-sdk/proofreader` | [Developer trial · local flag](https://developer.chrome.com/docs/ai/proofreader-api) | [142+ · Canary/Dev · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/proofreader-api) | feature-detected fallback |
-| `@web-ai-sdk/webmcp` | [OT from 149 · local flag](https://developer.chrome.com/docs/ai/webmcp) | [OT in 154](https://developer.microsoft.com/microsoft-edge/origin-trials/trials/0b76fe60-b266-458e-a285-04e375c0c31a) | feature-detected fallback |
+| `@web-ai-sdk/webmcp` | [OT from 149 · local flag](https://developer.chrome.com/docs/ai/webmcp) | [OT in 155](https://developer.microsoft.com/microsoft-edge/origin-trials/trials/0b76fe60-b266-458e-a285-04e375c0c31a) | feature-detected fallback |
 
 - **Stable:** the vendor enables the API by default.
 - **Canary/Dev:** an Edge preview that requires a flag.
@@ -45,6 +45,22 @@ These origin trials have ended. The current Developer trial label and localhost 
 Chrome documents Translator and Language Detector for desktop. The foundation-model APIs have additional platform, storage, GPU, and CPU requirements. See the [Prompt hardware requirements](https://developer.chrome.com/docs/ai/prompt-api).
 
 Do not infer product behavior from Chromium engine lineage. Check the capability page for each browser.
+
+### Prompt sampling options
+
+Chrome's [Prompt API documentation](https://developer.chrome.com/docs/ai/prompt-api) describes a sampling-parameters origin trial for web pages. The trial exposes `samplingMode` with seven values. The [Prompt API draft](https://webmachinelearning.github.io/prompt-api/) marks `samplingMode` experimental.
+
+Chrome supports numeric `topK` and `temperature` in Chrome Extensions. Chrome does not expose them to web pages by default.
+
+Prompt is stable in Chrome 148+, but `samplingMode` remains a trial option. The SDK forwards `samplingMode`, `topK`, and `temperature` unchanged. The browser decides whether each option is available.
+
+A localhost check ran installed Chrome 154.0.8037.98 with an origin-trial token. That build accepted all seven values and reported each through the session's `samplingMode`. Without a token, the same build ignored the option, including invalid values. These checks cover that build, not every browser product.
+
+### Chrome 157 preview: Language Detector on Android
+
+Chrome labels its [Chrome 157 release notes](https://chromestatus.com/release-notes/157) as Preview. They list Language Detector for Chrome on Android. This is preview information, not released behavior. The SDK has not verified availability on Android.
+
+The table above keeps Language Detector as documented for Chrome desktop. Feature-detect with `isAvailable()` on every platform.
 
 ### WebMCP discovery compatibility
 
@@ -104,7 +120,13 @@ The SDK detects the native API on the current document. `document.modelContext` 
 
 Microsoft enables Summarizer by default from Edge 138. Prompt, Writer, and Rewriter are Canary/Dev previews from 138.0.3309.2. Proofreader is a preview from Edge 142.
 
-Translator and Language Detector shipped in Edge 148. Microsoft Learn Edge 153 and Edge 154 release notes list origin trials for WebMCP and Prompt API sampling parameters.
+Translator and Language Detector shipped in Edge 148.
+
+The Microsoft Learn [Edge 155 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/155) list origin trials for WebMCP and Prompt API sampling parameters. The Edge 153 and Edge 154 notes list the same trials.
+
+The Edge sampling trial covers numeric `topK` and `temperature`. Microsoft's listing does not mention `samplingMode`. Do not assume that Edge accepts Chrome's `samplingMode` values.
+
+The WebMCP listing establishes that Edge offers an origin trial. It does not establish that Edge matches each Chrome WebMCP build detail on this page. The discovery, execution, and annotation checks above cover the named Chrome builds only.
 
 ### Models and hardware are capability-specific
 
@@ -138,3 +160,4 @@ Microsoft sources:
 - [Edge 148 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/148)
 - [Edge 153 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/153)
 - [Edge 154 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/154)
+- [Edge 155 release notes](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/155)

@@ -61,10 +61,11 @@ export interface LanguageModelExpectedOutput {
 }
 
 /**
- * @experimental A native Prompt API tool (function calling), mirroring the
- * W3C `LanguageModelTool` shape. `execute` is "the function to be invoked by
- * the user agent on behalf of the language model"; it must resolve to a
- * string the runtime feeds back into the conversation.
+ * @experimental An older Prompt API tool shape (function calling). `execute`
+ * is the function a user agent invokes on behalf of the language model; it
+ * must resolve to a string the runtime feeds back into the conversation. The
+ * current Prompt API draft declares tools without `execute`; the SDK has not
+ * adopted that shape yet.
  *
  * The SDK only forwards this shape to the native `create()`; it does not call
  * `execute` itself. See {@link LanguageModelCreateOptions.tools}.
