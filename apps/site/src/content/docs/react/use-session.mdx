@@ -184,7 +184,14 @@ interface UseSessionOptions extends CreateSessionOptions {
   enabled?: boolean;       // default: true; skip session creation when false
   // Inherited from CreateSessionOptions:
   systemPrompt?: string;
-  samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
+  samplingMode?:
+    | "most-predictable"
+    | "predictable"
+    | "slightly-predictable"
+    | "balanced"
+    | "slightly-creative"
+    | "creative"
+    | "most-creative";
   temperature?: number;
   topK?: number;
   language?: string;

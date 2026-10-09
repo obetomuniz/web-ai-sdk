@@ -23,6 +23,8 @@ Edge provides a [Canary/Dev preview](https://learn.microsoft.com/en-us/microsoft
 
 Canary/Dev 150.0.4070+ can use prerelease Aion-1.0-Instruct on Medium/Low devices. This path requires the "Enable prerelease on-device language model" flag.
 
+`samplingMode` is a Chrome web [origin trial](https://developer.chrome.com/docs/ai/prompt-api) option. The [Prompt API draft](https://webmachinelearning.github.io/prompt-api/) marks it experimental. See [Sampling](#sampling).
+
 See [Browser support](https://web-ai-sdk.dev/docs/browser-support/) for the full matrix. Without `LanguageModel`, React reports `"unavailable"` and `ask()` throws `PromptUnavailableError`.
 
 ## Install
@@ -166,7 +168,14 @@ The hook does not track responses, history, or streaming status. Keep that state
 interface AskOptions {
   input: string;
   systemPrompt?: string;
-  samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
+  samplingMode?:
+    | "most-predictable"
+    | "predictable"
+    | "slightly-predictable"
+    | "balanced"
+    | "slightly-creative"
+    | "creative"
+    | "most-creative";
   /** @deprecated Web page contexts are moving to samplingMode. */
   temperature?: number;
   /** @deprecated Web page contexts are moving to samplingMode. */
@@ -210,7 +219,14 @@ If `systemPrompt` is passed alongside `createOptions.initialPrompts`, the SDK em
 ```ts
 interface CreateSessionOptions {
   systemPrompt?: string;
-  samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
+  samplingMode?:
+    | "most-predictable"
+    | "predictable"
+    | "slightly-predictable"
+    | "balanced"
+    | "slightly-creative"
+    | "creative"
+    | "most-creative";
   /** @deprecated Web page contexts are moving to samplingMode. */
   temperature?: number;
   /** @deprecated Web page contexts are moving to samplingMode. */
@@ -250,6 +266,18 @@ interface Session {
 `Session.sendStreaming()` yields **deltas** (each chunk is the new text since the last yield, never cumulative). The wrapper does no extra bookkeeping: no history tracking, no concurrent-send queue, no usage telemetry. Always destroy sessions you no longer need.
 
 `omitResponseConstraintInput` is only forwarded when `responseConstraint` is also set; the native API throws a `TypeError` otherwise. When you omit the schema, include format guidance in the prompt text itself (the model no longer sees the schema).
+
+### Sampling
+
+`samplingMode` accepts the seven values in Chrome's [Prompt API documentation](https://developer.chrome.com/docs/ai/prompt-api) and the [Prompt API draft](https://webmachinelearning.github.io/prompt-api/): `"most-predictable"`, `"predictable"`, `"slightly-predictable"`, `"balanced"`, `"slightly-creative"`, `"creative"`, and `"most-creative"`.
+
+Chrome documents `samplingMode` for web pages under its sampling-parameters origin trial. The draft marks the option experimental. Treat it as a trial option, not as stable cross-browser behavior.
+
+The SDK forwards the value unchanged to `LanguageModel.create()`. `ask()` and `checkAvailability({ samplingMode })` forward it unchanged to `LanguageModel.availability()`. The SDK does not normalize values or map them to a model. The browser decides whether the option is available. If the browser rejects the availability check, `ask()` throws `PromptUnavailableError`.
+
+Each sampling mode uses its own cached base session and its own result-cache key.
+
+Chrome supports numeric `topK` and `temperature` in Chrome Extensions, not on web pages by default. Edge lists a separate [origin trial for numeric `topK` and `temperature`](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/155). That listing does not establish Edge support for `samplingMode` values. The SDK rejects `samplingMode` combined with `temperature` or `topK` with a `TypeError`.
 
 ### Native tool calling (experimental)
 
@@ -480,7 +508,7 @@ Feature-detect helper.
 
 ### `checkAvailability(opts?): Promise<LanguageModelAvailability | null>`
 
-Forwards to `LanguageModel.availability()`. Returns `null` if the global is missing or the call throws.
+Forwards `samplingMode`, `expectedInputs`, and `expectedOutputs` unchanged to `LanguageModel.availability()`. Returns `null` if the global is missing or the call throws.
 
 ## Caching
 

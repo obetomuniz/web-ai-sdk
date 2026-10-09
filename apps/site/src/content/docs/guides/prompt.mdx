@@ -45,7 +45,14 @@ Use React interpolation or DOM `textContent` for plain text. If you render HTML,
 interface AskOptions {
   input: string;
   systemPrompt?: string;
-  samplingMode?: "most-predictable" | "predictable" | "balanced" | "creative" | "most-creative";
+  samplingMode?:
+    | "most-predictable"
+    | "predictable"
+    | "slightly-predictable"
+    | "balanced"
+    | "slightly-creative"
+    | "creative"
+    | "most-creative";
   temperature?: number;
   topK?: number;
   language?: string;
@@ -70,7 +77,7 @@ interface AskOptions {
 | --- | --- | --- |
 | `input` <sup>required</sup> | `string` | The user-facing prompt / question. Empty / whitespace resolves to `{ output: null }`. |
 | `systemPrompt` | `string` | Optional system prompt (folded into `initialPrompts` as a `system` role). |
-| `samplingMode` | `"most-predictable" \| "predictable" \| "balanced" \| "creative" \| "most-creative"` | Semantic sampling preset. Mutually exclusive with `temperature` / `topK`. |
+| `samplingMode` | `"most-predictable" \| "predictable" \| "slightly-predictable" \| "balanced" \| "slightly-creative" \| "creative" \| "most-creative"` | Semantic sampling preset. Chrome web origin trial. Mutually exclusive with `temperature` / `topK`. |
 | `temperature` | `number` | Legacy raw sampling temperature. Web page contexts are moving to `samplingMode`. |
 | `topK` | `number` | Legacy raw sampling top-k. Web page contexts are moving to `samplingMode`. |
 | `language` | `string` | BCP-47 language hint. Folded into `expectedInputs` / `expectedOutputs` when supported. |
@@ -310,7 +317,15 @@ The two cache-shaped items above are *ergonomic defaults scoped to `ask()`*, not
 
 ## System prompt + sampling
 
-`systemPrompt` is folded into the session's `initialPrompts` as a `system` role. Prefer `samplingMode` for output variety: the browser maps the semantic mode to model-appropriate sampling parameters. Legacy `temperature` and `topK` are still passed through where browsers expose them, but they are mutually exclusive with `samplingMode`.
+`systemPrompt` is folded into the session's `initialPrompts` as a `system` role.
+
+`samplingMode` accepts seven values: `"most-predictable"`, `"predictable"`, `"slightly-predictable"`, `"balanced"`, `"slightly-creative"`, `"creative"`, and `"most-creative"`. The browser maps each value to sampling parameters for its model.
+
+Chrome documents `samplingMode` for web pages under its [sampling-parameters origin trial](https://developer.chrome.com/docs/ai/prompt-api). The [Prompt API draft](https://webmachinelearning.github.io/prompt-api/) marks the option experimental. The SDK forwards the value unchanged, and the browser decides whether the option is available.
+
+Chrome supports numeric `topK` and `temperature` in Chrome Extensions, not on web pages by default. Edge lists a separate [origin trial for numeric `topK` and `temperature`](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/155). That listing does not establish Edge support for `samplingMode` values.
+
+The SDK passes legacy `temperature` and `topK` through. It rejects them with a `TypeError` when `samplingMode` is also set.
 
 For `createSession`, use either the `systemPrompt` shorthand or `createOptions.initialPrompts` for restored multi-turn context. If both are provided, the advanced `initialPrompts` value is authoritative and the SDK warns once per loaded module instance that `systemPrompt` was ignored.
 

@@ -91,7 +91,9 @@ export interface CreateMonitor {
 export type LanguageModelSamplingMode =
   | "most-predictable"
   | "predictable"
+  | "slightly-predictable"
   | "balanced"
+  | "slightly-creative"
   | "creative"
   | "most-creative";
 
@@ -198,6 +200,7 @@ export interface LanguageModelParams {
 
 export interface LanguageModelApi {
   availability(options?: {
+    samplingMode?: LanguageModelSamplingMode;
     expectedInputs?: LanguageModelExpectedInput[];
     expectedOutputs?: LanguageModelExpectedOutput[];
   }): Promise<LanguageModelAvailability>;
@@ -218,6 +221,7 @@ export const getLanguageModelApi = (): LanguageModelApi | null => {
 export const isAvailable = (): boolean => getLanguageModelApi() !== null;
 
 export const checkAvailability = async (options?: {
+  samplingMode?: LanguageModelSamplingMode;
   expectedInputs?: LanguageModelExpectedInput[];
   expectedOutputs?: LanguageModelExpectedOutput[];
 }): Promise<LanguageModelAvailability | null> => {
