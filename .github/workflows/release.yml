@@ -27,6 +27,7 @@ jobs:
           # .nvmrc pins Node 24, which ships npm 11+ (required for npm
           # Trusted Publishing / OIDC).
           node-version-file: .nvmrc
+          check-latest: true
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
