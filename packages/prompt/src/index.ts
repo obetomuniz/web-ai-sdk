@@ -122,7 +122,12 @@ export interface AskOptions {
   tools?: LanguageModelTool[];
   /** Observe the first-call model download. */
   monitor?: (m: CreateMonitor) => void;
-  /** Optional JSON Schema for structured output. */
+  /**
+   * Optional JSON Schema object or `RegExp` for structured output. Forwarded
+   * to the browser unchanged. The default `cacheKey` keys a `RegExp` on its
+   * `source` and `flags`, and a JSON Schema on its JSON form. Other values
+   * skip the result cache unless you pass a `cacheKey`.
+   */
   responseConstraint?: object;
   /**
    * When `responseConstraint` is set, omit the inlined JSON Schema from the
@@ -138,7 +143,10 @@ export interface AskOptions {
    * `{ get, set }`-shaped object for a custom backend.
    */
   cache?: CacheOption;
-  /** Cache key. Default: JSON string of the prompt and output-shaping options. */
+  /**
+   * Cache key. Default: JSON string of the prompt and output-shaping options.
+   * Required for result caching when `responseConstraint` has no default key.
+   */
   cacheKey?: string;
   /**
    * Time-to-live in milliseconds for entries written by the built-in
@@ -370,7 +378,9 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
       responseConstraint: options.responseConstraint,
       omitResponseConstraintInput: options.omitResponseConstraintInput,
     });
-  if (cache && !options.cacheRefresh) {
+  // The default key is undefined when it cannot represent the constraint
+  // losslessly; skip the result cache instead of reusing another entry.
+  if (cache && cacheKey !== undefined && !options.cacheRefresh) {
     const cached = cache.get(cacheKey);
     if (cached) return { output: cached, cached: true };
   }
@@ -462,7 +472,8 @@ export const ask = async (options: AskOptions): Promise<AskResult> => {
     }
 
     const cleaned = cleanResponse(finalText);
-    if (cleaned && cache) cache.set(cacheKey, cleaned);
+    if (cleaned && cache && cacheKey !== undefined)
+      cache.set(cacheKey, cleaned);
     return { output: cleaned || null, cached: false };
   } catch (err) {
     if ((err as { name?: string })?.name === "AbortError") {
