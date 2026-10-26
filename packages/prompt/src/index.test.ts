@@ -295,6 +295,168 @@ describe("ask", () => {
     expect(second).toEqual({ output: "answer 2", cached: false });
   });
 
+  describe("RegExp response constraints", () => {
+    const installCountingModel = () => {
+      let calls = 0;
+      const prompt: ReturnType<typeof vi.fn> = vi.fn(
+        async () => `answer ${++calls}`,
+      );
+      installFakeLanguageModel({ sessionFactory: () => ({ prompt }) });
+      return prompt;
+    };
+
+    it("reuses an entry for an equal RegExp and forwards the original", async () => {
+      const prompt = installCountingModel();
+      const cache = inMemoryCache();
+      const first = /^\d+$/g;
+      const second = /^\d+$/g;
+      second.lastIndex = 3;
+
+      const a = await ask({ input: "hello", responseConstraint: first, cache });
+      const b = await ask({
+        input: "hello",
+        responseConstraint: second,
+        cache,
+      });
+
+      expect(a).toEqual({ output: "answer 1", cached: false });
+      expect(b).toEqual({ output: "answer 1", cached: true });
+      expect(prompt).toHaveBeenCalledTimes(1);
+      expect(prompt.mock.calls[0]?.[1]?.responseConstraint).toBe(first);
+    });
+
+    it("misses across patterns, flags, schemas, and omitResponseConstraintInput", async () => {
+      installCountingModel();
+      const cache = inMemoryCache();
+      const constraints: Array<
+        Pick<
+          Parameters<typeof ask>[0],
+          "responseConstraint" | "omitResponseConstraintInput"
+        >
+      > = [
+        { responseConstraint: /yes|no/ },
+        { responseConstraint: /yes|maybe/ },
+        { responseConstraint: /yes|no/i },
+        { responseConstraint: {} },
+        { responseConstraint: /yes|no/, omitResponseConstraintInput: true },
+      ];
+
+      const outputs: Array<string | null> = [];
+      for (const constraint of constraints) {
+        const result = await ask({ input: "hello", cache, ...constraint });
+        expect(result.cached).toBe(false);
+        outputs.push(result.output);
+      }
+      expect(outputs).toEqual([
+        "answer 1",
+        "answer 2",
+        "answer 3",
+        "answer 4",
+        "answer 5",
+      ]);
+    });
+
+    it("keeps JSON Schema keys unchanged", async () => {
+      const fake = installFakeLanguageModel();
+      const cache = inMemoryCache();
+      const schema = { type: "object" };
+      cache.set(
+        JSON.stringify([
+          "hello",
+          "",
+          null,
+          null,
+          "",
+          false,
+          null,
+          null,
+          null,
+          schema,
+          false,
+        ]),
+        "cached answer",
+      );
+      const result = await ask({
+        input: "hello",
+        responseConstraint: schema,
+        cache,
+      });
+      expect(result).toEqual({ output: "cached answer", cached: true });
+      expect(fake.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("constraints without a default cache key", () => {
+    class Constraint {
+      pattern = "x";
+    }
+    const circular: Record<string, unknown> = { type: "object" };
+    circular.self = circular;
+    const unkeyable: Array<[string, object]> = [
+      ["a class instance", new Constraint()],
+      ["a top-level array", ["RegExp", "x", ""]],
+      ["an undefined value", { type: "string", description: undefined }],
+      [
+        "a non-finite number",
+        { type: "number", maximum: Number.POSITIVE_INFINITY },
+      ],
+      ["a BigInt", { type: "integer", maximum: 10n }],
+      ["a nested RegExp", { type: "string", pattern: /x/ }],
+      ["a circular reference", circular],
+    ];
+
+    it.each(unkeyable)(
+      "skips the result cache for %s",
+      async (_, constraint) => {
+        const fake = installFakeLanguageModel();
+        const cache = { get: vi.fn(() => "stale"), set: vi.fn() };
+
+        const result = await ask({
+          input: "hello",
+          responseConstraint: constraint,
+          cache,
+        });
+
+        expect(result).toEqual({ output: "Hello, world.", cached: false });
+        expect(cache.get).not.toHaveBeenCalled();
+        expect(cache.set).not.toHaveBeenCalled();
+        expect(fake.promptSpy.mock.calls[0]?.[1]?.responseConstraint).toBe(
+          constraint,
+        );
+      },
+    );
+
+    it("skips the cache write on cacheRefresh", async () => {
+      installFakeLanguageModel();
+      const cache = { get: vi.fn(() => null), set: vi.fn() };
+      await ask({
+        input: "hello",
+        responseConstraint: new Constraint(),
+        cache,
+        cacheRefresh: true,
+      });
+      expect(cache.set).not.toHaveBeenCalled();
+    });
+
+    it("caches with a custom cacheKey", async () => {
+      const fake = installFakeLanguageModel();
+      const cache = inMemoryCache();
+      const options = {
+        input: "hello",
+        responseConstraint: new Constraint(),
+        cache,
+        cacheKey: "custom",
+      };
+
+      const first = await ask(options);
+      const second = await ask(options);
+
+      expect(first).toEqual({ output: "Hello, world.", cached: false });
+      expect(second).toEqual({ output: "Hello, world.", cached: true });
+      expect(fake.promptSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("does not fragment cache entries for omitResponseConstraintInput without a constraint", async () => {
     let calls = 0;
     installFakeLanguageModel({

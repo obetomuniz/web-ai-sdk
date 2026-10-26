@@ -186,7 +186,7 @@ interface AskOptions {
   expectedOutputs?: LanguageModelExpectedOutput[]; // advanced passthrough
   tools?: LanguageModelTool[];              // experimental: legacy-shape tool passthrough
   monitor?: (m: CreateMonitor) => void;     // observe first-call model download
-  responseConstraint?: object;              // JSON Schema for structured output
+  responseConstraint?: object;              // JSON Schema or RegExp for structured output
   omitResponseConstraintInput?: boolean;
   cache?: ResponseCache;
   cacheKey?: string;
@@ -243,8 +243,8 @@ interface CreateSessionOptions {
 
 interface SessionSendOptions {
   signal?: AbortSignal;
-  responseConstraint?: object;        // JSON Schema for structured output
-  omitResponseConstraintInput?: boolean; // drop the inlined schema to save tokens
+  responseConstraint?: object;        // JSON Schema or RegExp for structured output
+  omitResponseConstraintInput?: boolean; // drop the inlined constraint to save tokens
 }
 
 interface Session {
@@ -265,7 +265,22 @@ interface Session {
 
 `Session.sendStreaming()` yields **deltas** (each chunk is the new text since the last yield, never cumulative). The wrapper does no extra bookkeeping: no history tracking, no concurrent-send queue, no usage telemetry. Always destroy sessions you no longer need.
 
-`omitResponseConstraintInput` is only forwarded when `responseConstraint` is also set; the native API throws a `TypeError` otherwise. When you omit the schema, include format guidance in the prompt text itself (the model no longer sees the schema).
+`omitResponseConstraintInput` is only forwarded when `responseConstraint` is also set; the native API throws a `TypeError` otherwise. When you omit the constraint, include format guidance in the prompt text itself (the model no longer sees the constraint).
+
+### Structured output
+
+`responseConstraint` accepts a JSON Schema object or a `RegExp`. The SDK forwards it to the browser unchanged. `ask()`, `Session.send()`, and `Session.sendStreaming()` accept it.
+
+The [Prompt API proposal](https://github.com/webmachinelearning/prompt-api#structured-output-with-json-schema-or-regexp-constraints) defines the result. A JSON Schema response parses with `JSON.parse()`. A RegExp response matches the expression. If the browser cannot produce a matching response, the call fails with a `"SyntaxError"` `DOMException`.
+
+```ts
+const { output } = await ask({
+  input: "Is the sky blue? Answer yes or no.",
+  responseConstraint: /^(yes|no)$/,
+});
+```
+
+See [Caching](#caching) for how constraints affect the result-cache key.
 
 ### Sampling
 
@@ -521,7 +536,7 @@ Forwards `samplingMode`, `expectedInputs`, and `expectedOutputs` unchanged to `L
 Two layers, same as `@web-ai-sdk/summarizer`:
 
 - **Session cache** (in-memory, on for `ask()`): a bounded LRU of base instances keyed by serialized creation options. When supported, each call uses an isolated clone. `prepareLanguageModel()` warms this cache. `createSession()` bypasses it.
-- **Result cache** (opt-in): pass a `cache` (anything matching `{ get, set }`) to memoize final responses by `(input, systemPrompt, samplingMode / temperature / topK)`. Omit it for a fresh model call every time.
+- **Result cache** (opt-in): pass a `cache` (anything matching `{ get, set }`) to memoize final responses. The default key covers the input and every output-shaping option, including `responseConstraint`. Omit `cache` for a fresh model call every time.
 
 The session cache has public controls. `configureLanguageModelCache({ max })` bounds the base-session LRU; the default is 8. `clearLanguageModelSessions()` drops every cached base. `clearLanguageModelSession(createOptions)` drops one. Clearing detaches bases pinned by a lease or an in-flight `ask()` and destroys them when the last pin drops.
 
@@ -538,6 +553,14 @@ ask({ input: "hi", cache: "local" });
 // Or roll your own.
 ask({ input: "hi", cache: myMap, cacheKey: "greeting" });
 ```
+
+The default key encodes `responseConstraint` as follows:
+
+- A `RegExp` keys on its `source` and `flags`. Equal patterns with equal flags share an entry. `lastIndex` does not affect the key.
+- A JSON Schema keys on its JSON form. A schema and a `RegExp` never share an entry.
+- Other values skip the result cache. Examples: class instances, arrays, circular objects, and schemas that contain `undefined`, `BigInt`, non-finite numbers, or nested `RegExp` values.
+
+To cache a call with such a constraint, pass a `cacheKey` that identifies the constraint.
 
 ### Prepare and release
 

@@ -181,12 +181,56 @@ const hasExpandedKeyFields = (input: DefaultCacheKeyInput): boolean =>
   input.tools !== undefined ||
   input.responseConstraint !== undefined;
 
+const isPlainObject = (value: object): boolean => {
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+};
+
+/**
+ * Whether `JSON.stringify` represents `value` losslessly: `null`, strings,
+ * booleans, finite numbers, dense arrays, and plain objects of those values.
+ * `ancestors` rejects circular references, which would throw.
+ */
+const isJsonValue = (value: unknown, ancestors: Set<object>): boolean => {
+  if (value === null) return true;
+  if (typeof value === "string" || typeof value === "boolean") return true;
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value !== "object" || ancestors.has(value)) return false;
+  ancestors.add(value);
+  const valid = Array.isArray(value)
+    ? Object.keys(value).length === value.length &&
+      value.every((item) => isJsonValue(item, ancestors))
+    : isPlainObject(value) &&
+      Object.values(value).every((item) => isJsonValue(item, ancestors));
+  ancestors.delete(value);
+  return valid;
+};
+
+/**
+ * Encode a `responseConstraint` for the default cache key. A `RegExp` keys on
+ * `source` and `flags`, so `lastIndex` does not affect the key. A JSON Schema
+ * keys on its JSON form, which must be a plain object. Returns `undefined` when
+ * JSON cannot represent the constraint losslessly.
+ */
+const responseConstraintKey = (constraint: object): unknown => {
+  if (constraint instanceof RegExp) {
+    return ["RegExp", constraint.source, constraint.flags];
+  }
+  return isPlainObject(constraint) && isJsonValue(constraint, new Set())
+    ? constraint
+    : undefined;
+};
+
 /**
  * Build a default cache key from the inputs that affect the response. JSON
  * stringification keeps it collision-free without pulling in a hashing
- * dependency. Pass a custom `cacheKey` to `ask()` for shorter / sticky keys.
+ * dependency. Returns `undefined` when the `responseConstraint` has no
+ * lossless key; `ask()` then skips the result cache. Pass a custom `cacheKey`
+ * to `ask()` for shorter / sticky keys.
  */
-export const defaultCacheKey = (input: DefaultCacheKeyInput): string => {
+export const defaultCacheKey = (
+  input: DefaultCacheKeyInput,
+): string | undefined => {
   const parts: unknown[] = [
     input.prompt,
     input.systemPrompt ?? "",
@@ -197,6 +241,11 @@ export const defaultCacheKey = (input: DefaultCacheKeyInput): string => {
     if (input.samplingMode !== undefined) parts.push(input.samplingMode);
     return JSON.stringify(parts);
   }
+  const constraintKey =
+    input.responseConstraint == null
+      ? null
+      : responseConstraintKey(input.responseConstraint);
+  if (constraintKey === undefined) return undefined;
   if (input.samplingMode !== undefined) parts.push(input.samplingMode);
   parts.push(
     input.language ?? "",
@@ -204,7 +253,7 @@ export const defaultCacheKey = (input: DefaultCacheKeyInput): string => {
     input.expectedInputs ?? null,
     input.expectedOutputs ?? null,
     input.tools?.map(toolDescriptorKey) ?? null,
-    input.responseConstraint ?? null,
+    constraintKey,
     input.responseConstraint !== undefined &&
       input.omitResponseConstraintInput === true,
   );
