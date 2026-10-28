@@ -37,6 +37,7 @@ export const SummarizerDemo = ({ language = "en" }: SummarizerDemoProps) => {
   const [freshNonce, setFreshNonce] = useState(0);
 
   useEffect(() => {
+    // biome-ignore lint/performance/useDomNodeTextContent: innerText keeps rendered paragraph breaks in the summarizer input.
     setInput(articleRef.current?.innerText ?? "");
   }, []);
 
