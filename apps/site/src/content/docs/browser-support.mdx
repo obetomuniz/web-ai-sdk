@@ -1,11 +1,11 @@
 ---
 title: Browser support
-description: Current Chrome and Edge support for each package.
+description: Chrome and Edge support, plus Opera One WebAI preview status.
 ---
 
 import BrowserTableHeading from "../../features/docs/components/BrowserTableHeading.astro";
 
-Support differs by capability and browser. The browser table reports only behavior documented by Chrome and Edge. Its fallback column describes SDK behavior when the native API is missing.
+Support differs by capability and browser. The browser table reports only behavior documented by Chrome and Edge. Opera One preview status appears below because SDK compatibility is unverified. The fallback column describes SDK behavior when the native API is missing.
 
 | Package | <BrowserTableHeading browsers={["chrome"]} label="Chrome" /> | <BrowserTableHeading browsers={["edge"]} label="Edge" /> | <BrowserTableHeading browsers={["safari", "firefox"]} label="Fallback when the native API is missing" /> |
 | --- | --- | --- | --- |
@@ -24,6 +24,14 @@ Support differs by capability and browser. The browser table reports only behavi
 - **OT:** a public origin trial listed by the vendor.
 
 The wrappers do not detect browser brands or versions. They check the native API and its reported availability. React hooks return `status: "unavailable"`. Vanilla functions can throw a typed unavailability error.
+
+## Opera One WebAI preview
+
+Opera [announced an opt-in WebAI preview in Opera One](https://opera.gcs-web.com/news-releases/news-release-details/opera-doubles-down-local-ai-shipping-models-directly-its). [Enable "Web AI API" in Settings → Opera AI](https://blogs.opera.com/news/2026/10/webai-local-ai-for-the-web-now-in-opera/) to download a compatible local model. Opera says [site-specific permissions](https://opera.gcs-web.com/news-releases/news-release-details/opera-doubles-down-local-ai-shipping-models-directly-its) control which websites can use local AI.
+
+Opera's [playgrounds](https://next.opera.com/web-ai/) list the Prompt, Semantic Embedder, and Decisions APIs. Opera One compatibility has not been verified for this SDK. This announcement does not establish SDK support.
+
+Opera's [blog](https://blogs.opera.com/news/2026/10/webai-local-ai-for-the-web-now-in-opera/) describes the preview across Opera One, GX, and Neon. Its [corporate release](https://opera.gcs-web.com/news-releases/news-release-details/opera-doubles-down-local-ai-shipping-models-directly-its) says GX and Neon will follow. Their current availability is unclear, so this page makes no support claim for them.
 
 ## Chrome specifics
 
@@ -48,7 +56,7 @@ Do not infer product behavior from Chromium engine lineage. Check the capability
 
 ### Prompt sampling options
 
-Chrome's [Prompt API documentation](https://developer.chrome.com/docs/ai/prompt-api) describes a sampling-parameters origin trial for web pages. The trial exposes `samplingMode` with seven values. The [Prompt API draft](https://webmachinelearning.github.io/prompt-api/) marks `samplingMode` experimental.
+Chrome's [Prompt API documentation](https://developer.chrome.com/docs/ai/prompt-api) describes a sampling-parameters origin trial for web pages. The trial exposes `samplingMode` with seven values. The [Prompt API draft](https://webmachinelearning.github.io/prompt-api/) now includes `samplingMode` without an experimental marker. [PR #226](https://github.com/webmachinelearning/prompt-api/pull/226) removed that marker.
 
 Chrome supports numeric `topK` and `temperature` in Chrome Extensions. Chrome does not expose them to web pages by default.
 

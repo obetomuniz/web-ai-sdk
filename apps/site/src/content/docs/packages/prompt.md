@@ -23,7 +23,7 @@ Edge provides a [Canary/Dev preview](https://learn.microsoft.com/en-us/microsoft
 
 Canary/Dev 150.0.4070+ can use prerelease Aion-1.0-Instruct on Medium/Low devices. This path requires the "Enable prerelease on-device language model" flag.
 
-`samplingMode` is a Chrome web [origin trial](https://developer.chrome.com/docs/ai/prompt-api) option. The [Prompt API draft](https://webmachinelearning.github.io/prompt-api/) marks it experimental. See [Sampling](#sampling).
+`samplingMode` is a Chrome web [origin trial](https://developer.chrome.com/docs/ai/prompt-api) option. The [Prompt API draft](https://webmachinelearning.github.io/prompt-api/) no longer marks it experimental. See [Sampling](#sampling).
 
 See [Browser support](https://web-ai-sdk.dev/docs/browser-support/) for the full matrix. Without `LanguageModel`, React reports `"unavailable"` and `ask()` throws `PromptUnavailableError`.
 
@@ -286,7 +286,7 @@ See [Caching](#caching) for how constraints affect the result-cache key.
 
 `samplingMode` accepts the seven values in Chrome's [Prompt API documentation](https://developer.chrome.com/docs/ai/prompt-api) and the [Prompt API draft](https://webmachinelearning.github.io/prompt-api/): `"most-predictable"`, `"predictable"`, `"slightly-predictable"`, `"balanced"`, `"slightly-creative"`, `"creative"`, and `"most-creative"`.
 
-Chrome documents `samplingMode` for web pages under its sampling-parameters origin trial. The draft marks the option experimental. Treat it as a trial option, not as stable cross-browser behavior.
+Chrome documents `samplingMode` for web pages under its sampling-parameters origin trial. The [draft removed its experimental marker](https://github.com/webmachinelearning/prompt-api/pull/226). Treat Chrome access as a trial option, not as stable cross-browser behavior.
 
 The SDK forwards the value unchanged to `LanguageModel.create()`. `ask()` and `checkAvailability({ samplingMode })` forward it unchanged to `LanguageModel.availability()`. The SDK does not normalize values or map them to a model. The browser decides whether the option is available. If the browser rejects the availability check, `ask()` throws `PromptUnavailableError`.
 
