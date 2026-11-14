@@ -27,7 +27,7 @@
     "@web-ai-sdk/translator": "workspace:*",
     "@web-ai-sdk/webmcp": "workspace:*",
     "@web-ai-sdk/writer": "workspace:*",
-    "astro": "7.4.2",
+    "astro": "7.4.7",
     "marked": "^18.1.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
