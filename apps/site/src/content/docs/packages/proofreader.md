@@ -15,7 +15,7 @@ This package wraps the Web's Built-in [Proofreader API](https://developer.chrome
 
 Chrome labels Proofreader a **Developer trial** in its [status table](https://developer.chrome.com/docs/ai/built-in-apis). The public origin trial for Chrome 141–145 has ended. For localhost, enable `chrome://flags/#proofreader-api`.
 
-Edge provides a [Canary/Dev preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/proofreader-api) from 142. Enable "Proofreader API for Phi mini." Edge requires a High device-performance class or greater.
+Edge provides a [developer preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/proofreader-api) from Edge 158. Enable the "Proofreader API" flag in `edge://flags`. Edge uses its built-in Aion Instruct model and requires a Medium device-performance class or greater.
 
 Without `Proofreader`, React reports `"unavailable"` and `proofread()` throws `ProofreaderUnavailableError`.
 

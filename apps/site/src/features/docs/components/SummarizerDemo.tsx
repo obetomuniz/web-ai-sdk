@@ -75,7 +75,7 @@ export const SummarizerDemo = ({ language = "en" }: SummarizerDemoProps) => {
         <UnavailableHint
           api="Summarizer API"
           chrome="Summarizer API unavailable. Open in Chrome 138+ (stable) to exercise."
-          edge="Summarizer API unavailable. Open in Edge 138+ (stable) to exercise."
+          edge="Summarizer API unavailable. In Edge 158+, enable the Summarizer API flag in edge://flags, then reload."
         />
       )}
       {error && <p className="demo-error">{error.message}</p>}

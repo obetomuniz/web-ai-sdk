@@ -63,9 +63,9 @@ export const ProofreaderDemo = () => {
           }
           edge={
             <>
-              Proofreader API unavailable. In Edge Canary/Dev 142+, open{" "}
-              <code>edge://flags/</code>, search for "Proofreader API for Phi
-              mini", enable it, and reload.
+              Proofreader API unavailable. In Edge 158+, open{" "}
+              <code>edge://flags/</code>, search for "Proofreader API", enable
+              it, and reload.
             </>
           }
         />

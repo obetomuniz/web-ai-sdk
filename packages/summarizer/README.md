@@ -6,7 +6,11 @@ This package wraps the Web's Built-in [Summarizer API](https://developer.chrome.
 
 ## Status
 
-Summarizer is stable in Chrome 138+ and enabled by default in Edge 138+. See the [Chrome status table](https://developer.chrome.com/docs/ai/built-in-apis) and [Edge guide](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis).
+Summarizer is stable in Chrome 138+. See the [Chrome status table](https://developer.chrome.com/docs/ai/built-in-apis).
+
+Edge provides a [developer preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) from Edge 158. Enable the "Summarizer API" flag in `edge://flags`. Edge uses its built-in Aion Instruct model and requires a Medium device-performance class or greater.
+
+From Edge 158, Edge adds an [invisible AI-content watermark](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) to generated text. The SDK returns native text unchanged. It does not detect, strip, or add watermarks.
 
 Without `Summarizer`, React reports `"unavailable"` and `summarize()` throws `SummarizerUnavailableError`.
 

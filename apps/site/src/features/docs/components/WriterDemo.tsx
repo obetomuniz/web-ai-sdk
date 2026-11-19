@@ -60,9 +60,9 @@ export const WriterDemo = ({ language = "en" }: { language?: string }) => {
           }
           edge={
             <>
-              Writer API unavailable. In Edge Canary/Dev 138+, open{" "}
-              <code>edge://flags/</code>, search for "Writer API for on-device
-              language model", enable it, and reload.
+              Writer API unavailable. In Edge 158+, open{" "}
+              <code>edge://flags/</code>, search for "Writer API", enable it,
+              and reload.
             </>
           }
         />

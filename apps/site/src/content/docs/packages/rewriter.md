@@ -15,9 +15,13 @@ This package wraps the Web's Built-in [Rewriter API](https://developer.chrome.co
 
 Chrome labels Rewriter a **Developer trial** in its [status table](https://developer.chrome.com/docs/ai/built-in-apis). The public origin trial for Chrome 137–148 has ended. See the [Rewriter guide](https://developer.chrome.com/docs/ai/rewriter-api) for current localhost flags.
 
-Edge provides a [Canary/Dev preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) from 138.0.3309.2. Enable "Rewriter API for on-device language model."
+Google's [built-in AI task-API polyfills](https://github.com/GoogleChromeLabs/web-ai-demos/tree/main/built-in-ai-task-apis-polyfills) mark the Writer and Rewriter APIs deprecated in Chrome. Chrome has not published a removal milestone. For new Chrome work, use [`@web-ai-sdk/prompt`](https://web-ai-sdk.dev/docs/guides/prompt/).
 
-Without `Rewriter`, React reports `"unavailable"` and `rewrite()` throws `RewriterUnavailableError`.
+Edge provides a [developer preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) from Edge 158. Enable the "Rewriter API" flag in `edge://flags`. Edge uses its built-in Aion Instruct model and requires a Medium device-performance class or greater. This package remains supported while a browser documents the API.
+
+From Edge 158, Edge adds an [invisible AI-content watermark](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) to generated text. The SDK returns native text unchanged. It does not detect, strip, or add watermarks.
+
+Without `Rewriter`, React reports `"unavailable"` and `rewrite()` throws `RewriterUnavailableError`. The same behavior applies if a browser removes the API.
 
 ## Install
 
