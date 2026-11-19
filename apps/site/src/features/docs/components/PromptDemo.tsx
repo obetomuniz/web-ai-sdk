@@ -46,9 +46,9 @@ export const PromptDemo = ({
           }
           edge={
             <>
-              Prompt API unavailable. In Edge Canary/Dev 138+, open{" "}
-              <code>edge://flags/</code>, search for "Prompt API for on-device
-              language model", enable it, and reload.
+              Prompt API unavailable. In Edge 158+, open{" "}
+              <code>edge://flags/</code>, search for "Prompt API", enable it,
+              and reload.
             </>
           }
         />

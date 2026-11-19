@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { __clearSessionCacheForTests } from "./api.js";
 import {
+  checkAvailability,
   isAvailable,
   type WriteCache,
   WriterUnavailableError,
@@ -62,6 +63,17 @@ beforeEach(() => {
 
 afterEach(() => {
   removeFakeWriter();
+});
+
+describe("checkAvailability", () => {
+  it("resolves null when the global is missing", async () => {
+    await expect(checkAvailability()).resolves.toBeNull();
+  });
+
+  it("forwards the native availability when the global is present", async () => {
+    installFakeWriter({ availability: "unavailable" });
+    await expect(checkAvailability()).resolves.toBe("unavailable");
+  });
 });
 
 describe("isAvailable", () => {

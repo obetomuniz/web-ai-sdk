@@ -9,17 +9,18 @@ Support differs by capability and browser. The browser table reports only behavi
 
 | Package | <BrowserTableHeading browsers={["chrome"]} label="Chrome" /> | <BrowserTableHeading browsers={["edge"]} label="Edge" /> | <BrowserTableHeading browsers={["safari", "firefox"]} label="Fallback when the native API is missing" /> |
 | --- | --- | --- | --- |
-| `@web-ai-sdk/prompt` | [148+ · stable](https://developer.chrome.com/docs/ai/prompt-api) | [138+ · Canary/Dev · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api); [numeric sampling-parameters OT in 155](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/155) | feature-detected fallback |
-| `@web-ai-sdk/summarizer` | [138+ · stable](https://developer.chrome.com/docs/ai/built-in-apis) | [138+ · stable](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) | feature-detected fallback |
+| `@web-ai-sdk/prompt` | [148+ · stable](https://developer.chrome.com/docs/ai/prompt-api) | [158+ · preview · flag or OT](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api); [numeric sampling-parameters OT in 155](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/155) | feature-detected fallback |
+| `@web-ai-sdk/summarizer` | [138+ · stable](https://developer.chrome.com/docs/ai/built-in-apis) | [158+ · preview · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) | feature-detected fallback |
 | `@web-ai-sdk/translator` | [138+ · stable](https://developer.chrome.com/docs/ai/built-in-apis) | [148+ · stable](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/148) | feature-detected fallback |
 | `@web-ai-sdk/detector` | [138+ · stable](https://developer.chrome.com/docs/ai/built-in-apis) | [148+ · stable](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/release-notes/148) | feature-detected fallback |
-| `@web-ai-sdk/writer` | [Developer trial · local flag](https://developer.chrome.com/docs/ai/writer-api) | [138+ · Canary/Dev · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) | feature-detected fallback |
-| `@web-ai-sdk/rewriter` | [Developer trial · local flag](https://developer.chrome.com/docs/ai/rewriter-api) | [138+ · Canary/Dev · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) | feature-detected fallback |
-| `@web-ai-sdk/proofreader` | [Developer trial · local flag](https://developer.chrome.com/docs/ai/proofreader-api) | [142+ · Canary/Dev · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/proofreader-api) | feature-detected fallback |
+| `@web-ai-sdk/writer` | [Developer trial · local flag](https://developer.chrome.com/docs/ai/writer-api); [deprecated](https://github.com/GoogleChromeLabs/web-ai-demos/tree/main/built-in-ai-task-apis-polyfills) | [158+ · preview · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) | feature-detected fallback |
+| `@web-ai-sdk/rewriter` | [Developer trial · local flag](https://developer.chrome.com/docs/ai/rewriter-api); [deprecated](https://github.com/GoogleChromeLabs/web-ai-demos/tree/main/built-in-ai-task-apis-polyfills) | [158+ · preview · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) | feature-detected fallback |
+| `@web-ai-sdk/proofreader` | [Developer trial · local flag](https://developer.chrome.com/docs/ai/proofreader-api) | [158+ · preview · flag](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/proofreader-api) | feature-detected fallback |
 | `@web-ai-sdk/webmcp` | [OT from 149 · local flag](https://developer.chrome.com/docs/ai/webmcp) | [OT in 155](https://developer.microsoft.com/microsoft-edge/origin-trials/trials/0b76fe60-b266-458e-a285-04e375c0c31a) | feature-detected fallback |
 
 - **Stable:** the vendor enables the API by default.
-- **Canary/Dev:** an Edge preview that requires a flag.
+- **Preview:** an Edge developer preview. It requires a flag unless a listed Edge origin trial applies.
+- **Deprecated:** Google's public polyfill materials mark the API deprecated in Chrome. No removal milestone is published.
 - **Developer trial:** Chrome's current status label. It is not an active public origin trial.
 - **OT:** a public origin trial listed by the vendor.
 
@@ -36,6 +37,8 @@ Opera's [blog](https://blogs.opera.com/news/2026/10/webai-local-ai-for-the-web-n
 ## Chrome specifics
 
 Chrome's [status table](https://developer.chrome.com/docs/ai/built-in-apis) lists Translator, Language Detector, and Summarizer as stable from Chrome 138. Prompt is stable from Chrome 148. Writer, Rewriter, and Proofreader are in **Developer trial**.
+
+Google's [built-in AI task-API polyfills](https://github.com/GoogleChromeLabs/web-ai-demos/tree/main/built-in-ai-task-apis-polyfills) mark Writer and Rewriter deprecated. Chrome has not published a removal milestone. Use `@web-ai-sdk/prompt` for new Chrome work. Edge still documents its own preview of both APIs.
 
 The public origin-trial milestone windows documented on the capability pages are historical:
 
@@ -128,7 +131,9 @@ The SDK detects the native API on the current document. `document.modelContext` 
 
 ## Edge specifics
 
-Microsoft enables Summarizer by default from Edge 138. Prompt, Writer, and Rewriter are Canary/Dev previews from 138.0.3309.2. Proofreader is a preview from Edge 142.
+Prompt, Summarizer, Writer, Rewriter, and Proofreader are developer previews from Edge 158. Each one requires its `edge://flags` entry. Sites can also register for the Edge Prompt API origin trial.
+
+From Edge 158, Prompt, Summarizer, Writer, and Rewriter output includes an invisible AI-content watermark. Edge does not add it to Prompt `responseConstraint` responses. The SDK returns native text unchanged.
 
 Translator and Language Detector shipped in Edge 148.
 
@@ -142,23 +147,23 @@ The WebMCP listing establishes that Edge offers an origin trial. It does not est
 
 | Edge capability | Documented model path | Documented device-performance condition |
 | --- | --- | --- |
-| Prompt | Phi-4-mini by default; optional prerelease Aion-1.0-Instruct in Canary/Dev 150.0.4070+ when "Enable prerelease on-device language model" is enabled | High or greater for Phi; Medium/Low only through the prerelease Aion path |
-| Summarizer, Writer, Rewriter | Phi-4-mini by default; the [Writing Assistance docs](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/writing-assistance-apis) now document the same optional prerelease Aion override in Canary/Dev 150.0.4070+ | High or greater for Phi; Medium/Low only through the documented prerelease Aion path |
-| Proofreader | Phi-4-mini | High or greater; Microsoft does not document an Aion override on the Proofreader page |
-| Translator | Task-specific translation models | No Phi/Aion performance-class rule is documented on the Translator page |
-| Language Detector | Task-specific language-detection model | No Phi/Aion performance-class rule is documented on the Language Detector page |
+| Prompt | Built-in Aion Instruct model (Aion-1.0-Instruct, 2.3B parameters) | Medium or greater |
+| Summarizer, Writer, Rewriter | Built-in Aion Instruct model | Medium or greater |
+| Proofreader | Built-in Aion Instruct model | Medium or greater |
+| Translator | Task-specific translation models | No generative-model performance-class rule is documented on the Translator page |
+| Language Detector | Task-specific language-detection model | No generative-model performance-class rule is documented on the Language Detector page |
 
-Microsoft does not document the Aion path for Proofreader, Translator, or Language Detector.
+64-bit Linux requires Vulkan GPU drivers and Edge 159 or later for the Aion Instruct capabilities.
 
 Current Edge preview flag labels are:
 
-- "Prompt API for on-device language model"
-- "Writer API for on-device language model"
-- "Rewriter API for on-device language model"
-- "Proofreader API for Phi mini"
-- "Enable prerelease on-device language model" for the optional Aion override documented for Prompt and Writing Assistance
+- "Prompt API"
+- "Summarizer API"
+- "Writer API"
+- "Rewriter API"
+- "Proofreader API"
 
-Summarizer is enabled by default. Translator and Language Detector do not use these generative-model flags.
+Translator and Language Detector do not use these generative-model flags.
 
 Microsoft sources:
 

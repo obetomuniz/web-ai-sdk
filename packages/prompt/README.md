@@ -12,9 +12,9 @@ Prompt API is [stable in Chrome 148+](https://developer.chrome.com/docs/ai/promp
 
 Chrome 148+ also documents multimodal sessions with text, image, and audio expected inputs. Audio input requires a GPU. See [Multimodal input](#multimodal-input-text-image-audio).
 
-Edge provides a [Canary/Dev preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api) from 138.0.3309.2. Enable "Prompt API for on-device language model." Edge uses Phi-4-mini by default on High-class devices.
+Edge provides a [developer preview](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api) from Edge 158. Enable the "Prompt API" flag in `edge://flags`, or register for the Edge Prompt API origin trial. Edge uses its built-in Aion Instruct model and requires a Medium device-performance class or greater. 64-bit Linux requires Vulkan GPU drivers and Edge 159 or later.
 
-Canary/Dev 150.0.4070+ can use prerelease Aion-1.0-Instruct on Medium/Low devices. This path requires the "Enable prerelease on-device language model" flag.
+From Edge 158, Edge adds an [invisible AI-content watermark](https://learn.microsoft.com/en-us/microsoft-edge/web-platform/prompt-api) to generated text. Edge does not add it to `responseConstraint` responses. The SDK returns native text unchanged. It does not detect, strip, or add watermarks.
 
 `samplingMode` is a Chrome web [origin trial](https://developer.chrome.com/docs/ai/prompt-api) option. The [Prompt API draft](https://webmachinelearning.github.io/prompt-api/) no longer marks it experimental. See [Sampling](#sampling).
 
