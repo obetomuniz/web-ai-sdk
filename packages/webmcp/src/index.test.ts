@@ -23,6 +23,7 @@ interface RegisteredCall {
   title?: string;
   description: string;
   inputSchema?: object;
+  outputSchema?: object;
   annotations?: Record<string, boolean>;
   execute: (input: unknown, options?: ToolExecuteCallbackOptions) => unknown;
 }
@@ -163,6 +164,24 @@ describe("tool discovery and execution", () => {
     expect(getNativeTools).toHaveBeenCalledWith({
       fromOrigins: ["https://agent.example"],
     });
+  });
+
+  it("preserves native output schemas and absence during discovery", async () => {
+    const outputSchema = {
+      type: "object",
+      properties: { value: { type: "number" } },
+    };
+    const withSchema = { ...discoveredTool(), outputSchema };
+    const withoutSchema = discoveredTool();
+    setModelContext("document", {
+      registerTool: vi.fn(),
+      getTools: vi.fn(async () => [withSchema, withoutSchema]),
+    });
+
+    const result = await getTools();
+    expect(result[0]).toBe(withSchema);
+    expect(result[0]?.outputSchema).toBe(outputSchema);
+    expect(result[1]).not.toHaveProperty("outputSchema");
   });
 
   it("preserves schema values, omission, tool identity, and native ordering", async () => {
@@ -682,6 +701,35 @@ describe("registerTool", () => {
       execute: async () => ({}),
     });
     expect(registered.get("search")?.inputSchema).toBe(schema);
+  });
+
+  it("forwards native outputSchema separately from SDK output validation", async () => {
+    const { registered } = installFakeModelContext();
+    const outputSchema = {
+      type: "object",
+      properties: { value: { type: "number" } },
+    };
+    const output: StandardSchemaV1<number, number> = {
+      "~standard": {
+        version: 1,
+        vendor: "test",
+        validate: (value) => ({ value: Number(value) }),
+      },
+    };
+    const cleanup = registerTool({
+      name: "count",
+      description: "counts",
+      outputSchema,
+      output,
+      execute: () => 2,
+    });
+    expect(registered.get("count")?.outputSchema).toBe(outputSchema);
+    await expect(registered.get("count")?.execute({})).resolves.toBe(2);
+    cleanup();
+    expect(registered.has("count")).toBe(false);
+
+    registerTool({ name: "plain", description: "plain", execute: () => 1 });
+    expect(registered.get("plain")).not.toHaveProperty("outputSchema");
   });
 
   it("cleanup unregisters the tool by aborting the registration signal", () => {

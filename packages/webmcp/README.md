@@ -172,6 +172,8 @@ The [current WebMCP draft](https://webmachinelearning.github.io/webmcp/#dictdef-
 
 `inputSchema` is optional and typed as `object | string`. The SDK preserves native values without parsing, stringifying, normalizing, or cloning them. Omitted schemas stay omitted. Malformed legacy strings remain observable.
 
+The [WebMCP draft](https://webmachinelearning.github.io/webmcp/#dictdef-modelcontexttool) defines optional native `outputSchema` metadata. [Chromium added it](https://github.com/chromium/chromium/commit/b7b01805d172cc10bc060c73ea89c7d7c775b2fa) after earlier trial builds. Supply an explicit JSON Schema object when registering a tool. The SDK forwards it unchanged and preserves the discovery value. Check for an absent or `null` value on mixed trial generations. Native output validation is not guaranteed; use SDK-side `output` when validation is required.
+
 ```ts
 import { getTools } from "@web-ai-sdk/webmcp";
 
@@ -245,6 +247,7 @@ interface RegisteredTool {
   title?: string;
   description: string;
   inputSchema?: object | string;
+  outputSchema?: object | null;
   window: Window;
   origin: string;
   annotations?: ToolAnnotations;
@@ -267,6 +270,7 @@ interface Tool<TInput = unknown, TOutput = unknown> {
   title?: string; // human-readable host UI label
   description: string;
   inputSchema?: object; // JSON Schema
+  outputSchema?: object; // native result JSON Schema
   readOnly?: boolean; // shorthand for annotations.readOnlyHint
   destructive?: boolean; // shorthand for annotations.destructiveHint
   annotations?: ToolAnnotations; // raw passthrough, merged on top
@@ -292,6 +296,7 @@ interface ToolDefinition<
   input?: InputSchema;
   output?: OutputSchema;
   inputSchema?: object;
+  outputSchema?: object;
   readOnly?: boolean;
   destructive?: boolean;
   annotations?: ToolAnnotations;
@@ -376,12 +381,12 @@ Standard Schema validation and [Standard JSON Schema](https://standardschema.dev
 
 **Input validation:** supplying `input` validates before application code runs and passes the schema's parsed or transformed value to `execute`. Invalid input throws `ToolValidationError`; its `toolName` and `issues` fields identify the tool and preserve the Standard Schema issues.
 
-**Output validation:** supplying `output` always validates the resolved sync or async `execute` result and returns the schema's parsed value, including transformations. Invalid output throws `ToolOutputValidationError`; its `toolName` and `issues` fields identify the tool and preserve the Standard Schema issues. The output schema is SDK-only because WebMCP has no `outputSchema` field.
+**Output validation:** supplying `output` always validates the resolved sync or async `execute` result and returns the schema's parsed value, including transformations. Invalid output throws `ToolOutputValidationError`; its `toolName` and `issues` fields identify the tool and preserve the Standard Schema issues. This SDK-side Standard Schema is independent of native `outputSchema` metadata.
 
 Output validation only checks the rules encoded in the schema. It does not prove that a result is fresh, trustworthy, or factually correct.
 
 The SDK-only `input` and `output` fields are never forwarded to the native
-WebMCP host. `inputSchema`, metadata, annotations, and registration options keep
+WebMCP host. `inputSchema`, `outputSchema`, metadata, annotations, and registration options keep
 their native forwarding behavior.
 
 ### `defineTool({...}): Tool` — deprecated compatibility wrapper

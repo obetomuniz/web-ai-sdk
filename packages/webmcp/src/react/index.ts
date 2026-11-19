@@ -125,6 +125,9 @@ const wrapTools = (
     if (definition.inputSchema !== undefined) {
       tool.inputSchema = definition.inputSchema;
     }
+    if (definition.outputSchema !== undefined) {
+      tool.outputSchema = definition.outputSchema;
+    }
     if (definition.readOnly) tool.readOnly = true;
     if (definition.destructive) tool.destructive = true;
     if (definition.annotations) tool.annotations = definition.annotations;

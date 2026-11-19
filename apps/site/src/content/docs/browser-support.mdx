@@ -85,6 +85,8 @@ Use a `typeof schema === "string"` guard when consuming mixed trial generations.
 
 String compatibility is temporary. Remove it when supported trial generations no longer require it. Registration continues to accept schema objects. Execution compatibility is described below.
 
+Native `outputSchema` is available only in trial builds containing [Chromium's implementation](https://github.com/chromium/chromium/commit/b7b01805d172cc10bc060c73ea89c7d7c775b2fa). The SDK forwards an explicit schema and preserves native discovery values. Check for absence or `null` on other builds. Browser-side result validation is not guaranteed.
+
 ### WebMCP execution compatibility
 
 The [current draft](https://webmachinelearning.github.io/webmcp/#dom-modelcontext-executetool) accepts an optional object input, including arrays. Chromium [changed the native contract](https://github.com/chromium/chromium/commit/23cad65d6e6613d62542b27651c28925acfaffb2) from a required string to optional object input.
