@@ -1,5 +1,11 @@
 # @web-ai-sdk/webmcp
 
+## 0.13.0
+
+### Minor Changes
+
+- 2d9b012: Expose native WebMCP outputSchema metadata for registration and discovery.
+
 ## 0.12.1
 
 ### Patch Changes
