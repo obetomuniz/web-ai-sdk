@@ -22,6 +22,7 @@ interface RegisteredCall {
   title?: string;
   description: string;
   inputSchema?: object;
+  outputSchema?: object;
   annotations?: Record<string, boolean>;
   execute: (input: unknown, options?: ToolExecuteCallbackOptions) => unknown;
 }
@@ -227,6 +228,26 @@ describe("useWebMCP", () => {
     expect(registered.has("a")).toBe(false);
     expect(registered.has("b")).toBe(true);
     expect(registerTool).toHaveBeenCalledTimes(2);
+  });
+
+  it("re-registers when native outputSchema changes and cleans up", () => {
+    const { registered, registerTool } = installFakeModelContext();
+    const { rerender, unmount } = renderHook(
+      ({ type }: { type: string }) =>
+        useWebMCP({
+          name: "result",
+          description: "Returns a result",
+          outputSchema: { type },
+          execute: () => ({}),
+        }),
+      { initialProps: { type: "object" } },
+    );
+    expect(registered.get("result")?.outputSchema).toEqual({ type: "object" });
+    rerender({ type: "string" });
+    expect(registerTool).toHaveBeenCalledTimes(2);
+    expect(registered.get("result")?.outputSchema).toEqual({ type: "string" });
+    unmount();
+    expect(registered.has("result")).toBe(false);
   });
 
   it("skips registration while disabled and follows enabled transitions", () => {

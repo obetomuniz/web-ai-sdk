@@ -21,6 +21,8 @@ export interface ToolMetadata {
   title?: string;
   description: string;
   inputSchema?: object;
+  /** Native JSON Schema for the result. Independent of SDK-side `output`. */
+  outputSchema?: object;
   /** Shorthand for `annotations.readOnlyHint = true`. */
   readOnly?: boolean;
   /** Compatibility shorthand for `annotations.destructiveHint = true`. */
@@ -50,6 +52,7 @@ export interface RegisteredToolMetadata {
   title?: string;
   description: string;
   inputSchema?: object;
+  outputSchema?: object;
   annotations?: ToolAnnotations;
 }
 
@@ -69,6 +72,8 @@ export const toRegisteredToolMetadata = (
   };
   if (tool.title !== undefined) metadata.title = tool.title;
   if (tool.inputSchema !== undefined) metadata.inputSchema = tool.inputSchema;
+  if (tool.outputSchema !== undefined)
+    metadata.outputSchema = tool.outputSchema;
   if (Object.keys(annotations).length > 0) metadata.annotations = annotations;
   return metadata;
 };

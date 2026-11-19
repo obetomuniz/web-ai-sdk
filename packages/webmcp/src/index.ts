@@ -71,6 +71,8 @@ export interface RegisteredTool {
   description: string;
   /** Native JSON Schema object, or a serialized string on older trial hosts. */
   inputSchema?: object | string;
+  /** Native result schema when the host exposes it. */
+  outputSchema?: object | null;
   /** Window belonging to the document that registered the tool. */
   window: Window;
   /** Serialized origin of the document that registered the tool. */
